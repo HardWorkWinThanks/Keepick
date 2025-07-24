@@ -8,3 +8,6 @@
 
 ## 📝 커밋 메시지 작성 규칙
 📌 [Commit Convention 보기](./docs/commit-convention.md)
+
+## 🌿 브랜치 전략
+📌 [Git Branch Strategy 보기](./docs/branch-strategy.md)
