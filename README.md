@@ -11,3 +11,6 @@
 
 ## 🌿 브랜치 전략
 📌 [Git Branch Strategy 보기](./docs/branch-strategy.md)
+
+## 📋 Pull Request 템플릿
+📌 [PR Template 보기](./docs/pr-template.md)
