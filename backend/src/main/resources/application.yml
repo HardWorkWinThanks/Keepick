@@ -23,7 +23,7 @@ spring:
             client-id: ${KAKAO_CLIENT_ID}
             redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:8080/login/oauth2/code/kakao}
             authorization-grant-type: authorization_code
-            scope: profile_nickname,account_email
+            scope: profile_nickname,profile_image,account_email
           
           naver:
             client-name: naver
