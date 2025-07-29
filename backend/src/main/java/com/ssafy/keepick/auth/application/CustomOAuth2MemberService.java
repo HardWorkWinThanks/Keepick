@@ -77,10 +77,33 @@ public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
 
             return new CustomOAuth2Member(memberDto);
         }
-        // 존재하는 회원이면 회원 정보 반환
+        // 존재하는 회원이면 소셜 서비스의 최신 정보로 업데이트
         else {
+            System.out.println("=== Existing Member - Before Update ===");
+            System.out.println("Current Profile URL: " + existMember.getProfileUrl());
+            System.out.println("Current Name: " + existMember.getName());
+            
+            // 소셜 서비스의 최신 정보로 업데이트
+            String latestProfileUrl = oAuth2Response.getProfileUrl();
+            String latestName = oAuth2Response.getName();
+            
+            System.out.println("=== Latest Social Info ===");
+            System.out.println("Latest Profile URL: " + latestProfileUrl);
+            System.out.println("Latest Name: " + latestName);
+            
+            // 프로필 정보 업데이트 (JPA 더티 체킹으로 자동 저장)
+            boolean updated = existMember.updateSocialProfile(latestName, latestProfileUrl);
+            
+            if (updated) {
+                System.out.println("=== Member Updated ===");
+                System.out.println("Updated Profile URL: " + existMember.getProfileUrl());
+                System.out.println("Updated Name: " + existMember.getName());
+            } else {
+                System.out.println("No changes detected - using existing member info");
+            }
+            
             MemberDto memberDto = new MemberDto();
-            memberDto.setMemberId(existMember.getId());   // 🔥 memberId 설정!
+            memberDto.setMemberId(existMember.getId());
             memberDto.setUsername(existMember.getEmail());
             memberDto.setName(existMember.getName());
             memberDto.setEmail(existMember.getEmail());
@@ -94,13 +117,7 @@ public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
         }
     }
 
-    /**
-     * 이메일 주소에서 닉네임을 자동 생성합니다.
-     * 예시: "user@gmail.com" → "user"
-     * 
-     * @param email 이메일 주소
-     * @return @ 앞부분으로 생성된 닉네임
-     */
+    // 이메일 주소에서 닉네임을 자동 생성합니다.
     private String generateNicknameFromEmail(String email) {
         if (email == null || !email.contains("@")) {
             return "user"; // 기본값
