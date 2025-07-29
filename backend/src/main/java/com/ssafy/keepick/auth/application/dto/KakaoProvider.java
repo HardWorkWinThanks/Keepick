@@ -45,7 +45,18 @@ public class KakaoProvider implements OAuth2Provider {
 
     @Override
     public String getProfileUrl() {
+        // profile_image_url 먼저 확인 (고해상도)
         Object profileImageUrl = profile.get("profile_image_url");
-        return profileImageUrl != null ? profileImageUrl.toString() : null;
+        if (profileImageUrl != null) {
+            return profileImageUrl.toString();
+        }
+        
+        // thumbnail_image_url 확인 (저해상도)
+        Object thumbnailImageUrl = profile.get("thumbnail_image_url");
+        if (thumbnailImageUrl != null) {
+            return thumbnailImageUrl.toString();
+        }
+        
+        return null;
     }
 }

@@ -20,15 +20,20 @@ public class NaverProvider implements OAuth2Provider {
     }
 
     @Override
-    public String getEmail() { return attributes.get("email").toString(); }
+    public String getEmail() { 
+        Object email = attributes.get("email");
+        return email != null ? email.toString() : null;
+    }
 
     @Override
     public String getName() {  
-        return attributes.get("name").toString();
+        Object name = attributes.get("name");
+        return name != null ? name.toString() : null;
     }
 
     @Override
     public String getProfileUrl() {
-        return attributes.get("profile_image").toString();
+        Object profileImage = attributes.get("profile_image");
+        return profileImage != null ? profileImage.toString() : null;
     }
 }
