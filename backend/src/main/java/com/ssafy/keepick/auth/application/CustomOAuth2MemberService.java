@@ -62,9 +62,10 @@ public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
             .providerId(oAuth2Response.getProviderId())
             .build();
 
-            memberRepository.save(member);
+            Member savedMember = memberRepository.save(member); // 저장된 회원 정보 받기
 
             MemberDto memberDto = new MemberDto();
+            memberDto.setMemberId(savedMember.getId());  // 🔥 memberId 설정!
             memberDto.setUsername(email);
             memberDto.setName(oAuth2Response.getName());
             memberDto.setEmail(email);
@@ -79,6 +80,7 @@ public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
         // 존재하는 회원이면 회원 정보 반환
         else {
             MemberDto memberDto = new MemberDto();
+            memberDto.setMemberId(existMember.getId());   // 🔥 memberId 설정!
             memberDto.setUsername(existMember.getEmail());
             memberDto.setName(existMember.getName());
             memberDto.setEmail(existMember.getEmail());
