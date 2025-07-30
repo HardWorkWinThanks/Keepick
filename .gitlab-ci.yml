@@ -18,7 +18,7 @@ Vercel-Deploy:
     - npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
 
     # 3. 프로젝트를 빌드합니다.
-    - npx vercel build --token=$VERCEL_TOKEN
+    - npx vercel build --prod --token=$VERCEL_TOKEN
 
     # 4. 빌드된 결과물을 Vercel에 업로드하여 최종 배포를 실행합니다.
     - npx vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
