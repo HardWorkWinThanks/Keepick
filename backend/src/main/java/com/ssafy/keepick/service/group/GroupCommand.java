@@ -36,4 +36,12 @@ public class GroupCommand {
         private String thumbnailUrl;
     }
 
+    @Getter
+    @AllArgsConstructor
+    @Builder
+    public static class Leave {
+        private Long groupId;
+        private Long memberId;
+    }
+
 }

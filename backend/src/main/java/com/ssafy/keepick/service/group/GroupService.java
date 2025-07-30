@@ -62,4 +62,10 @@ public class GroupService {
         return GroupResult.GroupInfo.from(group);
     }
 
+    public void leaveGroup(GroupCommand.Leave command) {
+        GroupMember groupMember = groupMemberRepository.findByGroupIdAndMemberIdAndStatusAndDeletedAtIsNull(command.getGroupId(), command.getMemberId(), GroupMemberStatus.ACCEPTED).orElseThrow(() -> new BaseException(NOT_FOUND));
+        groupMember.delete();
+    }
+
+
 }

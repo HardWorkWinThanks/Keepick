@@ -3,6 +3,7 @@ package com.ssafy.keepick.controller.group;
 import com.ssafy.keepick.common.exception.BaseException;
 import com.ssafy.keepick.common.exception.ErrorCode;
 import com.ssafy.keepick.common.response.ApiResponse;
+import com.ssafy.keepick.common.response.ResponseCode;
 import com.ssafy.keepick.entity.GroupMemberStatus;
 import com.ssafy.keepick.service.group.GroupCommand;
 import com.ssafy.keepick.service.group.GroupResult;
@@ -56,6 +57,12 @@ public class GroupController {
     public ApiResponse<?> update(@PathVariable Long groupId, @RequestBody GroupRequest.Update request) {
         GroupResult.GroupInfo result = groupService.updateGroup(request.toCommand(groupId));
         return ApiResponse.ok(GroupResponse.Detail.from(result));
+    }
+
+    @DeleteMapping("/{groupId}/me")
+    public ApiResponse<?> leave(@PathVariable Long groupId) {
+        groupService.leaveGroup(new GroupCommand.Leave(groupId, 1L));
+        return ApiResponse.of(ResponseCode.DELETED);
     }
 
 }
