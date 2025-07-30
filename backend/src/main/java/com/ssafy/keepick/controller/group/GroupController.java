@@ -52,4 +52,10 @@ public class GroupController {
         return ApiResponse.ok(response);
     }
 
+    @PutMapping("/{groupId}")
+    public ApiResponse<?> update(@PathVariable Long groupId, @RequestBody GroupRequest.Update request) {
+        GroupResult.GroupInfo result = groupService.updateGroup(request.toCommand(groupId));
+        return ApiResponse.ok(GroupResponse.Detail.from(result));
+    }
+
 }

@@ -26,4 +26,14 @@ public class GroupCommand {
         private GroupMemberStatus status;
     }
 
+    @Getter
+    @AllArgsConstructor
+    @Builder
+    public static class Update {
+        private Long groupId;
+        private String name;
+        private String description;
+        private String thumbnailUrl;
+    }
+
 }

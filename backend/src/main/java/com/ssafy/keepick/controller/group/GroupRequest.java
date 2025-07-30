@@ -22,4 +22,18 @@ public class GroupRequest {
         }
     }
 
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class Update {
+        @NotBlank
+        private String name;
+        private String description;
+        private String thumbnailUrl;
+
+        public GroupCommand.Update toCommand(Long groupId) {
+            return new GroupCommand.Update(groupId, name, description, thumbnailUrl);
+        }
+    }
+
 }

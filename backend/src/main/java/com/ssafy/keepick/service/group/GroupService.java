@@ -56,4 +56,10 @@ public class GroupService {
         return groupMemberRepository.findJoinedMembersById(groupId).stream().map(GroupResult.Member::from).toList();
     }
 
+    public GroupResult.GroupInfo updateGroup(GroupCommand.Update command) {
+        Group group = groupRepository.findById(command.getGroupId()).orElseThrow(() -> new BaseException(GROUP_NOT_FOUND));
+        group.update(command.getName(), command.getDescription(), command.getThumbnailUrl());
+        return GroupResult.GroupInfo.from(group);
+    }
+
 }
