@@ -16,6 +16,7 @@ import { useVideoSession } from "../model/useVideoSession"; // widgets/video-con
 import { VideoGrid } from "./VideoGrid"; // widgets/video-conference/ui
 import { ControlPanel } from "./ControlPanel"; // widgets/video-conference/ui
 import { StatusDisplay } from "./StatusDisplay"; // widgets/video-conference/ui
+import { User } from "@/shared/types/webrtc"; // User 타입 임포트
 
 // Props 타입 정의
 interface VideoConferenceProps {
@@ -36,14 +37,12 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
     error,
     setRoomId,
     setIsInRoom,
-    setConnectionState, // 필요하면 사용
     setError,
     handleConnect,
     handleDisconnect,
     handleAllUsers,
     handleUserJoined,
     handleUserExit,
-    handleRoomFull, // 이 예시에서는 사용 안 함
     handleError,
     clearError,
   } = sessionState;
@@ -86,7 +85,7 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
           localVideoRef.current.srcObject = null;
         }
       },
-      onConnectError: (err: any) => {
+      onConnectError: (err: Error) => {
         // 'error' is of type 'unknown' 해결
         console.error("🔥 Socket connection error - updating app state:", err);
         handleError({ message: `Connection error: ${err.message}` });
@@ -151,7 +150,13 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
 
   // 🔥 기존 Producer들을 consume하는 함수 (중복 방지 강화)
   const consumeExistingProducers = useCallback(
-    async (existingProducers: any[]) => {
+    async (
+      existingProducers: {
+        producerId: string;
+        producerSocketId: string;
+        kind: string;
+      }[]
+    ) => {
       if (isProcessingExistingProducers) {
         console.log("⏸️ Already processing existing producers, skipping...");
         return;
@@ -293,13 +298,10 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
 
       clearError(); // 모든 과정 성공 시 에러 메시지 제거
       console.log("✅ Successfully joined room and started producing");
-    } catch (error: any) {
+    } catch (err: unknown) {
       // 'error' is of type 'unknown' 해결
       console.error("❌ Failed to join room:", error);
-      setError(
-        error.message ||
-          "룸 참가에 실패했습니다. 마이크/카메라 접근 권한을 확인해주세요."
-      );
+      setError(err instanceof Error ? err.message : "룸 참가에 실패했습니다.");
       // 에러 발생 시 모든 리소스 정리 (부분적으로만 성공했을 경우 대비)
       handleLeaveRoom(); // Room Leave 로직과 동일하게 리소스 정리
     }
@@ -460,8 +462,8 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
     setError,
     handleRemoteStream,
     consumeExistingProducers,
-    // sessionState.setRoomId, // useEffect 의존성에서 제거 (initialRoomId useEffect에서 처리)
-  ]); // handleLeaveRoom은 직접적인 의존성으로 추가할 필요 없음 (useCallback이 이미 처리)
+    isProcessingExistingProducers,
+  ]);
 
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white font-sans">

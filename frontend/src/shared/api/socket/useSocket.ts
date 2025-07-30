@@ -1,12 +1,12 @@
 import { useRef, useCallback, useEffect } from "react";
 import { io } from "socket.io-client";
 import type { Socket } from "socket.io-client";
-import {SOCKET_SERVER_URL} from "@/shared/config";
+import { SOCKET_SERVER_URL } from "@/shared/config";
 
 interface SocketCallbacks {
   onConnect?: () => void;
   onDisconnect?: () => void;
-  onConnectError?: (error: any) => void;
+  onConnectError?: (error: Error) => void;
 }
 
 export const useSocket = (callbacks?: SocketCallbacks) => {
