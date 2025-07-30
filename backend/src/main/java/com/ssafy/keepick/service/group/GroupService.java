@@ -8,12 +8,15 @@ import com.ssafy.keepick.entity.Member;
 import com.ssafy.keepick.repository.GroupMemberRepository;
 import com.ssafy.keepick.repository.GroupRepository;
 import com.ssafy.keepick.repository.MemberRepository;
+import com.ssafy.keepick.service.RedisService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static com.ssafy.keepick.common.exception.ErrorCode.*;
 import static com.ssafy.keepick.common.exception.ErrorCode.INVITATION_NOT_FOUND;
@@ -26,6 +29,11 @@ public class GroupService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final MemberRepository memberRepository;
+    private final RedisService redisService;
+
+    @Value("${app.frontend.url:http://localhost:3000}")
+    private String frontendUrl;
+
 
     public GroupResult.GroupInfo createGroup(GroupCommand.Create command) {
         // 그룹 생성
@@ -83,6 +91,24 @@ public class GroupService {
     public GroupResult.GroupMemberInfo rejectInvitation(Long groupMemberId) {
         GroupMember groupMember = groupMemberRepository.findByIdAndStatusAndDeletedAtIsNull(groupMemberId, GroupMemberStatus.PENDING).orElseThrow(() -> new BaseException(INVITATION_NOT_FOUND));
         groupMember.reject();
+        return GroupResult.GroupMemberInfo.from(groupMember);
+    }
+
+    public GroupResult.Link createInvitationLink(Long groupId) {
+        String inviteToken = UUID.randomUUID().toString();
+        redisService.setValue("invite:" + inviteToken, String.valueOf(groupId));
+        return GroupResult.Link.from(frontendUrl, inviteToken);
+    }
+
+    public GroupResult.GroupMemberInfo joinGroupByInvitationLink(GroupCommand.Link command) {
+        // 초대 토큰 유효성 검사
+        String value = redisService.getValue("invite:" + command.getInviteToken());
+        if(value == null) throw new BaseException(INVITATION_EXPIRED);
+        if (!String.valueOf(command.getGroupId()).equals(value)) throw new BaseException(INVITATION_INVALID_PARAMETER);
+        // 그룹 가입
+        Group group = groupRepository.findById(command.getGroupId()).orElseThrow(() -> new BaseException(GROUP_NOT_FOUND));
+        GroupMember groupMember = inviteMemberToGroup(group, command.getMemberId());
+        groupMember.accept();
         return GroupResult.GroupMemberInfo.from(groupMember);
     }
 

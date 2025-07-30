@@ -1,6 +1,7 @@
 package com.ssafy.keepick.controller.group;
 
 import com.ssafy.keepick.service.group.GroupResult;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -122,6 +123,16 @@ public class GroupResponse {
                     .createdAt(result.getCreatedAt())
                     .updatedAt(result.getUpdatedAt())
                     .build();
+        }
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class Link {
+        private String url;
+
+        public static Link from(GroupResult.Link result) {
+            return new Link(result.getFrontendUrl() + "/invite/" + result.getToken());
         }
     }
 

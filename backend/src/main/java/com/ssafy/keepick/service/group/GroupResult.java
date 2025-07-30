@@ -2,6 +2,7 @@ package com.ssafy.keepick.service.group;
 
 import com.ssafy.keepick.entity.Group;
 import com.ssafy.keepick.entity.GroupMember;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -90,6 +91,17 @@ public class GroupResult {
                     .invitationCreatedAt(groupMember.getCreatedAt())
                     .invitationUpdatedAt(groupMember.getUpdatedAt())
                     .build();
+        }
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class Link {
+        private String frontendUrl;
+        private String token;
+
+        public static Link from(String frontendUrl, String token) {
+            return new Link(frontendUrl, token);
         }
     }
 

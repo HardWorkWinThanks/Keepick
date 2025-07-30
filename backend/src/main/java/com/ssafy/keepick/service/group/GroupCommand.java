@@ -52,4 +52,13 @@ public class GroupCommand {
         private List<Long> members;
     }
 
+    @Getter
+    @AllArgsConstructor
+    @Builder
+    public static class Link {
+        private Long groupId;
+        private Long memberId;
+        private String inviteToken;
+    }
+
 }

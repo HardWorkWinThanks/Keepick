@@ -83,4 +83,16 @@ public class GroupController {
         return ApiResponse.ok(GroupResponse.Invitation.from(result));
     }
 
+    @PostMapping("/{groupId}/invitation-link")
+    public ApiResponse<?> createInvitationLink(@PathVariable Long groupId) {
+        GroupResult.Link result = groupService.createInvitationLink(groupId);
+        return ApiResponse.created(GroupResponse.Link.from(result));
+    }
+
+    @GetMapping("/{groupId}/invitation-link/{invitation-link}")
+    public ApiResponse<?> getInvitationLink(@PathVariable Long groupId, @PathVariable("invitation-link") String inviteToken) {
+        GroupResult.GroupMemberInfo result = groupService.joinGroupByInvitationLink(new GroupCommand.Link(groupId, 1L, inviteToken));
+        return ApiResponse.ok(GroupResponse.Invitation.from(result));
+    }
+
 }
