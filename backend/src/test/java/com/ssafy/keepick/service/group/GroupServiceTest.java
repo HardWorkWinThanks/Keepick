@@ -82,19 +82,19 @@ class GroupServiceTest {
         Member member = createMember(1);
         memberRepository.save(member);
 
-        Group group1 = new Group("그룹1");
-        Group group2 = new Group("그룹2");
-        Group group3 = new Group("그룹3");
-        Group group4 = new Group("그룹4");
+        Group group1 = Group.createGroup("그룹1", null);
+        Group group2 = Group.createGroup("그룹2", null);
+        Group group3 = Group.createGroup("그룹3", null);
+        Group group4 = Group.createGroup("그룹4", null);
         groupRepository.save(group1);
         groupRepository.save(group2);
         groupRepository.save(group3);
         groupRepository.save(group4);
 
-        GroupMember groupMember1 = new GroupMember(group1, member, GroupMemberStatus.PENDING);
-        GroupMember groupMember2 = new GroupMember(group2, member, GroupMemberStatus.ACCEPTED);
-        GroupMember groupMember3 = new GroupMember(group3, member, GroupMemberStatus.REJECTED);
-        GroupMember groupMember4 = new GroupMember(group4, member, GroupMemberStatus.ACCEPTED);
+        GroupMember groupMember1 = GroupMember.createGroupMember(group1, member, GroupMemberStatus.PENDING);
+        GroupMember groupMember2 = GroupMember.createGroupMember(group2, member, GroupMemberStatus.ACCEPTED);
+        GroupMember groupMember3 = GroupMember.createGroupMember(group3, member, GroupMemberStatus.REJECTED);
+        GroupMember groupMember4 = GroupMember.createGroupMember(group4, member, GroupMemberStatus.ACCEPTED);
         groupMemberRepository.save(groupMember1);
         groupMemberRepository.save(groupMember2);
         groupMemberRepository.save(groupMember3);
@@ -119,7 +119,7 @@ class GroupServiceTest {
         Member member = createMember(1);
         memberRepository.save(member);
 
-        Group group = new Group(" 테스트 그룹", member);
+        Group group = Group.createGroup(" 테스트 그룹", member);
         groupRepository.save(group);
 
         // when
@@ -143,13 +143,13 @@ class GroupServiceTest {
         memberRepository.save(member3);
         memberRepository.save(member4);
 
-        Group group = new Group("테스트 그룹");
+        Group group = Group.createGroup("테스트 그룹", null);
         groupRepository.save(group);
 
-        GroupMember groupMember1 = new GroupMember(group, member1, GroupMemberStatus.PENDING);
-        GroupMember groupMember2 = new GroupMember(group, member2, GroupMemberStatus.ACCEPTED);
-        GroupMember groupMember3 = new GroupMember(group, member3, GroupMemberStatus.REJECTED);
-        GroupMember groupMember4 = new GroupMember(group, member4, GroupMemberStatus.ACCEPTED);
+        GroupMember groupMember1 = GroupMember.createGroupMember(group, member1, GroupMemberStatus.PENDING);
+        GroupMember groupMember2 = GroupMember.createGroupMember(group, member2, GroupMemberStatus.ACCEPTED);
+        GroupMember groupMember3 = GroupMember.createGroupMember(group, member3, GroupMemberStatus.REJECTED);
+        GroupMember groupMember4 = GroupMember.createGroupMember(group, member4, GroupMemberStatus.ACCEPTED);
         groupMemberRepository.save(groupMember1);
         groupMemberRepository.save(groupMember2);
         groupMemberRepository.save(groupMember3);
@@ -170,10 +170,10 @@ class GroupServiceTest {
         Member member = createMember(1);
         memberRepository.save(member);
 
-        Group group = new Group("테스트 그룹");
+        Group group = Group.createGroup("테스트 그룹", null);
         groupRepository.save(group);
 
-        GroupMember groupMember = new GroupMember(group, member, GroupMemberStatus.ACCEPTED);
+        GroupMember groupMember = GroupMember.createGroupMember(group, member, GroupMemberStatus.ACCEPTED);
         groupMemberRepository.save(groupMember);
 
         GroupCommand.Leave command1 = new GroupCommand.Leave(group.getId(), member.getId());
@@ -195,11 +195,11 @@ class GroupServiceTest {
         memberRepository.save(member1);
         memberRepository.save(member2);
 
-        Group group = new Group("테스트 그룹");
+        Group group = Group.createGroup("테스트 그룹", null);
         groupRepository.save(group);
 
-        GroupMember groupMember1 = new GroupMember(group, member1, GroupMemberStatus.ACCEPTED); // 그룹 탈퇴한 회원
-        GroupMember groupMember2 = new GroupMember(group, member2, GroupMemberStatus.PENDING); // 그룹 초대 수락 안 한 회원
+        GroupMember groupMember1 = GroupMember.createGroupMember(group, member1, GroupMemberStatus.ACCEPTED); // 그룹 탈퇴한 회원
+        GroupMember groupMember2 = GroupMember.createGroupMember(group, member2, GroupMemberStatus.PENDING); // 그룹 초대 수락 안 한 회원
         groupMember1.delete();
         groupMemberRepository.save(groupMember1);
         groupMemberRepository.save(groupMember2);
@@ -225,11 +225,11 @@ class GroupServiceTest {
         memberRepository.save(member3);
         memberRepository.save(member4);
 
-        Group group = new Group("테스트 그룹");
+        Group group = Group.createGroup("테스트 그룹", null);
         groupRepository.save(group);
 
-        groupMemberRepository.save(new GroupMember(group, member3, GroupMemberStatus.REJECTED)); // 그룹 초대 거절한 회원
-        GroupMember groupMember = new GroupMember(group, member4, GroupMemberStatus.ACCEPTED); // 그룹 탈퇴한 회원
+        groupMemberRepository.save(GroupMember.createGroupMember(group, member3, GroupMemberStatus.REJECTED)); // 그룹 초대 거절한 회원
+        GroupMember groupMember = GroupMember.createGroupMember(group, member4, GroupMemberStatus.ACCEPTED); // 그룹 탈퇴한 회원
         groupMember.delete();
         groupMemberRepository.save(groupMember);
 
@@ -258,10 +258,10 @@ class GroupServiceTest {
         Member member = createMember(1);
         memberRepository.save(member);
 
-        Group group = new Group("테스트 그룹");
+        Group group = Group.createGroup("테스트 그룹", null);
         groupRepository.save(group);
 
-        groupMemberRepository.save(new GroupMember(group, member, GroupMemberStatus.ACCEPTED));
+        groupMemberRepository.save(GroupMember.createGroupMember(group, member, GroupMemberStatus.ACCEPTED));
 
         GroupCommand.Invite command = new GroupCommand.Invite(group.getId(), List.of(member.getId()));
 
@@ -276,10 +276,10 @@ class GroupServiceTest {
         Member member = createMember(1);
         memberRepository.save(member);
 
-        Group group = new Group("테스트 그룹");
+        Group group = Group.createGroup("테스트 그룹", null);
         groupRepository.save(group);
 
-        GroupMember groupMember = new GroupMember(group, member);
+        GroupMember groupMember = GroupMember.createGroupMember(group, member);
         groupMemberRepository.save(groupMember);
 
         // when
@@ -300,10 +300,10 @@ class GroupServiceTest {
         Member member = createMember(1);
         memberRepository.save(member);
 
-        Group group = new Group("테스트 그룹");
+        Group group = Group.createGroup("테스트 그룹", null);
         groupRepository.save(group);
 
-        GroupMember groupMember = new GroupMember(group, member);
+        GroupMember groupMember = GroupMember.createGroupMember(group, member);
         groupMemberRepository.save(groupMember);
 
         // when
@@ -324,7 +324,7 @@ class GroupServiceTest {
         Member member = createMember(1);
         memberRepository.save(member);
 
-        Group group = new Group("테스트 그룹");
+        Group group = Group.createGroup("테스트 그룹", null);
         groupRepository.save(group);
 
         // when
@@ -346,7 +346,7 @@ class GroupServiceTest {
         Member member = createMember(1);
         memberRepository.save(member);
 
-        Group group = new Group("테스트 그룹");
+        Group group = Group.createGroup("테스트 그룹", null);
         groupRepository.save(group);
 
         String inviteToken = groupService.createInvitationLink(group.getId()).getToken();

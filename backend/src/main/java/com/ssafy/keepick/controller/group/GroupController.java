@@ -26,73 +26,73 @@ public class GroupController {
             @Valid @RequestBody GroupRequest.Create request) {
         GroupCommand.Create command = request.toCommand(1L);
         GroupResult.GroupInfo result = groupService.createGroup(command);
-        return ApiResponse.created(GroupResponse.Creation.from(result));
+        return ApiResponse.created(GroupResponse.Creation.toResponse(result));
     }
 
     @GetMapping("")
     public ApiResponse<?> list(@RequestParam(required = true, defaultValue = "accepted") String status) {
         GroupCommand.MyGroup command = null;
         try {
-            command = new GroupCommand.MyGroup(1L, GroupMemberStatus.valueOf(status.toUpperCase()));
+            command = GroupCommand.MyGroup.of(1L, GroupMemberStatus.valueOf(status.toUpperCase()));
         } catch (IllegalArgumentException e) {
             throw new BaseException(ErrorCode.INVALID_PARAMETER);
         }
-        List<GroupResponse.MyGroup> response = groupService.getGroups(command).stream().map(GroupResponse.MyGroup::from).toList();
+        List<GroupResponse.MyGroup> response = groupService.getGroups(command).stream().map(GroupResponse.MyGroup::toResponse).toList();
         return ApiResponse.ok(response);
     }
 
     @GetMapping("/{groupId}")
     public ApiResponse<?> detail(@PathVariable Long groupId) {
         GroupResult.GroupInfo result = groupService.getGroup(groupId);
-        return ApiResponse.ok(GroupResponse.Detail.from(result));
+        return ApiResponse.ok(GroupResponse.Detail.toResponse(result));
     }
 
     @GetMapping("/{groupId}/members")
     public ApiResponse<?> groupMembers(@PathVariable Long groupId) {
-        List<GroupResponse.Member> response = groupService.getMembers(groupId).stream().map(GroupResponse.Member::from).toList();
+        List<GroupResponse.Member> response = groupService.getMembers(groupId).stream().map(GroupResponse.Member::toResponse).toList();
         return ApiResponse.ok(response);
     }
 
     @PutMapping("/{groupId}")
     public ApiResponse<?> update(@PathVariable Long groupId, @RequestBody GroupRequest.Update request) {
         GroupResult.GroupInfo result = groupService.updateGroup(request.toCommand(groupId));
-        return ApiResponse.ok(GroupResponse.Detail.from(result));
+        return ApiResponse.ok(GroupResponse.Detail.toResponse(result));
     }
 
     @DeleteMapping("/{groupId}/me")
     public ApiResponse<?> leave(@PathVariable Long groupId) {
-        groupService.leaveGroup(new GroupCommand.Leave(groupId, 1L));
+        groupService.leaveGroup(GroupCommand.Leave.of(groupId, 1L));
         return ApiResponse.of(ResponseCode.DELETED);
     }
 
     @PostMapping("/{groupId}/invitations")
     public ApiResponse<?> createInvitation(@PathVariable Long groupId, @RequestBody GroupRequest.Invite request) {
-        List<GroupResponse.Invitation> response = groupService.invite(request.toCommand(groupId)).stream().map(GroupResponse.Invitation::from).toList();
+        List<GroupResponse.Invitation> response = groupService.invite(request.toCommand(groupId)).stream().map(GroupResponse.Invitation::toResponse).toList();
         return ApiResponse.ok(response);
     }
 
     @PostMapping("/{groupId}/invitations/{invitationId}")
     public ApiResponse<?> acceptInvitation(@PathVariable Long invitationId) {
         GroupResult.GroupMemberInfo result = groupService.acceptInvitation(invitationId);
-        return ApiResponse.ok(GroupResponse.Invitation.from(result));
+        return ApiResponse.ok(GroupResponse.Invitation.toResponse(result));
     }
 
     @DeleteMapping("/{groupId}/invitations/{invitationId}")
     public ApiResponse<?> rejectInvitation(@PathVariable Long invitationId) {
         GroupResult.GroupMemberInfo result = groupService.rejectInvitation(invitationId);
-        return ApiResponse.ok(GroupResponse.Invitation.from(result));
+        return ApiResponse.ok(GroupResponse.Invitation.toResponse(result));
     }
 
     @PostMapping("/{groupId}/invitation-link")
     public ApiResponse<?> createInvitationLink(@PathVariable Long groupId) {
         GroupResult.Link result = groupService.createInvitationLink(groupId);
-        return ApiResponse.created(GroupResponse.Link.from(result));
+        return ApiResponse.created(GroupResponse.Link.toResponse(result));
     }
 
     @GetMapping("/{groupId}/invitation-link/{invitation-link}")
     public ApiResponse<?> getInvitationLink(@PathVariable Long groupId, @PathVariable("invitation-link") String inviteToken) {
-        GroupResult.GroupMemberInfo result = groupService.joinGroupByInvitationLink(new GroupCommand.Link(groupId, 1L, inviteToken));
-        return ApiResponse.ok(GroupResponse.Invitation.from(result));
+        GroupResult.GroupMemberInfo result = groupService.joinGroupByInvitationLink(GroupCommand.Link.of(groupId, 1L, inviteToken));
+        return ApiResponse.ok(GroupResponse.Invitation.toResponse(result));
     }
 
 }

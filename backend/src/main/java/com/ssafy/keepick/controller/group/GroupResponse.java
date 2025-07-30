@@ -1,7 +1,6 @@
 package com.ssafy.keepick.controller.group;
 
 import com.ssafy.keepick.service.group.GroupResult;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -17,7 +16,7 @@ public class GroupResponse {
         private Integer memberCount;
         private LocalDateTime createdAt;
 
-        public static Creation from(GroupResult.GroupInfo result) {
+        public static Creation toResponse(GroupResult.GroupInfo result) {
             return Creation
                     .builder()
                     .groupId(result.getGroupId())
@@ -37,7 +36,7 @@ public class GroupResponse {
         private Long invitationId;
         private String invitationStatus;
 
-        public static MyGroup from(GroupResult.GroupMemberInfo result) {
+        public static MyGroup toResponse(GroupResult.GroupMemberInfo result) {
             return MyGroup
                     .builder()
                     .groupId(result.getGroupId())
@@ -62,7 +61,7 @@ public class GroupResponse {
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
 
-        public static Detail from(GroupResult.GroupInfo result) {
+        public static Detail toResponse(GroupResult.GroupInfo result) {
             return Detail
                     .builder()
                     .groupId(result.getGroupId())
@@ -90,7 +89,7 @@ public class GroupResponse {
         private String profileUrl;
         private LocalDateTime joinedAt;
 
-        public static GroupResponse.Member from(GroupResult.Member result) {
+        public static GroupResponse.Member toResponse(GroupResult.Member result) {
             return Member
                     .builder()
                     .invitationId(result.getGroupMemberId())
@@ -114,7 +113,7 @@ public class GroupResponse {
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
 
-        public static Invitation from(GroupResult.GroupMemberInfo result) {
+        public static Invitation toResponse(GroupResult.GroupMemberInfo result) {
             return Invitation.builder()
                     .invitationId(result.getGroupMemberId())
                     .groupId(result.getGroupId())
@@ -126,13 +125,15 @@ public class GroupResponse {
         }
     }
 
+    @Builder
     @Getter
-    @AllArgsConstructor
     public static class Link {
         private String url;
 
-        public static Link from(GroupResult.Link result) {
-            return new Link(result.getFrontendUrl() + "/invite/" + result.getToken());
+        public static Link toResponse(GroupResult.Link result) {
+            return Link.builder()
+                    .url(result.getFrontendUrl() + "/invite/" + result.getToken())
+                    .build();
         }
     }
 

@@ -26,18 +26,20 @@ public class GroupMember extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private GroupMemberStatus status;
 
-    public GroupMember(Group group, Member member) {
+    private GroupMember(Group group, Member member, GroupMemberStatus status) {
         this.group = group;
         this.member = member;
-        this.invite();
-    }
-
-    public GroupMember(Group group, Member memebr, GroupMemberStatus status) {
-        this.group = group;
-        this.member = memebr;
-        if(status == GroupMemberStatus.PENDING) this.invite();
+        if(status == null || status == GroupMemberStatus.PENDING) this.invite();
         else if(status == GroupMemberStatus.ACCEPTED) this.accept();
         else if(status == GroupMemberStatus.REJECTED) this.reject();
+    }
+
+    public static GroupMember createGroupMember(Group group, Member member) {
+        return new GroupMember(group, member, null);
+    }
+
+    public static GroupMember createGroupMember(Group group, Member member, GroupMemberStatus status) {
+        return new GroupMember(group, member, status);
     }
 
     public void invite() {

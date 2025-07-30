@@ -38,12 +38,12 @@ public class GroupService {
     public GroupResult.GroupInfo createGroup(GroupCommand.Create command) {
         // 그룹 생성
         Member member = memberRepository.findById(command.getMemberId()).orElseThrow(() -> new BaseException(NOT_FOUND));
-        Group group = new Group(command.getName(), member);
+        Group group = Group.createGroup(command.getName(), member);
         groupRepository.save(group);
         // 그룹에 가입
-        GroupMember groupMember = new GroupMember(group, member, GroupMemberStatus.ACCEPTED);
+        GroupMember groupMember = GroupMember.createGroupMember(group, member, GroupMemberStatus.ACCEPTED);
         groupMemberRepository.save(groupMember);
-        List<GroupMember> invitees = memberRepository.findAllById(command.getMembers()).stream().map(m -> new GroupMember(group, m)).toList();
+        List<GroupMember> invitees = memberRepository.findAllById(command.getMembers()).stream().map(m -> GroupMember.createGroupMember(group, m)).toList();
         groupMemberRepository.saveAll(invitees);
         return GroupResult.GroupInfo.from(group);
     }
@@ -123,7 +123,7 @@ public class GroupService {
             return groupMember;
         } else {
             Member member = memberRepository.findById(memberId).orElseThrow(() -> new BaseException(NOT_FOUND));
-            GroupMember groupMember = new GroupMember(group, member);
+            GroupMember groupMember = GroupMember.createGroupMember(group, member);
             groupMemberRepository.save(groupMember);
             return groupMember;
         }

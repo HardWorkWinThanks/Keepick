@@ -1,9 +1,7 @@
 package com.ssafy.keepick.entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
 
 @Getter
@@ -26,13 +24,13 @@ public class Group extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     private Member creator;
 
-    public Group(String name) {
+    private Group(String name, Member creator) {
         this.name = name;
+        this.creator = creator;
     }
 
-    public Group(String name, Member member) {
-        this.name = name;
-        this.creator = member;
+    public static Group createGroup(String name, Member creator) {
+        return new Group(name, creator);
     }
 
     public void increaseMemberCount() {
@@ -40,6 +38,7 @@ public class Group extends BaseTimeEntity {
     }
 
     public void decreaseMemberCount() {
+        if(memberCount == 0) throw new IllegalStateException();
         this.memberCount--;
     }
 

@@ -19,7 +19,12 @@ public class GroupRequest {
         private List<Long> members;
 
         public GroupCommand.Create toCommand(Long memberId) {
-            return new GroupCommand.Create(memberId, name, members);
+            return GroupCommand.Create
+                    .builder()
+                    .memberId(memberId)
+                    .name(name)
+                    .members(members)
+                    .build();
         }
     }
 
@@ -33,7 +38,13 @@ public class GroupRequest {
         private String thumbnailUrl;
 
         public GroupCommand.Update toCommand(Long groupId) {
-            return new GroupCommand.Update(groupId, name, description, thumbnailUrl);
+            return GroupCommand.Update
+                    .builder()
+                    .groupId(groupId)
+                    .name(name)
+                    .description(description)
+                    .thumbnailUrl(thumbnailUrl)
+                    .build();
         }
     }
 
@@ -45,7 +56,11 @@ public class GroupRequest {
         private List<Long> members;
 
         public GroupCommand.Invite toCommand(Long groupId) {
-            return new GroupCommand.Invite(groupId, members);
+            return GroupCommand.Invite
+                    .builder()
+                    .groupId(groupId)
+                    .members(members)
+                    .build();
         }
     }
 

@@ -33,11 +33,11 @@ class GroupMemberRepositoryTest {
         memberRepository.save(member1);
         memberRepository.save(member2);
 
-        Group group1 = new Group("testGroup1");
+        Group group1 = Group.createGroup("testGroup1", null);
 
         groupRepository.save(group1);
 
-        GroupMember groupMember1 = new GroupMember(group1, member1);
+        GroupMember groupMember1 = GroupMember.createGroupMember(group1, member1);
         groupMember1.accept();
 
         groupMemberRepository.save(groupMember1);
@@ -58,16 +58,16 @@ class GroupMemberRepositoryTest {
 
         memberRepository.save(member1);
 
-        Group group1 = new Group("testGroup1");
-        Group group2 = new Group("testGroup2");
-        Group group3 = new Group("testGroup3");
+        Group group1 = Group.createGroup("testGroup1", null);
+        Group group2 = Group.createGroup("testGroup2", null);
+        Group group3 = Group.createGroup("testGroup3", null);
         groupRepository.save(group1);
         groupRepository.save(group2);
         groupRepository.save(group3);
 
-        GroupMember groupMember1 = new GroupMember(group1, member1);
-        GroupMember groupMember2 = new GroupMember(group2, member1);
-        GroupMember groupMember3 = new GroupMember(group3, member1);
+        GroupMember groupMember1 = GroupMember.createGroupMember(group1, member1);
+        GroupMember groupMember2 = GroupMember.createGroupMember(group2, member1);
+        GroupMember groupMember3 = GroupMember.createGroupMember(group3, member1);;
         groupMember2.accept();
         groupMember3.reject();
 
@@ -93,16 +93,16 @@ class GroupMemberRepositoryTest {
 
         memberRepository.save(member1);
 
-        Group group1 = new Group("testGroup1");
-        Group group2 = new Group("testGroup2");
-        Group group3 = new Group("testGroup3");
+        Group group1 = Group.createGroup("testGroup1", null);
+        Group group2 = Group.createGroup("testGroup2", null);;
+        Group group3 = Group.createGroup("testGroup3", null);;
         groupRepository.save(group1);
         groupRepository.save(group2);
         groupRepository.save(group3);
 
-        GroupMember groupMember1 = new GroupMember(group1, member1);
-        GroupMember groupMember2 = new GroupMember(group2, member1);
-        GroupMember groupMember3 = new GroupMember(group3, member1);
+        GroupMember groupMember1 = GroupMember.createGroupMember(group1, member1);
+        GroupMember groupMember2 = GroupMember.createGroupMember(group2, member1);
+        GroupMember groupMember3 = GroupMember.createGroupMember(group3, member1);
         groupMember2.accept();
         groupMember3.reject();
 
@@ -140,15 +140,15 @@ class GroupMemberRepositoryTest {
         memberRepository.save(member2);
         memberRepository.save(member3);
 
-        Group group1 = new Group("testGroup1");
-        Group group2 = new Group("testGroup2");
+        Group group1 = Group.createGroup("testGroup1", null);
+        Group group2 = Group.createGroup("testGroup2", null);
 
         groupRepository.save(group1);
         groupRepository.save(group2);
 
-        GroupMember groupMember1 = new GroupMember(group1, member1);
-        GroupMember groupMember2 = new GroupMember(group1, member2);
-        GroupMember groupMember3 = new GroupMember(group2, member3);
+        GroupMember groupMember1 = GroupMember.createGroupMember(group1, member1);
+        GroupMember groupMember2 = GroupMember.createGroupMember(group1, member2);
+        GroupMember groupMember3 = GroupMember.createGroupMember(group2, member3);
         groupMember1.accept();
         groupMember2.accept();
         groupMember3.accept();
