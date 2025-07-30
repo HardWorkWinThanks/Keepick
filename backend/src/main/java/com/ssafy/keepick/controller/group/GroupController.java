@@ -1,15 +1,17 @@
 package com.ssafy.keepick.controller.group;
 
+import com.ssafy.keepick.common.exception.BaseException;
+import com.ssafy.keepick.common.exception.ErrorCode;
 import com.ssafy.keepick.common.response.ApiResponse;
+import com.ssafy.keepick.entity.GroupMemberStatus;
 import com.ssafy.keepick.service.group.GroupCommand;
 import com.ssafy.keepick.service.group.GroupResult;
 import com.ssafy.keepick.service.group.GroupService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/groups")
@@ -24,6 +26,18 @@ public class GroupController {
         GroupCommand.Create command = request.toCommand(1L);
         GroupResult.GroupInfo result = groupService.createGroup(command);
         return ApiResponse.created(GroupResponse.Creation.from(result));
+    }
+
+    @GetMapping("")
+    public ApiResponse<?> list(@RequestParam(required = true, defaultValue = "accepted") String status) {
+        GroupCommand.MyGroup command = null;
+        try {
+            command = new GroupCommand.MyGroup(1L, GroupMemberStatus.valueOf(status.toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            throw new BaseException(ErrorCode.INVALID_PARAMETER);
+        }
+        List<GroupResponse.MyGroup> response = groupService.getGroups(command).stream().map(GroupResponse.MyGroup::from).toList();
+        return ApiResponse.ok(response);
     }
 
 }

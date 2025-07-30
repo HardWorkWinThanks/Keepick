@@ -38,4 +38,12 @@ public class GroupService {
         return GroupResult.GroupInfo.from(group);
     }
 
+    public List<GroupResult.GroupMemberInfo> getGroups(GroupCommand.MyGroup command) {
+        return groupMemberRepository
+                .findGroupsByMember(command.getMemberId(), command.getStatus())
+                .stream()
+                .map(GroupResult.GroupMemberInfo::from)
+                .toList();
+    }
+
 }

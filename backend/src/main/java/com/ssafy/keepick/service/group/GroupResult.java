@@ -1,6 +1,7 @@
 package com.ssafy.keepick.service.group;
 
 import com.ssafy.keepick.entity.Group;
+import com.ssafy.keepick.entity.GroupMember;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -33,6 +34,33 @@ public class GroupResult {
                     .creatorName(group.getCreator().getName())
                     .createdAt(group.getCreatedAt())
                     .updatedAt(group.getUpdatedAt())
+                    .build();
+        }
+    }
+
+    @Builder
+    @Getter
+    public static class GroupMemberInfo {
+        private Long groupMemberId;
+        private Long groupId;
+        private String groupName;
+        private Integer memberCount;
+        private Long memberId;
+        private String status;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
+
+        public static GroupMemberInfo from(GroupMember groupMember) {
+            return GroupMemberInfo
+                    .builder()
+                    .groupMemberId(groupMember.getId())
+                    .groupId(groupMember.getGroup().getId())
+                    .groupName(groupMember.getGroup().getName())
+                    .memberCount(groupMember.getGroup().getMemberCount())
+                    .memberId(groupMember.getMember().getId())
+                    .status(groupMember.getStatus().name())
+                    .createdAt(groupMember.getCreatedAt())
+                    .updatedAt(groupMember.getUpdatedAt())
                     .build();
         }
     }

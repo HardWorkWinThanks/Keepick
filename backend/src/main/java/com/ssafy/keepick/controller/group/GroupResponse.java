@@ -27,4 +27,25 @@ public class GroupResponse {
         }
     }
 
+    @Builder
+    @Getter
+    public static class MyGroup {
+        private Long groupId;
+        private String name;
+        private Integer memberCount;
+        private Long invitationId;
+        private String invitationStatus;
+
+        public static MyGroup from(GroupResult.GroupMemberInfo result) {
+            return MyGroup
+                    .builder()
+                    .groupId(result.getGroupId())
+                    .name(result.getGroupName())
+                    .memberCount(result.getMemberCount())
+                    .invitationId(result.getGroupMemberId())
+                    .invitationStatus(result.getStatus())
+                    .build();
+        }
+    }
+
 }
