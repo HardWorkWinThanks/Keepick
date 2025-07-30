@@ -30,6 +30,7 @@ dependencies {
 	annotationProcessor 'org.projectlombok:lombok'
 
 	implementation 'org.springframework.boot:spring-boot-starter-validation' // 검증 라이브러리
+	implementation('org.springframework.boot:spring-boot-starter-data-redis') // redis 라이브러리
 
 	// 데이터베이스 관련
 	runtimeOnly 'com.mysql:mysql-connector-j'
