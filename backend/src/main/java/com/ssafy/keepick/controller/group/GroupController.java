@@ -65,4 +65,22 @@ public class GroupController {
         return ApiResponse.of(ResponseCode.DELETED);
     }
 
+    @PostMapping("/{groupId}/invitations")
+    public ApiResponse<?> createInvitation(@PathVariable Long groupId, @RequestBody GroupRequest.Invite request) {
+        List<GroupResponse.Invitation> response = groupService.invite(request.toCommand(groupId)).stream().map(GroupResponse.Invitation::from).toList();
+        return ApiResponse.ok(response);
+    }
+
+    @PostMapping("/{groupId}/invitations/{invitationId}")
+    public ApiResponse<?> acceptInvitation(@PathVariable Long invitationId) {
+        GroupResult.GroupMemberInfo result = groupService.acceptInvitation(invitationId);
+        return ApiResponse.ok(GroupResponse.Invitation.from(result));
+    }
+
+    @DeleteMapping("/{groupId}/invitations/{invitationId}")
+    public ApiResponse<?> rejectInvitation(@PathVariable Long invitationId) {
+        GroupResult.GroupMemberInfo result = groupService.rejectInvitation(invitationId);
+        return ApiResponse.ok(GroupResponse.Invitation.from(result));
+    }
+
 }

@@ -13,9 +13,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
-import static com.ssafy.keepick.common.exception.ErrorCode.GROUP_NOT_FOUND;
-import static com.ssafy.keepick.common.exception.ErrorCode.NOT_FOUND;
+import static com.ssafy.keepick.common.exception.ErrorCode.*;
+import static com.ssafy.keepick.common.exception.ErrorCode.INVITATION_NOT_FOUND;
 
 @Service
 @RequiredArgsConstructor
@@ -67,5 +68,40 @@ public class GroupService {
         groupMember.delete();
     }
 
+    public List<GroupResult.GroupMemberInfo> invite(GroupCommand.Invite command) {
+        Group group = groupRepository.findById(command.getGroupId()).orElseThrow(() -> new BaseException(GROUP_NOT_FOUND));
+        List<GroupMember> invitees = command.getMembers().stream().map(m -> inviteMemberToGroup(group, m)).toList();
+        return invitees.stream().map(GroupResult.GroupMemberInfo::from).toList();
+    }
+
+    public GroupResult.GroupMemberInfo acceptInvitation(Long groupMemberId) {
+        GroupMember groupMember = groupMemberRepository.findByIdAndStatusAndDeletedAtIsNull(groupMemberId, GroupMemberStatus.PENDING).orElseThrow(() -> new BaseException(INVITATION_NOT_FOUND));
+        groupMember.accept();
+        return GroupResult.GroupMemberInfo.from(groupMember);
+    }
+
+    public GroupResult.GroupMemberInfo rejectInvitation(Long groupMemberId) {
+        GroupMember groupMember = groupMemberRepository.findByIdAndStatusAndDeletedAtIsNull(groupMemberId, GroupMemberStatus.PENDING).orElseThrow(() -> new BaseException(INVITATION_NOT_FOUND));
+        groupMember.reject();
+        return GroupResult.GroupMemberInfo.from(groupMember);
+    }
+
+    private GroupMember inviteMemberToGroup(Group group, Long memberId) {
+        // 초대할 멤버 중 이전에 초대받은 기록이 있는지 확인
+        Optional<GroupMember> pastInvitation = groupMemberRepository.findByGroupIdAndMemberId(group.getId(), memberId);
+        if (pastInvitation.isPresent()) {
+            GroupMember groupMember = pastInvitation.get();
+            if(groupMember.getDeletedAt() == null && groupMember.getStatus() == GroupMemberStatus.ACCEPTED) throw new BaseException(INVITATION_DUPLICATE); // 이미 가입한 그룹의 경우 에러 발생
+            if(groupMember.getDeletedAt() != null) groupMember.undelete(); // 그룹 탈퇴 취소
+            groupMember.invite(); // 그룹에 초대
+            return groupMember;
+        } else {
+            Member member = memberRepository.findById(memberId).orElseThrow(() -> new BaseException(NOT_FOUND));
+            GroupMember groupMember = new GroupMember(group, member);
+            groupMemberRepository.save(groupMember);
+            return groupMember;
+        }
+
+    }
 
 }

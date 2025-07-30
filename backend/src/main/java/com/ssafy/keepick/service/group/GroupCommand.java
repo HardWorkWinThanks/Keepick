@@ -44,4 +44,12 @@ public class GroupCommand {
         private Long memberId;
     }
 
+    @Getter
+    @AllArgsConstructor
+    @Builder
+    public static class Invite {
+        private Long groupId;
+        private List<Long> members;
+    }
+
 }

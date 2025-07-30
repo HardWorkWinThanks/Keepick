@@ -103,4 +103,26 @@ public class GroupResponse {
         }
     }
 
+    @Builder
+    @Getter
+    public static class Invitation {
+        private Long invitationId;
+        private Long groupId;
+        private Long memberId;
+        private String status;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
+
+        public static Invitation from(GroupResult.GroupMemberInfo result) {
+            return Invitation.builder()
+                    .invitationId(result.getGroupMemberId())
+                    .groupId(result.getGroupId())
+                    .memberId(result.getMemberId())
+                    .status(result.getStatus())
+                    .createdAt(result.getCreatedAt())
+                    .updatedAt(result.getUpdatedAt())
+                    .build();
+        }
+    }
+
 }
