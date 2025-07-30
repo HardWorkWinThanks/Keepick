@@ -65,4 +65,32 @@ public class GroupResult {
         }
     }
 
+    @Builder
+    @Getter
+    public static class Member {
+
+        private Long groupMemberId;
+        private Long memberId;
+        private String name;
+        private String nickname;
+        private String email;
+        private String profileUrl;
+        private LocalDateTime invitationCreatedAt;
+        private LocalDateTime invitationUpdatedAt;
+
+        public static GroupResult.Member from(GroupMember groupMember) {
+            return GroupResult.Member
+                    .builder()
+                    .groupMemberId(groupMember.getId())
+                    .memberId(groupMember.getMember().getId())
+                    .name(groupMember.getMember().getName())
+                    .nickname(groupMember.getMember().getNickname())
+                    .email(groupMember.getMember().getEmail())
+                    .profileUrl(groupMember.getMember().getProfileUrl())
+                    .invitationCreatedAt(groupMember.getCreatedAt())
+                    .invitationUpdatedAt(groupMember.getUpdatedAt())
+                    .build();
+        }
+    }
+
 }

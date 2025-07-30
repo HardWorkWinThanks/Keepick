@@ -40,4 +40,16 @@ public class GroupController {
         return ApiResponse.ok(response);
     }
 
+    @GetMapping("/{groupId}")
+    public ApiResponse<?> detail(@PathVariable Long groupId) {
+        GroupResult.GroupInfo result = groupService.getGroup(groupId);
+        return ApiResponse.ok(GroupResponse.Detail.from(result));
+    }
+
+    @GetMapping("/{groupId}/members")
+    public ApiResponse<?> groupMembers(@PathVariable Long groupId) {
+        List<GroupResponse.Member> response = groupService.getMembers(groupId).stream().map(GroupResponse.Member::from).toList();
+        return ApiResponse.ok(response);
+    }
+
 }

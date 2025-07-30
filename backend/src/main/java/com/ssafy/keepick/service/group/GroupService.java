@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import static com.ssafy.keepick.common.exception.ErrorCode.GROUP_NOT_FOUND;
 import static com.ssafy.keepick.common.exception.ErrorCode.NOT_FOUND;
 
 @Service
@@ -44,6 +45,15 @@ public class GroupService {
                 .stream()
                 .map(GroupResult.GroupMemberInfo::from)
                 .toList();
+    }
+
+    public GroupResult.GroupInfo getGroup(Long groupId) {
+        Group group = groupRepository.findById(groupId).orElseThrow(() -> new BaseException(GROUP_NOT_FOUND));
+        return GroupResult.GroupInfo.from(group);
+    }
+
+    public List<GroupResult.Member> getMembers(Long groupId) {
+        return groupMemberRepository.findJoinedMembersById(groupId).stream().map(GroupResult.Member::from).toList();
     }
 
 }
