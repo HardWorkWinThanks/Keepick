@@ -116,7 +116,7 @@ export default function AlbumsPage() {
           date: "2025.06.25",
           photoCount: 12,
           coverImage:
-            "/placeholder.svg?height=300&width=400&text=김포공항+출발",
+            "airport-dummy1.jpg",
           gradient: "from-[#E0F2F1] to-[var(--primary-color)]",
         },
         {
@@ -132,7 +132,7 @@ export default function AlbumsPage() {
           title: "부산 바다 여행",
           date: "2025.08.15",
           photoCount: 15,
-          coverImage: "/placeholder.svg?height=300&width=400&text=부산+바다",
+          coverImage: "sea-dummy1.jpg",
           gradient: "from-[#E3F2FD] to-[#2196F3]",
         },
         // {
@@ -225,7 +225,7 @@ export default function AlbumsPage() {
         title: "김포공항에서 출발",
         date: "2025.06.25",
         gradient: "from-[#E0F2F1] to-[var(--primary-color)]",
-        coverImage: "/placeholder.svg?height=250&width=1200&text=대표+사진",
+        coverImage: "airport-dummy1.jpg",
       },
       "jeju-travel": {
         title: "제주도 여행",
@@ -233,6 +233,7 @@ export default function AlbumsPage() {
         gradient: "from-[#F3E5F5] to-[#AA00FF]",
         coverImage: "jeju-dummy1.webp",
       },
+      
     };
 
     const currentAlbum =
@@ -322,34 +323,34 @@ export default function AlbumsPage() {
           coverImage: "/placeholder.svg?height=300&width=400&text=가족+모임",
           gradient: "from-[#FFB6C1] to-[#FF69B4]",
         },
-        {
-          id: "work-events",
-          title: "회사 행사",
-          date: "2025.09.20",
-          totalPhotos: 38,
-          tierDistribution: { S: 4, A: 10, B: 14, C: 10 },
-          coverImage: "/placeholder.svg?height=300&width=400&text=회사+행사",
-          gradient: "from-[#98FB98] to-[#32CD32]",
-        },
-        {
-          id: "hobby-activities",
-          title: "취미 활동",
-          date: "2025.10.05",
-          totalPhotos: 22,
-          tierDistribution: { S: 3, A: 6, B: 8, C: 5 },
-          coverImage: "/placeholder.svg?height=300&width=400&text=취미+활동",
-          gradient: "from-[#DDA0DD] to-[#9370DB]",
-        },
-        {
-          id: "special-events",
-          title: "특별한 이벤트",
-          date: "2025.10.25",
-          totalPhotos: 35,
-          tierDistribution: { S: 7, A: 11, B: 10, C: 7 },
-          coverImage:
-            "/placeholder.svg?height=300&width=400&text=특별한+이벤트",
-          gradient: "from-[#F0E68C] to-[#DAA520]",
-        },
+        // {
+        //   id: "work-events",
+        //   title: "회사 행사",
+        //   date: "2025.09.20",
+        //   totalPhotos: 38,
+        //   tierDistribution: { S: 4, A: 10, B: 14, C: 10 },
+        //   coverImage: "/placeholder.svg?height=300&width=400&text=회사+행사",
+        //   gradient: "from-[#98FB98] to-[#32CD32]",
+        // },
+        // {
+        //   id: "hobby-activities",
+        //   title: "취미 활동",
+        //   date: "2025.10.05",
+        //   totalPhotos: 22,
+        //   tierDistribution: { S: 3, A: 6, B: 8, C: 5 },
+        //   coverImage: "/placeholder.svg?height=300&width=400&text=취미+활동",
+        //   gradient: "from-[#DDA0DD] to-[#9370DB]",
+        // },
+        // {
+        //   id: "special-events",
+        //   title: "특별한 이벤트",
+        //   date: "2025.10.25",
+        //   totalPhotos: 35,
+        //   tierDistribution: { S: 7, A: 11, B: 10, C: 7 },
+        //   coverImage:
+        //     "/placeholder.svg?height=300&width=400&text=특별한+이벤트",
+        //   gradient: "from-[#F0E68C] to-[#DAA520]",
+        // },
       ];
 
       return (
@@ -758,7 +759,7 @@ export default function AlbumsPage() {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <Sidebar activeGroup="family" />
+        <Sidebar activeGroup="family" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       </div>
 
       {/* Overlay */}
@@ -772,12 +773,14 @@ export default function AlbumsPage() {
       {/* Main Content */}
       <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "ml-0"}`}>
         {/* Sidebar Toggle Button */}
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="fixed top-8 left-4 z-30 bg-[var(--primary-color)] text-white p-3 rounded-xl shadow-lg hover:bg-[#2fa692] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
-        >
-          <span className="text-lg">{sidebarOpen ? "✕" : "☰"}</span>
-        </button>
+        {!sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="fixed top-8 left-4 z-30 bg-[var(--primary-color)] text-white p-3 rounded-xl shadow-lg hover:bg-[#2fa692] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
+          >
+            <span className="text-lg">→</span>
+          </button>
+        )}
 
         <main className="flex-1 p-8">
         <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-lg mb-8">

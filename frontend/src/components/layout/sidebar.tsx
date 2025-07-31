@@ -10,7 +10,7 @@ interface SidebarProps {
 
 export default function Sidebar({ activeGroup, sidebarOpen, setSidebarOpen }: SidebarProps) {
   const groups = [
-    { id: "family", name: "가족 모임", icon: "👨‍👩‍👧‍👦", count: 5 },
+    { id: "family", name: "D207", icon: "👨‍👩‍👧‍👦", count: 5 },
     { id: "college", name: "대학 친구들", icon: "🎓", count: 5 },
     { id: "work", name: "회사 동료", icon: "💼", count: 5 },
     { id: "study", name: "스터디 그룹", icon: "📚", count: 5 },
@@ -26,7 +26,7 @@ export default function Sidebar({ activeGroup, sidebarOpen, setSidebarOpen }: Si
           onClick={() => setSidebarOpen(false)}
           className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-black/10 p-2 rounded-lg transition-all z-10"
         >
-          <span className="text-lg">✕</span>
+          <span className="text-lg">←</span>
         </button>
       )}
 

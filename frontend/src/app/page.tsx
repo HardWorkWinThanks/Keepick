@@ -26,12 +26,14 @@ export default function HomePage() {
         <Header variant="home" />
 
         {/* Sidebar Toggle Button */}
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="fixed top-24 left-4 z-30 bg-[var(--primary-color)] text-white p-3 rounded-xl shadow-lg hover:bg-[#2fa692] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
-        >
-          <span className="text-lg">{sidebarOpen ? "✕" : "☰"}</span>
-        </button>
+        {!sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="fixed top-24 left-4 z-30 bg-[var(--primary-color)] text-white p-3 rounded-xl shadow-lg hover:bg-[#2fa692] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
+          >
+            <span className="text-lg">→</span>
+          </button>
+        )}
 
         <section className="flex items-center justify-between min-h-screen px-[5%] mt-20 gap-12 flex-wrap">
           <div className="flex-1 min-w-[300px] animate-fade-slide-in">
