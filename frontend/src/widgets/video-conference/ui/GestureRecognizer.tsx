@@ -9,12 +9,13 @@ import type {
   NormalizedLandmark,
 } from "@mediapipe/tasks-vision";
 
-// 컴포넌트 Props 타입 정의
-interface GestureRecognizerProps {
-  mediaStream: MediaStream | null;
-}
+// --- 설정 상수 ---
+const SEQUENCE_LENGTH = 30; // 동적 모델이 사용할 프레임 시퀀스 길이
+const CONFIDENCE_THRESHOLD = 0.8; // 동적 모델 예측 신뢰도 임계값
 
-const GESTURE_LABELS = [
+// --- 레이블 정의 ---
+// 정적 모델 레이블 (기존)
+const STATIC_LABELS = [
   "bad",
   "fist",
   "good",
@@ -27,8 +28,7 @@ const GESTURE_LABELS = [
   "rock",
   "victory",
 ];
-
-const KOREAN_LABELS: { [key: string]: string } = {
+const KOREAN_STATIC_LABELS: { [key: string]: string } = {
   bad: "👎",
   fist: "주먹",
   good: "👍",
@@ -42,24 +42,49 @@ const KOREAN_LABELS: { [key: string]: string } = {
   victory: "브이",
 };
 
+// 동적 모델 레이블 (신규)
+const DYNAMIC_LABELS = ["fire", "hi", "hit", "none", "nono", "nyan", "shot"];
+const KOREAN_DYNAMIC_LABELS: { [key: string]: string } = {
+  fire: "🔥 파이어",
+  hi: "👋 안녕",
+  hit: "💥 히트",
+  none: "없음",
+  nono: "🚫 안돼",
+  nyan: "🐾 냥냥펀치",
+  shot: "💖 샷",
+};
+
+// 컴포넌트 Props 타입 정의
+interface GestureRecognizerProps {
+  mediaStream: MediaStream | null;
+}
+
 export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
   mediaStream,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [gesture, setGesture] = useState<string>("준비 중...");
 
-  // MediaPipe와 TFJS 모델 인스턴스는 리렌더링되어도 유지되도록 ref로 관리
+  // --- 모델 및 데이터 Ref ---
+  const staticModelRef = useRef<tf.LayersModel | null>(null);
+  const dynamicModelRef = useRef<tf.LayersModel | null>(null);
   const handLandmarkerRef = useRef<HandLandmarker | null>(null);
-  const modelRef = useRef<tf.LayersModel | null>(null);
-  const lastVideoTimeRef = useRef<number>(-1);
+  const sequenceRef = useRef<number[][]>([]); // 동적 인식을 위한 키포인트 시퀀스
+
+  // --- UI 상태 ---
+  const [staticGesture, setStaticGesture] =
+    useState<string>("정적: 준비 중...");
+  const [dynamicGesture, setDynamicGesture] =
+    useState<string>("동적: 준비 중...");
+
   const animationFrameId = useRef<number | null>(null);
+  const lastVideoTimeRef = useRef<number>(-1);
 
   // 1. 초기화 (모델 로딩 및 MediaPipe 설정)
+  // 1. 초기화: 두 모델과 MediaPipe를 함께 로드
   useEffect(() => {
-    async function setupModels() {
+    async function setupAllModels() {
       try {
-        // MediaPipe HandLandmarker 초기화
         const vision = await FilesetResolver.forVisionTasks(
           "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
         );
@@ -69,21 +94,27 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
             delegate: "GPU",
           },
           runningMode: "VIDEO",
-          numHands: 1, // 로컬 유저의 한 손만 인식
+          numHands: 1,
         });
         handLandmarkerRef.current = handLandmarker;
 
-        // TensorFlow.js 모델 로딩 (public 폴더 기준 경로)
-        const model = await tf.loadLayersModel("/model/model.json");
-        modelRef.current = model;
+        // Promise.all을 사용하여 두 모델을 병렬로 로딩
+        const [staticModel, dynamicModel] = await Promise.all([
+          tf.loadLayersModel("/static_model/model.json"), // 정적 모델 경로 수정
+          tf.loadLayersModel("/dynamic_model/model.json"), // 동적 모델 경로 확인
+        ]);
+        staticModelRef.current = staticModel;
+        dynamicModelRef.current = dynamicModel;
 
-        setGesture("카메라를 향해 손을 보여주세요");
+        setStaticGesture("정적: 인식 준비 완료");
+        setDynamicGesture("동적: 움직임을 보여주세요");
       } catch (error) {
         console.error("AI 모델 초기화 실패:", error);
-        setGesture("모델 로딩 실패");
+        setStaticGesture("정적: 모델 로딩 실패");
+        setDynamicGesture("동적: 모델 로딩 실패");
       }
     }
-    setupModels();
+    setupAllModels();
 
     // 컴포넌트 언마운트 시 자원 정리
     return () => {
@@ -91,7 +122,8 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
         cancelAnimationFrame(animationFrameId.current);
       }
       handLandmarkerRef.current?.close();
-      modelRef.current?.dispose();
+      staticModelRef.current?.dispose();
+      dynamicModelRef.current?.dispose();
     };
   }, []);
 
@@ -115,30 +147,25 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
 
   // 3. 실시간 예측 루프
   const startPredictionLoop = () => {
-    const video = videoRef.current;
-    if (!video || !handLandmarkerRef.current || !modelRef.current) return;
-
     const predict = async () => {
-      // ▼▼▼▼▼ 수정된 부분 시작 ▼▼▼▼▼
-
-      // ref의 현재 값을 지역 상수에 할당합니다.
+      const video = videoRef.current;
       const handLandmarker = handLandmarkerRef.current;
-      const model = modelRef.current;
+      const staticModel = staticModelRef.current;
+      const dynamicModel = dynamicModelRef.current;
 
-      // predict 루프가 매번 실행될 때마다 모델이 준비되었는지 확인합니다.
-      // 이렇게 하면 TypeScript도 이 변수들이 null이 아님을 인지합니다.
-      if (!video || !handLandmarker || !model) {
+      if (
+        !video ||
+        !handLandmarker ||
+        !staticModel ||
+        !dynamicModel ||
+        video.readyState < 2
+      ) {
         animationFrameId.current = requestAnimationFrame(predict);
         return;
       }
 
-      if (
-        video.readyState >= 2 &&
-        video.currentTime !== lastVideoTimeRef.current
-      ) {
+      if (video.currentTime !== lastVideoTimeRef.current) {
         lastVideoTimeRef.current = video.currentTime;
-
-        // 이제 안전하게 지역 변수를 사용합니다.
         const handLandmarkerResult = handLandmarker.detectForVideo(
           video,
           Date.now()
@@ -151,45 +178,58 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
           const landmarks = handLandmarkerResult.landmarks[0];
           drawLandmarks(landmarks);
 
-          // 1. 손목(landmark 0)을 기준점으로 설정합니다.
+          // 데이터 전처리 (두 모델이 공통으로 사용)
           const wrist = landmarks[0];
-
-          // 2. 모든 랜드마크 좌표를 손목 좌표 기준으로 정규화합니다.
-          //    Python의 extract_keypoints 로직과 동일합니다.
-          const inputData = landmarks.flatMap((lm) => [
+          const keypoints = landmarks.flatMap((lm) => [
             lm.x - wrist.x,
             lm.y - wrist.y,
             lm.z - wrist.z,
           ]);
 
-          // 3. 모델이 기대하는 shape [1, 63]으로 텐서를 생성합니다.
-          const inputTensor = tf.tensor2d([inputData], [1, 63]);
+          // --- 정적 모델 예측 (매 프레임 실행) ---
+          tf.tidy(() => {
+            const inputTensor = tf.tensor2d([keypoints], [1, 63]);
+            const prediction = staticModel.predict(inputTensor) as tf.Tensor;
+            const predictedIndex = prediction.argMax(-1).dataSync()[0];
+            const label = STATIC_LABELS[predictedIndex];
+            setStaticGesture(`정적: ${KOREAN_STATIC_LABELS[label] || label}`);
+          });
 
-          // model도 안전하게 사용합니다.
-          const prediction = model.predict(inputTensor) as tf.Tensor;
-          const predictionData = await prediction.data();
+          // --- 동적 모델 예측 (시퀀스가 찼을 때 실행) ---
+          sequenceRef.current.push(keypoints);
+          sequenceRef.current = sequenceRef.current.slice(-SEQUENCE_LENGTH);
 
-          const predictedIndex = tf.argMax(predictionData).dataSync()[0];
-          // 1. 영어 레이블을 먼저 찾습니다.
-          const englishLabel = GESTURE_LABELS[predictedIndex] || "알 수 없음";
+          if (sequenceRef.current.length === SEQUENCE_LENGTH) {
+            tf.tidy(() => {
+              const inputTensor = tf.tensor3d(
+                [sequenceRef.current],
+                [1, SEQUENCE_LENGTH, 63]
+              );
+              const prediction = dynamicModel.predict(inputTensor) as tf.Tensor;
+              const predictionData = prediction.dataSync();
+              const confidence = Math.max(...predictionData);
 
-          // 2. 영어 레이블을 키로 사용하여 한국어 레이블을 가져옵니다.
-          const koreanLabel = KOREAN_LABELS[englishLabel] || englishLabel;
+              let label = "none";
+              if (confidence >= CONFIDENCE_THRESHOLD) {
+                const predictedIndex = prediction.argMax(-1).dataSync()[0];
+                label = DYNAMIC_LABELS[predictedIndex];
+              }
+              setDynamicGesture(
+                `동적: ${KOREAN_DYNAMIC_LABELS[label] || label}`
+              );
 
-          // 3. UI 상태를 한국어 레이블로 업데이트합니다.
-          setGesture(koreanLabel);
-
-          inputTensor.dispose();
-          prediction.dispose();
+              // TODO: 여기에 'fire', 'nyan' 등 동적 제스처에 따른 시각 효과 로직 추가 가능
+            });
+          }
         } else {
           clearCanvas();
+          sequenceRef.current = []; // 손이 안보이면 시퀀스 초기화
         }
       }
       animationFrameId.current = requestAnimationFrame(predict);
     };
     predict();
   };
-
   // 랜드마크 그리기 함수
   const drawLandmarks = (landmarks: NormalizedLandmark[]) => {
     const canvas = canvasRef.current;
@@ -223,10 +263,6 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      {/* 
-        실제 비디오 스트림 (좌우 반전으로 거울 모드)
-        이 비디오는 MediaPipe에 데이터를 제공하는 소스 역할을 합니다.
-      */}
       <video
         ref={videoRef}
         autoPlay
@@ -234,14 +270,10 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
         muted
         style={{ width: "100%", height: "100%", transform: "scaleX(-1)" }}
       />
-      {/* 
-        랜드마크를 그릴 캔버스 (비디오 위에 오버레이)
-        비디오와 동일하게 좌우 반전 시켜 좌표를 맞춥니다.
-      */}
       <canvas
         ref={canvasRef}
         width="640"
-        height="360" // 비디오 해상도에 맞춰 조정
+        height="360"
         style={{
           position: "absolute",
           top: 0,
@@ -251,7 +283,8 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
           transform: "scaleX(-1)",
         }}
       />
-      {/* 인식된 제스처 표시 */}
+
+      {/* 정적 제스처 결과 (좌측 하단) */}
       <div
         style={{
           position: "absolute",
@@ -261,9 +294,25 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
           color: "white",
           padding: "5px 10px",
           borderRadius: "5px",
+          fontSize: "16px",
         }}
       >
-        {gesture}
+        {staticGesture}
+      </div>
+      {/* 동적 제스처 결과 (우측 하단) */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "10px",
+          right: "10px",
+          backgroundColor: "rgba(0,0,0,0.6)",
+          color: "white",
+          padding: "5px 10px",
+          borderRadius: "5px",
+          fontSize: "16px",
+        }}
+      >
+        {dynamicGesture}
       </div>
     </div>
   );
