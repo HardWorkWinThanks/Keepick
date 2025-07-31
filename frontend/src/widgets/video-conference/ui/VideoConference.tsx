@@ -1,4 +1,3 @@
-// src/widgets/video-conference/ui/VideoConference.tsx
 "use client";
 
 import React, {
@@ -8,7 +7,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-
 import { useSocket } from "@/shared/api/socket/useSocket";
 import { useMediasoup } from "../lib/useMediaSoup";
 import { useVideoSession } from "../model/useVideoSession";
@@ -51,6 +49,9 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
     handleError,
     clearError,
   } = sessionState;
+
+  const [isStaticGestureOn, setStaticGestureOn] = useState(true);
+  const [isDynamicGestureOn, setDynamicGestureOn] = useState(true);
 
   useEffect(() => {
     if (initialRoomId && initialRoomId !== roomId) {
@@ -352,19 +353,31 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
 
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white font-sans">
-      <header className="p-4 text-center text-3xl font-bold bg-gray-800 shadow-md border-b border-gray-700">
-        🎥 WebRTC SFU Video Call:{" "}
-        <span className="text-blue-400">{roomId || initialRoomId}</span>
+      {/* ▼▼▼▼▼ 수정된 부분 ▼▼▼▼▼ */}
+      <header className="p-4 text-center text-xl md:text-2xl font-semibold bg-gray-800 shadow-lg border-b border-gray-700 z-10 flex-shrink-0">
+        ✨{" "}
+        <span className="font-bold text-blue-400">
+          {roomId || initialRoomId}
+        </span>{" "}
+        그룹챗에 오신 것을 환영합니다! ✨
       </header>
+      {/* ▲▲▲▲▲ 수정 완료 ▲▲▲▲▲ */}
+
       <main className="flex flex-col md:flex-row flex-grow overflow-hidden">
-        <div className="w-full md:w-1/4 p-4 bg-gray-800 space-y-6 flex flex-col border-r border-gray-700 overflow-y-auto">
+        {/* === 사이드바 === */}
+        <div className="w-full md:w-80 p-4 bg-gray-800/80 space-y-4 md:space-y-6 flex flex-col border-b md:border-b-0 md:border-r border-gray-700 overflow-y-auto flex-shrink-0">
           <ControlPanel
             roomId={roomId}
             setRoomId={setRoomId}
             isInRoom={isInRoom}
-            isConnected={isConnected}
             onJoinRoom={handleJoinRoom}
             onLeaveRoom={handleLeaveRoom}
+            // ▼▼▼▼▼ 상태와 핸들러를 props로 전달 ▼▼▼▼▼
+            isStaticGestureOn={isStaticGestureOn}
+            setStaticGestureOn={setStaticGestureOn}
+            isDynamicGestureOn={isDynamicGestureOn}
+            setDynamicGestureOn={setDynamicGestureOn}
+            // ▲▲▲▲▲ 전달 완료 ▲▲▲▲▲
           />
           <StatusDisplay
             isConnected={isConnected}
@@ -373,18 +386,23 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
             isInRoom={isInRoom}
             error={error}
           />
-          <div className="bg-gray-700 p-4 rounded-lg shadow-inner space-y-2 text-sm">
-            {/* 디버그 정보 UI ... */}
-          </div>
         </div>
-        <div className="flex-grow flex items-center justify-center bg-gray-900">
+
+        {/* === 메인 비디오 그리드 === */}
+        <div className="flex-grow flex items-center justify-center p-4">
           <VideoGrid
             localStream={localStream}
             remoteStreams={remoteStreams}
             users={users}
+            // ▼▼▼▼▼ 상태를 props로 전달 ▼▼▼▼▼
+            isStaticGestureOn={isStaticGestureOn}
+            isDynamicGestureOn={isDynamicGestureOn}
+            // ▲▲▲▲▲ 전달 완료 ▲▲▲▲▲
           />
         </div>
       </main>
+
+      {/* 에러 팝업 (기존과 동일) */}
       {error && (
         <div className="fixed bottom-4 right-4 p-4 bg-red-600 text-white rounded-lg shadow-xl">
           <span className="font-bold">❌ 에러:</span> {error}

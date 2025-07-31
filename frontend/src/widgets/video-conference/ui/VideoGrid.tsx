@@ -54,117 +54,82 @@ interface VideoGridProps {
   localStream: MediaStream | null;
   remoteStreams: Map<string, MediaStream>;
   users: User[];
+  isStaticGestureOn: boolean;
+  isDynamicGestureOn: boolean;
 }
 
 export const VideoGrid: React.FC<VideoGridProps> = ({
   localStream,
   remoteStreams,
   users,
+  isStaticGestureOn,
+  isDynamicGestureOn,
 }) => {
-  // const localVideoRef = useRef<HTMLVideoElement>(null);
+  const totalUsers = (users?.length || 0) + (localStream ? 1 : 0);
 
-  // useEffect(() => {
-  //   if (
-  //     localVideoRef.current &&
-  //     localVideoRef.current.srcObject !== localStream
-  //   ) {
-  //     localVideoRef.current.srcObject = localStream;
-  //   }
-  // }, [localStream]);
-
-  const totalUsers = (users?.length || 0) + 1;
-  const getGridTemplateColumns = () => {
-    if (totalUsers <= 2) return "repeat(2, 1fr)";
-    if (totalUsers <= 4) return "repeat(2, 1fr)";
-    if (totalUsers <= 9) return "repeat(3, 1fr)";
-    return "repeat(4, 1fr)";
-  };
-
-  // 디버깅 로그 추가
-  console.log("--- VideoGrid Render ---");
-  console.log(
-    "Users:",
-    users.map((u) => u.id)
-  );
-  console.log("Remote Streams Keys:", Array.from(remoteStreams.keys()));
-
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: getGridTemplateColumns(),
-        gap: "10px",
-        padding: "10px",
-      }}
-    >
-      {/* ▼▼▼▼▼ 수정된 부분 ▼▼▼▼▼ */}
-      {/* 로컬 비디오 렌더링을 GestureRecognizer 컴포넌트에 위임합니다. */}
-      <div className="video-container" style={{ position: "relative" }}>
-        <GestureRecognizer mediaStream={localStream} />
-        <div
-          className="user-label"
-          style={{
-            position: "absolute",
-            top: "5px",
-            left: "5px",
-            color: "white",
-          }}
-        >
-          📹 나 (You)
+  // ▼▼▼▼▼ 수정된 부분 1번: 혼자 있을 때와 아닐 때를 구분하는 레이아웃 로직 ▼▼▼▼▼
+  if (totalUsers <= 1) {
+    // 혼자 있을 때: 화면 중앙에 적당한 크기로 표시
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="relative w-full max-w-4xl aspect-video bg-black rounded-lg overflow-hidden shadow-2xl">
+          <GestureRecognizer
+            mediaStream={localStream}
+            isStaticOn={isStaticGestureOn}
+            isDynamicOn={isDynamicGestureOn}
+          />
+          <div className="absolute bottom-2 left-2 px-2 py-1 bg-black bg-opacity-50 rounded-md text-sm">
+            📹 나 (You)
+          </div>
         </div>
       </div>
-      {/* ▲▲▲▲▲ 수정된 부분 ▲▲▲▲▲ */}
+    );
+  }
+  // ▲▲▲▲▲ 수정 완료 ▲▲▲▲▲
+
+  // 여러 명 있을 때: 기존 그리드 레이아웃 사용
+  const getGridClass = () => {
+    if (totalUsers <= 1) return "grid-cols-1";
+    if (totalUsers === 2) return "grid-cols-1 md:grid-cols-2"; // 2명일 땐 모바일에서 세로로, 데스크탑에서 가로로
+    if (totalUsers <= 4) return "grid-cols-2";
+    if (totalUsers <= 6) return "grid-cols-2 lg:grid-cols-3";
+    if (totalUsers <= 9) return "grid-cols-3";
+    return "grid-cols-3 lg:grid-cols-4"; // 9명 초과 시
+  };
+
+  return (
+    <div className={`grid ${getGridClass()} gap-4 w-full h-full items-center`}>
+      {/* 로컬 비디오 */}
+      {localStream && (
+        <div className="relative aspect-video bg-black rounded-lg overflow-hidden shadow-lg">
+          <GestureRecognizer
+            mediaStream={localStream}
+            isStaticOn={isStaticGestureOn}
+            isDynamicOn={isDynamicGestureOn}
+          />
+          <div className="absolute top-2 left-2 px-2 py-1 bg-black bg-opacity-50 rounded-md text-sm font-semibold">
+            📹 나 (You)
+          </div>
+        </div>
+      )}
 
       {/* 원격 사용자 비디오 */}
       {users.map((user) => {
         const stream = remoteStreams.get(user.id);
         const hasVideo = stream && stream.getVideoTracks().length > 0;
-
         return (
           <div
             key={user.id}
-            style={{
-              position: "relative",
-              width: "320px",
-              height: "240px",
-              backgroundColor: "#333",
-              borderRadius: "8px",
-              overflow: "hidden",
-            }}
+            className="relative aspect-video bg-black rounded-lg overflow-hidden shadow-lg"
           >
             {stream && hasVideo ? (
               <RemoteVideo stream={stream} userId={user.id} />
             ) : (
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#fff",
-                }}
-              >
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "48px", marginBottom: "8px" }}>
-                    👤
-                  </div>
-                  <div>{hasVideo ? "영상 로딩중..." : "비디오 없음"}</div>
-                </div>
+              <div className="w-full h-full flex items-center justify-center text-white">
+                <div>{hasVideo ? "영상 로딩중..." : "비디오 없음"}</div>
               </div>
             )}
-            <div
-              style={{
-                position: "absolute",
-                bottom: "8px",
-                left: "8px",
-                padding: "4px 8px",
-                backgroundColor: "rgba(0,0,0,0.5)",
-                color: "white",
-                borderRadius: "4px",
-                fontSize: "12px",
-              }}
-            >
+            <div className="absolute top-2 left-2 px-2 py-1 bg-black bg-opacity-50 rounded-md text-sm font-semibold">
               📺 {user.id.substring(0, 8)}...
             </div>
           </div>
@@ -172,4 +137,5 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
       })}
     </div>
   );
+  // ▲▲▲▲▲ 수정 완료 ▲▲▲▲▲
 };

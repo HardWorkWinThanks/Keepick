@@ -11,7 +11,8 @@ import type {
 
 // --- 설정 상수 ---
 const SEQUENCE_LENGTH = 30; // 동적 모델이 사용할 프레임 시퀀스 길이
-const CONFIDENCE_THRESHOLD = 0.8; // 동적 모델 예측 신뢰도 임계값
+const CONFIDENCE_THRESHOLD = 0.92; // 동적 모델 예측 신뢰도 임계값
+const GESTURE_COOLDOWN = 3000; // 5000ms = 5초 쿨타임
 
 // --- 레이블 정의 ---
 // 정적 모델 레이블 (기존)
@@ -57,10 +58,14 @@ const KOREAN_DYNAMIC_LABELS: { [key: string]: string } = {
 // 컴포넌트 Props 타입 정의
 interface GestureRecognizerProps {
   mediaStream: MediaStream | null;
+  isStaticOn: boolean;
+  isDynamicOn: boolean;
 }
 
 export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
   mediaStream,
+  isStaticOn,
+  isDynamicOn,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -77,8 +82,24 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
   const [dynamicGesture, setDynamicGesture] =
     useState<string>("동적: 준비 중...");
 
+  const [visualEffect, setVisualEffect] = useState<string | null>(null);
+
   const animationFrameId = useRef<number | null>(null);
   const lastVideoTimeRef = useRef<number>(-1);
+  const lastEffectTimeRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!isStaticOn) {
+      setStaticGesture("정적: 꺼짐");
+    }
+  }, [isStaticOn]);
+
+  useEffect(() => {
+    if (!isDynamicOn) {
+      setDynamicGesture("동적: 꺼짐");
+      sequenceRef.current = []; // 동적 인식이 꺼지면 시퀀스 데이터 초기화
+    }
+  }, [isDynamicOn]);
 
   // 1. 초기화 (모델 로딩 및 MediaPipe 설정)
   // 1. 초기화: 두 모델과 MediaPipe를 함께 로드
@@ -186,40 +207,63 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
             lm.z - wrist.z,
           ]);
 
-          // --- 정적 모델 예측 (매 프레임 실행) ---
-          tf.tidy(() => {
-            const inputTensor = tf.tensor2d([keypoints], [1, 63]);
-            const prediction = staticModel.predict(inputTensor) as tf.Tensor;
-            const predictedIndex = prediction.argMax(-1).dataSync()[0];
-            const label = STATIC_LABELS[predictedIndex];
-            setStaticGesture(`정적: ${KOREAN_STATIC_LABELS[label] || label}`);
-          });
-
-          // --- 동적 모델 예측 (시퀀스가 찼을 때 실행) ---
-          sequenceRef.current.push(keypoints);
-          sequenceRef.current = sequenceRef.current.slice(-SEQUENCE_LENGTH);
-
-          if (sequenceRef.current.length === SEQUENCE_LENGTH) {
+          if (isStaticOn) {
             tf.tidy(() => {
-              const inputTensor = tf.tensor3d(
-                [sequenceRef.current],
-                [1, SEQUENCE_LENGTH, 63]
-              );
-              const prediction = dynamicModel.predict(inputTensor) as tf.Tensor;
-              const predictionData = prediction.dataSync();
-              const confidence = Math.max(...predictionData);
-
-              let label = "none";
-              if (confidence >= CONFIDENCE_THRESHOLD) {
-                const predictedIndex = prediction.argMax(-1).dataSync()[0];
-                label = DYNAMIC_LABELS[predictedIndex];
-              }
-              setDynamicGesture(
-                `동적: ${KOREAN_DYNAMIC_LABELS[label] || label}`
-              );
-
-              // TODO: 여기에 'fire', 'nyan' 등 동적 제스처에 따른 시각 효과 로직 추가 가능
+              const inputTensor = tf.tensor2d([keypoints], [1, 63]);
+              const prediction = staticModel.predict(inputTensor) as tf.Tensor;
+              const predictedIndex = prediction.argMax(-1).dataSync()[0];
+              const label = STATIC_LABELS[predictedIndex];
+              setStaticGesture(`정적: ${KOREAN_STATIC_LABELS[label] || label}`);
             });
+          } else {
+            setStaticGesture("정적: 꺼짐");
+          }
+
+          // --- 동적 모델 예측 (조건부 실행) ---
+          if (isDynamicOn) {
+            sequenceRef.current.push(keypoints);
+            sequenceRef.current = sequenceRef.current.slice(-SEQUENCE_LENGTH);
+
+            if (sequenceRef.current.length === SEQUENCE_LENGTH) {
+              tf.tidy(() => {
+                // ... 동적 모델 예측 로직 ...
+                const inputTensor = tf.tensor3d(
+                  [sequenceRef.current],
+                  [1, SEQUENCE_LENGTH, 63]
+                );
+                const prediction = dynamicModel.predict(
+                  inputTensor
+                ) as tf.Tensor;
+                const predictionData = prediction.dataSync();
+                const confidence = Math.max(...predictionData);
+
+                let label = "none";
+                if (confidence >= CONFIDENCE_THRESHOLD) {
+                  const predictedIndex = prediction.argMax(-1).dataSync()[0];
+                  label = DYNAMIC_LABELS[predictedIndex];
+
+                  const currentTime = Date.now();
+                  if (
+                    label !== "none" &&
+                    label !== "nono" &&
+                    currentTime - lastEffectTimeRef.current > GESTURE_COOLDOWN
+                  ) {
+                    lastEffectTimeRef.current = currentTime; // 마지막 실행 시간 기록
+
+                    const koreanLabel = KOREAN_DYNAMIC_LABELS[label] || "";
+                    const emoji = koreanLabel.split(" ")[0];
+                    setVisualEffect(emoji);
+                    setTimeout(() => setVisualEffect(null), 2000);
+                  }
+                }
+                setDynamicGesture(
+                  `동적: ${KOREAN_DYNAMIC_LABELS[label] || label}`
+                );
+              });
+            }
+          } else {
+            setDynamicGesture("동적: 꺼짐");
+            sequenceRef.current = []; // 꺼져있을 땐 시퀀스 비우기
           }
         } else {
           clearCanvas();
@@ -230,6 +274,7 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
     };
     predict();
   };
+
   // 랜드마크 그리기 함수
   const drawLandmarks = (landmarks: NormalizedLandmark[]) => {
     const canvas = canvasRef.current;
@@ -263,17 +308,38 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      <style>
+        {`
+          /* ... (@keyframes는 동일) ... */
+          .visual-effect-corner {
+            position: absolute;
+            bottom: 5%;
+            right: 5%;
+            /* ▼▼▼▼▼ 수정된 부분 ▼▼▼▼▼ */
+            font-size: 5rem; /* 모바일을 고려하여 기본 크기 축소 */
+            /* ▲▲▲▲▲ 수정 완료 ▲▲▲▲▲ */
+            text-shadow: 0 0 15px rgba(0,0,0,0.6);
+            z-index: 10;
+            animation: fade-in-out-corner 2s ease-in-out forwards;
+          }
+        `}
+      </style>
+
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted
-        style={{ width: "100%", height: "100%", transform: "scaleX(-1)" }}
+        style={{
+          width: "100%",
+          height: "100%",
+          transform: "scaleX(-1)",
+        }}
       />
       <canvas
         ref={canvasRef}
         width="640"
-        height="360"
+        height="360" // 16:9 비율 유지
         style={{
           position: "absolute",
           top: 0,
@@ -284,36 +350,46 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
         }}
       />
 
-      {/* 정적 제스처 결과 (좌측 하단) */}
+      {/* ▼▼▼▼▼ 수정된 부분 4번: className 변경 ▼▼▼▼▼ */}
+      {visualEffect && (
+        <div className="visual-effect-corner">{visualEffect}</div>
+      )}
+      {/* ▲▲▲▲▲ 수정 완료 ▲▲▲▲▲ */}
+      {/* 정적 제스처 결과 (좌측 상단) */}
       <div
         style={{
           position: "absolute",
-          bottom: "10px",
+          top: "10px", // bottom -> top 으로 변경
           left: "10px",
           backgroundColor: "rgba(0,0,0,0.6)",
           color: "white",
           padding: "5px 10px",
           borderRadius: "5px",
           fontSize: "16px",
+          zIndex: 20, // 다른 UI 요소 위에 표시되도록 z-index 추가
         }}
       >
         {staticGesture}
       </div>
-      {/* 동적 제스처 결과 (우측 하단) */}
+
+      {/* 동적 제스처 결과 (우측 상단) */}
       <div
         style={{
           position: "absolute",
-          bottom: "10px",
+          top: "10px", // bottom -> top 으로 변경
           right: "10px",
           backgroundColor: "rgba(0,0,0,0.6)",
           color: "white",
           padding: "5px 10px",
           borderRadius: "5px",
           fontSize: "16px",
+          zIndex: 20, // 다른 UI 요소 위에 표시되도록 z-index 추가
         }}
       >
         {dynamicGesture}
       </div>
+
+      {/* ▲▲▲▲▲ 수정된 부분 끝 ▲▲▲▲▲ */}
     </div>
   );
 };
