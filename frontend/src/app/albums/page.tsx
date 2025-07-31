@@ -39,39 +39,39 @@ export default function AlbumsPage() {
   const [availablePhotos, setAvailablePhotos] = useState([
     {
       id: "photo1",
-      src: "jeju-dummy1.webp",
+      src: "ssafy-dummy1.jpg",
       name: "사진1",
     },
     {
       id: "photo2",
-      src: "jeju-dummy2.jpg",
+      src: "ssafy-dummy2.jpg",
       name: "사진2",
     },
     {
       id: "photo3",
-      src: "jeju-dummy3.jpg",
+      src: "ssafy-dummy3.jpg",
       name: "사진3",
     },
     {
       id: "photo4",
-      src: "jeju-dummy4.jpg",
+      src: "ssafy-dummy4.jpg",
       name: "사진4",
     },
     {
       id: "photo5",
-      src: "jeju-dummy5.jpg",
+      src: "ssafy-dummy5.jpg",
       name: "사진5",
     },
     {
       id: "photo6",
-      src: "jeju-dummy6.jpg",
+      src: "ssafy-dummy6.jpg",
       name: "사진6",
     },
-    {
-      id: "photo7",
-      src: "jeju-dummy7.jpg",
-      name: "사진7",
-    },
+    // {
+    //   id: "photo7",
+    //   src: "ssafy-dummy7.jpg",
+    //   name: "사진7",
+    // },
     // {
     //   id: "photo8",
     //   src: "/placeholder.svg?height=100&width=100&text=사진8",
@@ -84,7 +84,9 @@ export default function AlbumsPage() {
     // },
   ]);
   // 티어별 사진 배치 상태
-  const [tierPhotos, setTierPhotos] = useState<{ [key: string]: { id: string; src: string; name: string }[] }>({
+  const [tierPhotos, setTierPhotos] = useState<{
+    [key: string]: { id: string; src: string; name: string }[];
+  }>({
     S: [
       {
         id: "photo_s1",
@@ -115,8 +117,7 @@ export default function AlbumsPage() {
           title: "김포공항에서 출발",
           date: "2025.06.25",
           photoCount: 12,
-          coverImage:
-            "airport-dummy1.jpg",
+          coverImage: "airport-dummy1.jpg",
           gradient: "from-[#E0F2F1] to-[var(--primary-color)]",
         },
         {
@@ -233,7 +234,6 @@ export default function AlbumsPage() {
         gradient: "from-[#F3E5F5] to-[#AA00FF]",
         coverImage: "jeju-dummy1.webp",
       },
-      
     };
 
     const currentAlbum =
@@ -297,30 +297,29 @@ export default function AlbumsPage() {
       const tierAlbums = [
         {
           id: "best-moments",
-          title: "최고의 순간들",
+          title: "제주도 제일 재밌었던 곳 뽑기!",
           date: "2025.06.25",
           totalPhotos: 45,
-          tierDistribution: { S: 8, A: 12, B: 15, C: 10 },
-          coverImage:
-            "/placeholder.svg?height=300&width=400&text=최고의+순간들",
+          tierDistribution: { S: 8, A: 12, B: 15, C: 10, D: 0 },
+          coverImage: "jeju-dummy2.jpg",
           gradient: "from-[#FFD700] to-[#FFA500]",
         },
         {
           id: "travel-memories",
-          title: "제주도 여행 추억 모음",
+          title: "싸피에서의 추억",
           date: "2025.07.10",
           totalPhotos: 32,
-          tierDistribution: { S: 5, A: 8, B: 12, C: 7 },
-          coverImage: "jeju-dummy2.jpg",
+          tierDistribution: { S: 5, A: 8, B: 12, C: 7, D: 0 },
+          coverImage: "jaewan1.jpg",
           gradient: "from-[#87CEEB] to-[#4682B4]",
         },
         {
           id: "family-gathering",
-          title: "가족 모임",
+          title: "도쿄여행에서 먹은 음식",
           date: "2025.08.15",
           totalPhotos: 28,
-          tierDistribution: { S: 6, A: 9, B: 8, C: 5 },
-          coverImage: "/placeholder.svg?height=300&width=400&text=가족+모임",
+          tierDistribution: { S: 6, A: 9, B: 8, C: 5, D: 0 },
+          coverImage: "food-dummy1.jpg",
           gradient: "from-[#FFB6C1] to-[#FF69B4]",
         },
         // {
@@ -412,6 +411,10 @@ export default function AlbumsPage() {
                       <div className="w-3 h-3 bg-gradient-to-r from-red-500 to-red-700 rounded-full"></div>
                       <span>C: {album.tierDistribution.C}</span>
                     </div>
+                    <div className="flex items-center gap-1 text-xs">
+                      <div className="w-3 h-3 bg-gradient-to-r from-red-500 to-red-700 rounded-full"></div>
+                      <span>D: {album.tierDistribution.D}</span>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -434,11 +437,11 @@ export default function AlbumsPage() {
     // 티어 앨범이 선택되었으면 해당 앨범의 상세 내용을 보여줌
     const tierAlbumDetails = {
       "best-moments": {
-        title: "최고의 순간들",
+        title: "제주도 제일 재밌었던 곳 뽑기!",
         date: "2025.06.25",
       },
       "travel-memories": {
-        title: "여행 추억 모음",
+        title: "싸피에서의 추억",
         date: "2025.07.10",
       },
     };
@@ -452,6 +455,7 @@ export default function AlbumsPage() {
       { label: "A", color: "from-blue-500 to-blue-700", items: 0 },
       { label: "B", color: "from-green-500 to-green-700", items: 0 },
       { label: "C", color: "from-red-500 to-red-700", items: 0 },
+      { label: "D", color: "from-gray-500 to-gray-700", items: 0 },
     ];
 
     return (
@@ -759,7 +763,11 @@ export default function AlbumsPage() {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <Sidebar activeGroup="family" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <Sidebar
+          activeGroup="family"
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
       </div>
 
       {/* Overlay */}
@@ -771,201 +779,210 @@ export default function AlbumsPage() {
       )}
 
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "ml-0"}`}>
+      <div
+        className={`flex-1 transition-all duration-300 ${
+          sidebarOpen ? "lg:ml-64" : "ml-0"
+        }`}
+      >
         {/* Sidebar Toggle Button */}
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
-            className="fixed top-8 left-4 z-30 bg-[var(--primary-color)] text-white p-3 rounded-xl shadow-lg hover:bg-[#2fa692] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
+            className="fixed top-1/2 left-0 -translate-y-1/2 z-30 bg-[var(--primary-color)] text-white p-2 rounded-r-lg shadow-lg hover:bg-[#2fa692] transition-all duration-300 hover:shadow-xl group"
           >
-            <span className="text-lg">→</span>
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-4 h-0.5 bg-white rounded"></div>
+              <div className="w-4 h-0.5 bg-white rounded"></div>
+              <div className="w-4 h-0.5 bg-white rounded"></div>
+            </div>
+            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+              사이드바 열기
+            </div>
           </button>
         )}
 
         <main className="flex-1 p-8">
-        <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-lg mb-8">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleBackClick}
-              className="text-2xl text-[var(--text-dark)] hover:text-[var(--primary-color)] transition-colors cursor-pointer"
-            >
-              <span>←</span>
-            </button>
-            <div>
-              <h1 className="font-montserrat text-3xl font-bold text-[var(--text-dark)]">
-                그룹스페이스 - D207
-              </h1>
-              <p className="text-base text-gray-600">
-                그룹원들과 소중한 추억을 관리하세요
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-5">
-            <div className="flex items-center gap-3 cursor-pointer">
-              <div className="w-10 h-10 bg-[var(--primary-color)] rounded-full flex items-center justify-center text-white font-bold text-lg">
-                W
+          <div className="bg-white rounded-3xl shadow-lg mb-8">
+            <div className="flex justify-between items-center p-6">
+              <div className="flex items-center gap-6">
+                <div>
+                  <h1 className="font-montserrat text-3xl font-bold text-[var(--text-dark)]">
+                    그룹스페이스 - D207
+                  </h1>
+                  <p className="text-base text-gray-600">
+                    그룹원들과 소중한 추억을 관리하세요
+                  </p>
+                </div>
+
+                {/* 탭 네비게이션 */}
+                <div className="flex gap-2 ml-8">
+                  {[
+                    { type: "timeline", icon: "📅", label: "타임라인 앨범" },
+                    { type: "tier", icon: "🏆", label: "티어 앨범" },
+                    { type: "highlight", icon: "✨", label: "하이라이트 앨범" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.type}
+                      onClick={() => {
+                        setActiveTab(tab.type as AlbumType);
+                        // 탭 변경시 선택된 앨범 초기화
+                        if (tab.type === "timeline") setSelectedAlbum(null);
+                        if (tab.type === "tier") setSelectedTierAlbum(null);
+                      }}
+                      className={`px-4 py-2 font-semibold rounded-lg transition-all duration-300 flex items-center gap-2 whitespace-nowrap ${
+                        activeTab === tab.type
+                          ? "bg-gradient-to-r from-[var(--primary-color)] to-[#28a795] text-white shadow-lg"
+                          : "text-gray-600 hover:bg-[var(--primary-color)]/10"
+                      }`}
+                    >
+                      <span>{tab.icon}</span>
+                      {tab.label}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => router.push("/photos")}
+                    className="px-4 py-2 font-semibold rounded-lg transition-all duration-300 flex items-center gap-2 text-gray-600 hover:bg-[var(--primary-color)]/10 whitespace-nowrap"
+                  >
+                    <span>🖼️</span>
+                    그룹 갤러리
+                  </button>
+                </div>
               </div>
-              <span className="font-semibold text-[var(--text-dark)]">
-                wmwogus
-              </span>
-              <span className="text-sm text-gray-500">▼</span>
-            </div>
-            <button className="text-2xl text-[var(--text-dark)]">
-              <span>☰</span>
-            </button>
-          </div>
-        </div>
 
-        <div className="flex bg-white rounded-2xl p-2 shadow-lg mb-8 justify-around items-center sticky top-8 z-20">
-          {[
-            { type: "timeline", icon: "📅", label: "타임라인 앨범" },
-            { type: "tier", icon: "🏆", label: "티어 앨범" },
-            { type: "highlight", icon: "✨", label: "하이라이트 앨범" },
-          ].map((tab) => (
-            <button
-              key={tab.type}
-              onClick={() => {
-                setActiveTab(tab.type as AlbumType);
-                // 탭 변경시 선택된 앨범 초기화
-                if (tab.type === "timeline") setSelectedAlbum(null);
-                if (tab.type === "tier") setSelectedTierAlbum(null);
-              }}
-              className={`flex-1 px-6 py-3 font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
-                activeTab === tab.type
-                  ? "bg-gradient-to-r from-[var(--primary-color)] to-[#28a795] text-white shadow-lg -translate-y-0.5"
-                  : "text-gray-600 hover:bg-[var(--primary-color)]/10"
-              }`}
-            >
-              <span>{tab.icon}</span>
-              {tab.label}
-            </button>
-          ))}
-          <button
-            onClick={() => router.push("/photos")}
-            className="flex-1 px-6 py-3 font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-gray-600 hover:bg-[var(--primary-color)]/10"
-          >
-            <span>🖼️</span>
-            그룹 갤러리
-          </button>
-        </div>
-
-        <div className="pt-4">
-          {activeTab === "timeline" && renderTimelineAlbum()}
-          {activeTab === "tier" && renderTierAlbum()}
-          {activeTab === "highlight" && renderHighlightAlbum()}
-        </div>
-      </main>
-
-      {/* 그룹챗 위젯 */}
-      <button
-        onClick={() => router.push("/chat")}
-        className="fixed bottom-6 right-6 bg-[var(--primary-color)] text-white p-4 rounded-full shadow-2xl hover:bg-[#2fa692] transition-all duration-300 hover:-translate-y-1 hover:shadow-3xl z-50 group"
-      >
-        <div className="relative">
-          <span className="text-2xl">💬</span>
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-        </div>
-        <div className="absolute bottom-full right-0 mb-2 bg-black/80 text-white text-sm px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-          그룹챗 참여하기
-        </div>
-      </button>
-
-      {/********************************************************************** */}
-      {/* 정밀 티어 모드 비교 모달 */}
-      {showComparisonModal && comparisonData && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-[var(--text-dark)] mb-2">
-                어떤 추억이 더 소중한가요?
-              </h2>
-              <p className="text-gray-600">
-                {comparisonData.targetTier}티어 {comparisonData.currentStep}/
-                {comparisonData.totalSteps}
-              </p>
-              <div className="text-sm text-gray-500 mt-2">
-                더 높은 순위에 두고 싶은 추억을 선택해주세요!
+              <div className="flex items-center gap-5">
+                <div className="flex items-center gap-3 cursor-pointer">
+                  <div className="w-10 h-10 bg-[var(--primary-color)] rounded-full flex items-center justify-center text-white font-bold text-lg">
+                    W
+                  </div>
+                  <span className="font-semibold text-[var(--text-dark)]">
+                    wmwogus
+                  </span>
+                  <span className="text-sm text-gray-500">▼</span>
+                </div>
+                <button className="text-2xl text-[var(--text-dark)]">
+                  <span>☰</span>
+                </button>
               </div>
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-8 mb-8">
-              {/* 기존 추억 */}
-              <div className="text-center">
-                <div
-                  className="w-full aspect-square bg-gray-100 rounded-2xl border-2 border-gray-300 mb-4 overflow-hidden cursor-pointer hover:border-[var(--primary-color)] transition-colors"
-                  onClick={() => handleComparisonChoice("existing")}
+          <div>
+            {activeTab === "timeline" && renderTimelineAlbum()}
+            {activeTab === "tier" && renderTierAlbum()}
+            {activeTab === "highlight" && renderHighlightAlbum()}
+          </div>
+        </main>
+
+        {/* 그룹챗 위젯 */}
+        <button
+          onClick={() => router.push("/chat")}
+          className="fixed bottom-6 right-6 bg-[var(--primary-color)] text-white p-4 rounded-full shadow-2xl hover:bg-[#2fa692] transition-all duration-300 hover:-translate-y-1 hover:shadow-3xl z-50 group"
+        >
+          <div className="relative">
+            <span className="text-2xl">💬</span>
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+          </div>
+          <div className="absolute bottom-full right-0 mb-2 bg-black/80 text-white text-sm px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            그룹챗 참여하기
+          </div>
+        </button>
+
+        {/********************************************************************** */}
+        {/* 정밀 티어 모드 비교 모달 */}
+        {showComparisonModal && comparisonData && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
+            <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-[var(--text-dark)] mb-2">
+                  어떤 추억이 더 소중한가요?
+                </h2>
+                <p className="text-gray-600">
+                  {comparisonData.targetTier}티어 {comparisonData.currentStep}/
+                  {comparisonData.totalSteps}
+                </p>
+                <div className="text-sm text-gray-500 mt-2">
+                  더 높은 순위에 두고 싶은 추억을 선택해주세요!
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-8 mb-8">
+                {/* 기존 추억 */}
+                <div className="text-center">
+                  <div
+                    className="w-full aspect-square bg-gray-100 rounded-2xl border-2 border-gray-300 mb-4 overflow-hidden cursor-pointer hover:border-[var(--primary-color)] transition-colors"
+                    onClick={() => handleComparisonChoice("existing")}
+                  >
+                    <img
+                      src={
+                        comparisonData.existingPhoto?.src ||
+                        "/placeholder.svg?height=200&width=200&text=기존+추억"
+                      }
+                      alt="기존 추억"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <h3 className="font-semibold text-lg text-[var(--text-dark)]">
+                    기존 추억
+                  </h3>
+                </div>
+
+                {/* 새로운 추억 */}
+                <div className="text-center">
+                  <div
+                    className="w-full aspect-square bg-gray-100 rounded-2xl border-2 border-green-500 mb-4 overflow-hidden cursor-pointer hover:border-green-600 transition-colors"
+                    onClick={() => handleComparisonChoice("new")}
+                  >
+                    <img
+                      src={
+                        comparisonData.newPhoto?.src ||
+                        "/placeholder.svg?height=200&width=200&text=새로운+추억"
+                      }
+                      alt="새로운 추억"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <h3 className="font-semibold text-lg text-[var(--text-dark)]">
+                    새로운 추억
+                  </h3>
+                </div>
+              </div>
+
+              {/* 결과 영역 */}
+              <div className="text-center mb-6">
+                <h4 className="font-semibold text-lg text-[var(--text-dark)] mb-4">
+                  결과
+                </h4>
+                <div className="flex justify-center gap-4">
+                  <div className="w-16 h-16 bg-gray-100 rounded-xl border-2 border-gray-300 flex items-center justify-center">
+                    <span className="text-2xl">📷</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-2xl">→</span>
+                  </div>
+                  <div className="w-16 h-16 bg-green-100 rounded-xl border-2 border-green-500 flex items-center justify-center">
+                    <span className="text-2xl">📷</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 버튼 영역 */}
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setShowComparisonModal(false)}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
                 >
-                  <img
-                    src={
-                      comparisonData.existingPhoto?.src ||
-                      "/placeholder.svg?height=200&width=200&text=기존+추억"
-                    }
-                    alt="기존 추억"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <h3 className="font-semibold text-lg text-[var(--text-dark)]">
-                  기존 추억
-                </h3>
-              </div>
-
-              {/* 새로운 추억 */}
-              <div className="text-center">
-                <div
-                  className="w-full aspect-square bg-gray-100 rounded-2xl border-2 border-green-500 mb-4 overflow-hidden cursor-pointer hover:border-green-600 transition-colors"
-                  onClick={() => handleComparisonChoice("new")}
+                  취소
+                </button>
+                <button
+                  onClick={() => handleComparisonChoice("skip")}
+                  className="flex-1 px-6 py-3 bg-[var(--primary-color)] text-white rounded-xl font-semibold hover:bg-[#2fa692] transition-colors"
                 >
-                  <img
-                    src={
-                      comparisonData.newPhoto?.src ||
-                      "/placeholder.svg?height=200&width=200&text=새로운+추억"
-                    }
-                    alt="새로운 추억"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <h3 className="font-semibold text-lg text-[var(--text-dark)]">
-                  새로운 추억
-                </h3>
+                  건너뛰기
+                </button>
               </div>
-            </div>
-
-            {/* 결과 영역 */}
-            <div className="text-center mb-6">
-              <h4 className="font-semibold text-lg text-[var(--text-dark)] mb-4">
-                결과
-              </h4>
-              <div className="flex justify-center gap-4">
-                <div className="w-16 h-16 bg-gray-100 rounded-xl border-2 border-gray-300 flex items-center justify-center">
-                  <span className="text-2xl">📷</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-2xl">→</span>
-                </div>
-                <div className="w-16 h-16 bg-green-100 rounded-xl border-2 border-green-500 flex items-center justify-center">
-                  <span className="text-2xl">📷</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 버튼 영역 */}
-            <div className="flex gap-4">
-              <button
-                onClick={() => setShowComparisonModal(false)}
-                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={() => handleComparisonChoice("skip")}
-                className="flex-1 px-6 py-3 bg-[var(--primary-color)] text-white rounded-xl font-semibold hover:bg-[#2fa692] transition-colors"
-              >
-                건너뛰기
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </div>
   );

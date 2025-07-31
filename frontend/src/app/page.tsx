@@ -44,8 +44,8 @@ export default function HomePage() {
               세련된 인터페이스, 강렬한 인상. <br />
               새로운 경험을 만드는 Keepick과 함께하세요.
             </p>
-            <button className="mt-8 bg-gradient-to-r from-[var(--primary-color)] to-[#28a795] text-white px-10 py-4 text-xl rounded-xl font-semibold transition-all duration-400 hover:-translate-y-1 hover:shadow-2xl relative overflow-hidden group">
-              <span className="relative z-10">Get Started</span>
+            <button onClick={() => setSidebarOpen(true)} className="mt-8 bg-gradient-to-r from-[var(--primary-color)] to-[#28a795] text-white px-10 py-4 text-xl rounded-xl font-semibold transition-all duration-400 hover:-translate-y-1 hover:shadow-2xl relative overflow-hidden group">
+              <span className="relative z-10" >Get Started</span>
               <div className="absolute top-0 left-[-100px] w-15 h-full bg-white/40 transform skew-x-[-20deg] transition-all duration-600 group-hover:left-[120%]"></div>
             </button>
           </div>
