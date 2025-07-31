@@ -107,7 +107,7 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
   const { socket, joinRoom, leaveRoom } = useSocket(socketCallbacks);
   const {
     deviceLoaded,
-    isProducing,
+    // isProducing,
     initializeDevice,
     createProducerTransport,
     createConsumerTransport,
@@ -263,7 +263,6 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
     setError,
     clearError,
     handleLeaveRoom,
-    error,
   ]);
 
   useEffect(() => {

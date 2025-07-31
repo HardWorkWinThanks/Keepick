@@ -2,10 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import { User } from "@/shared/types/webrtc";
 
-const RemoteVideo: React.FC<{ stream: MediaStream; userId: string }> = ({
-  stream,
-  userId,
-}) => {
+const RemoteVideo: React.FC<{ stream: MediaStream }> = ({ stream }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -91,7 +88,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
             className="relative aspect-video bg-gray-800 rounded-lg overflow-hidden shadow-lg"
           >
             {hasVideo ? (
-              <RemoteVideo stream={stream!} userId={user.id} />
+              <RemoteVideo stream={stream!} />
             ) : (
               <div className="flex items-center justify-center w-full h-full text-gray-400">
                 <p>연결 중...</p>
