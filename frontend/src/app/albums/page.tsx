@@ -539,8 +539,10 @@ export default function AlbumsPage() {
                 </button>
               </div>
 
-              <button 
-                onClick={() => selectedTierAlbum && saveTierAlbumData(selectedTierAlbum)}
+              <button
+                onClick={() =>
+                  selectedTierAlbum && saveTierAlbumData(selectedTierAlbum)
+                }
                 className="bg-[var(--primary-color)] text-white px-4 py-2 rounded-xl font-semibold hover:bg-[#2fa692] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg flex items-center gap-2"
               >
                 💾 저장하기
@@ -653,11 +655,14 @@ export default function AlbumsPage() {
                                 />
                               </div>
                               {/* S티어 순위 왕관 표시 - 사진 테두리 상단 */}
-                              {tier.label === 'S' && index < 3 && (
+                              {tier.label === "S" && index < 3 && (
                                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-lg">
-                                  {index === 0 && <div className="animate-bounce">👑</div>} {/* 1위 - 금왕관 */}
-                                  {index === 1 && '🥈'} {/* 2위 - 은메달 */}
-                                  {index === 2 && '🥉'} {/* 3위 - 동메달 */}
+                                  {index === 0 && (
+                                    <div className="animate-bounce">👑</div>
+                                  )}{" "}
+                                  {/* 1위 - 금왕관 */}
+                                  {index === 1 && "🥈"} {/* 2위 - 은메달 */}
+                                  {index === 2 && "🥉"} {/* 3위 - 동메달 */}
                                 </div>
                               )}
                               <button
@@ -800,16 +805,16 @@ export default function AlbumsPage() {
         lastSaved: new Date().toISOString(),
       };
       localStorage.setItem(`tierAlbum_${albumId}`, JSON.stringify(albumData));
-      
+
       // S티어 1위 사진을 커버 이미지로 저장
       const sTierFirstPhoto = tierPhotos.S?.[0];
       if (sTierFirstPhoto) {
         localStorage.setItem(`tierAlbumCover_${albumId}`, sTierFirstPhoto.src);
       }
-      
+
       // 저장 성공 알림
       alert("✅ 티어 앨범이 성공적으로 저장되었습니다!");
-      
+
       // 티어 앨범 목록으로 리다이렉트
       setSelectedTierAlbum(null);
     } catch (error) {
@@ -824,13 +829,15 @@ export default function AlbumsPage() {
       const savedData = localStorage.getItem(`tierAlbum_${albumId}`);
       if (savedData) {
         const albumData = JSON.parse(savedData);
-        setTierPhotos(albumData.tierPhotos || {
-          S: [],
-          A: [],
-          B: [],
-          C: [],
-          D: [],
-        });
+        setTierPhotos(
+          albumData.tierPhotos || {
+            S: [],
+            A: [],
+            B: [],
+            C: [],
+            D: [],
+          }
+        );
         setAvailablePhotos(albumData.availablePhotos || []);
         console.log("Tier album data loaded successfully");
       }
@@ -855,15 +862,22 @@ export default function AlbumsPage() {
     if (!selectedPhoto || !battleSequence) return;
 
     const isNewPhotoWin = selectedPhoto === battleSequence.newPhoto.id;
-    
+
     if (isNewPhotoWin) {
       // 새 사진이 이겼을 때 - 더 높은 순위와 계속 대결
-      if (battleSequence.currentOpponentIndex < battleSequence.opponents.length - 1) {
+      if (
+        battleSequence.currentOpponentIndex <
+        battleSequence.opponents.length - 1
+      ) {
         // 다음 상대와 대결
-        setBattleSequence(prev => prev ? {
-          ...prev,
-          currentOpponentIndex: prev.currentOpponentIndex + 1
-        } : null);
+        setBattleSequence((prev) =>
+          prev
+            ? {
+                ...prev,
+                currentOpponentIndex: prev.currentOpponentIndex + 1,
+              }
+            : null
+        );
         setSelectedPhoto(null);
       } else {
         // 모든 대결 완료 - 1위 획득!
@@ -871,8 +885,11 @@ export default function AlbumsPage() {
       }
     } else {
       // 기존 사진이 이겼을 때 - 해당 사진 뒤에 배치
-      const currentOpponent = battleSequence.opponents[battleSequence.currentOpponentIndex];
-      const opponentIndex = tierPhotos[battleSequence.targetTier].findIndex(p => p.id === currentOpponent.id);
+      const currentOpponent =
+        battleSequence.opponents[battleSequence.currentOpponentIndex];
+      const opponentIndex = tierPhotos[battleSequence.targetTier].findIndex(
+        (p) => p.id === currentOpponent.id
+      );
       finalizeBattleResult(opponentIndex + 1);
     }
   };
@@ -885,16 +902,16 @@ export default function AlbumsPage() {
 
     // 기존 소스에서 제거
     if (sourceType === "available") {
-      setAvailablePhotos(prev => prev.filter(p => p.id !== newPhoto.id));
+      setAvailablePhotos((prev) => prev.filter((p) => p.id !== newPhoto.id));
     } else {
-      setTierPhotos(prev => ({
+      setTierPhotos((prev) => ({
         ...prev,
-        [sourceType]: prev[sourceType].filter(p => p.id !== newPhoto.id),
+        [sourceType]: prev[sourceType].filter((p) => p.id !== newPhoto.id),
       }));
     }
 
     // 목표 티어의 특정 위치에 삽입
-    setTierPhotos(prev => {
+    setTierPhotos((prev) => {
       const newArray = [...prev[targetTier]];
       newArray.splice(finalIndex, 0, newPhoto);
       return {
@@ -918,15 +935,15 @@ export default function AlbumsPage() {
     // 새로운 사진을 원래 위치로 복구
     if (sourceType === "available") {
       // 사용 가능한 사진 목록에 이미 있는지 확인 후 추가
-      setAvailablePhotos(prev => {
-        const exists = prev.some(p => p.id === newPhoto.id);
+      setAvailablePhotos((prev) => {
+        const exists = prev.some((p) => p.id === newPhoto.id);
         if (exists) return prev;
         return [...prev, newPhoto];
       });
     } else {
       // 원래 티어로 복구
-      setTierPhotos(prev => {
-        const exists = prev[sourceType].some(p => p.id === newPhoto.id);
+      setTierPhotos((prev) => {
+        const exists = prev[sourceType].some((p) => p.id === newPhoto.id);
         if (exists) return prev;
         return {
           ...prev,
@@ -1100,11 +1117,11 @@ export default function AlbumsPage() {
     ) {
       // 새로운 토너먼트 시스템 - 드롭 위치의 왼쪽 사진부터 시작
       const targetPhotos = tierPhotos[targetTier];
-      
+
       // 드롭 위치가 0이면 1위부터, 아니면 해당 위치-1부터 시작
       const startIndex = targetIndex === 0 ? 0 : targetIndex - 1;
       const opponents = targetPhotos.slice(0, startIndex + 1).reverse(); // 왼쪽부터 역순으로
-      
+
       if (opponents.length > 0) {
         setBattleSequence({
           newPhoto: draggedPhotoData,
@@ -1285,7 +1302,7 @@ export default function AlbumsPage() {
 
         {/* 그룹챗 위젯 */}
         <button
-          onClick={() => router.push("/chat")}
+          onClick={() => router.push("/groupchat/D207")}
           className="fixed bottom-6 right-6 bg-[var(--primary-color)] text-white p-4 rounded-full shadow-2xl hover:bg-[#2fa692] transition-all duration-300 hover:-translate-y-1 hover:shadow-3xl z-50 group"
         >
           <div className="relative">
@@ -1300,11 +1317,11 @@ export default function AlbumsPage() {
         {/********************************************************************** */}
         {/* 정밀 티어 모드 비교 모달 */}
         {showComparisonModal && battleSequence && (
-          <div 
+          <div
             className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-6"
             onClick={handleCloseBattleModal}
           >
-            <div 
+            <div
               className="bg-white rounded-3xl p-16 max-w-7xl w-full max-h-[98vh] overflow-y-auto shadow-2xl relative"
               onClick={(e) => e.stopPropagation()}
             >
@@ -1315,13 +1332,16 @@ export default function AlbumsPage() {
               >
                 ✕
               </button>
-              
+
               <div className="text-center mb-12">
                 <h2 className="text-3xl font-bold text-[var(--text-dark)] mb-4">
                   🏆 티어 배틀
                 </h2>
                 <p className="text-2xl text-gray-600 font-semibold">
-                  {battleSequence.targetTier}티어 {battleSequence.opponents.length - battleSequence.currentOpponentIndex}위 결정전
+                  {battleSequence.targetTier}티어{" "}
+                  {battleSequence.opponents.length -
+                    battleSequence.currentOpponentIndex}
+                  위 결정전
                 </p>
                 <div className="text-lg text-gray-500 mt-2">
                   더 높은 순위에 두고 싶은 추억을 선택해주세요!
@@ -1333,14 +1353,27 @@ export default function AlbumsPage() {
                 <div className="text-center">
                   <div
                     className={`w-full aspect-square bg-gray-100 rounded-3xl border-6 mb-8 overflow-hidden cursor-pointer transition-all transform ${
-                      selectedPhoto === battleSequence.opponents[battleSequence.currentOpponentIndex]?.id
+                      selectedPhoto ===
+                      battleSequence.opponents[
+                        battleSequence.currentOpponentIndex
+                      ]?.id
                         ? "border-blue-500 scale-105 shadow-2xl ring-8 ring-blue-200"
                         : "border-gray-300 hover:border-blue-300 hover:scale-102"
                     }`}
-                    onClick={() => setSelectedPhoto(battleSequence.opponents[battleSequence.currentOpponentIndex]?.id)}
+                    onClick={() =>
+                      setSelectedPhoto(
+                        battleSequence.opponents[
+                          battleSequence.currentOpponentIndex
+                        ]?.id
+                      )
+                    }
                   >
                     <img
-                      src={battleSequence.opponents[battleSequence.currentOpponentIndex]?.src || "/placeholder.svg"}
+                      src={
+                        battleSequence.opponents[
+                          battleSequence.currentOpponentIndex
+                        ]?.src || "/placeholder.svg"
+                      }
                       alt="기존 추억"
                       className="w-full h-full object-cover"
                     />
@@ -1349,7 +1382,13 @@ export default function AlbumsPage() {
                     기존 추억
                   </h3>
                   <button
-                    onClick={() => handleImageClick(battleSequence.opponents[battleSequence.currentOpponentIndex])}
+                    onClick={() =>
+                      handleImageClick(
+                        battleSequence.opponents[
+                          battleSequence.currentOpponentIndex
+                        ]
+                      )
+                    }
                     className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
                   >
                     🔍 크게 보기
