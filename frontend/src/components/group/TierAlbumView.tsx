@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { ArrowUturnLeftIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import TierBattleModal from "./TierBattleModal"; // 분리된 배틀 모달 import
-
+import { TrophyIcon } from "@heroicons/react/24/solid";
 // 타입 정의
 interface Photo {
   id: string;
@@ -45,6 +45,7 @@ export default function TierAlbumView({
     tier: string;
     index: number;
   } | null>(null);
+  const [draggingPhotoId, setDraggingPhotoId] = useState<string | null>(null);
 
   const tiers = [
     { label: "S", color: "from-yellow-400 to-orange-500" },
@@ -105,7 +106,6 @@ export default function TierAlbumView({
     }
   };
 
-  // --- UI 상호작용 함수 ---
   const handleImageClick = (photo: Photo) => {
     setSelectedImage(photo);
     setShowImageModal(true);
@@ -125,7 +125,9 @@ export default function TierAlbumView({
       "text/plain",
       JSON.stringify({ photoId: photo.id, source })
     );
+    setDraggingPhotoId(photo.id); // [개선] 드래그 시작 시 ID 설정
   };
+  const handleDragEnd = () => setDraggingPhotoId(null);
   const handleDragOverPosition = (
     e: React.DragEvent,
     tier: string,
@@ -257,52 +259,57 @@ export default function TierAlbumView({
 
   // --- 렌더링 ---
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-gray-600 hover:text-[var(--primary-color)] font-semibold transition-colors"
-        >
-          <ArrowUturnLeftIcon className="w-5 h-5" /> 앨범 목록으로 돌아가기
-        </button>
-        <button
-          onClick={saveTierAlbumData}
-          className="px-5 py-2 bg-[var(--primary-color)] text-white rounded-lg font-bold hover:bg-[#2fa692] shadow-sm hover:shadow-md transition-all"
-        >
-          💾 저장하기
-        </button>
+    <div className="space-y-4 animate-fade-in">
+      {/* [개선] 1. 상단 컨트롤 바: 모든 제어 기능을 한 곳으로 통합 */}
+      <div className="flex items-center justify-between gap-4 mb-4 p-4 bg-white rounded-xl shadow-md border">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onBack}
+            className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <ArrowUturnLeftIcon className="w-6 h-6" />
+          </button>
+          <h2 className="text-xl font-bold text-gray-800 truncate">
+            {albumTitle}
+          </h2>
+        </div>
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="toggle toggle-sm toggle-primary"
+              checked={precisionTierMode}
+              onChange={(e) => setPrecisionTierMode(e.target.checked)}
+            />
+            <span className="font-semibold text-sm text-gray-700 hidden sm:block">
+              배틀 모드
+            </span>
+          </label>
+          <button
+            onClick={saveTierAlbumData}
+            className="px-5 py-2 bg-teal-500 text-white rounded-lg font-bold hover:bg-teal-600 shadow-sm transition-all"
+          >
+            저장
+          </button>
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl p-6 shadow-md border">
-        <h2 className="text-2xl font-bold text-gray-800">{albumTitle}</h2>
-        <label className="flex items-center gap-2 cursor-pointer mt-4">
-          <input
-            type="checkbox"
-            className="toggle toggle-primary"
-            checked={precisionTierMode}
-            onChange={(e) => setPrecisionTierMode(e.target.checked)}
-          />
-          <span className="font-semibold text-gray-700">
-            정밀 티어 배틀 모드 활성화
-          </span>
-        </label>
-      </div>
-
-      <div className="space-y-3">
+      {/* [개선] 2. 컴팩트한 티어 목록 레이아웃 */}
+      <div className="bg-gray-800 rounded-xl shadow-lg p-4 space-y-1">
         {tiers.map(({ label, color }) => (
           <div
             key={label}
-            className="flex bg-gray-800 rounded-lg overflow-hidden min-h-[120px] shadow-lg"
+            className={`flex items-stretch min-h-[112px] rounded-md transition-colors ${
+              dragOverPosition?.tier === label ? "bg-white/10" : ""
+            }`}
+            onDragOver={(e) => e.preventDefault()}
           >
             <div
-              className={`w-20 flex items-center justify-center text-white text-4xl font-black bg-gradient-to-br ${color}`}
+              className={`w-16 flex items-center justify-center text-white text-3xl font-black rounded-l-md bg-gradient-to-br ${color}`}
             >
               {label}
             </div>
-            <div
-              className="flex-1 p-3 flex flex-wrap gap-3 items-center bg-white/5"
-              onDragOver={(e) => e.preventDefault()}
-            >
+            <div className="flex-1 p-2 flex flex-wrap gap-2 items-center">
               {(tierPhotos[label] || []).map((photo, index) => (
                 <div
                   key={photo.id}
@@ -312,25 +319,34 @@ export default function TierAlbumView({
                 >
                   {dragOverPosition?.tier === label &&
                     dragOverPosition.index === index && (
-                      <div className="w-1.5 h-24 bg-teal-400 rounded-full transition-all" />
+                      <div className="w-1 h-20 bg-teal-400 rounded-full transition-all" />
                     )}
                   <div
                     draggable
                     onDragStart={(e) => handleDragStart(e, photo, label)}
+                    onDragEnd={handleDragEnd}
                     onClick={() => handleImageClick(photo)}
+                    className={`relative group transition-opacity ${
+                      draggingPhotoId === photo.id
+                        ? "opacity-40"
+                        : "opacity-100"
+                    }`}
                   >
                     <Image
                       src={photo.src}
                       alt={photo.name}
-                      width={96}
-                      height={96}
-                      className="rounded-md object-cover cursor-pointer w-24 h-24 shadow-md"
+                      width={88}
+                      height={88}
+                      className="rounded-md object-cover cursor-pointer w-22 h-22 shadow-md hover:scale-105 transition-transform"
                     />
+                    {label === "S" && index === 0 && (
+                      <TrophyIcon className="absolute -top-2 -right-2 w-6 h-6 text-yellow-400 filter drop-shadow-lg" />
+                    )}
                   </div>
                 </div>
               ))}
               <div
-                className="flex-1 min-w-[24px]"
+                className="flex-1 min-w-[20px]"
                 onDragOver={(e) =>
                   handleDragOverPosition(
                     e,
@@ -349,7 +365,7 @@ export default function TierAlbumView({
                 {dragOverPosition?.tier === label &&
                   dragOverPosition.index ===
                     (tierPhotos[label] || []).length && (
-                    <div className="w-1.5 h-24 bg-teal-400 rounded-full transition-all" />
+                    <div className="w-1 h-20 bg-teal-400 rounded-full" />
                   )}
               </div>
             </div>
@@ -363,21 +379,25 @@ export default function TierAlbumView({
         </h3>
         <div
           onDragOver={(e) => e.preventDefault()}
-          className="p-4 bg-gray-50 rounded-lg min-h-[140px] flex flex-wrap gap-3 items-center border-2 border-dashed"
+          className="p-4 bg-gray-50 rounded-lg min-h-[120px] flex flex-wrap gap-3 items-center border-2 border-dashed"
         >
           {availablePhotos.map((photo) => (
             <div
               key={photo.id}
               draggable
               onDragStart={(e) => handleDragStart(e, photo, "available")}
+              onDragEnd={handleDragEnd}
               onClick={() => handleImageClick(photo)}
+              className={`transition-opacity ${
+                draggingPhotoId === photo.id ? "opacity-40" : "opacity-100"
+              }`}
             >
               <Image
                 src={photo.src}
                 alt={photo.name}
-                width={96}
-                height={96}
-                className="rounded-md object-cover cursor-pointer w-24 h-24 shadow-sm"
+                width={88}
+                height={88}
+                className="rounded-md object-cover cursor-pointer w-22 h-22 shadow-sm"
               />
             </div>
           ))}

@@ -2,11 +2,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import Header from "@/components/layout/header";
 import GroupSidebar from "@/components/layout/GroupSidebar";
 import TierAlbumView from "@/components/group/TierAlbumView";
-import { PlusIcon, CameraIcon, PhotoIcon } from "@heroicons/react/24/solid";
+import TimelineAlbumView from "@/components/group/TimelineAlbumView";
+import HighlightAlbumView from "@/components/group/HighlightAlbumView";
+import { PlusIcon, PhotoIcon } from "@heroicons/react/24/solid";
+import Image from "next/image";
 
 type AlbumType = "timeline" | "tier" | "highlight";
 
@@ -19,21 +21,27 @@ export default function GroupPage({
   const groupName = decodeURIComponent(encodedGroupName);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<AlbumType>("tier");
-  const [selectedTimelineAlbum, setSelectedTimelineAlbum] = useState<
-    string | null
-  >(null);
-  const [selectedTierAlbum, setSelectedTierAlbum] = useState<{
+  const [selectedAlbum, setSelectedAlbum] = useState<{
     id: string;
     title: string;
+    type: AlbumType;
   } | null>(null);
 
   useEffect(() => {
-    if (selectedTierAlbum) {
+    if (selectedAlbum) {
       setSidebarOpen(false);
+    } else {
+      setSidebarOpen(true);
     }
-  }, [selectedTierAlbum]);
+  }, [selectedAlbum]);
 
-  // --- 각 앨범 타입별 목록 렌더링 함수 ---
+  const handleSelectAlbum = (id: string, title: string, type: AlbumType) => {
+    setSelectedAlbum({ id, title, type });
+  };
+
+  const handleBackToList = () => {
+    setSelectedAlbum(null);
+  };
 
   // 1. 타임라인 앨범 목록 렌더링
   const renderTimelineAlbumList = () => {
@@ -42,30 +50,15 @@ export default function GroupPage({
         id: "airport-trip",
         title: "김포공항에서 출발",
         date: "2025.06.25",
-        photoCount: 12,
         coverImage: "/airport-dummy1.jpg",
-        gradient: "from-blue-100 to-blue-200",
       },
       {
         id: "jeju-travel",
         title: "제주도 여행",
         date: "2025.07.10",
-        photoCount: 8,
         coverImage: "/jeju-dummy1.webp",
-        gradient: "from-orange-100 to-orange-200",
       },
     ];
-    // 타임라인 앨범 상세 보기는 이 예제에서는 생략합니다.
-    if (selectedTimelineAlbum) {
-      return (
-        <div>
-          <button onClick={() => setSelectedTimelineAlbum(null)}>
-            ← 목록으로
-          </button>
-          <h2>{selectedTimelineAlbum} 상세 보기</h2>
-        </div>
-      );
-    }
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="flex justify-between items-center">
@@ -78,18 +71,18 @@ export default function GroupPage({
           {albums.map((album) => (
             <div
               key={album.id}
-              onClick={() => alert(`${album.title} 앨범 선택됨!`)}
+              onClick={() =>
+                handleSelectAlbum(album.id, album.title, "timeline")
+              }
               className="bg-white rounded-xl shadow-md border overflow-hidden cursor-pointer group hover:shadow-xl hover:-translate-y-1 transition-all"
             >
-              <div
-                className={`relative h-48 bg-gradient-to-br ${album.gradient}`}
-              >
+              <div className="relative h-48">
                 <Image
                   src={album.coverImage}
                   alt={album.title}
-                  layout="fill"
-                  objectFit="cover"
-                  className="group-hover:scale-105 transition-transform duration-300"
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               </div>
               <div className="p-4">
@@ -137,18 +130,16 @@ export default function GroupPage({
           {tierAlbums.map((album) => (
             <div
               key={album.id}
-              onClick={() =>
-                setSelectedTierAlbum({ id: album.id, title: album.title })
-              }
+              onClick={() => handleSelectAlbum(album.id, album.title, "tier")}
               className="bg-white rounded-xl shadow-md border overflow-hidden cursor-pointer group hover:shadow-xl hover:-translate-y-1 transition-all"
             >
               <div className="relative h-48">
                 <Image
                   src={album.coverImage}
                   alt={album.title}
-                  layout="fill"
-                  objectFit="cover"
-                  className="group-hover:scale-105 transition-transform duration-300"
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                 <h4 className="absolute bottom-4 left-4 text-white text-xl font-bold">
@@ -164,21 +155,52 @@ export default function GroupPage({
   };
 
   // 3. 하이라이트 앨범 목록 렌더링
-  const renderHighlightAlbumList = () => (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-7">
-      {[1, 2, 3, 4].map((i) => (
-        <div
-          key={i}
-          className="bg-white rounded-2xl overflow-hidden shadow-xl cursor-pointer transition-all hover:-translate-y-2 hover:shadow-2xl aspect-video relative flex items-center justify-center"
-        >
-          <h3 className="text-2xl font-bold text-gray-800">하이라이트 {i}</h3>
-        </div>
-      ))}
-    </div>
-  );
+  const renderHighlightAlbumList = () => {
+    const highlightAlbums = [
+      { id: "highlight-1", title: "하이라이트 1" },
+      { id: "highlight-2", title: "하이라이트 2" },
+      { id: "highlight-3", title: "하이라이트 3" },
+      { id: "highlight-4", title: "하이라이트 4" },
+    ];
+    return (
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-7">
+        {highlightAlbums.map((album) => (
+          <div
+            key={album.id}
+            onClick={() =>
+              handleSelectAlbum(album.id, album.title, "highlight")
+            }
+            className="bg-white rounded-2xl overflow-hidden shadow-xl cursor-pointer transition-all hover:-translate-y-2 hover:shadow-2xl aspect-video relative flex items-center justify-center"
+          >
+            <h3 className="text-2xl font-bold text-gray-800">{album.title}</h3>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderActiveAlbumView = () => {
+    if (!selectedAlbum) return null;
+
+    switch (selectedAlbum.type) {
+      case "tier":
+        return (
+          <TierAlbumView
+            albumId={selectedAlbum.id}
+            albumTitle={selectedAlbum.title}
+            onBack={handleBackToList}
+          />
+        );
+      case "timeline":
+        return <TimelineAlbumView albumId={selectedAlbum.id} />;
+      case "highlight":
+        return <HighlightAlbumView albumId={selectedAlbum.id} />;
+      default:
+        return null;
+    }
+  };
 
   return (
-    // [변경] 전체 레이아웃 구조 수정
     <div className="min-h-screen bg-gray-50">
       <GroupSidebar
         groupName={groupName}
@@ -194,63 +216,61 @@ export default function GroupPage({
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
         <main className="p-6 sm:p-8">
-          <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
-            <h1 className="text-3xl font-bold text-gray-900">
-              {groupName} 그룹스페이스
-            </h1>
-          </div>
+          {selectedAlbum ? (
+            renderActiveAlbumView()
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {groupName} 그룹스페이스
+                </h1>
+              </div>
 
-          <div className="flex items-center justify-between border-b border-gray-200 mb-8">
-            <div className="flex gap-2">
-              <button
-                onClick={() => setActiveTab("timeline")}
-                className={`px-4 py-3 font-semibold ${
-                  activeTab === "timeline"
-                    ? "border-b-2 border-teal-500 text-teal-600"
-                    : "text-gray-500"
-                }`}
-              >
-                📅 타임라인
-              </button>
-              <button
-                onClick={() => setActiveTab("tier")}
-                className={`px-4 py-3 font-semibold ${
-                  activeTab === "tier"
-                    ? "border-b-2 border-teal-500 text-teal-600"
-                    : "text-gray-500"
-                }`}
-              >
-                🏆 티어
-              </button>
-              <button
-                onClick={() => setActiveTab("highlight")}
-                className={`px-4 py-3 font-semibold ${
-                  activeTab === "highlight"
-                    ? "border-b-2 border-teal-500 text-teal-600"
-                    : "text-gray-500"
-                }`}
-              >
-                ✨ 하이라이트
-              </button>
-            </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg font-semibold text-gray-700">
-              <PhotoIcon className="w-5 h-5" /> 갤러리
-            </button>
-          </div>
+              <div className="flex items-center justify-between border-b border-gray-200 mb-8">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setActiveTab("timeline")}
+                    className={`px-4 py-3 font-semibold ${
+                      activeTab === "timeline"
+                        ? "border-b-2 border-teal-500 text-teal-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    📅 타임라인
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("tier")}
+                    className={`px-4 py-3 font-semibold ${
+                      activeTab === "tier"
+                        ? "border-b-2 border-teal-500 text-teal-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    🏆 티어
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("highlight")}
+                    className={`px-4 py-3 font-semibold ${
+                      activeTab === "highlight"
+                        ? "border-b-2 border-teal-500 text-teal-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    ✨ 하이라이트
+                  </button>
+                </div>
+                <button className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg font-semibold text-gray-700">
+                  <PhotoIcon className="w-5 h-5" /> 갤러리
+                </button>
+              </div>
 
-          <div>
-            {activeTab === "tier" &&
-              (selectedTierAlbum ? (
-                <TierAlbumView
-                  albumId={selectedTierAlbum.id}
-                  albumTitle={selectedTierAlbum.title}
-                  onBack={() => setSelectedTierAlbum(null)}
-                />
-              ) : (
-                renderTierAlbumList()
-              ))}
-            {/* ... 타임라인, 하이라이트 탭 렌더링 ... */}
-          </div>
+              <div>
+                {activeTab === "timeline" && renderTimelineAlbumList()}
+                {activeTab === "tier" && renderTierAlbumList()}
+                {activeTab === "highlight" && renderHighlightAlbumList()}
+              </div>
+            </>
+          )}
         </main>
       </div>
     </div>
