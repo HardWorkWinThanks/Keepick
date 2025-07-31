@@ -1,6 +1,7 @@
 // src/widgets/video-conference/ui/VideoGrid.tsx
 import React, { useEffect, useRef } from "react";
 import type { User } from "@/shared/types/webrtc";
+import { GestureRecognizer } from "./GestureRecognizer";
 
 /**
  * 원격 비디오를 렌더링하는 가장 안정적인 최종 컴포넌트
@@ -60,16 +61,16 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
   remoteStreams,
   users,
 }) => {
-  const localVideoRef = useRef<HTMLVideoElement>(null);
+  // const localVideoRef = useRef<HTMLVideoElement>(null);
 
-  useEffect(() => {
-    if (
-      localVideoRef.current &&
-      localVideoRef.current.srcObject !== localStream
-    ) {
-      localVideoRef.current.srcObject = localStream;
-    }
-  }, [localStream]);
+  // useEffect(() => {
+  //   if (
+  //     localVideoRef.current &&
+  //     localVideoRef.current.srcObject !== localStream
+  //   ) {
+  //     localVideoRef.current.srcObject = localStream;
+  //   }
+  // }, [localStream]);
 
   const totalUsers = (users?.length || 0) + 1;
   const getGridTemplateColumns = () => {
@@ -92,48 +93,27 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
       style={{
         display: "grid",
         gridTemplateColumns: getGridTemplateColumns(),
-        gap: "16px",
-        padding: "16px",
-        width: "100%",
-        height: "100%",
-        boxSizing: "border-box",
-        overflow: "auto",
-        placeItems: "center",
+        gap: "10px",
+        padding: "10px",
       }}
     >
-      {/* 로컬 비디오 */}
-      <div
-        style={{
-          position: "relative",
-          width: "320px",
-          height: "240px",
-          backgroundColor: "#000",
-          borderRadius: "8px",
-          overflow: "hidden",
-        }}
-      >
-        <video
-          ref={localVideoRef}
-          autoPlay
-          playsInline
-          muted
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        />
+      {/* ▼▼▼▼▼ 수정된 부분 ▼▼▼▼▼ */}
+      {/* 로컬 비디오 렌더링을 GestureRecognizer 컴포넌트에 위임합니다. */}
+      <div className="video-container" style={{ position: "relative" }}>
+        <GestureRecognizer mediaStream={localStream} />
         <div
+          className="user-label"
           style={{
             position: "absolute",
-            bottom: "8px",
-            left: "8px",
-            padding: "4px 8px",
-            backgroundColor: "rgba(0,0,0,0.5)",
+            top: "5px",
+            left: "5px",
             color: "white",
-            borderRadius: "4px",
-            fontSize: "12px",
           }}
         >
           📹 나 (You)
         </div>
       </div>
+      {/* ▲▲▲▲▲ 수정된 부분 ▲▲▲▲▲ */}
 
       {/* 원격 사용자 비디오 */}
       {users.map((user) => {
