@@ -5,18 +5,25 @@ import { io } from "socket.io-client";
 import type { Socket } from "socket.io-client";
 import { SOCKET_SERVER_URL } from "@/shared/config";
 import type { RtpCapabilities } from "mediasoup-client/types";
+import type { User } from "@/shared/types/webrtc";
 
-// 필요한 타입들을 명확하게 정의합니다.
-// 이 타입들은 다른 파일에서 가져와서 사용할 수 있습니다.
 interface ProducerInfo {
   producerId: string;
-  producerSocketId: string;
   kind: "audio" | "video";
+}
+
+interface PeerWithProducers extends User {
+  producers: ProducerInfo[];
+}
+
+interface JoinRoomPayload {
+  roomId: string;
+  userName: string;
 }
 
 interface JoinRoomResponse {
   rtpCapabilities: RtpCapabilities;
-  existingProducers: ProducerInfo[];
+  peers: PeerWithProducers[];
 }
 
 interface SocketCallbacks {
@@ -64,46 +71,69 @@ export const useSocket = (callbacks?: SocketCallbacks) => {
     console.log("✅ Socket initialized");
   }, [callbacks]);
 
-  /**
-   * 🔥 [수정됨] SFU 방식의 joinRoom
-   * Promise를 반환하여, 서버로부터 'joined_room' 응답을 받아야만 완료됩니다.
-   * 이렇게 하면 레이스 컨디션을 방지하고 안정적인 데이터 흐름을 보장할 수 있습니다.
-   */
-  const joinRoom = useCallback((roomId: string): Promise<JoinRoomResponse> => {
-    return new Promise((resolve, reject) => {
+  const joinRoom = useCallback(
+    (payload: JoinRoomPayload): Promise<JoinRoomResponse> => {
+      return new Promise((resolve, reject) => {
+        if (!socketRef.current?.connected) {
+          return reject(new Error("Socket not connected. Cannot join room."));
+        }
+
+        console.log(
+          `🚪 Emitting join_room request for room: ${payload.roomId} as ${payload.userName}`
+        );
+
+        socketRef.current.emit("join_room", payload);
+
+        const handleJoinedRoom = (data: JoinRoomResponse) => {
+          if (data && data.rtpCapabilities) {
+            console.log("✅ Successfully joined room with data:", data);
+            resolve(data);
+          } else {
+            console.error("❌ Invalid 'joined_room' response:", data);
+            reject(new Error("Server response for join_room is invalid."));
+          }
+          socketRef.current?.off("error", handleError);
+        };
+
+        const handleError = (error: { message: string }) => {
+          console.error("❌ Error while joining room:", error);
+          reject(new Error(error.message || "Failed to join room"));
+          socketRef.current?.off("joined_room", handleJoinedRoom);
+        };
+
+        socketRef.current.once("joined_room", handleJoinedRoom);
+        socketRef.current.once("error", handleError);
+      });
+    },
+    []
+  );
+
+  const leaveRoom = useCallback((): Promise<void> => {
+    return new Promise((resolve) => {
       if (!socketRef.current?.connected) {
-        return reject(new Error("Socket not connected. Cannot join room."));
+        console.log("Socket not connected. Cannot leave room.");
+        resolve();
+        return;
       }
 
-      console.log(`🚪 Emitting join_room request for room: ${roomId}`);
-      // 서버에 방 참여를 요청합니다.
-      socketRef.current.emit("join_room", { roomId });
+      console.log("🚪 Emitting leave_room request");
 
-      // 서버로부터 'joined_room' 응답을 한 번만 수신합니다.
-      socketRef.current.once("joined_room", (data: JoinRoomResponse) => {
-        // 서버로부터 받은 데이터(data)를 확인합니다.
-        if (data && data.rtpCapabilities) {
-          // ✅ data 안에 rtpCapabilities가 있으면 성공!
-          resolve(data);
-        } else {
-          // ❌ data 안에 rtpCapabilities가 없으면 실패!
-          reject(new Error("Server response for join_room is invalid.")); // <--- 바로 이 에러입니다.
-        }
-      });
+      // 서버로부터 left_room 확인을 받으면 resolve
+      const handleLeftRoom = () => {
+        console.log("✅ Successfully left room");
+        resolve();
+      };
 
-      // 에러 발생 시 Promise를 reject 합니다.
-      socketRef.current.once("error", (error) => {
-        console.error("❌ Error while joining room:", error);
-        reject(error);
-      });
-    });
-  }, []);
-
-  const leaveRoom = useCallback(() => {
-    if (socketRef.current?.connected) {
+      socketRef.current.once("left_room", handleLeftRoom);
       socketRef.current.emit("leave_room");
-      console.log("👋 Left room");
-    }
+
+      // 타임아웃 설정 (3초 후 강제 resolve)
+      setTimeout(() => {
+        socketRef.current?.off("left_room", handleLeftRoom);
+        console.log("⏰ Leave room timeout - forcing resolve");
+        resolve();
+      }, 3000);
+    });
   }, []);
 
   const disconnect = useCallback(() => {

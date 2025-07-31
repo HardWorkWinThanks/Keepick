@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Header from "@/components/layout/Header";
+import Header from "@/components/layout/header";
 import GroupSidebar from "@/components/layout/GroupSidebar";
 import TierAlbumView from "@/components/group/TierAlbumView";
 import TimelineAlbumView from "@/components/group/TimelineAlbumView";

@@ -1,7 +1,10 @@
 // src/widgets/video-conference/ui/VideoGrid.tsx
+"use client";
+
 import React, { useEffect, useRef } from "react";
 import type { User } from "@/shared/types/webrtc";
 import { GestureRecognizer } from "./GestureRecognizer";
+import { UserCircleIcon } from "@heroicons/react/24/solid"; // UserCircleIcon 추가
 
 /**
  * 원격 비디오를 렌더링하는 가장 안정적인 최종 컴포넌트
@@ -22,12 +25,10 @@ const RemoteVideo: React.FC<{ stream: MediaStream; userId: string }> = ({
 
     const handleCanPlay = async () => {
       try {
-        videoElement.muted = true;
+        videoElement.muted = true; // 초기에는 음소거
         await videoElement.play();
-        videoElement.muted = false;
-        console.log(
-          `✅✅✅ Successfully played video for ${userId} WITH SOUND.`
-        );
+        // 이후 로직에서 필요에 따라 음소거 해제 가능 (예: 사용자가 음소거 해제 버튼 클릭 시)
+        console.log(`✅✅✅ Successfully played video for ${userId}.`);
       } catch (error) {
         console.error(`❌❌❌ FAILED to play video for ${userId}`, error);
       }
@@ -44,8 +45,8 @@ const RemoteVideo: React.FC<{ stream: MediaStream; userId: string }> = ({
       ref={videoRef}
       autoPlay
       playsInline
-      muted // 초기값은 muted로 설정
-      style={{ width: "100%", height: "100%", objectFit: "cover" }} // 부모에 꽉 차게 설정
+      muted // 원격 비디오는 기본적으로 음소거로 유지 (충돌 방지)
+      className="w-full h-full object-cover rounded-lg shadow-lg" // Tailwind CSS 클래스 사용
     />
   );
 };
@@ -67,30 +68,42 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
 }) => {
   const totalUsers = (users?.length || 0) + (localStream ? 1 : 0);
 
-  // ▼▼▼▼▼ 수정된 부분 1번: 혼자 있을 때와 아닐 때를 구분하는 레이아웃 로직 ▼▼▼▼▼
-  if (totalUsers <= 1) {
-    // 혼자 있을 때: 화면 중앙에 적당한 크기로 표시
+  // 혼자 있을 때의 UI (localStream이 있고 remoteStream이 없을 때)
+  if (localStream && remoteStreams.size === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="relative w-full max-w-4xl aspect-video bg-black rounded-lg overflow-hidden shadow-2xl">
+      <div className="w-full h-full flex items-center justify-center p-4">
+        <div className="relative w-full max-w-4xl aspect-video bg-gray-800 rounded-lg overflow-hidden shadow-2xl">
+          {/* 로컬 스트림을 GestureRecognizer로 감싸서 사용 */}
           <GestureRecognizer
             mediaStream={localStream}
             isStaticOn={isStaticGestureOn}
             isDynamicOn={isDynamicGestureOn}
           />
-          <div className="absolute bottom-2 left-2 px-2 py-1 bg-black bg-opacity-50 rounded-md text-sm">
+          <div className="absolute bottom-2 left-2 px-3 py-1 bg-black bg-opacity-50 rounded-md text-sm font-semibold text-white">
             📹 나 (You)
           </div>
         </div>
       </div>
     );
   }
-  // ▲▲▲▲▲ 수정 완료 ▲▲▲▲▲
+
+  // 로컬 스트림도 없고 원격 스트림도 없을 때 (아무도 참여하지 않았을 때)
+  if (!localStream && remoteStreams.size === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
+        <UserCircleIcon className="w-24 h-24 text-gray-600 mb-4" />
+        <h2 className="text-2xl font-bold text-white">그룹챗 대기 중</h2>
+        <p className="mt-2 max-w-sm text-gray-400">
+          사이드바의 '참여하기' 버튼을 눌러 그룹챗을 시작하세요!
+        </p>
+      </div>
+    );
+  }
 
   // 여러 명 있을 때: 기존 그리드 레이아웃 사용
   const getGridClass = () => {
-    if (totalUsers <= 1) return "grid-cols-1";
-    if (totalUsers === 2) return "grid-cols-1 md:grid-cols-2"; // 2명일 땐 모바일에서 세로로, 데스크탑에서 가로로
+    if (totalUsers <= 1) return "grid-cols-1"; // 이 경우는 위에서 이미 처리됨
+    if (totalUsers === 2) return "grid-cols-1 md:grid-cols-2";
     if (totalUsers <= 4) return "grid-cols-2";
     if (totalUsers <= 6) return "grid-cols-2 lg:grid-cols-3";
     if (totalUsers <= 9) return "grid-cols-3";
@@ -99,7 +112,6 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
 
   return (
     <div className={`grid ${getGridClass()} gap-4 w-full h-full items-center`}>
-      {/* 로컬 비디오 */}
       {localStream && (
         <div className="relative aspect-video bg-black rounded-lg overflow-hidden shadow-lg">
           <GestureRecognizer
@@ -107,7 +119,8 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
             isStaticOn={isStaticGestureOn}
             isDynamicOn={isDynamicGestureOn}
           />
-          <div className="absolute top-2 left-2 px-2 py-1 bg-black bg-opacity-50 rounded-md text-sm font-semibold">
+          <div className="absolute bottom-2 left-2 px-2 py-1 bg-black bg-opacity-50 rounded-md text-sm font-semibold">
+            {/* [수정] 부모로부터 받은 로컬 사용자 이름으로 표시 */}
             📹 나 (You)
           </div>
         </div>
@@ -125,17 +138,19 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
             {stream && hasVideo ? (
               <RemoteVideo stream={stream} userId={user.id} />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-white">
-                <div>{hasVideo ? "영상 로딩중..." : "비디오 없음"}</div>
+              <div className="w-full h-full flex items-center justify-center text-white bg-gray-700">
+                <UserCircleIcon className="w-16 h-16 text-gray-500 mb-2" />
+                {/* [수정] ID 대신 이름 표시 */}
+                <span className="text-lg font-semibold">{user.name}</span>
               </div>
             )}
-            <div className="absolute top-2 left-2 px-2 py-1 bg-black bg-opacity-50 rounded-md text-sm font-semibold">
-              📺 {user.id.substring(0, 8)}...
+            <div className="absolute bottom-2 left-2 px-2 py-1 bg-black bg-opacity-50 rounded-md text-sm font-semibold">
+              {/* [수정] ID 대신 이름 표시 */}
+              📺 {user.name}
             </div>
           </div>
         );
       })}
     </div>
   );
-  // ▲▲▲▲▲ 수정 완료 ▲▲▲▲▲
 };
