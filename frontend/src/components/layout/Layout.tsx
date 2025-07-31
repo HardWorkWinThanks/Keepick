@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, ReactNode } from "react";
-import Header from "./header";
+import Header from "./Header";
 import Sidebar from "./sidebar";
 
 interface LayoutProps {

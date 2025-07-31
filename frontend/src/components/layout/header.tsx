@@ -1,4 +1,3 @@
-// components/layout/Header.tsx
 "use client";
 
 import { useState } from "react";
@@ -8,26 +7,30 @@ import {
   BellIcon,
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
+  ArrowLeftStartOnRectangleIcon, // [추가] 대시보드 이동 아이콘
 } from "@heroicons/react/24/outline";
 import Image from "next/image";
 
 interface HeaderProps {
   onMenuClick?: () => void;
+  onBackToDashboard?: () => void; // [추가] 대시보드로 돌아가기 함수 prop
 }
 
-export default function Header({ onMenuClick }: HeaderProps) {
+export default function Header({
+  onMenuClick,
+  onBackToDashboard,
+}: HeaderProps) {
   const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
 
   // 실제로는 인증 상태에서 가져올 데이터
-  const user = { name: "wmwogus", imageUrl: "/jaewan1.jpg" }; // [변경] 프로필 사진 경로 수정
+  const user = { name: "wmwogus", imageUrl: "/jaewan1.jpg" };
 
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-sm shadow-sm h-16">
-      {" "}
-      {/* 높이 고정 */}
       <div className="flex items-center justify-between h-full px-4 sm:px-6 lg:px-8">
         {/* Left side */}
         <div className="flex items-center gap-4">
+          {/* 사이드바 메뉴 버튼 (onMenuClick prop이 있을 때만 렌더링) */}
           {onMenuClick ? (
             <button
               onClick={onMenuClick}
@@ -37,14 +40,31 @@ export default function Header({ onMenuClick }: HeaderProps) {
               <Bars3Icon className="h-7 w-7" />
             </button>
           ) : (
+            // 메뉴 버튼이 없을 때도 레이아웃 유지를 위한 빈 공간
             <div className="w-7 h-7"></div>
           )}
+
+          {/* 로고 */}
           <Link
             href="/"
             className="font-montserrat font-bold text-2xl text-[var(--primary-color)]"
           >
             Keep<span className="text-[var(--text-dark)] ml-1">ick</span>
           </Link>
+
+          {/* [추가] 대시보드 복귀 버튼 (onBackToDashboard prop이 있을 때만 렌더링) */}
+          {onBackToDashboard && (
+            <>
+              <div className="h-6 w-px bg-gray-200"></div> {/* 시각적 구분선 */}
+              <button
+                onClick={onBackToDashboard}
+                className="flex items-center gap-2 text-gray-600 hover:text-[var(--primary-color)] transition-colors"
+              >
+                <ArrowLeftStartOnRectangleIcon className="h-6 w-6" />
+                <span className="font-semibold hidden sm:block">대시보드</span>
+              </button>
+            </>
+          )}
         </div>
 
         {/* Right side: Actions */}
