@@ -153,26 +153,31 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
         console.log("⏸️ Already processing existing producers, skipping...");
         return;
       }
-      setIsProcessingExistingProducers(true);
+
       console.log(
-        "🔍 Starting to consume existing producers:",
+        "🔍 Starting to consume existing producers SEQUENTIALLY:",
         existingProducers
       );
+      setIsProcessingExistingProducers(true);
+
       try {
+        // 🔥 Promise.all 대신 for...of 루프와 await를 사용하여 순차적으로 처리합니다.
         for (const producerInfo of existingProducers) {
+          if (
+            socket?.id === producerInfo.producerSocketId ||
+            processedProducersRef.current.has(producerInfo.producerId)
+          ) {
+            continue;
+          }
+
           try {
-            if (processedProducersRef.current.has(producerInfo.producerId))
-              continue;
-            if (socket?.id === producerInfo.producerSocketId) {
-              processedProducersRef.current.add(producerInfo.producerId);
-              continue;
-            }
             const consumer = await consume(producerInfo.producerId, roomId);
             if (consumer) {
               handleRemoteStream(consumer, producerInfo.producerSocketId);
               processedProducersRef.current.add(producerInfo.producerId);
             }
-          } catch (err: unknown) {
+          } catch (err) {
+            // 이 catch는 개별 producer 소비 실패를 처리합니다.
             console.error(
               `❌ Failed to consume existing producer ${producerInfo.producerId}:`,
               err
@@ -217,31 +222,36 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
       setIsProcessingExistingProducers(false);
       setRemoteStreams(new Map());
 
-      const rtpCapabilities = await joinRoom(roomId.trim());
-      if (!rtpCapabilities) {
-        throw new Error("Failed to get RTP capabilities from server.");
-      }
+      const { rtpCapabilities, existingProducers } = await joinRoom(
+        roomId.trim()
+      );
+
+      setIsInRoom(true); // 방에 성공적으로 참여했음을 표시
 
       await initializeDevice(rtpCapabilities);
 
-      // 1. 로컬 미디어 스트림을 가져와서 state에 설정 (여기까지만 책임)
+      console.log("1️⃣ 로컬 미디어 초기화 시작");
       const stream = await initializeLocalMedia();
+      console.log("2️⃣ 로컬 미디어 초기화 성공. stream:", stream);
+
       setLocalStream(stream);
 
-      // 2. Transport 생성
+      console.log("3️⃣ 프로듀서 트랜스포트 생성 시작");
       await createProducerTransport(roomId.trim());
+      console.log("4️⃣ 프로듀서 트랜스포트 생성 성공"); // 🚨 아마 이 로그는 안 찍힐 겁니다.
+
+      console.log("5️⃣ 컨슈머 트랜스포트 생성 시작");
       await createConsumerTransport(roomId.trim());
+      console.log("6️⃣ 컨슈머 트랜스포트 생성 성공");
 
-      // 3. 기존 Producer 목록 요청
-      socket.emit("get_existing_producers", { roomId: roomId.trim() });
-
-      // 4. 미디어 송신 시작 (방금 함수 내에서 가져온 stream 변수 사용)
       if (stream) {
         await startProducing(stream);
-      } else {
-        console.warn(
-          "⚠️ startProducing skipped because localStream is not available."
-        );
+      }
+
+      // 4. 모든 설정이 끝난 후, 받아온 기존 producer 목록을 처리합니다.
+      if (existingProducers && existingProducers.length > 0) {
+        console.log("➡️ Consuming existing producers after setup.");
+        await consumeExistingProducers(existingProducers);
       }
 
       clearError();
@@ -255,6 +265,7 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
     roomId,
     socket,
     joinRoom,
+    consumeExistingProducers,
     initializeDevice,
     initializeLocalMedia,
     createProducerTransport,
@@ -268,27 +279,12 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
   useEffect(() => {
     if (!socket) return;
     console.log("🔌 Setting up SFU socket events");
-    socket.on("joined_room", (data: { existingProducers?: ProducerInfo[] }) => {
-      console.log("✅ Successfully joined room:", data);
-      setIsInRoom(true);
-      if (data.existingProducers)
-        consumeExistingProducers(data.existingProducers);
-    });
-    socket.on(
-      "existing_producers_list",
-      (data: { existingProducers: ProducerInfo[] }) => {
-        console.log(
-          "📥 Received existing producers list for manual consume:",
-          data.existingProducers
-        );
-        if (
-          data.existingProducers.length > 0 &&
-          !isProcessingExistingProducers
-        ) {
-          consumeExistingProducers(data.existingProducers);
-        }
-      }
-    );
+    // socket.on("joined_room", (data: { existingProducers?: ProducerInfo[] }) => {
+    //   console.log("✅ Successfully joined room:", data);
+    //   setIsInRoom(true);
+    //   if (data.existingProducers)
+    //     consumeExistingProducers(data.existingProducers);
+    // });
     socket.on("existing_peers", (data: { peers: string[] }) => {
       console.log("👥 Existing peers:", data.peers);
       handleAllUsers(data.peers.map((id) => ({ id, email: "unknown" })));
