@@ -13,6 +13,7 @@ import { useVideoSession } from "../model/useVideoSession";
 import { VideoGrid } from "./VideoGrid";
 import { ControlPanel } from "./ControlPanel";
 import { StatusDisplay } from "./StatusDisplay";
+import { BottomControls } from "./BottomControls";
 import type { Consumer } from "mediasoup-client/types";
 
 // Props 타입 정의
@@ -67,6 +68,27 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
 
   // ✅ localStream을 state로 관리
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [isCameraOn, setCameraOn] = useState(true);
+  const [isMicOn, setMicOn] = useState(true);
+  const toggleCamera = useCallback(() => {
+    if (localStream) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setCameraOn(videoTrack.enabled);
+      }
+    }
+  }, [localStream]);
+
+  const toggleMicrophone = useCallback(() => {
+    if (localStream) {
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setMicOn(audioTrack.enabled);
+      }
+    }
+  }, [localStream]);
 
   // ✅ localStream state가 변경될 때만 비디오 엘리먼트를 조작
   useEffect(() => {
@@ -205,6 +227,8 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
     setIsInRoom(false);
     cleanup();
     setLocalStream(null); // 로컬 스트림 상태도 초기화
+    setCameraOn(true);
+    setMicOn(true);
     processedProducersRef.current.clear();
     setIsProcessingExistingProducers(false);
     setRemoteStreams(new Map());
@@ -389,7 +413,8 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
         </div>
 
         {/* === 메인 비디오 그리드 === */}
-        <div className="flex-grow flex items-center justify-center p-4">
+        <div className="flex flex-col flex-grow">
+          <div className="flex-grow flex items-center justify-center p-2 md:p-4 bg-gray-900 overflow-hidden"></div>
           <VideoGrid
             localStream={localStream}
             remoteStreams={remoteStreams}
@@ -399,6 +424,15 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
             isDynamicGestureOn={isDynamicGestureOn}
             // ▲▲▲▲▲ 전달 완료 ▲▲▲▲▲
           />
+          <div className="flex-shrink-0">
+            <BottomControls
+              onLeaveRoom={handleLeaveRoom}
+              isCameraOn={isCameraOn}
+              isMicOn={isMicOn}
+              onToggleCamera={toggleCamera}
+              onToggleMicrophone={toggleMicrophone}
+            />
+          </div>
         </div>
       </main>
 
