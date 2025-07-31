@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import Header from "@/components/layout/Header";
 import GroupSidebar from "@/components/layout/GroupSidebar";
 import TierAlbumView from "@/components/group/TierAlbumView";
@@ -10,6 +11,8 @@ import TimelineAlbumView from "@/components/group/TimelineAlbumView";
 import HighlightAlbumView from "@/components/group/HighlightAlbumView";
 import { PlusIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
+// [추가] 새로 만든 플로팅 버튼 컴포넌트 임포트
+import GroupChatFloatingButton from "@/components/group/GroupChatFloatingButton";
 
 type AlbumType = "timeline" | "tier" | "highlight";
 
@@ -27,6 +30,12 @@ export default function GroupPage({
     title: string;
     type: AlbumType;
   } | null>(null);
+
+  const [isChatActive, setIsChatActive] = useState(false);
+
+  useEffect(() => {
+    setIsChatActive(Math.random() > 0.5);
+  }, [groupName]);
 
   useEffect(() => {
     if (!searchParams) return;
@@ -67,7 +76,6 @@ export default function GroupPage({
   }, [selectedAlbum]);
 
   const handleSelectAlbum = (id: string, title: string, type: AlbumType) => {
-    // URL을 변경하여 페이지 상태를 반영하고, 새로고침 시에도 유지되도록 함
     const newUrl = `/group/${encodedGroupName}?album=${id}&type=${type}`;
     window.history.pushState({ path: newUrl }, "", newUrl);
     setSelectedAlbum({ id, title, type });
@@ -80,7 +88,7 @@ export default function GroupPage({
   };
 
   const renderTimelineAlbumList = () => {
-    /* ... 이전과 동일 ... */
+    /* ... 이전과 동일 (생략) ... */
     const albums = [
       {
         id: "airport-trip",
@@ -133,7 +141,7 @@ export default function GroupPage({
     );
   };
   const renderTierAlbumList = () => {
-    /* ... 이전과 동일 ... */
+    /* ... 이전과 동일 (생략) ... */
     const tierAlbums = [
       {
         id: "best-moments",
@@ -190,31 +198,31 @@ export default function GroupPage({
     );
   };
   const renderHighlightAlbumList = () => {
-    /* ... 이전과 동일 ... */
+    /* ... 이전과 동일 (생략) ... */
     const highlightAlbums = [
       {
         id: "highlight-1",
         title: "가족 추억",
         date: "2024.05.01",
-        coverImage: "/family-dummy1.jpg",
+        coverImage: "/jeju-dummy3.jpg",
       },
       {
         id: "highlight-2",
         title: "프로젝트 회고",
         date: "2024.06.15",
-        coverImage: "/project-dummy1.jpg",
+        coverImage: "/jeju-dummy4.jpg",
       },
       {
         id: "highlight-3",
         title: "반려동물 일상",
         date: "2024.07.01",
-        coverImage: "/pet-dummy1.jpg",
+        coverImage: "/jeju-dummy5.jpg",
       },
       {
         id: "highlight-4",
         title: "팀 빌딩 워크샵",
         date: "2024.07.20",
-        coverImage: "/workshop-dummy1.jpg",
+        coverImage: "/jeju-dummy6.jpg",
       },
     ];
     return (
@@ -255,7 +263,7 @@ export default function GroupPage({
     );
   };
   const renderActiveAlbumView = () => {
-    /* ... 이전과 동일 ... */
+    /* ... 이전과 동일 (생략) ... */
     if (!selectedAlbum) return null;
     switch (selectedAlbum.type) {
       case "tier":
@@ -293,7 +301,7 @@ export default function GroupPage({
         groupName={groupName}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        onSelectAlbum={handleSelectAlbum} // [수정] prop 전달
+        onSelectAlbum={handleSelectAlbum}
       />
       <div
         className={`flex-1 transition-all duration-300 ${
@@ -357,6 +365,12 @@ export default function GroupPage({
           )}
         </main>
       </div>
+
+      {/* [수정] 플로팅 버튼을 별도 컴포넌트로 분리하여 사용 */}
+      <GroupChatFloatingButton
+        groupName={encodedGroupName}
+        isChatActive={isChatActive}
+      />
     </div>
   );
 }
