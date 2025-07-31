@@ -1,45 +1,123 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Header from "@/components/layout/header"
+import { useState } from "react";
+import Header from "@/components/layout/header";
 
 export default function FriendsPage() {
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = useState("");
 
   const friends = [
-    { id: 1, name: "김지민", status: "온라인", avatar: "JM", color: "bg-purple-500" },
-    { id: 2, name: "이수현", status: "오프라인", avatar: "LS", color: "bg-green-500" },
-    { id: 3, name: "박건우", status: "온라인", avatar: "PK", color: "bg-orange-500" },
-    { id: 4, name: "최진우", status: "온라인", avatar: "CJ", color: "bg-blue-500" },
-    { id: 5, name: "강하늘", status: "오프라인", avatar: "KH", color: "bg-red-500" },
-    { id: 6, name: "한선아", status: "온라인", avatar: "HS", color: "bg-[var(--primary-color)]" },
-    { id: 7, name: "윤기찬", status: "온라인", avatar: "YK", color: "bg-purple-500" },
-  ]
+    {
+      id: 1,
+      name: "김지민",
+      status: "온라인",
+      avatar: "JM",
+      color: "bg-purple-500",
+    },
+    {
+      id: 2,
+      name: "이수현",
+      status: "오프라인",
+      avatar: "LS",
+      color: "bg-green-500",
+    },
+    {
+      id: 3,
+      name: "박건우",
+      status: "온라인",
+      avatar: "PK",
+      color: "bg-orange-500",
+    },
+    {
+      id: 4,
+      name: "최진우",
+      status: "온라인",
+      avatar: "CJ",
+      color: "bg-blue-500",
+    },
+    {
+      id: 5,
+      name: "강하늘",
+      status: "오프라인",
+      avatar: "KH",
+      color: "bg-red-500",
+    },
+    {
+      id: 6,
+      name: "한선아",
+      status: "온라인",
+      avatar: "HS",
+      color: "bg-[var(--primary-color)]",
+    },
+    {
+      id: 7,
+      name: "윤기찬",
+      status: "온라인",
+      avatar: "YK",
+      color: "bg-purple-500",
+    },
+  ];
 
   const groups = [
-    { id: 1, name: "가족 모임", members: 5, avatar: "가", color: "bg-green-500" },
-    { id: 2, name: "대학 친구들", members: 8, avatar: "대", color: "bg-orange-500" },
-    { id: 3, name: "회사 동료", members: 12, avatar: "회", color: "bg-blue-500" },
-    { id: 4, name: "스터디 그룹", members: 4, avatar: "스", color: "bg-red-500" },
-    { id: 5, name: "여행 동호회", members: 7, avatar: "여", color: "bg-[var(--primary-color)]" },
-    { id: 6, name: "취미 모임", members: 6, avatar: "취", color: "bg-purple-500" },
-  ]
+    {
+      id: 1,
+      name: "가족 모임",
+      members: 5,
+      avatar: "가",
+      color: "bg-green-500",
+    },
+    {
+      id: 2,
+      name: "대학 친구들",
+      members: 8,
+      avatar: "대",
+      color: "bg-orange-500",
+    },
+    {
+      id: 3,
+      name: "회사 동료",
+      members: 12,
+      avatar: "회",
+      color: "bg-blue-500",
+    },
+    {
+      id: 4,
+      name: "스터디 그룹",
+      members: 4,
+      avatar: "스",
+      color: "bg-red-500",
+    },
+    {
+      id: 5,
+      name: "여행 동호회",
+      members: 7,
+      avatar: "여",
+      color: "bg-[var(--primary-color)]",
+    },
+    {
+      id: 6,
+      name: "취미 모임",
+      members: 6,
+      avatar: "취",
+      color: "bg-purple-500",
+    },
+  ];
 
   const handleSearch = () => {
-    console.log("Searching for:", searchTerm)
-  }
+    console.log("Searching for:", searchTerm);
+  };
 
   const handleAddFriend = () => {
-    console.log("Adding friend")
-  }
+    console.log("Adding friend");
+  };
 
   const handleDeleteFriend = (friendId: number) => {
-    console.log("Deleting friend:", friendId)
-  }
+    console.log("Deleting friend:", friendId);
+  };
 
   const handleInviteToGroup = (groupId: number) => {
-    console.log("Inviting to group:", groupId)
-  }
+    console.log("Inviting to group:", groupId);
+  };
 
   return (
     <div className="min-h-screen bg-[var(--bg-dark)] p-6 flex flex-col gap-6">
@@ -94,7 +172,9 @@ export default function FriendsPage() {
                   {friend.avatar}
                 </div>
                 <div className="flex-1">
-                  <div className="font-semibold text-lg text-[var(--text-dark)] mb-1">{friend.name}</div>
+                  <div className="font-semibold text-lg text-[var(--text-dark)] mb-1">
+                    {friend.name}
+                  </div>
                   <div className="text-sm text-gray-600">{friend.status}</div>
                 </div>
                 <div className="flex gap-2">
@@ -129,8 +209,12 @@ export default function FriendsPage() {
                   {group.avatar}
                 </div>
                 <div className="flex-1">
-                  <div className="font-semibold text-lg text-[var(--text-dark)] mb-1">{group.name}</div>
-                  <div className="text-sm text-gray-600">멤버 {group.members}명</div>
+                  <div className="font-semibold text-lg text-[var(--text-dark)] mb-1">
+                    {group.name}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    멤버 {group.members}명
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -147,5 +231,5 @@ export default function FriendsPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

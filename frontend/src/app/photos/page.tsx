@@ -1,16 +1,24 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef } from "react"
-import Header from "@/components/layout/header"
+import { useState, useRef } from "react";
+import Header from "@/components/layout/header";
 
-type FilterType = "all" | "people" | "food" | "place" | "trash" | "blurry" | "duplicate" | "similar"
+type FilterType =
+  | "all"
+  | "people"
+  | "food"
+  | "place"
+  | "trash"
+  | "blurry"
+  | "duplicate"
+  | "similar";
 
 export default function PhotosPage() {
-  const [activeFilter, setActiveFilter] = useState<FilterType>("all")
-  const [dragOver, setDragOver] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filters = [
     { type: "all", icon: "🖼️", label: "모든 사진" },
@@ -21,7 +29,7 @@ export default function PhotosPage() {
     { type: "blurry", icon: "🌫️", label: "흐린 사진" },
     { type: "duplicate", icon: "📚", label: "중복 사진" },
     { type: "similar", icon: "🔗", label: "유사 사진" },
-  ]
+  ];
 
   const allPhotos = [
     {
@@ -30,89 +38,139 @@ export default function PhotosPage() {
       tags: ["김지민", "파스타", "레스토랑"],
       type: "all",
     },
-    { id: 2, src: "/placeholder.svg?height=200&width=200&text=사진2", tags: ["이수현", "샐러드", "카페"], type: "all" },
-    { id: 3, src: "/placeholder.svg?height=200&width=200&text=사진3", tags: ["박건우", "초밥", "도쿄"], type: "all" },
-    { id: 4, src: "/placeholder.svg?height=200&width=200&text=사진4", tags: ["한국의궁궐"], type: "all" },
-  ]
+    {
+      id: 2,
+      src: "/placeholder.svg?height=200&width=200&text=사진2",
+      tags: ["이수현", "샐러드", "카페"],
+      type: "all",
+    },
+    {
+      id: 3,
+      src: "/placeholder.svg?height=200&width=200&text=사진3",
+      tags: ["박건우", "초밥", "도쿄"],
+      type: "all",
+    },
+    {
+      id: 4,
+      src: "/placeholder.svg?height=200&width=200&text=사진4",
+      tags: ["한국의궁궐"],
+      type: "all",
+    },
+  ];
 
   const trashPhotos = [
-    { id: 5, src: "/placeholder.svg?height=200&width=200&text=삭제된+사진1", tags: [], type: "trash" },
-    { id: 6, src: "/placeholder.svg?height=200&width=200&text=삭제된+사진2", tags: [], type: "trash" },
-  ]
+    {
+      id: 5,
+      src: "/placeholder.svg?height=200&width=200&text=삭제된+사진1",
+      tags: [],
+      type: "trash",
+    },
+    {
+      id: 6,
+      src: "/placeholder.svg?height=200&width=200&text=삭제된+사진2",
+      tags: [],
+      type: "trash",
+    },
+  ];
 
   const blurryPhotos = [
-    { id: 7, src: "/placeholder.svg?height=200&width=200&text=흐린+사진1", tags: ["흐림"], type: "blurry" },
-  ]
+    {
+      id: 7,
+      src: "/placeholder.svg?height=200&width=200&text=흐린+사진1",
+      tags: ["흐림"],
+      type: "blurry",
+    },
+  ];
 
   const duplicatePhotos = [
-    { id: 8, src: "/placeholder.svg?height=200&width=200&text=중복+사진1", tags: ["중복"], type: "duplicate" },
-    { id: 9, src: "/placeholder.svg?height=200&width=200&text=중복+사진1(복사본)", tags: ["중복"], type: "duplicate" },
-  ]
+    {
+      id: 8,
+      src: "/placeholder.svg?height=200&width=200&text=중복+사진1",
+      tags: ["중복"],
+      type: "duplicate",
+    },
+    {
+      id: 9,
+      src: "/placeholder.svg?height=200&width=200&text=중복+사진1(복사본)",
+      tags: ["중복"],
+      type: "duplicate",
+    },
+  ];
 
   const similarPhotos = [
-    { id: 10, src: "/placeholder.svg?height=200&width=200&text=유사+사진1-A", tags: ["유사"], type: "similar" },
-    { id: 11, src: "/placeholder.svg?height=200&width=200&text=유사+사진1-B", tags: ["유사"], type: "similar" },
-  ]
+    {
+      id: 10,
+      src: "/placeholder.svg?height=200&width=200&text=유사+사진1-A",
+      tags: ["유사"],
+      type: "similar",
+    },
+    {
+      id: 11,
+      src: "/placeholder.svg?height=200&width=200&text=유사+사진1-B",
+      tags: ["유사"],
+      type: "similar",
+    },
+  ];
 
   const getPhotosForFilter = (filter: FilterType) => {
     switch (filter) {
       case "trash":
-        return trashPhotos
+        return trashPhotos;
       case "blurry":
-        return blurryPhotos
+        return blurryPhotos;
       case "duplicate":
-        return duplicatePhotos
+        return duplicatePhotos;
       case "similar":
-        return similarPhotos
+        return similarPhotos;
       default:
-        return allPhotos
+        return allPhotos;
     }
-  }
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(true)
-  }
+    e.preventDefault();
+    setDragOver(true);
+  };
 
   const handleDragLeave = () => {
-    setDragOver(false)
-  }
+    setDragOver(false);
+  };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-    const files = e.dataTransfer.files
+    e.preventDefault();
+    setDragOver(false);
+    const files = e.dataTransfer.files;
     if (files.length > 0) {
-      console.log(`${files.length}개의 파일이 드롭되었습니다.`)
+      console.log(`${files.length}개의 파일이 드롭되었습니다.`);
     }
-  }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
+    const files = e.target.files;
     if (files && files.length > 0) {
-      console.log(`${files.length}개의 파일이 선택되었습니다.`)
+      console.log(`${files.length}개의 파일이 선택되었습니다.`);
     }
-  }
+  };
 
   const handleUploadClick = () => {
-    fileInputRef.current?.click()
-  }
+    fileInputRef.current?.click();
+  };
 
   const handleDeletePhoto = (photoId: number) => {
-    console.log("Deleting photo:", photoId)
-  }
+    console.log("Deleting photo:", photoId);
+  };
 
   const handleRestorePhoto = (photoId: number) => {
-    console.log("Restoring photo:", photoId)
-  }
+    console.log("Restoring photo:", photoId);
+  };
 
   const handlePermanentDelete = (photoId: number) => {
     if (confirm("이 사진을 영구 삭제하시겠습니까? 복구할 수 없습니다!")) {
-      console.log("Permanently deleting photo:", photoId)
+      console.log("Permanently deleting photo:", photoId);
     }
-  }
+  };
 
-  const currentPhotos = getPhotosForFilter(activeFilter)
+  const currentPhotos = getPhotosForFilter(activeFilter);
 
   return (
     <div className="min-h-screen bg-[var(--bg-dark)] p-6 flex flex-col gap-6 overflow-y-auto">
@@ -132,11 +190,17 @@ export default function PhotosPage() {
           onClick={handleUploadClick}
         >
           <span
-            className={`text-6xl mb-4 transition-colors ${dragOver ? "text-[var(--primary-color)]" : "text-gray-300 hover:text-[var(--primary-color)]"}`}
+            className={`text-6xl mb-4 transition-colors ${
+              dragOver
+                ? "text-[var(--primary-color)]"
+                : "text-gray-300 hover:text-[var(--primary-color)]"
+            }`}
           >
             📤
           </span>
-          <p className="text-lg text-gray-500">사진을 여기에 드래그하거나 클릭하여 업로드</p>
+          <p className="text-lg text-gray-500">
+            사진을 여기에 드래그하거나 클릭하여 업로드
+          </p>
           <input
             ref={fileInputRef}
             type="file"
@@ -173,7 +237,9 @@ export default function PhotosPage() {
         </div>
 
         {/* Sub-filters for specific categories */}
-        {(activeFilter === "people" || activeFilter === "food" || activeFilter === "place") && (
+        {(activeFilter === "people" ||
+          activeFilter === "food" ||
+          activeFilter === "place") && (
           <div className="mb-4">
             <select className="w-52 p-3 border border-[var(--border-color)] rounded-2xl text-base text-[var(--text-dark)] outline-none focus:border-[var(--primary-color)] transition-colors bg-white">
               {activeFilter === "people" && (
@@ -215,12 +281,12 @@ export default function PhotosPage() {
                 photo.type === "trash"
                   ? "border-2 border-red-500"
                   : photo.type === "blurry"
-                    ? "border-2 border-orange-500"
-                    : photo.type === "duplicate"
-                      ? "border-2 border-purple-500"
-                      : photo.type === "similar"
-                        ? "border-2 border-blue-500"
-                        : ""
+                  ? "border-2 border-orange-500"
+                  : photo.type === "duplicate"
+                  ? "border-2 border-purple-500"
+                  : photo.type === "similar"
+                  ? "border-2 border-blue-500"
+                  : ""
               }`}
             >
               <img
@@ -233,8 +299,8 @@ export default function PhotosPage() {
               <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={(e) => {
-                    e.stopPropagation()
-                    console.log("Photo info:", photo.id)
+                    e.stopPropagation();
+                    console.log("Photo info:", photo.id);
                   }}
                   className="w-8 h-8 bg-black/40 text-white rounded-full flex items-center justify-center hover:bg-black/60 transition-colors"
                   title="정보"
@@ -246,8 +312,8 @@ export default function PhotosPage() {
                   <>
                     <button
                       onClick={(e) => {
-                        e.stopPropagation()
-                        handleRestorePhoto(photo.id)
+                        e.stopPropagation();
+                        handleRestorePhoto(photo.id);
                       }}
                       className="w-8 h-8 bg-green-500/70 text-white rounded-full flex items-center justify-center hover:bg-green-500/90 transition-colors"
                       title="복원"
@@ -256,8 +322,8 @@ export default function PhotosPage() {
                     </button>
                     <button
                       onClick={(e) => {
-                        e.stopPropagation()
-                        handlePermanentDelete(photo.id)
+                        e.stopPropagation();
+                        handlePermanentDelete(photo.id);
                       }}
                       className="w-8 h-8 bg-red-600/70 text-white rounded-full flex items-center justify-center hover:bg-red-600/90 transition-colors"
                       title="영구 삭제"
@@ -268,8 +334,8 @@ export default function PhotosPage() {
                 ) : (
                   <button
                     onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeletePhoto(photo.id)
+                      e.stopPropagation();
+                      handleDeletePhoto(photo.id);
                     }}
                     className="w-8 h-8 bg-red-500/70 text-white rounded-full flex items-center justify-center hover:bg-red-500/90 transition-colors"
                     title="삭제"
@@ -297,5 +363,5 @@ export default function PhotosPage() {
         </div>
       </section>
     </div>
-  )
+  );
 }
