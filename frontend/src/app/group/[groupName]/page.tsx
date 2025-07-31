@@ -11,18 +11,19 @@ import TimelineAlbumView from "@/components/group/TimelineAlbumView";
 import HighlightAlbumView from "@/components/group/HighlightAlbumView";
 import { PlusIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
-// [추가] 새로 만든 플로팅 버튼 컴포넌트 임포트
 import GroupChatFloatingButton from "@/components/group/GroupChatFloatingButton";
 
 type AlbumType = "timeline" | "tier" | "highlight";
 
-export default function GroupPage({
-  params: { groupName: encodedGroupName },
-}: {
-  params: { groupName: string };
-}) {
+// ✅ Next.js 15 호환: params를 Promise 타입으로 변경
+interface PageProps {
+  params: Promise<{ groupName: string }>;
+}
+
+export default function GroupPage({ params }: PageProps) {
   const searchParams = useSearchParams();
-  const groupName = decodeURIComponent(encodedGroupName);
+  const [groupName, setGroupName] = useState<string>("");
+  const [encodedGroupName, setEncodedGroupName] = useState<string>("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<AlbumType>("tier");
   const [selectedAlbum, setSelectedAlbum] = useState<{
@@ -33,8 +34,26 @@ export default function GroupPage({
 
   const [isChatActive, setIsChatActive] = useState(false);
 
+  // ✅ useEffect에서 params Promise 해결
   useEffect(() => {
-    setIsChatActive(Math.random() > 0.5);
+    const resolveParams = async () => {
+      try {
+        const resolvedParams = await params;
+        const decodedName = decodeURIComponent(resolvedParams.groupName);
+        setGroupName(decodedName);
+        setEncodedGroupName(resolvedParams.groupName);
+      } catch (error) {
+        console.error("Error resolving params:", error);
+      }
+    };
+
+    resolveParams();
+  }, [params]);
+
+  useEffect(() => {
+    if (groupName) {
+      setIsChatActive(Math.random() > 0.5);
+    }
   }, [groupName]);
 
   useEffect(() => {
@@ -76,19 +95,20 @@ export default function GroupPage({
   }, [selectedAlbum]);
 
   const handleSelectAlbum = (id: string, title: string, type: AlbumType) => {
+    if (!encodedGroupName) return;
     const newUrl = `/group/${encodedGroupName}?album=${id}&type=${type}`;
     window.history.pushState({ path: newUrl }, "", newUrl);
     setSelectedAlbum({ id, title, type });
   };
 
   const handleBackToList = () => {
+    if (!encodedGroupName) return;
     const newUrl = `/group/${encodedGroupName}`;
     window.history.pushState({ path: newUrl }, "", newUrl);
     setSelectedAlbum(null);
   };
 
   const renderTimelineAlbumList = () => {
-    /* ... 이전과 동일 (생략) ... */
     const albums = [
       {
         id: "airport-trip",
@@ -140,8 +160,8 @@ export default function GroupPage({
       </div>
     );
   };
+
   const renderTierAlbumList = () => {
-    /* ... 이전과 동일 (생략) ... */
     const tierAlbums = [
       {
         id: "best-moments",
@@ -197,8 +217,8 @@ export default function GroupPage({
       </div>
     );
   };
+
   const renderHighlightAlbumList = () => {
-    /* ... 이전과 동일 (생략) ... */
     const highlightAlbums = [
       {
         id: "highlight-1",
@@ -262,8 +282,8 @@ export default function GroupPage({
       </div>
     );
   };
+
   const renderActiveAlbumView = () => {
-    /* ... 이전과 동일 (생략) ... */
     if (!selectedAlbum) return null;
     switch (selectedAlbum.type) {
       case "tier":
@@ -294,6 +314,15 @@ export default function GroupPage({
         return null;
     }
   };
+
+  // ✅ 데이터가 로드되지 않았을 때 로딩 처리
+  if (!groupName || !encodedGroupName) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -366,7 +395,6 @@ export default function GroupPage({
         </main>
       </div>
 
-      {/* [수정] 플로팅 버튼을 별도 컴포넌트로 분리하여 사용 */}
       <GroupChatFloatingButton
         groupName={encodedGroupName}
         isChatActive={isChatActive}
