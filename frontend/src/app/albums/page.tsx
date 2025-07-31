@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/sidebar";
 
@@ -18,6 +18,13 @@ export default function AlbumsPage() {
   const handleBackClick = () => {
     router.push("/");
   };
+
+  // 티어 앨범이 선택될 때마다 데이터 불러오기
+  useEffect(() => {
+    if (selectedTierAlbum && activeTab === "tier") {
+      loadTierAlbumData(selectedTierAlbum);
+    }
+  }, [selectedTierAlbum, activeTab]);
   {
     /******************************************************************** */
   }
@@ -36,6 +43,17 @@ export default function AlbumsPage() {
     targetTier: string;
     currentStep: number;
     totalSteps: number;
+    sourceType: string;
+  } | null>(null);
+
+  // 새로운 정밀 티어 모드 상태
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [battleSequence, setBattleSequence] = useState<{
+    newPhoto: { id: string; src: string; name: string };
+    opponents: { id: string; src: string; name: string }[];
+    currentOpponentIndex: number;
+    targetTier: string;
+    targetIndex: number;
     sourceType: string;
   } | null>(null);
 
@@ -313,7 +331,7 @@ export default function AlbumsPage() {
           date: "2025.06.25",
           totalPhotos: 45,
           tierDistribution: { S: 8, A: 12, B: 15, C: 10, D: 0 },
-          coverImage: "jeju-dummy2.jpg",
+          coverImage: getTierAlbumCover("best-moments", "jeju-dummy2.jpg"),
           gradient: "from-[#FFD700] to-[#FFA500]",
         },
         {
@@ -322,7 +340,7 @@ export default function AlbumsPage() {
           date: "2025.07.10",
           totalPhotos: 32,
           tierDistribution: { S: 5, A: 8, B: 12, C: 7, D: 0 },
-          coverImage: "jaewan1.jpg",
+          coverImage: getTierAlbumCover("travel-memories", "jaewan1.jpg"),
           gradient: "from-[#87CEEB] to-[#4682B4]",
         },
         {
@@ -331,7 +349,7 @@ export default function AlbumsPage() {
           date: "2025.08.15",
           totalPhotos: 28,
           tierDistribution: { S: 6, A: 9, B: 8, C: 5, D: 0 },
-          coverImage: "food-dummy1.jpg",
+          coverImage: getTierAlbumCover("family-gathering", "food-dummy1.jpg"),
           gradient: "from-[#FFB6C1] to-[#FF69B4]",
         },
         // {
@@ -521,7 +539,10 @@ export default function AlbumsPage() {
                 </button>
               </div>
 
-              <button className="bg-[var(--primary-color)] text-white px-4 py-2 rounded-xl font-semibold hover:bg-[#2fa692] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg flex items-center gap-2">
+              <button 
+                onClick={() => selectedTierAlbum && saveTierAlbumData(selectedTierAlbum)}
+                className="bg-[var(--primary-color)] text-white px-4 py-2 rounded-xl font-semibold hover:bg-[#2fa692] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg flex items-center gap-2"
+              >
                 💾 저장하기
               </button>
             </div>
@@ -623,7 +644,7 @@ export default function AlbumsPage() {
                             >
                               <div
                                 onClick={() => handleImageClick(photo)}
-                                className="w-24 h-24 bg-[var(--card-bg)] rounded-xl shadow-md hover:-translate-y-1 hover:shadow-lg transition-all overflow-hidden cursor-pointer"
+                                className="w-24 h-24 bg-[var(--card-bg)] rounded-xl shadow-md hover:-translate-y-1 hover:shadow-lg transition-all overflow-hidden cursor-pointer relative"
                               >
                                 <img
                                   src={photo.src || "/placeholder.svg"}
@@ -631,6 +652,14 @@ export default function AlbumsPage() {
                                   className="w-full h-full object-cover"
                                 />
                               </div>
+                              {/* S티어 순위 왕관 표시 - 사진 테두리 상단 */}
+                              {tier.label === 'S' && index < 3 && (
+                                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-lg">
+                                  {index === 0 && <div className="animate-bounce">👑</div>} {/* 1위 - 금왕관 */}
+                                  {index === 1 && '🥈'} {/* 2위 - 은메달 */}
+                                  {index === 2 && '🥉'} {/* 3위 - 동메달 */}
+                                </div>
+                              )}
                               <button
                                 onClick={() =>
                                   handleReturnToAvailable(photo.id, tier.label)
@@ -696,7 +725,7 @@ export default function AlbumsPage() {
         {/* 이미지 확대 모달 */}
         {showImageModal && selectedImage && (
           <div
-            className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]"
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-[99999]"
             onClick={handleCloseImageModal}
           >
             <div
@@ -760,6 +789,156 @@ export default function AlbumsPage() {
   const handleCloseImageModal = () => {
     setShowImageModal(false);
     setSelectedImage(null);
+  };
+
+  // 티어 앨범 데이터 저장
+  const saveTierAlbumData = (albumId: string) => {
+    try {
+      const albumData = {
+        tierPhotos: tierPhotos,
+        availablePhotos: availablePhotos,
+        lastSaved: new Date().toISOString(),
+      };
+      localStorage.setItem(`tierAlbum_${albumId}`, JSON.stringify(albumData));
+      
+      // S티어 1위 사진을 커버 이미지로 저장
+      const sTierFirstPhoto = tierPhotos.S?.[0];
+      if (sTierFirstPhoto) {
+        localStorage.setItem(`tierAlbumCover_${albumId}`, sTierFirstPhoto.src);
+      }
+      
+      // 저장 성공 알림
+      alert("✅ 티어 앨범이 성공적으로 저장되었습니다!");
+      
+      // 티어 앨범 목록으로 리다이렉트
+      setSelectedTierAlbum(null);
+    } catch (error) {
+      console.error("Failed to save tier album data:", error);
+      alert("❌ 저장에 실패했습니다. 다시 시도해주세요.");
+    }
+  };
+
+  // 티어 앨범 데이터 불러오기
+  const loadTierAlbumData = (albumId: string) => {
+    try {
+      const savedData = localStorage.getItem(`tierAlbum_${albumId}`);
+      if (savedData) {
+        const albumData = JSON.parse(savedData);
+        setTierPhotos(albumData.tierPhotos || {
+          S: [],
+          A: [],
+          B: [],
+          C: [],
+          D: [],
+        });
+        setAvailablePhotos(albumData.availablePhotos || []);
+        console.log("Tier album data loaded successfully");
+      }
+    } catch (error) {
+      console.error("Failed to load tier album data:", error);
+    }
+  };
+
+  // 티어 앨범 커버 이미지 가져오기
+  const getTierAlbumCover = (albumId: string, defaultCover: string) => {
+    try {
+      const savedCover = localStorage.getItem(`tierAlbumCover_${albumId}`);
+      return savedCover || defaultCover;
+    } catch (error) {
+      console.error("Failed to load tier album cover:", error);
+      return defaultCover;
+    }
+  };
+
+  // 배틀 결정 핸들러
+  const handleBattleDecision = () => {
+    if (!selectedPhoto || !battleSequence) return;
+
+    const isNewPhotoWin = selectedPhoto === battleSequence.newPhoto.id;
+    
+    if (isNewPhotoWin) {
+      // 새 사진이 이겼을 때 - 더 높은 순위와 계속 대결
+      if (battleSequence.currentOpponentIndex < battleSequence.opponents.length - 1) {
+        // 다음 상대와 대결
+        setBattleSequence(prev => prev ? {
+          ...prev,
+          currentOpponentIndex: prev.currentOpponentIndex + 1
+        } : null);
+        setSelectedPhoto(null);
+      } else {
+        // 모든 대결 완료 - 1위 획득!
+        finalizeBattleResult(0);
+      }
+    } else {
+      // 기존 사진이 이겼을 때 - 해당 사진 뒤에 배치
+      const currentOpponent = battleSequence.opponents[battleSequence.currentOpponentIndex];
+      const opponentIndex = tierPhotos[battleSequence.targetTier].findIndex(p => p.id === currentOpponent.id);
+      finalizeBattleResult(opponentIndex + 1);
+    }
+  };
+
+  // 배틀 결과 최종 처리
+  const finalizeBattleResult = (finalIndex: number) => {
+    if (!battleSequence) return;
+
+    const { newPhoto, targetTier, sourceType } = battleSequence;
+
+    // 기존 소스에서 제거
+    if (sourceType === "available") {
+      setAvailablePhotos(prev => prev.filter(p => p.id !== newPhoto.id));
+    } else {
+      setTierPhotos(prev => ({
+        ...prev,
+        [sourceType]: prev[sourceType].filter(p => p.id !== newPhoto.id),
+      }));
+    }
+
+    // 목표 티어의 특정 위치에 삽입
+    setTierPhotos(prev => {
+      const newArray = [...prev[targetTier]];
+      newArray.splice(finalIndex, 0, newPhoto);
+      return {
+        ...prev,
+        [targetTier]: newArray,
+      };
+    });
+
+    // 모달 닫기
+    setShowComparisonModal(false);
+    setBattleSequence(null);
+    setSelectedPhoto(null);
+  };
+
+  // 배틀 모달 닫기 (원상복구)
+  const handleCloseBattleModal = () => {
+    if (!battleSequence) return;
+
+    const { newPhoto, sourceType } = battleSequence;
+
+    // 새로운 사진을 원래 위치로 복구
+    if (sourceType === "available") {
+      // 사용 가능한 사진 목록에 이미 있는지 확인 후 추가
+      setAvailablePhotos(prev => {
+        const exists = prev.some(p => p.id === newPhoto.id);
+        if (exists) return prev;
+        return [...prev, newPhoto];
+      });
+    } else {
+      // 원래 티어로 복구
+      setTierPhotos(prev => {
+        const exists = prev[sourceType].some(p => p.id === newPhoto.id);
+        if (exists) return prev;
+        return {
+          ...prev,
+          [sourceType]: [...prev[sourceType], newPhoto],
+        };
+      });
+    }
+
+    // 모달 닫기
+    setShowComparisonModal(false);
+    setBattleSequence(null);
+    setSelectedPhoto(null);
   };
 
   // 드래그 시작
@@ -919,17 +1098,25 @@ export default function AlbumsPage() {
       tierPhotos[targetTier]?.length > 0 &&
       source !== targetTier
     ) {
-      const existingPhoto = tierPhotos[targetTier][0];
-      setComparisonData({
-        newPhoto: draggedPhotoData,
-        existingPhoto: existingPhoto,
-        targetTier: targetTier,
-        currentStep: 1,
-        totalSteps: 3,
-        sourceType: source,
-      });
-      setShowComparisonModal(true);
-      return;
+      // 새로운 토너먼트 시스템 - 드롭 위치의 왼쪽 사진부터 시작
+      const targetPhotos = tierPhotos[targetTier];
+      
+      // 드롭 위치가 0이면 1위부터, 아니면 해당 위치-1부터 시작
+      const startIndex = targetIndex === 0 ? 0 : targetIndex - 1;
+      const opponents = targetPhotos.slice(0, startIndex + 1).reverse(); // 왼쪽부터 역순으로
+      
+      if (opponents.length > 0) {
+        setBattleSequence({
+          newPhoto: draggedPhotoData,
+          opponents: opponents,
+          currentOpponentIndex: 0, // 첫 번째 상대부터 시작
+          targetTier: targetTier,
+          targetIndex: targetIndex,
+          sourceType: source,
+        });
+        setShowComparisonModal(true);
+        return;
+      }
     }
 
     // 같은 티어 내에서 이동하는 경우
@@ -1112,95 +1299,113 @@ export default function AlbumsPage() {
 
         {/********************************************************************** */}
         {/* 정밀 티어 모드 비교 모달 */}
-        {showComparisonModal && comparisonData && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
-            <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-[var(--text-dark)] mb-2">
-                  어떤 추억이 더 소중한가요?
+        {showComparisonModal && battleSequence && (
+          <div 
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-6"
+            onClick={handleCloseBattleModal}
+          >
+            <div 
+              className="bg-white rounded-3xl p-16 max-w-7xl w-full max-h-[98vh] overflow-y-auto shadow-2xl relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* X 닫기 버튼 */}
+              <button
+                onClick={handleCloseBattleModal}
+                className="absolute top-6 right-6 w-12 h-12 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-full flex items-center justify-center text-2xl font-bold transition-colors z-10"
+              >
+                ✕
+              </button>
+              
+              <div className="text-center mb-12">
+                <h2 className="text-3xl font-bold text-[var(--text-dark)] mb-4">
+                  🏆 티어 배틀
                 </h2>
-                <p className="text-gray-600">
-                  {comparisonData.targetTier}티어 {comparisonData.currentStep}/
-                  {comparisonData.totalSteps}
+                <p className="text-2xl text-gray-600 font-semibold">
+                  {battleSequence.targetTier}티어 {battleSequence.opponents.length - battleSequence.currentOpponentIndex}위 결정전
                 </p>
-                <div className="text-sm text-gray-500 mt-2">
+                <div className="text-lg text-gray-500 mt-2">
                   더 높은 순위에 두고 싶은 추억을 선택해주세요!
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-8 mb-8">
+              <div className="grid grid-cols-3 gap-16 mb-16 items-center">
                 {/* 기존 추억 */}
                 <div className="text-center">
                   <div
-                    className="w-full aspect-square bg-gray-100 rounded-2xl border-2 border-gray-300 mb-4 overflow-hidden cursor-pointer hover:border-[var(--primary-color)] transition-colors"
-                    onClick={() => handleComparisonChoice("existing")}
+                    className={`w-full aspect-square bg-gray-100 rounded-3xl border-6 mb-8 overflow-hidden cursor-pointer transition-all transform ${
+                      selectedPhoto === battleSequence.opponents[battleSequence.currentOpponentIndex]?.id
+                        ? "border-blue-500 scale-105 shadow-2xl ring-8 ring-blue-200"
+                        : "border-gray-300 hover:border-blue-300 hover:scale-102"
+                    }`}
+                    onClick={() => setSelectedPhoto(battleSequence.opponents[battleSequence.currentOpponentIndex]?.id)}
                   >
                     <img
-                      src={
-                        comparisonData.existingPhoto?.src ||
-                        "/placeholder.svg?height=200&width=200&text=기존+추억"
-                      }
+                      src={battleSequence.opponents[battleSequence.currentOpponentIndex]?.src || "/placeholder.svg"}
                       alt="기존 추억"
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <h3 className="font-semibold text-lg text-[var(--text-dark)]">
+                  <h3 className="font-semibold text-2xl text-[var(--text-dark)] mb-4">
                     기존 추억
                   </h3>
+                  <button
+                    onClick={() => handleImageClick(battleSequence.opponents[battleSequence.currentOpponentIndex])}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                  >
+                    🔍 크게 보기
+                  </button>
+                </div>
+
+                {/* VS 표시 */}
+                <div className="text-center">
+                  <div className="text-8xl font-bold text-[var(--primary-color)] animate-pulse mb-6">
+                    VS
+                  </div>
+                  <div className="text-xl text-gray-500 font-medium">
+                    어떤 추억이 더 소중한가요?
+                  </div>
                 </div>
 
                 {/* 새로운 추억 */}
                 <div className="text-center">
                   <div
-                    className="w-full aspect-square bg-gray-100 rounded-2xl border-2 border-green-500 mb-4 overflow-hidden cursor-pointer hover:border-green-600 transition-colors"
-                    onClick={() => handleComparisonChoice("new")}
+                    className={`w-full aspect-square bg-gray-100 rounded-3xl border-6 mb-8 overflow-hidden cursor-pointer transition-all transform ${
+                      selectedPhoto === battleSequence.newPhoto.id
+                        ? "border-green-500 scale-105 shadow-2xl ring-8 ring-green-200"
+                        : "border-gray-300 hover:border-green-300 hover:scale-102"
+                    }`}
+                    onClick={() => setSelectedPhoto(battleSequence.newPhoto.id)}
                   >
                     <img
-                      src={
-                        comparisonData.newPhoto?.src ||
-                        "/placeholder.svg?height=200&width=200&text=새로운+추억"
-                      }
+                      src={battleSequence.newPhoto.src || "/placeholder.svg"}
                       alt="새로운 추억"
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <h3 className="font-semibold text-lg text-[var(--text-dark)]">
+                  <h3 className="font-semibold text-2xl text-[var(--text-dark)] mb-4">
                     새로운 추억
                   </h3>
+                  <button
+                    onClick={() => handleImageClick(battleSequence.newPhoto)}
+                    className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
+                  >
+                    🔍 크게 보기
+                  </button>
                 </div>
               </div>
 
-              {/* 결과 영역 */}
-              <div className="text-center mb-6">
-                <h4 className="font-semibold text-lg text-[var(--text-dark)] mb-4">
-                  결과
-                </h4>
-                <div className="flex justify-center gap-4">
-                  <div className="w-16 h-16 bg-gray-100 rounded-xl border-2 border-gray-300 flex items-center justify-center">
-                    <span className="text-2xl">📷</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-2xl">→</span>
-                  </div>
-                  <div className="w-16 h-16 bg-green-100 rounded-xl border-2 border-green-500 flex items-center justify-center">
-                    <span className="text-2xl">📷</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 버튼 영역 */}
-              <div className="flex gap-4">
+              {/* 결정 버튼 */}
+              <div className="text-center">
                 <button
-                  onClick={() => setShowComparisonModal(false)}
-                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                  onClick={handleBattleDecision}
+                  disabled={!selectedPhoto}
+                  className={`px-16 py-6 rounded-3xl text-2xl font-bold transition-all transform ${
+                    selectedPhoto
+                      ? "bg-[var(--primary-color)] text-white hover:bg-[#2fa692] hover:scale-105 shadow-xl"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
                 >
-                  취소
-                </button>
-                <button
-                  onClick={() => handleComparisonChoice("skip")}
-                  className="flex-1 px-6 py-3 bg-[var(--primary-color)] text-white rounded-xl font-semibold hover:bg-[#2fa692] transition-colors"
-                >
-                  건너뛰기
+                  🎯 결정하기
                 </button>
               </div>
             </div>
