@@ -108,6 +108,14 @@ export default function AlbumsPage() {
     /******************************************************* */
   }
 
+  // 티어 상세페이지에서 이미지 확대 모달 상태
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{
+    id: string;
+    src: string;
+    name: string;
+  } | null>(null);
+
   const renderTimelineAlbum = () => {
     // 앨범이 선택되지 않았으면 앨범 목록을 보여줌
     if (!selectedAlbum) {
@@ -532,7 +540,7 @@ export default function AlbumsPage() {
                 </div>
                 <div className="flex-1">
                   <div
-                    className={`min-h-32 border-2 border-dashed rounded-2xl p-4 flex flex-wrap gap-3 items-start transition-all ${
+                    className={`h-32 border-2 border-dashed rounded-2xl p-4 flex flex-wrap gap-3 items-start transition-all ${
                       dragOverTier === tier.label
                         ? "border-[var(--primary-color)] bg-[var(--primary-color)]/10"
                         : "border-[var(--border-color)] hover:border-[var(--primary-color)] hover:bg-[var(--primary-color)]/5"
@@ -551,7 +559,10 @@ export default function AlbumsPage() {
                             handleDragStart(e, photo.id, tier.label)
                           }
                         >
-                          <div className="w-24 h-24 bg-[var(--card-bg)] rounded-xl shadow-md hover:-translate-y-1 hover:shadow-lg transition-all overflow-hidden">
+                          <div
+                            onClick={() => handleImageClick(photo)}
+                            className="w-24 h-24 bg-[var(--card-bg)] rounded-xl shadow-md hover:-translate-y-1 hover:shadow-lg transition-all overflow-hidden cursor-pointer"
+                          >
                             <img
                               src={photo.src || "/placeholder.svg"}
                               alt={photo.name}
@@ -569,7 +580,7 @@ export default function AlbumsPage() {
                         </div>
                       ))
                     ) : (
-                      <div className="flex-1 flex flex-col items-center justify-center text-gray-400 text-center py-8">
+                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 text-center">
                         <span className="text-3xl mb-2">📷</span>
                         <span className="text-sm">
                           이미지를 여기로 드래그 하세요
@@ -592,9 +603,10 @@ export default function AlbumsPage() {
             {availablePhotos.map((photo) => (
               <div
                 key={photo.id}
-                className="w-20 h-20 bg-[var(--card-bg)] rounded-xl shadow-md cursor-grab hover:-translate-y-1 hover:shadow-lg transition-all overflow-hidden"
+                className="w-20 h-20 bg-[var(--card-bg)] rounded-xl shadow-md cursor-grab hover:-translate-y-1 hover:shadow-lg transition-all overflow-hidden cursor-pointer"
                 draggable
                 onDragStart={(e) => handleDragStart(e, photo.id, "available")}
+                onClick={() => handleImageClick(photo)}
               >
                 <img
                   src={photo.src || "/placeholder.svg"}
@@ -610,6 +622,32 @@ export default function AlbumsPage() {
         </div>
 
         {/****************************************************************************************/}
+
+        {/* 이미지 확대 모달 */}
+        {showImageModal && selectedImage && (
+          <div
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]"
+            onClick={handleCloseImageModal}
+          >
+            <div
+              className="relative flex items-center justify-center w-full h-full p-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={selectedImage.src}
+                alt={selectedImage.name}
+                className="max-w-[75vw] max-h-[75vh] object-contain rounded-lg shadow-2xl"
+              />
+              <button
+                onClick={handleCloseImageModal}
+                className="absolute top-8 right-8 w-10 h-10 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center
+  justify-center text-xl font-bold transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -637,6 +675,22 @@ export default function AlbumsPage() {
   {
     /****************************************************************************************/
   }
+
+  // 이미지 클릭 핸들러
+  const handleImageClick = (photo: {
+    id: string;
+    src: string;
+    name: string;
+  }) => {
+    setSelectedImage(photo);
+    setShowImageModal(true);
+  };
+
+  // 모달 닫기 핸들러
+  const handleCloseImageModal = () => {
+    setShowImageModal(false);
+    setSelectedImage(null);
+  };
 
   // 드래그 시작
   const handleDragStart = (
