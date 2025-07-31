@@ -1,5 +1,4 @@
-// types/mediasoup.types.ts
-import { Device, Transport, Producer, Consumer } from "mediasoup-client/types";
+import { Device, Producer } from "mediasoup-client/types";
 import type {
   RtpCapabilities,
   RtpParameters,
