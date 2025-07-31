@@ -47,7 +47,7 @@ export default function Sidebar({ activeGroup, sidebarOpen, setSidebarOpen }: Si
               개인 스페이스
             </Link>
           </li>
-          <li>
+          {/* <li>
             <Link
               href="/recommended"
               className="flex items-center gap-4 text-white/85 hover:text-white hover:bg-black/10 p-3 rounded-xl font-semibold transition-all"
@@ -55,7 +55,7 @@ export default function Sidebar({ activeGroup, sidebarOpen, setSidebarOpen }: Si
               <span className="text-xl">⭐</span>
               추천의 스페이스
             </Link>
-          </li>
+          </li> */}
         </ul>
 
         <div className="text-white/70 text-sm font-semibold px-3 mt-6 mb-2 uppercase tracking-wider">내 그룹</div>
