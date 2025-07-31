@@ -3,9 +3,9 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { ArrowUturnLeftIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import TierBattleModal from "./TierBattleModal"; // 분리된 배틀 모달 import
-import { TrophyIcon } from "@heroicons/react/24/solid";
+import { ArrowUturnLeftIcon, BoltIcon } from "@heroicons/react/24/outline";
+import TierBattleModal from "./TierBattleModal";
+
 // 타입 정의
 interface Photo {
   id: string;
@@ -31,7 +31,7 @@ export default function TierAlbumView({
   albumTitle,
   onBack,
 }: TierAlbumViewProps) {
-  // --- 상태 관리 (States) ---
+  // --- 상태 관리 ---
   const [tierPhotos, setTierPhotos] = useState<{ [key: string]: Photo[] }>({});
   const [availablePhotos, setAvailablePhotos] = useState<Photo[]>([]);
   const [precisionTierMode, setPrecisionTierMode] = useState(false);
@@ -48,11 +48,11 @@ export default function TierAlbumView({
   const [draggingPhotoId, setDraggingPhotoId] = useState<string | null>(null);
 
   const tiers = [
-    { label: "S", color: "from-yellow-400 to-orange-500" },
-    { label: "A", color: "from-blue-500 to-blue-700" },
-    { label: "B", color: "from-green-500 to-green-700" },
-    { label: "C", color: "from-red-500 to-red-700" },
-    { label: "D", color: "from-gray-500 to-gray-700" },
+    { label: "S", color: "from-amber-300 to-yellow-400" },
+    { label: "A", color: "from-sky-300 to-blue-500" },
+    { label: "B", color: "from-teal-300 to-emerald-500" },
+    { label: "C", color: "from-orange-300 to-rose-400" },
+    { label: "D", color: "from-gray-300 to-slate-500" },
   ];
 
   // --- 데이터 관리 함수 ---
@@ -86,7 +86,6 @@ export default function TierAlbumView({
         setTierPhotos(data.tierPhotos || { S: [], A: [], B: [], C: [], D: [] });
         setAvailablePhotos(data.availablePhotos || []);
       } else {
-        // 초기 데이터 설정
         setTierPhotos({
           S: [{ id: "photo_s1", src: "/jaewan1.jpg", name: "S급 사진1" }],
           A: [],
@@ -110,9 +109,21 @@ export default function TierAlbumView({
     setSelectedImage(photo);
     setShowImageModal(true);
   };
+
   const handleCloseImageModal = () => {
     setShowImageModal(false);
     setSelectedImage(null);
+  };
+
+  const handleReturnToAvailable = (photoId: string, fromTier: string) => {
+    const photo = tierPhotos[fromTier]?.find((p) => p.id === photoId);
+    if (photo) {
+      setTierPhotos((prev) => ({
+        ...prev,
+        [fromTier]: prev[fromTier].filter((p) => p.id !== photoId),
+      }));
+      setAvailablePhotos((prev) => [...prev, photo]);
+    }
   };
 
   // --- 드래그 앤 드롭 로직 ---
@@ -125,16 +136,36 @@ export default function TierAlbumView({
       "text/plain",
       JSON.stringify({ photoId: photo.id, source })
     );
-    setDraggingPhotoId(photo.id); // [개선] 드래그 시작 시 ID 설정
+    setDraggingPhotoId(photo.id);
   };
-  const handleDragEnd = () => setDraggingPhotoId(null);
+
+  const handleDragEnd = () => {
+    setDraggingPhotoId(null);
+    setDragOverPosition(null);
+  };
+
+  const handleDragOverTierArea = (e: React.DragEvent, tier: string) => {
+    e.preventDefault();
+    setDragOverPosition({ tier, index: (tierPhotos[tier] || []).length });
+  };
+
+  const handleDropTierArea = (e: React.DragEvent, targetTier: string) => {
+    e.preventDefault();
+    handleDropAtPosition(e, targetTier, (tierPhotos[targetTier] || []).length);
+  };
+
   const handleDragOverPosition = (
     e: React.DragEvent,
     tier: string,
     index: number
   ) => {
     e.preventDefault();
-    setDragOverPosition({ tier, index });
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const isLeftHalf = mouseX < rect.width / 2;
+    const targetIndex = isLeftHalf ? index : index + 1;
+    setDragOverPosition({ tier, index: targetIndex });
   };
 
   const handleDropAtPosition = (
@@ -143,6 +174,7 @@ export default function TierAlbumView({
     targetIndex: number
   ) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOverPosition(null);
     const data = JSON.parse(e.dataTransfer.getData("text/plain"));
     const { photoId, source } = data;
@@ -152,7 +184,6 @@ export default function TierAlbumView({
         : tierPhotos[source]?.find((p) => p.id === photoId);
     if (!draggedPhoto) return;
 
-    // 같은 위치로 드롭한 경우 무시
     const sourceIndex =
       source !== "available"
         ? tierPhotos[source].findIndex((p) => p.id === photoId)
@@ -163,7 +194,6 @@ export default function TierAlbumView({
     )
       return;
 
-    // 정밀 티어 모드 배틀 시작
     if (
       precisionTierMode &&
       tierPhotos[targetTier]?.length > 0 &&
@@ -186,23 +216,20 @@ export default function TierAlbumView({
       }
     }
 
-    // 일반 드롭 로직
-    const newTierPhotos = { ...tierPhotos };
-    if (source === "available") {
-      setAvailablePhotos((prev) => prev.filter((p) => p.id !== photoId));
-    } else {
-      newTierPhotos[source] = newTierPhotos[source].filter(
-        (p) => p.id !== photoId
-      );
-    }
-    const targetArray = [...(newTierPhotos[targetTier] || [])];
-    const adjustedIndex =
-      source === targetTier && sourceIndex < targetIndex
-        ? targetIndex - 1
-        : targetIndex;
-    targetArray.splice(adjustedIndex, 0, draggedPhoto);
-    newTierPhotos[targetTier] = targetArray;
-    setTierPhotos(newTierPhotos);
+    setTierPhotos((prev) => {
+      const newTiers = { ...prev };
+      if (source === "available") {
+        setAvailablePhotos((p) => p.filter((p) => p.id !== photoId));
+      } else {
+        newTiers[source] = [...(newTiers[source] || [])].filter(
+          (p) => p.id !== photoId
+        );
+      }
+      const targetArray = [...(newTiers[targetTier] || [])];
+      targetArray.splice(targetIndex, 0, draggedPhoto);
+      newTiers[targetTier] = targetArray;
+      return newTiers;
+    });
   };
 
   // --- 배틀 로직 ---
@@ -220,34 +247,40 @@ export default function TierAlbumView({
           : null
       );
     } else {
-      const finalPlacementIndex = isNewPhotoWin
-        ? battleSequence.targetIndex - battleSequence.opponents.length
-        : battleSequence.targetIndex - battleSequence.currentOpponentIndex - 1;
-      finalizeBattleResult(Math.max(0, finalPlacementIndex));
+      finalizeBattleResult(isNewPhotoWin);
     }
   };
 
-  const finalizeBattleResult = (finalIndex: number) => {
+  const finalizeBattleResult = (isNewPhotoWin: boolean) => {
     if (!battleSequence) return;
-    const { newPhoto, targetTier, sourceType } = battleSequence;
+    const {
+      newPhoto,
+      targetTier,
+      sourceType,
+      opponents,
+      currentOpponentIndex,
+      targetIndex,
+    } = battleSequence;
+    let finalIndex = isNewPhotoWin
+      ? targetIndex - opponents.length
+      : tierPhotos[targetTier].findIndex(
+          (p) => p.id === opponents[currentOpponentIndex].id
+        ) + 1;
 
-    // 소스에서 제거
-    if (sourceType === "available") {
-      setAvailablePhotos((prev) => prev.filter((p) => p.id !== newPhoto.id));
-    } else {
-      setTierPhotos((prev) => ({
-        ...prev,
-        [sourceType]: prev[sourceType].filter((p) => p.id !== newPhoto.id),
-      }));
-    }
-
-    // 타겟에 추가
     setTierPhotos((prev) => {
-      const newArray = [...(prev[targetTier] || [])];
-      newArray.splice(finalIndex, 0, newPhoto);
-      return { ...prev, [targetTier]: newArray };
+      const newTiers = { ...prev };
+      if (sourceType === "available") {
+        setAvailablePhotos((p) => p.filter((p) => p.id !== newPhoto.id));
+      } else {
+        newTiers[sourceType] = newTiers[sourceType].filter(
+          (p) => p.id !== newPhoto.id
+        );
+      }
+      const targetArray = [...(newTiers[targetTier] || [])];
+      targetArray.splice(finalIndex, 0, newPhoto);
+      newTiers[targetTier] = targetArray;
+      return newTiers;
     });
-
     setShowComparisonModal(false);
     setBattleSequence(null);
   };
@@ -257,10 +290,9 @@ export default function TierAlbumView({
     setBattleSequence(null);
   };
 
-  // --- 렌더링 ---
+  // --- 최종 렌더링 ---
   return (
-    <div className="space-y-4 animate-fade-in">
-      {/* [개선] 1. 상단 컨트롤 바: 모든 제어 기능을 한 곳으로 통합 */}
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between gap-4 mb-4 p-4 bg-white rounded-xl shadow-md border">
         <div className="flex items-center gap-4">
           <button
@@ -274,136 +306,139 @@ export default function TierAlbumView({
           </h2>
         </div>
         <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              className="toggle toggle-sm toggle-primary"
-              checked={precisionTierMode}
-              onChange={(e) => setPrecisionTierMode(e.target.checked)}
-            />
-            <span className="font-semibold text-sm text-gray-700 hidden sm:block">
-              배틀 모드
+          <button
+            onClick={() => setPrecisionTierMode(!precisionTierMode)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 ${
+              precisionTierMode
+                ? "bg-teal-100 text-teal-700 ring-2 ring-teal-500"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            <BoltIcon className="w-5 h-5" />
+            <span className="hidden sm:block">
+              {precisionTierMode ? "배틀 활성화됨" : "정밀 배틀"}
             </span>
-          </label>
+          </button>
           <button
             onClick={saveTierAlbumData}
             className="px-5 py-2 bg-teal-500 text-white rounded-lg font-bold hover:bg-teal-600 shadow-sm transition-all"
           >
-            저장
+            💾 저장
           </button>
         </div>
       </div>
 
-      {/* [개선] 2. 컴팩트한 티어 목록 레이아웃 */}
-      <div className="bg-gray-800 rounded-xl shadow-lg p-4 space-y-1">
-        {tiers.map(({ label, color }) => (
-          <div
-            key={label}
-            className={`flex items-stretch min-h-[112px] rounded-md transition-colors ${
-              dragOverPosition?.tier === label ? "bg-white/10" : ""
-            }`}
-            onDragOver={(e) => e.preventDefault()}
-          >
-            <div
-              className={`w-16 flex items-center justify-center text-white text-3xl font-black rounded-l-md bg-gradient-to-br ${color}`}
-            >
-              {label}
-            </div>
-            <div className="flex-1 p-2 flex flex-wrap gap-2 items-center">
-              {(tierPhotos[label] || []).map((photo, index) => (
-                <div
-                  key={photo.id}
-                  className="flex items-center"
-                  onDragOver={(e) => handleDragOverPosition(e, label, index)}
-                  onDrop={(e) => handleDropAtPosition(e, label, index)}
-                >
-                  {dragOverPosition?.tier === label &&
-                    dragOverPosition.index === index && (
-                      <div className="w-1 h-20 bg-teal-400 rounded-full transition-all" />
-                    )}
-                  <div
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, photo, label)}
-                    onDragEnd={handleDragEnd}
-                    onClick={() => handleImageClick(photo)}
-                    className={`relative group transition-opacity ${
-                      draggingPhotoId === photo.id
-                        ? "opacity-40"
-                        : "opacity-100"
-                    }`}
-                  >
-                    <Image
-                      src={photo.src}
-                      alt={photo.name}
-                      width={88}
-                      height={88}
-                      className="rounded-md object-cover cursor-pointer w-22 h-22 shadow-md hover:scale-105 transition-transform"
-                    />
-                    {label === "S" && index === 0 && (
-                      <TrophyIcon className="absolute -top-2 -right-2 w-6 h-6 text-yellow-400 filter drop-shadow-lg" />
-                    )}
-                  </div>
-                </div>
-              ))}
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
+        <div className="bg-white rounded-xl shadow-md border p-4 space-y-2">
+          {tiers.map(({ label, color }) => (
+            <div key={label} className="flex items-start">
               <div
-                className="flex-1 min-w-[20px]"
-                onDragOver={(e) =>
-                  handleDragOverPosition(
-                    e,
-                    label,
-                    (tierPhotos[label] || []).length
-                  )
-                }
-                onDrop={(e) =>
-                  handleDropAtPosition(
-                    e,
-                    label,
-                    (tierPhotos[label] || []).length
-                  )
-                }
+                className={`w-16 h-28 flex-shrink-0 flex items-center justify-center text-white text-3xl font-black rounded-l-md bg-gradient-to-br ${color}`}
               >
+                {label}
+              </div>
+              <div
+                className="flex-1 p-2 flex flex-wrap gap-2 items-center border-t border-b border-r rounded-r-md min-h-[112px]"
+                onDragOver={(e) => handleDragOverTierArea(e, label)}
+                onDrop={(e) => handleDropTierArea(e, label)}
+              >
+                {(tierPhotos[label] || []).length === 0 && !draggingPhotoId && (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 text-center">
+                    <span className="text-3xl mb-2">📷</span>
+                    <span className="text-sm">사진을 여기에 드래그하세요.</span>
+                  </div>
+                )}
+                {(tierPhotos[label] || []).map((photo, index) => (
+                  <div
+                    key={photo.id}
+                    className="flex items-center"
+                    onDragOver={(e) => handleDragOverPosition(e, label, index)}
+                    onDrop={(e) =>
+                      handleDropAtPosition(
+                        e,
+                        label,
+                        dragOverPosition?.index ?? index
+                      )
+                    }
+                  >
+                    {dragOverPosition?.tier === label &&
+                      dragOverPosition.index === index && (
+                        <div className="w-1.5 h-20 bg-teal-400 rounded-full transition-all" />
+                      )}
+
+                    {/* [수정] 투명도 효과(transition-opacity, opacity-40) 제거 */}
+                    <div
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, photo, label)}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => handleImageClick(photo)}
+                      className="relative group"
+                    >
+                      <Image
+                        src={photo.src}
+                        alt={photo.name}
+                        width={88}
+                        height={88}
+                        className="rounded-md object-cover cursor-grab w-22 h-22 shadow-md hover:scale-105 transition-transform"
+                      />
+
+                      {label === "S" && index < 3 && (
+                        <div className="absolute -top-2 -left-1 text-2xl z-10 filter drop-shadow-lg">
+                          {index === 0 ? "👑" : index === 1 ? "🥈" : "🥉"}
+                        </div>
+                      )}
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReturnToAvailable(photo.id, label);
+                        }}
+                        className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
                 {dragOverPosition?.tier === label &&
                   dragOverPosition.index ===
                     (tierPhotos[label] || []).length && (
-                    <div className="w-1 h-20 bg-teal-400 rounded-full" />
+                    <div className="w-1.5 h-20 bg-teal-400 rounded-full ml-2 transition-all" />
                   )}
               </div>
             </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-white rounded-xl p-6 shadow-md border">
-        <h3 className="text-xl font-bold text-gray-700 mb-4">
-          사용 가능한 사진
-        </h3>
-        <div
-          onDragOver={(e) => e.preventDefault()}
-          className="p-4 bg-gray-50 rounded-lg min-h-[120px] flex flex-wrap gap-3 items-center border-2 border-dashed"
-        >
-          {availablePhotos.map((photo) => (
-            <div
-              key={photo.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, photo, "available")}
-              onDragEnd={handleDragEnd}
-              onClick={() => handleImageClick(photo)}
-              className={`transition-opacity ${
-                draggingPhotoId === photo.id ? "opacity-40" : "opacity-100"
-              }`}
-            >
-              <Image
-                src={photo.src}
-                alt={photo.name}
-                width={88}
-                height={88}
-                className="rounded-md object-cover cursor-pointer w-22 h-22 shadow-sm"
-              />
-            </div>
           ))}
-          {availablePhotos.length === 0 && (
-            <p className="text-gray-400 text-sm">모든 사진이 배치되었습니다.</p>
-          )}
+        </div>
+
+        <div className="bg-white rounded-xl p-6 shadow-md border lg:h-full lg:max-h-[calc(100vh-180px)] overflow-y-auto">
+          <h3 className="text-xl font-bold text-gray-700 mb-4">
+            사용 가능한 사진
+          </h3>
+          <div className="p-4 bg-gray-50 rounded-lg min-h-[120px] flex flex-wrap gap-3 items-center border-2 border-dashed">
+            {availablePhotos.map((photo) => (
+              // [수정] 여기에서도 투명도 효과 제거
+              <div
+                key={photo.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, photo, "available")}
+                onDragEnd={handleDragEnd}
+                onClick={() => handleImageClick(photo)}
+              >
+                <Image
+                  src={photo.src}
+                  alt={photo.name}
+                  width={88}
+                  height={88}
+                  className="rounded-md object-cover cursor-grab w-22 h-22 shadow-sm"
+                />
+              </div>
+            ))}
+            {availablePhotos.length === 0 && (
+              <p className="text-gray-400 text-sm">
+                모든 사진이 배치되었습니다.
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -412,8 +447,8 @@ export default function TierAlbumView({
         battleSequence={battleSequence}
         onClose={handleCloseBattleModal}
         onDecision={handleBattleDecision}
+        onZoomRequest={handleImageClick}
       />
-
       {showImageModal && selectedImage && (
         <div
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center"

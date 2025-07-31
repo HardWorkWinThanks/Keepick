@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { XMarkIcon } from "@heroicons/react/24/outline";
 
 // 타입 정의
 interface Photo {
@@ -11,18 +10,18 @@ interface Photo {
   src: string;
   name: string;
 }
-
 interface BattleSequence {
   newPhoto: Photo;
   opponents: Photo[];
   currentOpponentIndex: number;
+  targetTier: string;
 }
-
 interface TierBattleModalProps {
   isOpen: boolean;
   battleSequence: BattleSequence | null;
-  onClose: () => void; // 배틀 취소
-  onDecision: (winnerId: string) => void; // 승자 결정
+  onClose: () => void;
+  onDecision: (winnerId: string) => void;
+  onZoomRequest: (photo: Photo) => void;
 }
 
 export default function TierBattleModal({
@@ -30,104 +29,169 @@ export default function TierBattleModal({
   battleSequence,
   onClose,
   onDecision,
+  onZoomRequest,
 }: TierBattleModalProps) {
-  const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
-  // 새로운 대결이 시작되면 선택 상태를 초기화합니다.
   useEffect(() => {
     if (isOpen) {
-      setSelectedPhotoId(null);
+      setSelectedPhoto(null);
     }
-  }, [isOpen, battleSequence]);
+  }, [isOpen]);
 
-  if (!isOpen || !battleSequence) {
-    return null;
-  }
+  if (!isOpen || !battleSequence) return null;
 
-  const { newPhoto, opponents, currentOpponentIndex } = battleSequence;
+  const { newPhoto, opponents, currentOpponentIndex, targetTier } =
+    battleSequence;
   const currentOpponent = opponents[currentOpponentIndex];
-
-  // currentOpponent가 없을 경우(오류 방지) 모달을 렌더링하지 않습니다.
   if (!currentOpponent) {
-    console.error("Battle opponent is missing.");
-    onClose(); // 문제가 있으면 모달을 닫습니다.
+    onClose();
     return null;
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-3xl relative">
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-3xl p-10 max-w-5xl w-full max-h-[90vh] shadow-2xl relative animate-modal-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 닫기 버튼 */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 p-1 rounded-full transition-colors"
+          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 text-xl transition-all"
         >
-          <XMarkIcon className="w-6 h-6" />
+          ✕
         </button>
 
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">정밀 티어 배틀</h2>
-          <p className="text-gray-500 mt-1">
-            더 마음에 드는 사진을 선택하세요.
-            <span className="font-semibold text-[var(--primary-color)] ml-2">
-              (대결 {currentOpponentIndex + 1} / {opponents.length})
-            </span>
+        {/* 좌상단 타이틀 */}
+        <div className="absolute top-8 left-10 font-bold text-lg text-gray-700">
+          티어 배틀
+        </div>
+
+        {/* 메인 헤더 */}
+        <div className="text-center  mb-10">
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">
+            {targetTier}티어 {opponents.length - currentOpponentIndex}위 결정전
+          </h1>
+          <p className="text-xl text-gray-600">
+            더 높은 순위에 두고 싶은 추억을 선택해주세요
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* 새로운 사진 */}
-          <div
-            className={`relative rounded-lg overflow-hidden cursor-pointer border-4 transition-all duration-300 ${
-              selectedPhotoId === newPhoto.id
-                ? "border-[var(--primary-color)] shadow-xl scale-105"
-                : "border-transparent"
-            }`}
-            onClick={() => setSelectedPhotoId(newPhoto.id)}
-          >
-            <Image
-              src={newPhoto.src}
-              alt={newPhoto.name}
-              width={500}
-              height={500}
-              className="w-full h-auto object-cover aspect-square"
-            />
-            <div className="absolute bottom-0 left-0 bg-black/50 text-white p-2 text-center w-full">
-              <p className="font-bold">새로운 사진</p>
-              <p className="text-sm">{newPhoto.name}</p>
+        {/* 대결 영역 */}
+        <div className="flex items-center justify-center gap-16 mb-12">
+          {/* 기존 추억 */}
+          <div className="text-center">
+            <div
+              className={`relative group mb-4 cursor-pointer`}
+              onClick={() => setSelectedPhoto(currentOpponent.id)}
+            >
+              <div
+                className={`w-72 h-72 rounded-2xl overflow-hidden shadow-xl transition-all duration-300 relative ${
+                  selectedPhoto === currentOpponent.id
+                    ? "scale-105"
+                    : "hover:scale-102"
+                }`}
+              >
+                <Image
+                  src={currentOpponent.src}
+                  alt="기존 추억"
+                  layout="fill"
+                  objectFit="cover"
+                />
+                <div
+                  className={`absolute inset-0 border-8 rounded-2xl transition-all duration-300 ${
+                    selectedPhoto === currentOpponent.id
+                      ? "border-emerald-500"
+                      : "border-transparent"
+                  }`}
+                ></div>
+              </div>
             </div>
+            <h3 className="text-2xl font-semibold text-gray-800 mb-3">
+              기존 추억
+            </h3>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onZoomRequest(currentOpponent);
+              }}
+              className="px-5 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-medium transition-colors"
+            >
+              🔍 자세히 보기
+            </button>
           </div>
 
-          {/* 기존 사진 (상대) */}
-          <div
-            className={`relative rounded-lg overflow-hidden cursor-pointer border-4 transition-all duration-300 ${
-              selectedPhotoId === currentOpponent.id
-                ? "border-[var(--primary-color)] shadow-xl scale-105"
-                : "border-transparent"
-            }`}
-            onClick={() => setSelectedPhotoId(currentOpponent.id)}
-          >
-            <Image
-              src={currentOpponent.src}
-              alt={currentOpponent.name}
-              width={500}
-              height={500}
-              className="w-full h-auto object-cover aspect-square"
-            />
-            <div className="absolute bottom-0 left-0 bg-black/50 text-white p-2 text-center w-full">
-              <p className="font-bold">기존 사진</p>
-              <p className="text-sm">{currentOpponent.name}</p>
+          {/* VS 구분선 */}
+          <div className="my-4">
+            <span className="text-7xl font-black bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">
+              VS
+            </span>
+          </div>
+
+          {/* 새로운 추억 */}
+          <div className="text-center">
+            <div
+              className={`relative group mb-4 cursor-pointer`}
+              onClick={() => setSelectedPhoto(newPhoto.id)}
+            >
+              <div
+                className={`w-72 h-72 rounded-2xl overflow-hidden shadow-xl transition-all duration-300 relative ${
+                  selectedPhoto === newPhoto.id
+                    ? "scale-105"
+                    : "hover:scale-102"
+                }`}
+              >
+                <Image
+                  src={newPhoto.src}
+                  alt="새로운 추억"
+                  layout="fill"
+                  objectFit="cover"
+                />
+                <div
+                  className={`absolute inset-0 border-8 rounded-2xl transition-all duration-300 ${
+                    selectedPhoto === newPhoto.id
+                      ? "border-emerald-500"
+                      : "border-transparent"
+                  }`}
+                ></div>
+              </div>
             </div>
+            <h3 className="text-2xl font-semibold text-gray-800 mb-3">
+              새로운 추억
+            </h3>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onZoomRequest(newPhoto);
+              }}
+              className="px-5 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-medium transition-colors"
+            >
+              🔍 자세히 보기
+            </button>
           </div>
         </div>
 
-        <button
-          onClick={() => onDecision(selectedPhotoId!)}
-          disabled={!selectedPhotoId}
-          className="w-full mt-6 py-3 bg-[var(--primary-color)] text-white font-bold rounded-lg text-lg transition-all
-                     disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-[#2fa692]"
-        >
-          결정하기
-        </button>
+        {/* 결정 버튼 */}
+        <div className="text-center">
+          {selectedPhoto ? (
+            <button
+              onClick={() => onDecision(selectedPhoto)}
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-xl py-5 px-16 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+            >
+              이걸로 결정하기!
+            </button>
+          ) : (
+            <div className="bg-gray-50 rounded-2xl py-6 px-8 border-2 border-dashed border-gray-300">
+              <p className="text-gray-500 text-lg font-medium">
+                위의 두 추억 중 하나를 선택해주세요
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
