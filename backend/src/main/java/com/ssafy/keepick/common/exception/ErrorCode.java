@@ -20,8 +20,7 @@ public enum ErrorCode {
     // Group_Member
     INVITATION_DUPLICATE(HttpStatus.CONFLICT, "이미 그룹에 가입한 회원입니다", "GM001"),
     INVITATION_NOT_FOUND(HttpStatus.FORBIDDEN, "그룹 초대 요청을 찾을 수 없습니다", "GM002"),
-    INVITATION_EXPIRED(HttpStatus.NOT_FOUND, "만료된 그룹 초대 링크입니다", "GM003"),
-    INVITATION_INVALID_PARAMETER(HttpStatus.NOT_FOUND, "잘못된 그룹 초대 링크입니다", "GM003"),
+    INVITATION_TOKEN_NOT_FOUND(HttpStatus.FORBIDDEN, "유효하지 않거나 만료된 링크입니다.", "GM003"),
 
     // 시스템 에러
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다.", "S001");

@@ -12,8 +12,8 @@ public class RedisService {
 
     private final StringRedisTemplate stringRedisTemplate;
 
-    public void setValue(String key, String value) {
-        stringRedisTemplate.opsForValue().set(key, value, Duration.ofDays(1));
+    public void setValue(String key, String value, Duration duration) {
+        stringRedisTemplate.opsForValue().set(key, value, duration);
     }
 
     public String getValue(String key) {

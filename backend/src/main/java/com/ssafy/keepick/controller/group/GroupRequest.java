@@ -16,14 +16,14 @@ public class GroupRequest {
     public static class Create {
         @NotBlank
         private String name;
-        private List<Long> members;
+        private List<Long> memberIds;
 
         public GroupCommand.Create toCommand(Long memberId) {
             return GroupCommand.Create
                     .builder()
                     .memberId(memberId)
                     .name(name)
-                    .members(members)
+                    .memberIds(memberIds)
                     .build();
         }
     }
@@ -53,13 +53,13 @@ public class GroupRequest {
     @AllArgsConstructor
     public static class Invite {
         @NotNull
-        private List<Long> members;
+        private List<Long> memberIds;
 
         public GroupCommand.Invite toCommand(Long groupId) {
             return GroupCommand.Invite
                     .builder()
                     .groupId(groupId)
-                    .members(members)
+                    .memberIds(memberIds)
                     .build();
         }
     }

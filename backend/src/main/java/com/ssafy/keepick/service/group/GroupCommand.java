@@ -1,8 +1,6 @@
 package com.ssafy.keepick.service.group;
 
-import com.ssafy.keepick.entity.Group;
 import com.ssafy.keepick.entity.GroupMemberStatus;
-import com.ssafy.keepick.entity.Member;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,7 +15,7 @@ public class GroupCommand {
     public static class Create {
         private Long memberId;
         private String name;
-        private List<Long> members;
+        private List<Long> memberIds;
     }
 
     @Getter
@@ -67,7 +65,7 @@ public class GroupCommand {
     @AllArgsConstructor
     public static class Invite {
         private Long groupId;
-        private List<Long> members;
+        private List<Long> memberIds;
     }
 
     @Getter

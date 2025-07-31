@@ -1,7 +1,5 @@
 package com.ssafy.keepick.controller.group;
 
-import com.ssafy.keepick.common.exception.BaseException;
-import com.ssafy.keepick.common.exception.ErrorCode;
 import com.ssafy.keepick.common.response.ApiResponse;
 import com.ssafy.keepick.common.response.ResponseCode;
 import com.ssafy.keepick.entity.GroupMemberStatus;
@@ -22,77 +20,47 @@ public class GroupController {
     private final GroupService groupService;
 
     @PostMapping("")
-    public ApiResponse<?> create(
+    public ApiResponse<GroupResponse.Creation> create(
             @Valid @RequestBody GroupRequest.Create request) {
         GroupCommand.Create command = request.toCommand(1L);
         GroupResult.GroupInfo result = groupService.createGroup(command);
-        return ApiResponse.created(GroupResponse.Creation.toResponse(result));
+        GroupResponse.Creation response = GroupResponse.Creation.toResponse(result);
+        return ApiResponse.created(response);
     }
 
     @GetMapping("")
-    public ApiResponse<?> list(@RequestParam(required = true, defaultValue = "accepted") String status) {
-        GroupCommand.MyGroup command = null;
-        try {
-            command = GroupCommand.MyGroup.of(1L, GroupMemberStatus.valueOf(status.toUpperCase()));
-        } catch (IllegalArgumentException e) {
-            throw new BaseException(ErrorCode.INVALID_PARAMETER);
-        }
-        List<GroupResponse.MyGroup> response = groupService.getGroups(command).stream().map(GroupResponse.MyGroup::toResponse).toList();
+    public ApiResponse<List<GroupResponse.MyGroup>> list(@RequestParam(defaultValue = "ACCEPTED") GroupMemberStatus status) {
+        GroupCommand.MyGroup command = GroupCommand.MyGroup.of(1L, status);
+        List<GroupResult.GroupMemberInfo> result = groupService.getGroups(command);
+        List<GroupResponse.MyGroup> response = result.stream().map(GroupResponse.MyGroup::toResponse).toList();
         return ApiResponse.ok(response);
     }
 
     @GetMapping("/{groupId}")
-    public ApiResponse<?> detail(@PathVariable Long groupId) {
+    public ApiResponse<GroupResponse.Detail> detail(@PathVariable Long groupId) {
         GroupResult.GroupInfo result = groupService.getGroup(groupId);
-        return ApiResponse.ok(GroupResponse.Detail.toResponse(result));
+        GroupResponse.Detail response = GroupResponse.Detail.toResponse(result);
+        return ApiResponse.ok(response);
     }
 
     @GetMapping("/{groupId}/members")
-    public ApiResponse<?> groupMembers(@PathVariable Long groupId) {
-        List<GroupResponse.Member> response = groupService.getMembers(groupId).stream().map(GroupResponse.Member::toResponse).toList();
+    public ApiResponse<List<GroupResponse.Member>> groupMembers(@PathVariable Long groupId) {
+        List<GroupResult.Member> result = groupService.getMembers(groupId);
+        List<GroupResponse.Member> response = result.stream().map(GroupResponse.Member::toResponse).toList();
         return ApiResponse.ok(response);
     }
 
     @PutMapping("/{groupId}")
-    public ApiResponse<?> update(@PathVariable Long groupId, @RequestBody GroupRequest.Update request) {
+    public ApiResponse<GroupResponse.Detail> update(@PathVariable Long groupId, @Valid @RequestBody GroupRequest.Update request) {
         GroupResult.GroupInfo result = groupService.updateGroup(request.toCommand(groupId));
-        return ApiResponse.ok(GroupResponse.Detail.toResponse(result));
-    }
-
-    @DeleteMapping("/{groupId}/me")
-    public ApiResponse<?> leave(@PathVariable Long groupId) {
-        groupService.leaveGroup(GroupCommand.Leave.of(groupId, 1L));
-        return ApiResponse.of(ResponseCode.DELETED);
-    }
-
-    @PostMapping("/{groupId}/invitations")
-    public ApiResponse<?> createInvitation(@PathVariable Long groupId, @RequestBody GroupRequest.Invite request) {
-        List<GroupResponse.Invitation> response = groupService.invite(request.toCommand(groupId)).stream().map(GroupResponse.Invitation::toResponse).toList();
+        GroupResponse.Detail response = GroupResponse.Detail.toResponse(result);
         return ApiResponse.ok(response);
     }
 
-    @PostMapping("/{groupId}/invitations/{invitationId}")
-    public ApiResponse<?> acceptInvitation(@PathVariable Long invitationId) {
-        GroupResult.GroupMemberInfo result = groupService.acceptInvitation(invitationId);
-        return ApiResponse.ok(GroupResponse.Invitation.toResponse(result));
-    }
-
-    @DeleteMapping("/{groupId}/invitations/{invitationId}")
-    public ApiResponse<?> rejectInvitation(@PathVariable Long invitationId) {
-        GroupResult.GroupMemberInfo result = groupService.rejectInvitation(invitationId);
-        return ApiResponse.ok(GroupResponse.Invitation.toResponse(result));
-    }
-
-    @PostMapping("/{groupId}/invitation-link")
-    public ApiResponse<?> createInvitationLink(@PathVariable Long groupId) {
-        GroupResult.Link result = groupService.createInvitationLink(groupId);
-        return ApiResponse.created(GroupResponse.Link.toResponse(result));
-    }
-
-    @GetMapping("/{groupId}/invitation-link/{invitation-link}")
-    public ApiResponse<?> getInvitationLink(@PathVariable Long groupId, @PathVariable("invitation-link") String inviteToken) {
-        GroupResult.GroupMemberInfo result = groupService.joinGroupByInvitationLink(GroupCommand.Link.of(groupId, 1L, inviteToken));
-        return ApiResponse.ok(GroupResponse.Invitation.toResponse(result));
+    @DeleteMapping("/{groupId}/me")
+    public ApiResponse<Void> leave(@PathVariable Long groupId) {
+        groupService.leaveGroup(GroupCommand.Leave.of(groupId, 1L));
+        return ApiResponse.of(ResponseCode.DELETED);
     }
 
 }

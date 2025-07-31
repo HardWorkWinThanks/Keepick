@@ -26,43 +26,39 @@ public class GroupMember extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private GroupMemberStatus status;
 
-    private GroupMember(Group group, Member member, GroupMemberStatus status) {
+    private GroupMember(Group group, Member member) {
         this.group = group;
         this.member = member;
-        if(status == null || status == GroupMemberStatus.PENDING) this.invite();
-        else if(status == GroupMemberStatus.ACCEPTED) this.accept();
-        else if(status == GroupMemberStatus.REJECTED) this.reject();
+        this.status = GroupMemberStatus.PENDING;
     }
 
     public static GroupMember createGroupMember(Group group, Member member) {
-        return new GroupMember(group, member, null);
-    }
-
-    public static GroupMember createGroupMember(Group group, Member member, GroupMemberStatus status) {
-        return new GroupMember(group, member, status);
+        return new GroupMember(group, member);
     }
 
     public void invite() {
+        if(this.status == GroupMemberStatus.ACCEPTED) throw new IllegalStateException();
         this.status = GroupMemberStatus.PENDING;
     }
 
     public void accept() {
+        if(this.status != GroupMemberStatus.PENDING) throw new IllegalStateException();
         this.status = GroupMemberStatus.ACCEPTED;
         this.group.increaseMemberCount();
     }
 
     public void reject() {
+        if(this.status != GroupMemberStatus.PENDING) throw new IllegalStateException();
         this.status = GroupMemberStatus.REJECTED;
     }
 
-    public void delete() {
+    public void leave() {
+        if(this.status != GroupMemberStatus.ACCEPTED) throw new IllegalStateException();
+        this.status = GroupMemberStatus.LEFT;
         this.deletedAt = LocalDateTime.now();
         this.group.decreaseMemberCount();
     }
 
-    public void undelete() {
-        this.deletedAt = null;
-    }
 }
 
 

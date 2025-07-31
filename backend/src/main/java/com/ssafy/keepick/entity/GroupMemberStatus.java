@@ -1,5 +1,5 @@
 package com.ssafy.keepick.entity;
 
 public enum GroupMemberStatus {
-    PENDING, ACCEPTED, REJECTED
+    PENDING, ACCEPTED, REJECTED, LEFT
 }

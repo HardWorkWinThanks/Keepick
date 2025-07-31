@@ -76,9 +76,9 @@ class GroupMemberRepositoryTest {
         groupMemberRepository.save(groupMember3);
 
         // when
-        GroupMember findGroupMember1 = groupMemberRepository.findByGroupIdAndMemberIdAndStatusAndDeletedAtIsNull(group1.getId(), member1.getId(), GroupMemberStatus.PENDING).get();
-        GroupMember findGroupMember2 = groupMemberRepository.findByGroupIdAndMemberIdAndStatusAndDeletedAtIsNull(group2.getId(), member1.getId(), GroupMemberStatus.ACCEPTED).get();
-        GroupMember findGroupMember3 = groupMemberRepository.findByGroupIdAndMemberIdAndStatusAndDeletedAtIsNull(group3.getId(), member1.getId(), GroupMemberStatus.REJECTED).get();
+        GroupMember findGroupMember1 = groupMemberRepository.findByGroupIdAndMemberIdAndStatus(group1.getId(), member1.getId(), GroupMemberStatus.PENDING).get();
+        GroupMember findGroupMember2 = groupMemberRepository.findByGroupIdAndMemberIdAndStatus(group2.getId(), member1.getId(), GroupMemberStatus.ACCEPTED).get();
+        GroupMember findGroupMember3 = groupMemberRepository.findByGroupIdAndMemberIdAndStatus(group3.getId(), member1.getId(), GroupMemberStatus.REJECTED).get();
 
         // then
         assertThat(findGroupMember1).isEqualTo(groupMember1);
