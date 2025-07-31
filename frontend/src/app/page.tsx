@@ -58,7 +58,7 @@ export default function HomePage() {
                 className="w-full h-auto filter brightness-105"
                 poster="/placeholder.svg?height=400&width=600&text=Keepick+Demo+Video"
               >
-                <source src="/demo-video.mp4" type="video/mp4" />
+                <source src="/main-video.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
             </div>

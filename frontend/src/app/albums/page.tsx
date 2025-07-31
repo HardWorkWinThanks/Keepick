@@ -39,63 +39,63 @@ export default function AlbumsPage() {
   const [availablePhotos, setAvailablePhotos] = useState([
     {
       id: "photo1",
-      src: "/placeholder.svg?height=100&width=100&text=사진1",
+      src: "jeju-dummy1.webp",
       name: "사진1",
     },
     {
       id: "photo2",
-      src: "/placeholder.svg?height=100&width=100&text=사진2",
+      src: "jeju-dummy2.jpg",
       name: "사진2",
     },
     {
       id: "photo3",
-      src: "/placeholder.svg?height=100&width=100&text=사진3",
+      src: "jeju-dummy3.jpg",
       name: "사진3",
     },
     {
       id: "photo4",
-      src: "/placeholder.svg?height=100&width=100&text=사진4",
+      src: "jeju-dummy4.jpg",
       name: "사진4",
     },
     {
       id: "photo5",
-      src: "/placeholder.svg?height=100&width=100&text=사진5",
+      src: "jeju-dummy5.jpg",
       name: "사진5",
     },
     {
       id: "photo6",
-      src: "/placeholder.svg?height=100&width=100&text=사진6",
+      src: "jeju-dummy6.jpg",
       name: "사진6",
     },
     {
       id: "photo7",
-      src: "/placeholder.svg?height=100&width=100&text=사진7",
+      src: "jeju-dummy7.jpg",
       name: "사진7",
     },
-    {
-      id: "photo8",
-      src: "/placeholder.svg?height=100&width=100&text=사진8",
-      name: "사진8",
-    },
-    {
-      id: "photo9",
-      src: "/placeholder.svg?height=100&width=100&text=사진9",
-      name: "사진9",
-    },
+    // {
+    //   id: "photo8",
+    //   src: "/placeholder.svg?height=100&width=100&text=사진8",
+    //   name: "사진8",
+    // },
+    // {
+    //   id: "photo9",
+    //   src: "/placeholder.svg?height=100&width=100&text=사진9",
+    //   name: "사진9",
+    // },
   ]);
   // 티어별 사진 배치 상태
   const [tierPhotos, setTierPhotos] = useState<{ [key: string]: { id: string; src: string; name: string }[] }>({
     S: [
       {
         id: "photo_s1",
-        src: "/placeholder.svg?height=100&width=100&text=S급1",
+        src: "jaewan1.jpg",
         name: "S급 사진1",
       },
-      {
-        id: "photo_s2",
-        src: "/placeholder.svg?height=100&width=100&text=S급2",
-        name: "S급 사진2",
-      },
+      // {
+      //   id: "photo_s2",
+      //   src: "/placeholder.svg?height=100&width=100&text=S급2",
+      //   name: "S급 사진2",
+      // },
     ],
     A: [],
     B: [],
@@ -124,7 +124,7 @@ export default function AlbumsPage() {
           title: "제주도 여행",
           date: "2025.07.10",
           photoCount: 8,
-          coverImage: "/placeholder.svg?height=300&width=400&text=제주도+여행",
+          coverImage: "jeju-dummy1.webp",
           gradient: "from-[#F3E5F5] to-[#AA00FF]",
         },
         {
@@ -135,30 +135,30 @@ export default function AlbumsPage() {
           coverImage: "/placeholder.svg?height=300&width=400&text=부산+바다",
           gradient: "from-[#E3F2FD] to-[#2196F3]",
         },
-        {
-          id: "seoul-tour",
-          title: "서울 시내 투어",
-          date: "2025.09.20",
-          photoCount: 20,
-          coverImage: "/placeholder.svg?height=300&width=400&text=서울+투어",
-          gradient: "from-[#FFF3E0] to-[#FF9800]",
-        },
-        {
-          id: "mountain-hiking",
-          title: "설악산 등반",
-          date: "2025.10.05",
-          photoCount: 25,
-          coverImage: "/placeholder.svg?height=300&width=400&text=설악산+등반",
-          gradient: "from-[#E8F5E8] to-[#4CAF50]",
-        },
-        {
-          id: "autumn-festival",
-          title: "가을 축제",
-          date: "2025.10.25",
-          photoCount: 18,
-          coverImage: "/placeholder.svg?height=300&width=400&text=가을+축제",
-          gradient: "from-[#FFF8E1] to-[#FFC107]",
-        },
+        // {
+        //   id: "seoul-tour",
+        //   title: "서울 시내 투어",
+        //   date: "2025.09.20",
+        //   photoCount: 20,
+        //   coverImage: "/placeholder.svg?height=300&width=400&text=서울+투어",
+        //   gradient: "from-[#FFF3E0] to-[#FF9800]",
+        // },
+        // {
+        //   id: "mountain-hiking",
+        //   title: "설악산 등반",
+        //   date: "2025.10.05",
+        //   photoCount: 25,
+        //   coverImage: "/placeholder.svg?height=300&width=400&text=설악산+등반",
+        //   gradient: "from-[#E8F5E8] to-[#4CAF50]",
+        // },
+        // {
+        //   id: "autumn-festival",
+        //   title: "가을 축제",
+        //   date: "2025.10.25",
+        //   photoCount: 18,
+        //   coverImage: "/placeholder.svg?height=300&width=400&text=가을+축제",
+        //   gradient: "from-[#FFF8E1] to-[#FFC107]",
+        // },
       ];
 
       return (
@@ -231,7 +231,7 @@ export default function AlbumsPage() {
         title: "제주도 여행",
         date: "2025.07.10",
         gradient: "from-[#F3E5F5] to-[#AA00FF]",
-        coverImage: "/placeholder.svg?height=250&width=1200&text=두번째+모임",
+        coverImage: "jeju-dummy1.webp",
       },
     };
 
@@ -306,11 +306,11 @@ export default function AlbumsPage() {
         },
         {
           id: "travel-memories",
-          title: "여행 추억 모음",
+          title: "제주도 여행 추억 모음",
           date: "2025.07.10",
           totalPhotos: 32,
           tierDistribution: { S: 5, A: 8, B: 12, C: 7 },
-          coverImage: "/placeholder.svg?height=300&width=400&text=여행+추억",
+          coverImage: "jeju-dummy2.jpg",
           gradient: "from-[#87CEEB] to-[#4682B4]",
         },
         {
@@ -837,6 +837,13 @@ export default function AlbumsPage() {
               {tab.label}
             </button>
           ))}
+          <button
+            onClick={() => router.push("/photos")}
+            className="flex-1 px-6 py-3 font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-gray-600 hover:bg-[var(--primary-color)]/10"
+          >
+            <span>🖼️</span>
+            그룹 갤러리
+          </button>
         </div>
 
         <div className="pt-4">
