@@ -23,6 +23,10 @@ export default function AlbumsPage() {
   }
   // 드래그 앤 드롭 상태 관리
   const [dragOverTier, setDragOverTier] = useState<string | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<{
+    tier: string;
+    index: number;
+  } | null>(null);
   // 정밀 티어 모드 상태
   const [precisionTierMode, setPrecisionTierMode] = useState(false);
   const [showComparisonModal, setShowComparisonModal] = useState(false);
@@ -540,45 +544,111 @@ export default function AlbumsPage() {
                 </div>
                 <div className="flex-1">
                   <div
-                    className={`h-32 border-2 border-dashed rounded-2xl p-4 flex flex-wrap gap-3 items-start transition-all ${
+                    className={`h-32 border-2 border-dashed rounded-2xl p-4 transition-all ${
                       dragOverTier === tier.label
                         ? "border-[var(--primary-color)] bg-[var(--primary-color)]/10"
                         : "border-[var(--border-color)] hover:border-[var(--primary-color)] hover:bg-[var(--primary-color)]/5"
                     }`}
-                    onDragOver={(e) => handleDragOver(e, tier.label)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, tier.label)}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragOverTier(tier.label);
+                    }}
+                    onDragLeave={() => {
+                      setDragOverTier(null);
+                      setDragOverPosition(null);
+                    }}
+                    onDrop={(e) =>
+                      handleDropAtPosition(
+                        e,
+                        tier.label,
+                        tierPhotos[tier.label]?.length || 0
+                      )
+                    }
                   >
                     {tierPhotos[tier.label]?.length > 0 ? (
-                      tierPhotos[tier.label].map((photo) => (
-                        <div
-                          key={photo.id}
-                          className="relative group cursor-move"
-                          draggable
-                          onDragStart={(e) =>
-                            handleDragStart(e, photo.id, tier.label)
-                          }
-                        >
+                      <div className="flex gap-2 flex-wrap h-full items-start relative">
+                        {tierPhotos[tier.label].map((photo, index) => (
                           <div
-                            onClick={() => handleImageClick(photo)}
-                            className="w-24 h-24 bg-[var(--card-bg)] rounded-xl shadow-md hover:-translate-y-1 hover:shadow-lg transition-all overflow-hidden cursor-pointer"
+                            key={`${tier.label}-${photo.id}`}
+                            className="flex items-center h-24 relative"
                           >
-                            <img
-                              src={photo.src || "/placeholder.svg"}
-                              alt={photo.name}
-                              className="w-full h-full object-cover"
-                            />
+                            {/* 동적 드롭 인디케이터 - 사진 앞 */}
+                            {dragOverPosition?.tier === tier.label &&
+                              dragOverPosition?.index === index && (
+                                <div className="absolute -left-1 top-0 w-0.5 h-24 bg-[var(--primary-color)] rounded-full z-10" />
+                              )}
+
+                            {/* 사진 */}
+                            <div
+                              className="relative group cursor-move"
+                              draggable
+                              onDragStart={(e) =>
+                                handleDragStart(e, photo.id, tier.label)
+                              }
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+
+                                // 마우스 위치에 따라 앞/뒤 판단
+                                const rect =
+                                  e.currentTarget.getBoundingClientRect();
+                                const mouseX = e.clientX - rect.left;
+                                const isLeftHalf = mouseX < rect.width / 2;
+
+                                const targetIndex = isLeftHalf
+                                  ? index
+                                  : index + 1;
+                                setDragOverPosition({
+                                  tier: tier.label,
+                                  index: targetIndex,
+                                });
+                                setDragOverTier(tier.label);
+                              }}
+                              onDrop={(e) => {
+                                e.stopPropagation();
+                                const rect =
+                                  e.currentTarget.getBoundingClientRect();
+                                const mouseX = e.clientX - rect.left;
+                                const isLeftHalf = mouseX < rect.width / 2;
+
+                                const targetIndex = isLeftHalf
+                                  ? index
+                                  : index + 1;
+                                handleDropAtPosition(
+                                  e,
+                                  tier.label,
+                                  targetIndex
+                                );
+                              }}
+                            >
+                              <div
+                                onClick={() => handleImageClick(photo)}
+                                className="w-24 h-24 bg-[var(--card-bg)] rounded-xl shadow-md hover:-translate-y-1 hover:shadow-lg transition-all overflow-hidden cursor-pointer"
+                              >
+                                <img
+                                  src={photo.src || "/placeholder.svg"}
+                                  alt={photo.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <button
+                                onClick={() =>
+                                  handleReturnToAvailable(photo.id, tier.label)
+                                }
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                              >
+                                ✕
+                              </button>
+                            </div>
+
+                            {/* 동적 드롭 인디케이터 - 사진 뒤 */}
+                            {dragOverPosition?.tier === tier.label &&
+                              dragOverPosition?.index === index + 1 && (
+                                <div className="absolute -right-1 top-0 w-0.5 h-24 bg-[var(--primary-color)] rounded-full z-10" />
+                              )}
                           </div>
-                          <button
-                            onClick={() =>
-                              handleReturnToAvailable(photo.id, tier.label)
-                            }
-                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))
+                        ))}
+                      </div>
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 text-center">
                         <span className="text-3xl mb-2">📷</span>
@@ -808,6 +878,105 @@ export default function AlbumsPage() {
   {
     /****************************************************************************************/
   }
+
+  // 위치별 드래그 오버 처리
+  const handleDragOverPosition = (
+    e: React.DragEvent,
+    tier: string,
+    index: number
+  ) => {
+    e.preventDefault();
+    setDragOverPosition({ tier, index });
+    setDragOverTier(tier);
+  };
+
+  // 위치별 드롭 처리
+  const handleDropAtPosition = (
+    e: React.DragEvent,
+    targetTier: string,
+    targetIndex: number
+  ) => {
+    e.preventDefault();
+    setDragOverPosition(null);
+    setDragOverTier(null);
+
+    const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+    const { photoId, source } = data;
+
+    // 드래그된 사진 찾기
+    let draggedPhotoData = null;
+    if (source === "available") {
+      draggedPhotoData = availablePhotos.find((p) => p.id === photoId);
+    } else {
+      draggedPhotoData = tierPhotos[source]?.find((p) => p.id === photoId);
+    }
+
+    if (!draggedPhotoData) return;
+
+    // 정밀 티어 모드 분기 처리
+    if (
+      precisionTierMode &&
+      tierPhotos[targetTier]?.length > 0 &&
+      source !== targetTier
+    ) {
+      const existingPhoto = tierPhotos[targetTier][0];
+      setComparisonData({
+        newPhoto: draggedPhotoData,
+        existingPhoto: existingPhoto,
+        targetTier: targetTier,
+        currentStep: 1,
+        totalSteps: 3,
+        sourceType: source,
+      });
+      setShowComparisonModal(true);
+      return;
+    }
+
+    // 같은 티어 내에서 이동하는 경우
+    if (source === targetTier) {
+      const currentIndex = tierPhotos[targetTier].findIndex(
+        (p) => p.id === photoId
+      );
+      if (currentIndex === targetIndex || currentIndex === targetIndex - 1) {
+        return; // 같은 위치나 바로 옆 위치면 아무것도 하지 않음
+      }
+
+      setTierPhotos((prev) => {
+        const newArray = [...prev[targetTier]];
+        // 기존 위치에서 제거
+        newArray.splice(currentIndex, 1);
+        // 새 위치에 삽입 (인덱스 조정 필요)
+        const adjustedIndex =
+          currentIndex < targetIndex ? targetIndex - 1 : targetIndex;
+        newArray.splice(adjustedIndex, 0, draggedPhotoData);
+        return {
+          ...prev,
+          [targetTier]: newArray,
+        };
+      });
+      return;
+    }
+
+    // 다른 소스에서 오는 경우
+    if (source === "available") {
+      setAvailablePhotos((prev) => prev.filter((p) => p.id !== photoId));
+    } else {
+      setTierPhotos((prev) => ({
+        ...prev,
+        [source]: prev[source].filter((p) => p.id !== photoId),
+      }));
+    }
+
+    // 배열의 특정 위치에 삽입
+    setTierPhotos((prev) => {
+      const newArray = [...prev[targetTier]];
+      newArray.splice(targetIndex, 0, draggedPhotoData);
+      return {
+        ...prev,
+        [targetTier]: newArray,
+      };
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[var(--bg-dark)] flex relative">
