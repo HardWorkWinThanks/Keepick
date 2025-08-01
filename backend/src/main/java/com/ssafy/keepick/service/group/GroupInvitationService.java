@@ -31,12 +31,12 @@ public class GroupInvitationService {
     private final MemberRepository memberRepository;
     private final RedisService redisService;
 
-    @Value("${app.frontend.url")
+    @Value("${app.frontend.url}")
     private String frontendUrl;
 
     public List<GroupResult.GroupMemberInfo> invite(GroupCommand.Invite command) {
         Group group = groupRepository.findById(command.getGroupId()).orElseThrow(() -> new BaseException(GROUP_NOT_FOUND));
-        List<GroupMember> invitees = command.getMemberIds().stream().map(m -> inviteMemberToGroup(group, m)).toList();
+        List<GroupMember> invitees = command.getMemberIds().stream().map(inviteeId -> inviteMemberToGroup(group, inviteeId)).toList();
         List<GroupResult.GroupMemberInfo> result = invitees.stream().map(GroupResult.GroupMemberInfo::from).toList();
         return result;
     }
@@ -75,7 +75,7 @@ public class GroupInvitationService {
 
     private void validateToken(Long groupId, String inviteToken) {
         String value = redisService.getValue("invite:" + inviteToken);
-        if (groupId.toString().equals(value)) throw new BaseException(INVITATION_TOKEN_NOT_FOUND);
+        if (!groupId.toString().equals(value)) throw new BaseException(INVITATION_TOKEN_NOT_FOUND);
     }
 
     private GroupMember inviteMemberToGroup(Group group, Long memberId) {

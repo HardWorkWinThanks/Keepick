@@ -73,7 +73,7 @@ public class GroupService {
         GroupMember groupMember = GroupMember.createGroupMember(group, creator);
         groupMember.accept();
         groupMemberRepository.save(groupMember);
-        List<GroupMember> invitees = memberRepository.findAllById(inviteeIds).stream().map(m -> GroupMember.createGroupMember(group, m)).toList();
+        List<GroupMember> invitees = memberRepository.findAllById(inviteeIds).stream().map(invitee -> GroupMember.createGroupMember(group, invitee)).toList();
         groupMemberRepository.saveAll(invitees);
     }
 
