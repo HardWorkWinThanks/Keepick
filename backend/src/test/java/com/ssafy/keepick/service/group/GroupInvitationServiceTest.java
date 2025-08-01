@@ -1,6 +1,7 @@
 package com.ssafy.keepick.service.group;
 
 import com.ssafy.keepick.common.exception.BaseException;
+import com.ssafy.keepick.controller.group.request.GroupInviteRequest;
 import com.ssafy.keepick.entity.Group;
 import com.ssafy.keepick.entity.GroupMember;
 import com.ssafy.keepick.entity.GroupMemberStatus;
@@ -9,10 +10,12 @@ import com.ssafy.keepick.repository.GroupMemberRepository;
 import com.ssafy.keepick.repository.GroupRepository;
 import com.ssafy.keepick.repository.MemberRepository;
 import com.ssafy.keepick.service.RedisService;
+import com.ssafy.keepick.service.group.dto.GroupMemberDto;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.List;
@@ -26,14 +29,21 @@ public class GroupInvitationServiceTest {
 
     @Autowired
     GroupRepository groupRepository;
+
     @Autowired
     MemberRepository memberRepository;
+
     @Autowired
     GroupMemberRepository groupMemberRepository;
+
     @Autowired
     GroupInvitationService groupInvitationService;
+
     @Autowired
     RedisService redisService;
+
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
     @DisplayName("회원을 그룹에 초대한다")
     @Test
@@ -57,10 +67,10 @@ public class GroupInvitationServiceTest {
         groupMemberRepository.save(groupMemberLeft);
 
 
-        GroupCommand.Invite command = new GroupCommand.Invite(group.getId(), List.of(member1.getId(), member2.getId(), member3.getId(), member4.getId()));
+        GroupInviteRequest request = GroupInviteRequest.builder().inviteeIds(List.of(member1.getId(), member2.getId(), member3.getId(), member4.getId())).build();
 
         // when
-        List<GroupResult.GroupMemberInfo> result = groupInvitationService.invite(command);
+        List<GroupMemberDto> groupMemberDtos = groupInvitationService.createInvitation(request, group.getId());
         GroupMember groupMember1 = groupMemberRepository.findByGroupIdAndMemberId(group.getId(), member1.getId()).get();
         GroupMember groupMember2 = groupMemberRepository.findByGroupIdAndMemberId(group.getId(), member2.getId()).get();
         GroupMember groupMember3 = groupMemberRepository.findByGroupIdAndMemberId(group.getId(), member3.getId()).get();
@@ -87,10 +97,11 @@ public class GroupInvitationServiceTest {
         groupMember.accept();
         groupMemberRepository.save(groupMember);
 
-        GroupCommand.Invite command = new GroupCommand.Invite(group.getId(), List.of(member.getId()));
+        GroupInviteRequest request = GroupInviteRequest.builder().inviteeIds(List.of(member.getId())).build();
+        List<GroupMemberDto> groupMemberDtos = groupInvitationService.createInvitation(request, group.getId());
 
         // when & then
-        assertThrows(BaseException.class, () -> groupInvitationService.invite(command));
+        assertThat(groupMemberDtos.get(0).getStatus()).isEqualTo(GroupMemberStatus.ACCEPTED);
     }
 
     @DisplayName("그룹 초대를 수락한다")
@@ -107,11 +118,11 @@ public class GroupInvitationServiceTest {
         groupMemberRepository.save(groupMember);
 
         // when
-        GroupResult.GroupMemberInfo result = groupInvitationService.acceptInvitation(groupMember.getId());
+        GroupMemberDto result = groupInvitationService.acceptInvitation(groupMember.getId());
         List<Long> joinedMemberIds = groupMemberRepository.findJoinedMembersById(group.getId()).stream().map(gm -> gm.getMember().getId()).toList();
 
         // then
-        assertThat(result.getStatus()).isEqualTo(GroupMemberStatus.ACCEPTED.name());
+        assertThat(result.getStatus()).isEqualTo(GroupMemberStatus.ACCEPTED);
         assertThat(joinedMemberIds).containsExactly(member.getId());
 
         assertThrows(BaseException.class, () -> groupInvitationService.acceptInvitation(1234567L));
@@ -131,11 +142,11 @@ public class GroupInvitationServiceTest {
         groupMemberRepository.save(groupMember);
 
         // when
-        GroupResult.GroupMemberInfo result = groupInvitationService.rejectInvitation(groupMember.getId());
+        GroupMemberDto result = groupInvitationService.rejectInvitation(groupMember.getId());
         List<Long> rejectGroupIds = groupMemberRepository.findGroupsByMember(member.getId(), GroupMemberStatus.REJECTED).stream().map(gm -> gm.getGroup().getId()).toList();
 
         // then
-        assertThat(result.getStatus()).isEqualTo(GroupMemberStatus.REJECTED.name());
+        assertThat(result.getStatus()).isEqualTo(GroupMemberStatus.REJECTED);
         assertThat(rejectGroupIds).containsExactly(group.getId());
 
         assertThrows(BaseException.class, () -> groupInvitationService.rejectInvitation(1234567L));
@@ -152,10 +163,12 @@ public class GroupInvitationServiceTest {
         groupRepository.save(group);
 
         // when
-        GroupResult.Link result = groupInvitationService.createInvitationLink(group.getId());
+        String link = groupInvitationService.createInvitationLink(group.getId());
+        System.out.println("link = " + link);
+        String token = link.substring((frontendUrl+"/invite/").length());
 
         // then
-        String value = redisService.getValue("invite:"+result.getToken());
+        String value = redisService.getValue("invite:" + token);
         assertThat(value).isEqualTo(group.getId().toString());
 
 //        Thread.sleep(5000);
@@ -173,12 +186,11 @@ public class GroupInvitationServiceTest {
         Group group = Group.createGroup("테스트 그룹", null);
         groupRepository.save(group);
 
-        String inviteToken = groupInvitationService.createInvitationLink(group.getId()).getToken();
-
-        GroupCommand.Link command = new GroupCommand.Link(group.getId(), member.getId(), inviteToken);
+        String link = groupInvitationService.createInvitationLink(group.getId());
+        String token = link.substring((frontendUrl+"/invite/").length());
 
         // when
-        GroupResult.GroupMemberInfo result = groupInvitationService.joinGroupByInvitationLink(command);
+        GroupMemberDto result = groupInvitationService.joinGroupByInvitationLink(group.getId(), member.getId(), token);
 
         // then
         List<Group> groups = groupMemberRepository.findGroupsByMember(member.getId(), GroupMemberStatus.ACCEPTED).stream().map(gm -> gm.getGroup()).toList();

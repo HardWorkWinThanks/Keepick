@@ -1,6 +1,7 @@
 package com.ssafy.keepick.service.group;
 
 import com.ssafy.keepick.common.exception.BaseException;
+import com.ssafy.keepick.controller.group.request.GroupCreateRequest;
 import com.ssafy.keepick.entity.Group;
 import com.ssafy.keepick.entity.GroupMember;
 import com.ssafy.keepick.entity.GroupMemberStatus;
@@ -8,7 +9,9 @@ import com.ssafy.keepick.entity.Member;
 import com.ssafy.keepick.repository.GroupMemberRepository;
 import com.ssafy.keepick.repository.GroupRepository;
 import com.ssafy.keepick.repository.MemberRepository;
-import com.ssafy.keepick.service.RedisService;
+import com.ssafy.keepick.service.group.dto.GroupDto;
+import com.ssafy.keepick.service.group.dto.GroupMemberDto;
+import com.ssafy.keepick.service.group.dto.MemberDto;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,51 +29,43 @@ class GroupServiceTest {
 
     @Autowired
     GroupRepository groupRepository;
+
     @Autowired
     MemberRepository memberRepository;
+
     @Autowired
     GroupMemberRepository groupMemberRepository;
+
     @Autowired
     GroupService groupService;
 
 
-    @DisplayName("그룹을 생성한다 - 생성 시 회원 수는 1명이고 초대한 회원 수는 N명이다")
+    @DisplayName("그룹을 생성한다 - 생성 시 회원 수는 1명이다")
     @Test
     void createGroupTest() {
         // given
         Member creator = createMember(0);
-        Member invitee1 = createMember(1);
-        Member invitee2 = createMember(2);
-        Member invitee3 = createMember(3);
         memberRepository.save(creator);
-        memberRepository.save(invitee1);
-        memberRepository.save(invitee2);
-        memberRepository.save(invitee3);
 
-        GroupCommand.Create command = GroupCommand.Create.builder().name("테스트 그룹").memberId(creator.getId()).memberIds(List.of(invitee1.getId(), invitee2.getId(), invitee3.getId())).build();
+        GroupCreateRequest request = GroupCreateRequest.builder().name("테스트 그룹").build();
 
         // when
-        GroupResult.GroupInfo result = groupService.createGroup(command);
+        GroupDto groupDto = groupService.createGroup(request, creator.getId());
 
         // then
-        assertThat(result.getName()).isEqualTo(command.getName());
+        assertThat(groupDto.getName()).isEqualTo(request.getName());
 
         // 생성된 그룹 검증
-        Group group = groupRepository.findById(result.getGroupId()).get();
-        assertThat(group.getName()).isEqualTo(command.getName());
+        Group group = groupRepository.findById(groupDto.getGroupId()).get();
+        assertThat(group.getName()).isEqualTo(request.getName());
         assertThat(group.getCreatedAt()).isNotNull();
         assertThat(group.getMemberCount()).isEqualTo(1);
         assertThat(group.getCreator().getId()).isEqualTo(creator.getId());
 
         // 그룹 생성자는 생성 시 그룹에 가입한다.
-        List<Long> memberIds = groupMemberRepository.findJoinedMembersById(result.getGroupId()).stream().map(gm -> gm.getMember().getId()).toList();
+        List<Long> memberIds = groupMemberRepository.findJoinedMembersById(groupDto.getGroupId()).stream().map(gm -> gm.getMember().getId()).toList();
         assertThat(memberIds.size()).isEqualTo(1);
         assertThat(memberIds).contains(creator.getId());
-
-        // 그룹 생성 시 초대한 회원들은 그룹에 초대받는다. (가입X)
-        List<Long> inviteeIds = groupMemberRepository.findByGroupId(group.getId()).stream().filter(gm -> gm.getStatus() == GroupMemberStatus.PENDING).map(gm -> gm.getMember().getId()).toList();
-        assertThat(inviteeIds.size()).isEqualTo(3);
-        assertThat(inviteeIds).containsExactly(invitee1.getId(), invitee2.getId(), invitee3.getId());
     }
 
     @DisplayName("내가 가입한/거절한/초대받은 그룹 목록을 조회한다 - 탈퇴한 그룹은 조회되지 않는다")
@@ -100,9 +95,9 @@ class GroupServiceTest {
 
 
         // when
-        List<GroupResult.GroupMemberInfo> invitedGroups = groupService.getGroups(new GroupCommand.MyGroup(member.getId(), GroupMemberStatus.PENDING));
-        List<GroupResult.GroupMemberInfo> acceptedGroups = groupService.getGroups(new GroupCommand.MyGroup(member.getId(), GroupMemberStatus.ACCEPTED));
-        List<GroupResult.GroupMemberInfo> rejectedGroups = groupService.getGroups(new GroupCommand.MyGroup(member.getId(), GroupMemberStatus.REJECTED));
+        List<GroupMemberDto> invitedGroups = groupService.getGroupList(member.getId(), GroupMemberStatus.PENDING);
+        List<GroupMemberDto> acceptedGroups = groupService.getGroupList(member.getId(), GroupMemberStatus.ACCEPTED);
+        List<GroupMemberDto> rejectedGroups = groupService.getGroupList(member.getId(), GroupMemberStatus.REJECTED);
 
         // then
         assertThat(invitedGroups).extracting("groupId").contains(group1.getId());
@@ -121,11 +116,11 @@ class GroupServiceTest {
         groupRepository.save(group);
 
         // when
-        GroupResult.GroupInfo result = groupService.getGroup(group.getId());
+        GroupDto groupDto = groupService.getGroup(group.getId());
 
         // then
-        assertThat(result.getName()).isEqualTo(group.getName());
-        assertThat(result.getCreatorId()).isEqualTo(member.getId());
+        assertThat(groupDto.getName()).isEqualTo(group.getName());
+        assertThat(groupDto.getCreatorId()).isEqualTo(member.getId());
     }
 
     @DisplayName("그룹에 가입한 회원을 조회한다")
@@ -154,7 +149,7 @@ class GroupServiceTest {
         groupMemberRepository.save(groupMember4);
 
         // when
-        List<GroupResult.Member> members = groupService.getMembers(group.getId());
+        List<MemberDto> members = groupService.getGroupMembers(group.getId());
 
         // then
         assertThat(members).extracting("memberId").containsExactly(member2.getId()).doesNotContain(member1.getId(), member3.getId(), member4.getId());
@@ -173,13 +168,11 @@ class GroupServiceTest {
         GroupMember groupMember = GroupMember.createGroupMember(group, member); groupMember.accept();
         groupMemberRepository.save(groupMember);
 
-        GroupCommand.Leave command1 = new GroupCommand.Leave(group.getId(), member.getId());
-
         // when
-        groupService.leaveGroup(command1);
+        groupService.leaveGroup(group.getId(), member.getId());
 
         // then
-        List<GroupResult.Member> members = groupService.getMembers(group.getId());
+        List<MemberDto> members = groupService.getGroupMembers(group.getId());
         assertThat(members).extracting("memberId").doesNotContain(member.getId());
     }
 
@@ -200,12 +193,9 @@ class GroupServiceTest {
         groupMemberRepository.save(groupMember1);
         groupMemberRepository.save(groupMember2);
 
-        GroupCommand.Leave command1 = new GroupCommand.Leave(group.getId(), member1.getId());
-        GroupCommand.Leave command2 = new GroupCommand.Leave(group.getId(), member2.getId());
-
         // when & then
-        assertThrows(BaseException.class, () -> groupService.leaveGroup(command1));
-        assertThrows(BaseException.class, () -> groupService.leaveGroup(command2));
+        assertThrows(BaseException.class, () -> groupService.leaveGroup(group.getId(), member1.getId()));
+        assertThrows(BaseException.class, () -> groupService.leaveGroup(group.getId(), member2.getId()));
     }
 
     Member createMember(int i) {

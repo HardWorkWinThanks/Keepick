@@ -7,7 +7,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:
@@ -20,4 +20,4 @@ spring:
 
 app:
   frontend:
-      url: http://localhost:3000
+      url: ${FRONTEND_URL}

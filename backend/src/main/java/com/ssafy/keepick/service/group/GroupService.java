@@ -1,6 +1,8 @@
 package com.ssafy.keepick.service.group;
 
 import com.ssafy.keepick.common.exception.BaseException;
+import com.ssafy.keepick.controller.group.request.GroupCreateRequest;
+import com.ssafy.keepick.controller.group.request.GroupUpdateRequest;
 import com.ssafy.keepick.entity.Group;
 import com.ssafy.keepick.entity.GroupMember;
 import com.ssafy.keepick.entity.GroupMemberStatus;
@@ -8,6 +10,9 @@ import com.ssafy.keepick.entity.Member;
 import com.ssafy.keepick.repository.GroupMemberRepository;
 import com.ssafy.keepick.repository.GroupRepository;
 import com.ssafy.keepick.repository.MemberRepository;
+import com.ssafy.keepick.service.group.dto.GroupDto;
+import com.ssafy.keepick.service.group.dto.GroupMemberDto;
+import com.ssafy.keepick.service.group.dto.MemberDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,55 +31,53 @@ public class GroupService {
     private final MemberRepository memberRepository;
 
     @Transactional
-    public GroupResult.GroupInfo createGroup(GroupCommand.Create command) {
+    public GroupDto createGroup(GroupCreateRequest request, Long memberId) {
         // 그룹 생성
-        Member member = memberRepository.findById(command.getMemberId()).orElseThrow(() -> new BaseException(NOT_FOUND));
-        Group group = Group.createGroup(command.getName(), member);
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new BaseException(NOT_FOUND));
+        Group group = Group.createGroup(request.getName(), member);
         groupRepository.save(group);
-        // 그룹에 가입 & 초대
-        createGroupWithInvitees(group, member, command.getMemberIds());
-        GroupResult.GroupInfo result = GroupResult.GroupInfo.from(group);
-        return result;
+        // 그룹 생성자는 그룹에 가입
+        joinCreatorToGroup(group, member);
+        GroupDto dto = GroupDto.from(group);
+        return dto;
     }
 
-    public List<GroupResult.GroupMemberInfo> getGroups(GroupCommand.MyGroup command) {
-        List<GroupMember> groupMembers = groupMemberRepository.findGroupsByMember(command.getMemberId(), command.getStatus());
-        List<GroupResult.GroupMemberInfo> result = groupMembers.stream().map(GroupResult.GroupMemberInfo::from).toList();
-        return result;
+    public List<GroupMemberDto> getGroupList(Long memberId, GroupMemberStatus status) {
+        List<GroupMember> groupMembers = groupMemberRepository.findGroupsByMember(memberId, status);
+        List<GroupMemberDto> dto = groupMembers.stream().map(GroupMemberDto::from).toList();
+        return dto;
     }
 
-    public GroupResult.GroupInfo getGroup(Long groupId) {
+    public GroupDto getGroup(Long groupId) {
         Group group = groupRepository.findById(groupId).orElseThrow(() -> new BaseException(GROUP_NOT_FOUND));
-        GroupResult.GroupInfo result = GroupResult.GroupInfo.from(group);
-        return result;
+        GroupDto dto = GroupDto.from(group);
+        return dto;
     }
 
-    public List<GroupResult.Member> getMembers(Long groupId) {
+    public List<MemberDto> getGroupMembers(Long groupId) {
+        Group group = groupRepository.findById(groupId).orElseThrow(() -> new BaseException(GROUP_NOT_FOUND));
         List<GroupMember> groupMembers = groupMemberRepository.findJoinedMembersById(groupId);
-        List<GroupResult.Member> result = groupMembers.stream().map(GroupResult.Member::from).toList();
-        return result;
+        List<MemberDto> dto = groupMembers.stream().map(MemberDto::from).toList();
+        return dto;
     }
 
     @Transactional
-    public GroupResult.GroupInfo updateGroup(GroupCommand.Update command) {
-        Group group = groupRepository.findById(command.getGroupId()).orElseThrow(() -> new BaseException(GROUP_NOT_FOUND));
-        group.update(command.getName(), command.getDescription(), command.getThumbnailUrl());
-        GroupResult.GroupInfo result = GroupResult.GroupInfo.from(group);
-        return result;
+    public GroupDto updateGroup(GroupUpdateRequest request, Long groupId) {
+        Group group = groupRepository.findById(groupId).orElseThrow(() -> new BaseException(GROUP_NOT_FOUND));
+        group.update(request.getName(), request.getDescription(), request.getThumbnailUrl());
+        GroupDto dto = GroupDto.from(group);
+        return dto;
     }
 
     @Transactional
-    public void leaveGroup(GroupCommand.Leave command) {
-        GroupMember groupMember = groupMemberRepository.findByGroupIdAndMemberIdAndStatus(command.getGroupId(), command.getMemberId(), GroupMemberStatus.ACCEPTED).orElseThrow(() -> new BaseException(NOT_FOUND));
+    public void leaveGroup(Long groupId, Long memberId) {
+        GroupMember groupMember = groupMemberRepository.findByGroupIdAndMemberIdAndStatus(groupId, memberId, GroupMemberStatus.ACCEPTED).orElseThrow(() -> new BaseException(NOT_FOUND));
         groupMember.leave();
     }
 
-    private void createGroupWithInvitees(Group group, Member creator, List<Long> inviteeIds) {
+    private void joinCreatorToGroup(Group group, Member creator) {
         GroupMember groupMember = GroupMember.createGroupMember(group, creator);
         groupMember.accept();
-        groupMemberRepository.save(groupMember);
-        List<GroupMember> invitees = memberRepository.findAllById(inviteeIds).stream().map(invitee -> GroupMember.createGroupMember(group, invitee)).toList();
-        groupMemberRepository.saveAll(invitees);
-    }
+        groupMemberRepository.save(groupMember);    }
 
 }
