@@ -1,6 +1,7 @@
 package com.ssafy.keepick.friend.domain;
 
 import com.ssafy.keepick.global.entity.BaseTimeEntity;
+import com.ssafy.keepick.group.domain.GroupMemberStatus;
 import com.ssafy.keepick.member.domain.Member;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -30,5 +31,16 @@ public class Friendship extends BaseTimeEntity {
     public static Friendship createFriendship(Member sender, Member receiver) {
         return new Friendship(sender, receiver);
     }
+
+    public void accept() {
+        if(this.status != FriendshipStatus.PENDING) throw new IllegalStateException();
+        this.status = FriendshipStatus.ACCEPTED;
+    }
+
+    public void reject() {
+        if(this.status != FriendshipStatus.PENDING) throw new IllegalStateException();
+        this.status = FriendshipStatus.REJECTED;
+    }
+
 }
 

@@ -5,14 +5,12 @@ import com.ssafy.keepick.friend.application.FriendService;
 import com.ssafy.keepick.friend.application.dto.FriendshipDto;
 import com.ssafy.keepick.friend.controller.request.FriendCreateRequest;
 import com.ssafy.keepick.friend.controller.response.FriendCreateResponse;
+import com.ssafy.keepick.friend.controller.response.FriendResultResponse;
 import com.ssafy.keepick.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/friends")
@@ -26,6 +24,14 @@ public class FriendController {
         Long loginMemberId = getLoginMemberId(authentication);
         FriendshipDto dto = friendService.createFriendRequest(request, loginMemberId);
         FriendCreateResponse response = FriendCreateResponse.toResponse(dto);
+        return ApiResponse.ok(response);
+    }
+
+    @PostMapping("/requests/{requestId}")
+    public ApiResponse<?> acceptRequest(@PathVariable Long requestId, Authentication authentication) {
+        Long loginMemberId = getLoginMemberId(authentication);
+        FriendshipDto dto = friendService.acceptFriendRequest(requestId, loginMemberId);
+        FriendResultResponse response = FriendResultResponse.toResponse(dto);
         return ApiResponse.ok(response);
     }
 
