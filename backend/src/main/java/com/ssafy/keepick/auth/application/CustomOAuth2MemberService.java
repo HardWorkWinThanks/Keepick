@@ -16,7 +16,9 @@ import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.persistence.MemberRepository;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @AllArgsConstructor
 public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
@@ -28,28 +30,30 @@ public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
 
         OAuth2User oAuth2User = super.loadUser(userRequest);
 
-        System.out.println(oAuth2User);
+        log.info("OAuth2 사용자 정보: {}", oAuth2User);
 
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
+        log.info("OAuth2 로그인 시도: 제공자 = {}", registrationId);
+        
         OAuth2Provider oAuth2Response = null;
         if (registrationId.equals("naver")) {
-
             oAuth2Response = NaverProvider.from(oAuth2User.getAttributes());
         } else if (registrationId.equals("google")) {
-
             oAuth2Response = GoogleProvider.from(oAuth2User.getAttributes());
         } else if (registrationId.equals("kakao")) {
-
             oAuth2Response = KakaoProvider.from(oAuth2User.getAttributes());
         } else {
+            log.warn("지원하지 않는 OAuth2 제공자: {}", registrationId);
             return null;
         }
 
         String email = oAuth2Response.getEmail();
+        log.debug("OAuth2 이메일: {}", email);
         Member existMember = memberRepository.findByEmail(email);
 
         // 존재하지 않는 회원이면 회원 생성
         if (existMember == null) {
+            log.info("새 회원 생성: 이메일 = {}, 제공자 = {}", email, registrationId);
 
             String nickname = generateNicknameFromEmail(email);
             
@@ -62,7 +66,8 @@ public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
             .providerId(oAuth2Response.getProviderId())
             .build();
 
-            Member savedMember = memberRepository.save(member); // 저장된 회원 정보 받기
+            Member savedMember = memberRepository.save(member);
+            log.info("회원 생성 완료: ID = {}", savedMember.getId());
 
             MemberDto memberDto = MemberDto.from(savedMember);
 
@@ -70,6 +75,7 @@ public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
         }
         // 존재하는 회원이면 기존 정보 그대로 사용
         else {
+            log.info("기존 회원 로그인: ID = {}, 이메일 = {}", existMember.getId(), email);
             MemberDto memberDto = MemberDto.from(existMember);
 
             return CustomOAuth2Member.from(memberDto);
