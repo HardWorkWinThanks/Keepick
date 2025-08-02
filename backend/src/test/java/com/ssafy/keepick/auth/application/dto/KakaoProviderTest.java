@@ -86,8 +86,8 @@ class KakaoProviderTest {
     }
 
     @Test
-    @DisplayName("이메일이 없을 때 null을 반환한다")
-    void shouldReturnNullWhenEmailNotAvailable() {
+    @DisplayName("이메일이 없을 때 예외가 발생한다")
+    void shouldThrowExceptionWhenEmailNotAvailable() {
         // given
         Map<String, Object> profile = new HashMap<>();
         profile.put("nickname", "홍길동");
@@ -104,7 +104,9 @@ class KakaoProviderTest {
         KakaoProvider kakaoProvider = KakaoProvider.from(attributes);
 
         // then
-        assertThat(kakaoProvider.getEmail()).isNull();
+        assertThatThrownBy(() -> kakaoProvider.getEmail())
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Kakao OAuth2에서 이메일 정보를 가져올 수 없습니다.");
     }
 
     @Test

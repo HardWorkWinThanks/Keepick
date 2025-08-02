@@ -27,7 +27,10 @@ public class GoogleProvider implements OAuth2Provider {
     @Override
     public String getEmail() {
         Object email = attributes.get("email");
-        return email != null ? email.toString() : null;
+        if (email == null) {
+            throw new RuntimeException("Google OAuth2에서 이메일 정보를 가져올 수 없습니다.");
+        }
+        return email.toString();
     }
 
     @Override

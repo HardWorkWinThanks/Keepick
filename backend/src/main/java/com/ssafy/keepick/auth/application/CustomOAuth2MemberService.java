@@ -100,14 +100,13 @@ public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
     // 이메일 주소에서 닉네임을 자동 생성합니다.
     private String generateNicknameFromEmail(String email) {
         if (email == null || !email.contains("@")) {
-            return "user"; // 기본값
+            throw new RuntimeException("유효하지 않은 이메일 형식입니다: " + email);
         }
 
         String nicknameCandidate = email.substring(0, email.indexOf("@"));
-
-        // 빈 문자열이면 기본값 반환
+        
         if (nicknameCandidate.trim().isEmpty()) {
-            return "user";
+            throw new RuntimeException("이메일에서 닉네임을 생성할 수 없습니다: " + email);
         }
 
         return nicknameCandidate;

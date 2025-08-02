@@ -47,4 +47,22 @@ class GoogleProviderTest {
         // then
         assertThat(googleProvider.getProfileUrl()).isNull();
     }
+
+    @Test
+    @DisplayName("이메일이 없을 때 예외가 발생한다")
+    void shouldThrowExceptionWhenEmailNotAvailable() {
+        // given
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put("sub", "google-user-id");
+        attributes.put("name", "홍길동");
+        // email 없음
+
+        // when
+        GoogleProvider googleProvider = GoogleProvider.from(attributes);
+
+        // then
+        assertThatThrownBy(() -> googleProvider.getEmail())
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Google OAuth2에서 이메일 정보를 가져올 수 없습니다.");
+    }
 } 

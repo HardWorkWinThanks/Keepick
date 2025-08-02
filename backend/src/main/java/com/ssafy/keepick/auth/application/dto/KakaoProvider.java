@@ -38,7 +38,10 @@ public class KakaoProvider implements OAuth2Provider {
     @Override
     public String getEmail() {
         Object email = kakaoAccount.get("email");
-        return email != null ? email.toString() : null;
+        if (email == null) {
+            throw new RuntimeException("Kakao OAuth2에서 이메일 정보를 가져올 수 없습니다.");
+        }
+        return email.toString();
     }
 
     @Override

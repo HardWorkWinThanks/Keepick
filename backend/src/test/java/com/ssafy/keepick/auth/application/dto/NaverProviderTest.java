@@ -53,4 +53,25 @@ class NaverProviderTest {
         // then
         assertThat(naverProvider.getProfileUrl()).isNull();
     }
+
+    @Test
+    @DisplayName("이메일이 없을 때 예외가 발생한다")
+    void shouldThrowExceptionWhenEmailNotAvailable() {
+        // given
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", "naver-user-id");
+        response.put("name", "홍길동");
+        // email 없음
+
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put("response", response);
+
+        // when
+        NaverProvider naverProvider = NaverProvider.from(attributes);
+
+        // then
+        assertThatThrownBy(() -> naverProvider.getEmail())
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Naver OAuth2에서 이메일 정보를 가져올 수 없습니다.");
+    }
 } 
