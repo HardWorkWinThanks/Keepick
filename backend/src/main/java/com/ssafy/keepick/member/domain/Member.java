@@ -92,4 +92,23 @@ public class Member {
         if (str1 == null || str2 == null) return false;
         return str1.equals(str2);
     }
+    
+    /**
+     * 이메일 주소에서 닉네임을 자동 생성
+     * @param email 이메일 주소
+     * @return 생성된 닉네임
+     */
+    public static String generateNicknameFromEmail(String email) {
+        if (email == null || !email.contains("@")) {
+            throw new RuntimeException("유효하지 않은 이메일 형식입니다: " + email);
+        }
+
+        String nicknameCandidate = email.substring(0, email.indexOf("@"));
+        
+        if (nicknameCandidate.trim().isEmpty()) {
+            throw new RuntimeException("이메일에서 닉네임을 생성할 수 없습니다: " + email);
+        }
+
+        return nicknameCandidate;
+    }
 }
