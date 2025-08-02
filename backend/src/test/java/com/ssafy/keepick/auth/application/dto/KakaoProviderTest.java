@@ -28,7 +28,7 @@ class KakaoProviderTest {
         attributes.put("kakao_account", kakaoAccount);
 
         // when
-        KakaoProvider kakaoProvider = new KakaoProvider(attributes);
+        KakaoProvider kakaoProvider = KakaoProvider.from(attributes);
 
         // then
         assertThat(kakaoProvider.getProvider()).isEqualTo("kakao");
@@ -56,7 +56,7 @@ class KakaoProviderTest {
         attributes.put("kakao_account", kakaoAccount);
 
         // when
-        KakaoProvider kakaoProvider = new KakaoProvider(attributes);
+        KakaoProvider kakaoProvider = KakaoProvider.from(attributes);
 
         // then
         assertThat(kakaoProvider.getProfileUrl()).isEqualTo("https://k.kakaocdn.net/thumb.jpg");
@@ -79,7 +79,7 @@ class KakaoProviderTest {
         attributes.put("kakao_account", kakaoAccount);
 
         // when
-        KakaoProvider kakaoProvider = new KakaoProvider(attributes);
+        KakaoProvider kakaoProvider = KakaoProvider.from(attributes);
 
         // then
         assertThat(kakaoProvider.getProfileUrl()).isNull();
@@ -101,7 +101,7 @@ class KakaoProviderTest {
         attributes.put("kakao_account", kakaoAccount);
 
         // when
-        KakaoProvider kakaoProvider = new KakaoProvider(attributes);
+        KakaoProvider kakaoProvider = KakaoProvider.from(attributes);
 
         // then
         assertThat(kakaoProvider.getEmail()).isNull();
@@ -116,7 +116,7 @@ class KakaoProviderTest {
         // kakao_account 없음
 
         // when & then
-        assertThatThrownBy(() -> new KakaoProvider(attributes))
+        assertThatThrownBy(() -> KakaoProvider.from(attributes))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("kakao_account 정보를 찾을 수 없습니다.");
     }
@@ -134,7 +134,7 @@ class KakaoProviderTest {
         attributes.put("kakao_account", kakaoAccount);
 
         // when & then
-        assertThatThrownBy(() -> new KakaoProvider(attributes))
+        assertThatThrownBy(() -> KakaoProvider.from(attributes))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("profile 정보를 찾을 수 없습니다.");
     }

@@ -24,7 +24,7 @@ class NaverProviderTest {
         attributes.put("response", response);
 
         // when
-        NaverProvider naverProvider = new NaverProvider(attributes);
+        NaverProvider naverProvider = NaverProvider.from(attributes);
 
         // then
         assertThat(naverProvider.getProvider()).isEqualTo("naver");
@@ -48,7 +48,7 @@ class NaverProviderTest {
         attributes.put("response", response);
 
         // when
-        NaverProvider naverProvider = new NaverProvider(attributes);
+        NaverProvider naverProvider = NaverProvider.from(attributes);
 
         // then
         assertThat(naverProvider.getProfileUrl()).isNull();

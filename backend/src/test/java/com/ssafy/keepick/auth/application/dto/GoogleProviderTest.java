@@ -21,7 +21,7 @@ class GoogleProviderTest {
         attributes.put("picture", "https://lh3.googleusercontent.com/profile.jpg");
 
         // when
-        GoogleProvider googleProvider = new GoogleProvider(attributes);
+        GoogleProvider googleProvider = GoogleProvider.from(attributes);
 
         // then
         assertThat(googleProvider.getProvider()).isEqualTo("google");
@@ -42,7 +42,7 @@ class GoogleProviderTest {
         // picture 없음
 
         // when
-        GoogleProvider googleProvider = new GoogleProvider(attributes);
+        GoogleProvider googleProvider = GoogleProvider.from(attributes);
 
         // then
         assertThat(googleProvider.getProfileUrl()).isNull();
