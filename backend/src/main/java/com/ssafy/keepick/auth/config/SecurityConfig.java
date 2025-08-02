@@ -30,7 +30,7 @@ public class SecurityConfig {
     private final CustomSuccessHandler customSuccessHandler;
     private final JWTUtil jwtUtil;
 
-    @Value("${app.frontend.url:http://localhost:3000}")
+    @Value("${app.frontend.url}")
     private String frontendUrl;
 
     @Bean
