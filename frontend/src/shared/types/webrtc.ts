@@ -1,6 +1,7 @@
 export interface User {
   id: string;
-  email: string;
+  name: string; // 사용자 이름 속성
+  producers?: { producerId: string; kind: "audio" | "video" }[];
 }
 
 export interface JoinRoomData {

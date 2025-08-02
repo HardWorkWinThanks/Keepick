@@ -15,6 +15,11 @@ import type {
   ProducerCreatedData,
 } from "@/shared/types/mediasoup.types";
 
+const ICE_SERVERS = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+];
+
 // 에러를 일관되게 처리하기 위한 헬퍼 함수
 const toError = (error: unknown): Error => {
   if (error instanceof Error) {
@@ -63,8 +68,10 @@ export const useMediasoup = (socket: Socket | null) => {
           "producer_transport_created",
           (transportOptions: TransportOptions) => {
             try {
-              const transport =
-                deviceRef.current!.createSendTransport(transportOptions);
+              const transport = deviceRef.current!.createSendTransport({
+                ...transportOptions,
+                iceServers: ICE_SERVERS,
+              });
 
               transport.on(
                 "connect",
@@ -141,8 +148,10 @@ export const useMediasoup = (socket: Socket | null) => {
           "consumer_transport_created",
           (transportOptions: TransportOptions) => {
             try {
-              const transport =
-                deviceRef.current!.createRecvTransport(transportOptions);
+              const transport = deviceRef.current!.createRecvTransport({
+                ...transportOptions,
+                iceServers: ICE_SERVERS,
+              });
               transport.on(
                 "connect",
                 (

@@ -27,6 +27,5 @@ app.prepare().then(() => {
     if (err) throw err;
     // 접속 가능한 모든 주소를 안내
     console.log(`> 🚀 Ready on https://localhost:${port}`);
-    console.log(`> 🚀 Also available on https://192.168.100.154:${port}`); // 여기에 1단계에서 찾은 IP를 넣으세요
   });
 });

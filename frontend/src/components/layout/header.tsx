@@ -1,122 +1,119 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState } from "react";
+import Link from "next/link";
+import {
+  Bars3Icon,
+  BellIcon,
+  UserCircleIcon,
+  ArrowRightOnRectangleIcon,
+  ArrowLeftStartOnRectangleIcon, // [추가] 대시보드 이동 아이콘
+} from "@heroicons/react/24/outline";
+import Image from "next/image";
 
 interface HeaderProps {
-  variant?: "home" | "app"
-  currentPage?: string
+  onMenuClick?: () => void;
+  onBackToDashboard?: () => void; // [추가] 대시보드로 돌아가기 함수 prop
 }
 
-export default function Header({ variant = "home", currentPage }: HeaderProps) {
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [showChat, setShowChat] = useState(false)
+export default function Header({
+  onMenuClick,
+  onBackToDashboard,
+}: HeaderProps) {
+  const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 0)
-    }
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+  // 실제로는 인증 상태에서 가져올 데이터
+  const user = { name: "wmwogus", imageUrl: "/jaewan1.jpg" };
 
-  if (variant === "home") {
-    return (
-      <header
-        className={`fixed top-0 left-0 right-0 z-40 flex justify-between items-center px-12 py-4 bg-white shadow-lg transition-all duration-300 ${isScrolled ? "py-3 shadow-xl" : ""}`}
-      >
-        <Link href="/" className="font-montserrat font-bold text-3xl text-[var(--primary-color)] flex items-center">
-          Keep<span className="text-[var(--text-dark)] ml-1">ick</span>
-        </Link>
+  return (
+    <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-sm shadow-sm h-16">
+      <div className="flex items-center justify-between h-full px-4 sm:px-6 lg:px-8">
+        {/* Left side */}
+        <div className="flex items-center gap-4">
+          {/* 사이드바 메뉴 버튼 (onMenuClick prop이 있을 때만 렌더링) */}
+          {onMenuClick ? (
+            <button
+              onClick={onMenuClick}
+              className="text-gray-600 hover:text-[var(--primary-color)]"
+            >
+              <span className="sr-only">메뉴 열기</span>
+              <Bars3Icon className="h-7 w-7" />
+            </button>
+          ) : (
+            // 메뉴 버튼이 없을 때도 레이아웃 유지를 위한 빈 공간
+            <div className="w-7 h-7"></div>
+          )}
 
-
-        <div className="flex items-center gap-4 relative">
-          <button
-            onClick={() => setShowDropdown(!showDropdown)}
-            className="bg-[var(--primary-color)] text-white px-4 py-3 rounded-xl font-semibold hover:bg-[#2fa692] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg flex items-center gap-2"
+          {/* 로고 */}
+          <Link
+            href="/"
+            className="font-montserrat font-bold text-2xl text-[var(--primary-color)]"
           >
-            <span className="text-lg">👥</span>
-          </button>
+            Keep<span className="text-[var(--text-dark)] ml-1">ick</span>
+          </Link>
 
-          <button
-            onClick={() => setShowChat(!showChat)}
-            className="bg-[var(--primary-color)] text-white px-4 py-3 rounded-xl font-semibold hover:bg-[#2fa692] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg flex items-center gap-2"
-          >
-            <span className="text-lg">💬</span>
-          </button>
-
-          {showDropdown && (
-            <div className="absolute top-full right-0 mt-2 bg-white border border-[var(--border-color)] rounded-xl shadow-xl min-w-48 z-50 opacity-100 transform translate-y-0 transition-all duration-300">
-              <div className="p-3 hover:bg-[var(--bg-dark)] hover:text-[var(--primary-color)] cursor-pointer flex items-center gap-3 rounded-t-xl">
-                🐿️ 람쥐
-              </div>
-              <div className="p-3 hover:bg-[var(--bg-dark)] hover:text-[var(--primary-color)] cursor-pointer flex items-center gap-3">
-                🦝 너구리
-              </div>
-              <div className="p-3 hover:bg-[var(--bg-dark)] hover:text-[var(--primary-color)] cursor-pointer flex items-center gap-3 rounded-b-xl">
-                🦔 고슴도치
-              </div>
-            </div>
+          {/* [추가] 대시보드 복귀 버튼 (onBackToDashboard prop이 있을 때만 렌더링) */}
+          {onBackToDashboard && (
+            <>
+              <div className="h-6 w-px bg-gray-200"></div> {/* 시각적 구분선 */}
+              <button
+                onClick={onBackToDashboard}
+                className="flex items-center gap-2 text-gray-600 hover:text-[var(--primary-color)] transition-colors"
+              >
+                <ArrowLeftStartOnRectangleIcon className="h-6 w-6" />
+                <span className="font-semibold hidden sm:block">대시보드</span>
+              </button>
+            </>
           )}
         </div>
 
-        {showChat && (
-          <div className="fixed bottom-6 right-6 w-80 bg-white border border-[var(--border-color)] rounded-xl shadow-2xl z-50 overflow-hidden transform scale-100 opacity-100 transition-all duration-300">
-            <div className="bg-[var(--primary-color)] text-white p-3 flex justify-between items-center">
-              <span className="font-semibold">현재 그룹채팅</span>
-              <button onClick={() => setShowChat(false)} className="text-white hover:opacity-80">
-                <span className="text-lg">✕</span>
-              </button>
-            </div>
-            <div className="p-4 max-h-56 overflow-y-auto">
-              <div className="text-center text-sm bg-[#e0f2f1] text-[var(--primary-color)] rounded-full py-2 px-4 mb-3">
-                🎥 영상채팅 참여중...
-              </div>
-              <div className="bg-[var(--bg-dark)] rounded-2xl p-3 mb-3 max-w-[80%]">🐿️ 람쥐: 안녕!</div>
-              <div className="bg-[var(--bg-dark)] rounded-2xl p-3 mb-3 max-w-[80%]">🦝 너구리: 시작하자!</div>
-            </div>
-          </div>
-        )}
-      </header>
-    )
-  }
+        {/* Right side: Actions */}
+        <div className="flex items-center gap-4">
+          <button className="relative text-gray-600 hover:text-[var(--primary-color)] p-2 rounded-full hover:bg-gray-100">
+            <span className="sr-only">알림</span>
+            <BellIcon className="h-6 w-6" />
+            <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500" />
+          </button>
 
-  return (
-    <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-lg mb-6">
-      <div className="font-montserrat text-3xl font-bold text-[var(--primary-color)]">Keepick</div>
-      <nav className="flex gap-6">
-        <Link
-          href="/"
-          className={`text-[var(--text-dark)] font-semibold px-3 py-2 rounded-lg transition-all ${currentPage === "home" ? "bg-[var(--primary-color)] text-white" : "hover:bg-[var(--primary-color)] hover:text-white"}`}
-        >
-          홈
-        </Link>
-        <Link
-          href="/albums"
-          className={`text-[var(--text-dark)] font-semibold px-3 py-2 rounded-lg transition-all ${currentPage === "albums" ? "bg-[var(--primary-color)] text-white" : "hover:bg-[var(--primary-color)] hover:text-white"}`}
-        >
-          그룹스페이스
-        </Link>
-        <Link
-          href="/chat"
-          className={`text-[var(--text-dark)] font-semibold px-3 py-2 rounded-lg transition-all ${currentPage === "chat" ? "bg-[var(--primary-color)] text-white" : "hover:bg-[var(--primary-color)] hover:text-white"}`}
-        >
-          그룹 채팅
-        </Link>
-        <Link
-          href="/friends"
-          className={`text-[var(--text-dark)] font-semibold px-3 py-2 rounded-lg transition-all ${currentPage === "friends" ? "bg-[var(--primary-color)] text-white" : "hover:bg-[var(--primary-color)] hover:text-white"}`}
-        >
-          친구
-        </Link>
-        <Link
-          href="/photos"
-          className={`text-[var(--text-dark)] font-semibold px-3 py-2 rounded-lg transition-all ${currentPage === "photos" ? "bg-[var(--primary-color)] text-white" : "hover:bg-[var(--primary-color)] hover:text-white"}`}
-        >
-          사진 관리
-        </Link>
-      </nav>
-    </div>
-  )
+          <div className="relative">
+            <button
+              onClick={() => setProfileMenuOpen(!isProfileMenuOpen)}
+              className="flex items-center gap-2 rounded-full p-1 pr-3 hover:bg-gray-100 transition-colors"
+            >
+              <Image
+                src={user.imageUrl}
+                alt="프로필 사진"
+                width={32}
+                height={32}
+                className="rounded-full w-8 h-8 object-cover"
+              />
+              <span className="font-semibold text-sm text-gray-800 hidden sm:block">
+                {user.name}
+              </span>
+            </button>
+            {isProfileMenuOpen && (
+              <div
+                className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 z-50 border"
+                onMouseLeave={() => setProfileMenuOpen(false)}
+              >
+                <div className="px-4 py-2 border-b mb-2">
+                  <p className="font-bold text-sm text-gray-800">{user.name}</p>
+                  <p className="text-xs text-gray-500">반갑습니다!</p>
+                </div>
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  <UserCircleIcon className="w-5 h-5" /> 프로필
+                </Link>
+                <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                  <ArrowRightOnRectangleIcon className="w-5 h-5" /> 로그아웃
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </header>
+  );
 }

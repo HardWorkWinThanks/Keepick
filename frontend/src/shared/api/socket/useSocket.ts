@@ -1,7 +1,30 @@
+// src/shared/api/socket/useSocket.ts
+
 import { useRef, useCallback, useEffect } from "react";
 import { io } from "socket.io-client";
 import type { Socket } from "socket.io-client";
 import { SOCKET_SERVER_URL } from "@/shared/config";
+import type { RtpCapabilities } from "mediasoup-client/types";
+import type { User } from "@/shared/types/webrtc";
+
+interface ProducerInfo {
+  producerId: string;
+  kind: "audio" | "video";
+}
+
+interface PeerWithProducers extends User {
+  producers: ProducerInfo[];
+}
+
+interface JoinRoomPayload {
+  roomId: string;
+  userName: string;
+}
+
+interface JoinRoomResponse {
+  rtpCapabilities: RtpCapabilities;
+  peers: PeerWithProducers[];
+}
 
 interface SocketCallbacks {
   onConnect?: () => void;
@@ -48,39 +71,69 @@ export const useSocket = (callbacks?: SocketCallbacks) => {
     console.log("✅ Socket initialized");
   }, [callbacks]);
 
-  // 🔥 SFU 방식의 joinRoom
-  const joinRoom = useCallback(async (roomId: string) => {
-    if (!socketRef.current?.connected) {
-      console.warn("❌ Socket not connected");
-      return null;
-    }
+  const joinRoom = useCallback(
+    (payload: JoinRoomPayload): Promise<JoinRoomResponse> => {
+      return new Promise((resolve, reject) => {
+        if (!socketRef.current?.connected) {
+          return reject(new Error("Socket not connected. Cannot join room."));
+        }
 
-    try {
-      // 1. RTP Capabilities 가져오기
-      const response = await fetch(
-        `${SOCKET_SERVER_URL}/sfu-demo/rtp-capabilities/${roomId}`
-      );
-      const { rtpCapabilities } = await response.json();
+        console.log(
+          `🚪 Emitting join_room request for room: ${payload.roomId} as ${payload.userName}`
+        );
 
-      // 2. 룸 참가
-      socketRef.current.emit("join_room", {
-        room: roomId,
-        rtpCapabilities,
+        socketRef.current.emit("join_room", payload);
+
+        const handleJoinedRoom = (data: JoinRoomResponse) => {
+          if (data && data.rtpCapabilities) {
+            console.log("✅ Successfully joined room with data:", data);
+            resolve(data);
+          } else {
+            console.error("❌ Invalid 'joined_room' response:", data);
+            reject(new Error("Server response for join_room is invalid."));
+          }
+          socketRef.current?.off("error", handleError);
+        };
+
+        const handleError = (error: { message: string }) => {
+          console.error("❌ Error while joining room:", error);
+          reject(new Error(error.message || "Failed to join room"));
+          socketRef.current?.off("joined_room", handleJoinedRoom);
+        };
+
+        socketRef.current.once("joined_room", handleJoinedRoom);
+        socketRef.current.once("error", handleError);
       });
+    },
+    []
+  );
 
-      console.log(`🚪 Joining room: ${roomId}`);
-      return rtpCapabilities;
-    } catch (error) {
-      console.error("❌ Failed to join room:", error);
-      throw error;
-    }
-  }, []);
+  const leaveRoom = useCallback((): Promise<void> => {
+    return new Promise((resolve) => {
+      if (!socketRef.current?.connected) {
+        console.log("Socket not connected. Cannot leave room.");
+        resolve();
+        return;
+      }
 
-  const leaveRoom = useCallback(() => {
-    if (socketRef.current?.connected) {
+      console.log("🚪 Emitting leave_room request");
+
+      // 서버로부터 left_room 확인을 받으면 resolve
+      const handleLeftRoom = () => {
+        console.log("✅ Successfully left room");
+        resolve();
+      };
+
+      socketRef.current.once("left_room", handleLeftRoom);
       socketRef.current.emit("leave_room");
-      console.log("👋 Left room");
-    }
+
+      // 타임아웃 설정 (3초 후 강제 resolve)
+      setTimeout(() => {
+        socketRef.current?.off("left_room", handleLeftRoom);
+        console.log("⏰ Leave room timeout - forcing resolve");
+        resolve();
+      }, 3000);
+    });
   }, []);
 
   const disconnect = useCallback(() => {

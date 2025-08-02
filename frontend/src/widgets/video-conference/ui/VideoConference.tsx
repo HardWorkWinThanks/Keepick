@@ -8,22 +8,19 @@ import React, {
   useRef,
   useState,
 } from "react";
-
 import { useSocket } from "@/shared/api/socket/useSocket";
 import { useMediasoup } from "../lib/useMediaSoup";
 import { useVideoSession } from "../model/useVideoSession";
 import { VideoGrid } from "./VideoGrid";
-import { ControlPanel } from "./ControlPanel";
-import { StatusDisplay } from "./StatusDisplay";
+import { ConferenceSidebar } from "./ConferenceSidebar";
 import type { Consumer } from "mediasoup-client/types";
+import type { User } from "@/shared/types/webrtc";
 
-// Props 타입 정의
 interface VideoConferenceProps {
   initialRoomId: string;
 }
 
-// 서버에서 받는 Producer 정보 타입을 명시적으로 정의
-interface ProducerInfo {
+interface NewProducerInfo {
   producerId: string;
   producerSocketId: string;
   kind: "audio" | "video";
@@ -32,7 +29,6 @@ interface ProducerInfo {
 export const VideoConference: React.FC<VideoConferenceProps> = ({
   initialRoomId,
 }) => {
-  const sessionState = useVideoSession();
   const {
     isConnected,
     roomId,
@@ -50,7 +46,20 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
     handleUserExit,
     handleError,
     clearError,
-  } = sessionState;
+  } = useVideoSession();
+
+  const [isStaticGestureOn, setStaticGestureOn] = useState(true);
+  const [isDynamicGestureOn, setDynamicGestureOn] = useState(true);
+  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(
+    new Map()
+  );
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [isCameraOn, setCameraOn] = useState(true);
+  const [isMicOn, setMicOn] = useState(true);
+  const [userName, setUserName] = useState(`게스트`);
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  const consumersRef = useRef<Map<string, Consumer>>(new Map());
 
   useEffect(() => {
     if (initialRoomId && initialRoomId !== roomId) {
@@ -59,47 +68,38 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
     }
   }, [initialRoomId, setRoomId, roomId, clearError]);
 
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(
-    new Map()
-  );
-
-  // ✅ localStream을 state로 관리
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-
-  // ✅ localStream state가 변경될 때만 비디오 엘리먼트를 조작
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-      console.log(
-        "✅ (useEffect) Local video stream has been set to the video element."
-      );
+  const toggleCamera = useCallback(() => {
+    if (localStream) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setCameraOn(videoTrack.enabled);
+      }
     }
-  }, [localStream]); // 이 useEffect는 오직 localStream에만 의존합니다.
+  }, [localStream]);
 
-  const [isProcessingExistingProducers, setIsProcessingExistingProducers] =
-    useState(false);
-  const processedProducersRef = useRef<Set<string>>(new Set());
+  const toggleMicrophone = useCallback(() => {
+    if (localStream) {
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setMicOn(audioTrack.enabled);
+      }
+    }
+  }, [localStream]);
 
   const socketCallbacks = useMemo(
     () => ({
-      onConnect: () => {
-        console.log("🔥 Socket connected - updating app state");
-        handleConnect();
-      },
+      onConnect: handleConnect,
       onDisconnect: () => {
-        console.log("🔥 Socket disconnected - updating app state");
         handleDisconnect();
         setIsInRoom(false);
         setRemoteStreams(new Map());
-        processedProducersRef.current.clear();
-        setIsProcessingExistingProducers(false);
-        if (localVideoRef.current) localVideoRef.current.srcObject = null;
+        consumersRef.current.clear();
+        setIsLeaving(false);
       },
-      onConnectError: (err: Error) => {
-        console.error("🔥 Socket connection error:", err);
-        handleError({ message: `Connection error: ${err.message}` });
-      },
+      onConnectError: (err: Error) =>
+        handleError({ message: `Connection error: ${err.message}` }),
     }),
     [handleConnect, handleDisconnect, handleError, setIsInRoom]
   );
@@ -107,7 +107,6 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
   const { socket, joinRoom, leaveRoom } = useSocket(socketCallbacks);
   const {
     deviceLoaded,
-    // isProducing,
     initializeDevice,
     createProducerTransport,
     createConsumerTransport,
@@ -119,140 +118,114 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
 
   const handleRemoteStream = useCallback(
     (consumer: Consumer, producerSocketId: string) => {
-      try {
-        const track = consumer.track;
-        if (track) {
-          setRemoteStreams((prev) => {
-            const newMap = new Map(prev);
-            let stream = newMap.get(producerSocketId);
-            if (!stream) {
-              stream = new MediaStream();
-              newMap.set(producerSocketId, stream);
-            }
-            const existingTracks = stream
-              .getTracks()
-              .filter((t) => t.kind === track.kind);
-            existingTracks.forEach((t) => stream!.removeTrack(t));
-            stream.addTrack(track);
-            console.log(
-              `✅ Remote ${consumer.kind} stream updated for peer ${producerSocketId}`
-            );
-            return newMap;
-          });
-        }
-      } catch (err: unknown) {
-        console.error("❌ Failed to handle remote stream:", err);
+      const track = consumer.track;
+      if (track) {
+        setRemoteStreams((prev) => {
+          const newMap = new Map(prev);
+          let stream = newMap.get(producerSocketId) || new MediaStream();
+          stream.addTrack(track);
+          newMap.set(producerSocketId, stream);
+          return newMap;
+        });
+        consumersRef.current.set(consumer.producerId, consumer);
       }
     },
     []
   );
 
-  const consumeExistingProducers = useCallback(
-    async (existingProducers: ProducerInfo[]) => {
-      if (isProcessingExistingProducers) {
-        console.log("⏸️ Already processing existing producers, skipping...");
-        return;
-      }
-      setIsProcessingExistingProducers(true);
-      console.log(
-        "🔍 Starting to consume existing producers:",
-        existingProducers
-      );
-      try {
-        for (const producerInfo of existingProducers) {
-          try {
-            if (processedProducersRef.current.has(producerInfo.producerId))
-              continue;
-            if (socket?.id === producerInfo.producerSocketId) {
-              processedProducersRef.current.add(producerInfo.producerId);
-              continue;
-            }
-            const consumer = await consume(producerInfo.producerId, roomId);
-            if (consumer) {
-              handleRemoteStream(consumer, producerInfo.producerSocketId);
-              processedProducersRef.current.add(producerInfo.producerId);
-            }
-          } catch (err: unknown) {
-            console.error(
-              `❌ Failed to consume existing producer ${producerInfo.producerId}:`,
-              err
-            );
-          }
-        }
-      } finally {
-        setIsProcessingExistingProducers(false);
-        console.log("✅ Finished processing existing producers.");
-      }
-    },
-    [
-      consume,
-      roomId,
-      handleRemoteStream,
-      isProcessingExistingProducers,
-      socket?.id,
-    ]
-  );
+  const handleLeaveRoom = useCallback(async () => {
+    if (isLeaving) return;
 
-  const handleLeaveRoom = useCallback(() => {
     console.log("👋 Leaving room");
-    leaveRoom();
-    setIsInRoom(false);
-    cleanup();
-    setLocalStream(null); // 로컬 스트림 상태도 초기화
-    processedProducersRef.current.clear();
-    setIsProcessingExistingProducers(false);
-    setRemoteStreams(new Map());
-    if (localVideoRef.current) localVideoRef.current.srcObject = null;
-    clearError();
-  }, [leaveRoom, setIsInRoom, cleanup, clearError]);
+    setIsLeaving(true);
+
+    try {
+      // 서버에 leave_room 신호 보내고 확인 대기
+      await leaveRoom();
+
+      // 로컬 정리
+      cleanup();
+      consumersRef.current.forEach((consumer) => consumer.close());
+      consumersRef.current.clear();
+      setLocalStream(null);
+      setRemoteStreams(new Map());
+      setIsInRoom(false);
+      setCameraOn(true);
+      setMicOn(true);
+      clearError();
+      handleAllUsers([]); // 사용자 목록 초기화
+
+      console.log("✅ Successfully left room");
+    } catch (error) {
+      console.error("❌ Error leaving room:", error);
+    } finally {
+      setIsLeaving(false);
+    }
+  }, [leaveRoom, cleanup, setIsInRoom, clearError, handleAllUsers, isLeaving]);
 
   const handleJoinRoom = useCallback(async () => {
     if (!roomId.trim() || !socket?.connected) {
       setError("룸 이름을 입력해주세요.");
       return;
     }
+
+    if (!userName.trim()) {
+      setError("사용자 이름을 입력해주세요.");
+      return;
+    }
+
     try {
-      console.log(`🚪 Attempting to join room: ${roomId.trim()}`);
-      processedProducersRef.current.clear();
-      setIsProcessingExistingProducers(false);
+      // 입장 전 완전한 상태 초기화
+      consumersRef.current.clear();
       setRemoteStreams(new Map());
+      handleAllUsers([]);
 
-      const rtpCapabilities = await joinRoom(roomId.trim());
-      if (!rtpCapabilities) {
-        throw new Error("Failed to get RTP capabilities from server.");
-      }
+      const { rtpCapabilities, peers } = await joinRoom({
+        roomId: roomId.trim(),
+        userName: userName.trim(),
+      });
 
+      setIsInRoom(true);
       await initializeDevice(rtpCapabilities);
 
-      // 1. 로컬 미디어 스트림을 가져와서 state에 설정 (여기까지만 책임)
+      // UI에 기존 참여자들 정보 반영
+      handleAllUsers(peers);
+
+      // 로컬 미디어 초기화 및 프로듀싱 시작
       const stream = await initializeLocalMedia();
       setLocalStream(stream);
-
-      // 2. Transport 생성
       await createProducerTransport(roomId.trim());
       await createConsumerTransport(roomId.trim());
+      if (stream) await startProducing(stream);
 
-      // 3. 기존 Producer 목록 요청
-      socket.emit("get_existing_producers", { roomId: roomId.trim() });
-
-      // 4. 미디어 송신 시작 (방금 함수 내에서 가져온 stream 변수 사용)
-      if (stream) {
-        await startProducing(stream);
-      } else {
-        console.warn(
-          "⚠️ startProducing skipped because localStream is not available."
-        );
+      // 기존 참여자들의 미디어 스트림 소비
+      for (const peer of peers) {
+        if (peer.producers && peer.producers.length > 0) {
+          for (const producer of peer.producers) {
+            try {
+              const consumer = await consume(producer.producerId, roomId);
+              if (consumer) {
+                handleRemoteStream(consumer, peer.id);
+              }
+            } catch (err) {
+              console.error(
+                `Failed to consume existing producer ${producer.producerId} for peer ${peer.id}:`,
+                err
+              );
+            }
+          }
+        }
       }
 
       clearError();
-      console.log("✅ Successfully joined room and started producing");
     } catch (err: unknown) {
       console.error("❌ Failed to join room:", err);
       setError(err instanceof Error ? err.message : "룸 참가에 실패했습니다.");
-      handleLeaveRoom();
+      await handleLeaveRoom();
     }
   }, [
     roomId,
+    userName,
     socket,
     joinRoom,
     initializeDevice,
@@ -263,143 +236,140 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
     setError,
     clearError,
     handleLeaveRoom,
+    handleAllUsers,
+    consume,
+    handleRemoteStream,
   ]);
 
+  // Socket 이벤트 핸들러
   useEffect(() => {
     if (!socket) return;
-    console.log("🔌 Setting up SFU socket events");
-    socket.on("joined_room", (data: { existingProducers?: ProducerInfo[] }) => {
-      console.log("✅ Successfully joined room:", data);
-      setIsInRoom(true);
-      if (data.existingProducers)
-        consumeExistingProducers(data.existingProducers);
-    });
-    socket.on(
-      "existing_producers_list",
-      (data: { existingProducers: ProducerInfo[] }) => {
-        console.log(
-          "📥 Received existing producers list for manual consume:",
-          data.existingProducers
-        );
-        if (
-          data.existingProducers.length > 0 &&
-          !isProcessingExistingProducers
-        ) {
-          consumeExistingProducers(data.existingProducers);
-        }
-      }
-    );
-    socket.on("existing_peers", (data: { peers: string[] }) => {
-      console.log("👥 Existing peers:", data.peers);
-      handleAllUsers(data.peers.map((id) => ({ id, email: "unknown" })));
-    });
-    socket.on("user_joined", (data: { id: string }) => {
-      console.log("👋 User joined:", data);
-      handleUserJoined({ id: data.id, email: "unknown" });
-    });
-    socket.on("user_left", (data: { id: string }) => {
-      console.log("👋 User left:", data);
+
+    const onUserJoined = (user: User) => {
+      console.log(`👋 User joined: ${user.name} (${user.id})`);
+      handleUserJoined(user);
+    };
+
+    const onUserLeft = (data: { id: string }) => {
+      console.log(`👋 User ${data.id} left. Updating UI.`);
       handleUserExit({ id: data.id });
+
       setRemoteStreams((prev) => {
         const newMap = new Map(prev);
         newMap.delete(data.id);
         return newMap;
       });
-    });
-    socket.on("new_producer", async (data: ProducerInfo) => {
+    };
+
+    const onNewProducer = async (data: NewProducerInfo) => {
       console.log("🎬 New producer available:", data);
       if (deviceLoaded && data.producerSocketId !== socket.id) {
         try {
-          if (processedProducersRef.current.has(data.producerId)) return;
           const consumer = await consume(data.producerId, roomId);
           if (consumer) {
             handleRemoteStream(consumer, data.producerSocketId);
-            processedProducersRef.current.add(data.producerId);
           }
-        } catch (err: unknown) {
+        } catch (err) {
           console.error("❌ Failed to consume new producer:", err);
-          setError(
-            `새로운 비디오/오디오 스트림 처리 실패: ${
-              err instanceof Error ? err.message : "Unknown error"
-            }`
-          );
         }
       }
-    });
-    socket.on("error", (data: { message: string }) => {
-      console.error("❌ Server error:", data);
-      setError(data.message);
-    });
+    };
+
+    const onProducerClosed = ({
+      producerId,
+      producerSocketId,
+    }: {
+      producerId: string;
+      producerSocketId: string;
+    }) => {
+      console.log(
+        `🎬 Producer ${producerId} from user ${producerSocketId} closed. Cleaning up consumer.`
+      );
+      const consumer = consumersRef.current.get(producerId);
+
+      if (consumer) {
+        consumer.close();
+        consumersRef.current.delete(producerId);
+
+        setRemoteStreams((prev) => {
+          const newMap = new Map(prev);
+          const stream = newMap.get(producerSocketId);
+          if (stream) {
+            const track = stream.getTrackById(consumer.track.id);
+            if (track) {
+              stream.removeTrack(track);
+              console.log(
+                `- Removed track ${track.id} from stream for socket ${producerSocketId}`
+              );
+            }
+            if (stream.getTracks().length === 0) {
+              newMap.delete(producerSocketId);
+            }
+          }
+          return newMap;
+        });
+      }
+    };
+
+    const onError = (data: { message: string }) => setError(data.message);
+
+    socket.on("user_joined", onUserJoined);
+    socket.on("user_left", onUserLeft);
+    socket.on("producer_closed", onProducerClosed);
+    socket.on("new_producer", onNewProducer);
+    socket.on("error", onError);
+
     return () => {
-      socket.off("joined_room");
-      socket.off("existing_producers_list");
-      socket.off("existing_peers");
-      socket.off("user_joined");
-      socket.off("user_left");
-      socket.off("new_producer");
-      socket.off("error");
+      socket.off("user_joined", onUserJoined);
+      socket.off("user_left", onUserLeft);
+      socket.off("producer_closed", onProducerClosed);
+      socket.off("new_producer", onNewProducer);
+      socket.off("error", onError);
     };
   }, [
     socket,
-    deviceLoaded,
     roomId,
     consume,
-    handleAllUsers,
+    handleRemoteStream,
     handleUserJoined,
     handleUserExit,
-    setIsInRoom,
     setError,
-    handleRemoteStream,
-    consumeExistingProducers,
-    isProcessingExistingProducers,
+    deviceLoaded,
   ]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white font-sans">
-      <header className="p-4 text-center text-3xl font-bold bg-gray-800 shadow-md border-b border-gray-700">
-        🎥 WebRTC SFU Video Call:{" "}
-        <span className="text-blue-400">{roomId || initialRoomId}</span>
-      </header>
-      <main className="flex flex-col md:flex-row flex-grow overflow-hidden">
-        <div className="w-full md:w-1/4 p-4 bg-gray-800 space-y-6 flex flex-col border-r border-gray-700 overflow-y-auto">
-          <ControlPanel
-            roomId={roomId}
-            setRoomId={setRoomId}
-            isInRoom={isInRoom}
-            isConnected={isConnected}
-            onJoinRoom={handleJoinRoom}
-            onLeaveRoom={handleLeaveRoom}
-          />
-          <StatusDisplay
-            isConnected={isConnected}
-            connectionState={connectionState}
-            users={users}
-            isInRoom={isInRoom}
-            error={error}
-          />
-          <div className="bg-gray-700 p-4 rounded-lg shadow-inner space-y-2 text-sm">
-            {/* 디버그 정보 UI ... */}
-          </div>
-        </div>
-        <div className="flex-grow flex items-center justify-center bg-gray-900">
-          <VideoGrid
-            localStream={localStream}
-            remoteStreams={remoteStreams}
-            users={users}
-          />
-        </div>
+    <div className="flex h-screen bg-gray-900 text-white font-sans">
+      <aside className="w-80 flex-shrink-0">
+        <ConferenceSidebar
+          roomId={roomId || initialRoomId}
+          isInRoom={isInRoom}
+          onJoinRoom={handleJoinRoom}
+          onLeaveRoom={handleLeaveRoom}
+          isStaticGestureOn={isStaticGestureOn}
+          setStaticGestureOn={setStaticGestureOn}
+          isDynamicGestureOn={isDynamicGestureOn}
+          setDynamicGestureOn={setDynamicGestureOn}
+          isCameraOn={isCameraOn}
+          isMicOn={isMicOn}
+          onToggleCamera={toggleCamera}
+          onToggleMicrophone={toggleMicrophone}
+          isConnected={isConnected}
+          connectionState={connectionState}
+          userName={userName}
+          setUserName={setUserName}
+          users={users as User[]}
+          error={error}
+        />
+      </aside>
+      <main className="flex-1 flex items-center justify-center p-4 bg-black/20 overflow-hidden">
+        <VideoGrid
+          localStream={localStream}
+          remoteStreams={remoteStreams}
+          users={users as User[]}
+          isStaticGestureOn={isStaticGestureOn}
+          isDynamicGestureOn={isDynamicGestureOn}
+        />
       </main>
-      {error && (
-        <div className="fixed bottom-4 right-4 p-4 bg-red-600 text-white rounded-lg shadow-xl">
-          <span className="font-bold">❌ 에러:</span> {error}
-          <button
-            onClick={clearError}
-            className="ml-4 text-white hover:text-gray-200 font-bold"
-          >
-            [닫기]
-          </button>
-        </div>
-      )}
     </div>
   );
 };
