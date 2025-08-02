@@ -1,18 +1,21 @@
 package com.ssafy.keepick.auth.application.dto;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter
-@Setter
+@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class MemberDto {
-    private Long memberId;
-    private String username;
-    private String role;
-    private String name;
-    private String email;
-    private String nickname;
-    private String profileUrl;
-    private String provider;
-    private String providerId;
+    private final Long memberId;
+    private final String username;
+    private final String role;
+    private final String name;
+    private final String email;
+    private final String nickname;
+    private final String profileUrl;
+    private final String provider;
+    private final String providerId;
 }

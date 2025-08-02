@@ -5,8 +5,12 @@ import java.util.Map;
 public class NaverProvider implements OAuth2Provider {
     private final Map<String, Object> attributes;
 
-    public NaverProvider(Map<String, Object> attributes) {
+    private NaverProvider(Map<String, Object> attributes) {
         this.attributes = (Map<String, Object>) attributes.get("response");
+    }
+
+    public static NaverProvider from(Map<String, Object> attributes) {
+        return new NaverProvider(attributes);
     }
 
     @Override

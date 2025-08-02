@@ -7,7 +7,7 @@ public class KakaoProvider implements OAuth2Provider {
     private final Map<String, Object> kakaoAccount;
     private final Map<String, Object> profile;
 
-    public KakaoProvider(Map<String, Object> attributes) {
+    private KakaoProvider(Map<String, Object> attributes) {
         this.attributes = attributes;
         
         this.kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
@@ -19,6 +19,10 @@ public class KakaoProvider implements OAuth2Provider {
         if (this.profile == null) {
             throw new RuntimeException("profile 정보를 찾을 수 없습니다.");
         }
+    }
+
+    public static KakaoProvider from(Map<String, Object> attributes) {
+        return new KakaoProvider(attributes);
     }
 
     @Override

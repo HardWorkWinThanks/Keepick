@@ -8,12 +8,17 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
-import lombok.AllArgsConstructor;
-
-@AllArgsConstructor
 public class CustomOAuth2Member implements OAuth2User {
 
-    private MemberDto memberDto;
+    private final MemberDto memberDto;
+
+    private CustomOAuth2Member(MemberDto memberDto) {
+        this.memberDto = memberDto;
+    }
+
+    public static CustomOAuth2Member from(MemberDto memberDto) {
+        return new CustomOAuth2Member(memberDto);
+    }
 
     @Override
     public Map<String, Object> getAttributes() {

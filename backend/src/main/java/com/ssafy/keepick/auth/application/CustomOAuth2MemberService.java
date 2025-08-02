@@ -34,13 +34,13 @@ public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
         OAuth2Provider oAuth2Response = null;
         if (registrationId.equals("naver")) {
 
-            oAuth2Response = new NaverProvider(oAuth2User.getAttributes());
+            oAuth2Response = NaverProvider.from(oAuth2User.getAttributes());
         } else if (registrationId.equals("google")) {
 
-            oAuth2Response = new GoogleProvider(oAuth2User.getAttributes());
+            oAuth2Response = GoogleProvider.from(oAuth2User.getAttributes());
         } else if (registrationId.equals("kakao")) {
 
-            oAuth2Response = new KakaoProvider(oAuth2User.getAttributes());
+            oAuth2Response = KakaoProvider.from(oAuth2User.getAttributes());
         } else {
             return null;
         }
@@ -64,18 +64,19 @@ public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
 
             Member savedMember = memberRepository.save(member); // 저장된 회원 정보 받기
 
-            MemberDto memberDto = new MemberDto();
-            memberDto.setMemberId(savedMember.getId());  // 🔥 memberId 설정!
-            memberDto.setUsername(email);
-            memberDto.setName(oAuth2Response.getName());
-            memberDto.setEmail(email);
-            memberDto.setNickname(nickname);
-            memberDto.setProfileUrl(oAuth2Response.getProfileUrl());
-            memberDto.setProvider(oAuth2Response.getProvider());
-            memberDto.setProviderId(oAuth2Response.getProviderId());
-            memberDto.setRole("ROLE_USER");
+            MemberDto memberDto = MemberDto.builder()
+                .memberId(savedMember.getId())  // 🔥 memberId 설정!
+                .username(email)
+                .name(oAuth2Response.getName())
+                .email(email)
+                .nickname(nickname)
+                .profileUrl(oAuth2Response.getProfileUrl())
+                .provider(oAuth2Response.getProvider())
+                .providerId(oAuth2Response.getProviderId())
+                .role("ROLE_USER")
+                .build();
 
-            return new CustomOAuth2Member(memberDto);
+            return CustomOAuth2Member.from(memberDto);
         }
         // 존재하는 회원이면 소셜 서비스의 최신 정보로 업데이트
         else {
@@ -102,18 +103,19 @@ public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
                 System.out.println("No changes detected - using existing member info");
             }
             
-            MemberDto memberDto = new MemberDto();
-            memberDto.setMemberId(existMember.getId());
-            memberDto.setUsername(existMember.getEmail());
-            memberDto.setName(existMember.getName());
-            memberDto.setEmail(existMember.getEmail());
-            memberDto.setNickname(existMember.getNickname());
-            memberDto.setProfileUrl(existMember.getProfileUrl());
-            memberDto.setProvider(existMember.getProvider());
-            memberDto.setProviderId(existMember.getProviderId());
-            memberDto.setRole("ROLE_USER");
+            MemberDto memberDto = MemberDto.builder()
+                .memberId(existMember.getId())
+                .username(existMember.getEmail())
+                .name(existMember.getName())
+                .email(existMember.getEmail())
+                .nickname(existMember.getNickname())
+                .profileUrl(existMember.getProfileUrl())
+                .provider(existMember.getProvider())
+                .providerId(existMember.getProviderId())
+                .role("ROLE_USER")
+                .build();
 
-            return new CustomOAuth2Member(memberDto);
+            return CustomOAuth2Member.from(memberDto);
         }
     }
 

@@ -5,8 +5,12 @@ import java.util.Map;
 public class GoogleProvider implements OAuth2Provider {
     private final Map<String, Object> attributes;
 
-    public GoogleProvider(Map<String, Object> attributes) {
+    private GoogleProvider(Map<String, Object> attributes) {
         this.attributes = attributes;
+    }
+
+    public static GoogleProvider from(Map<String, Object> attributes) {
+        return new GoogleProvider(attributes);
     }
 
     @Override
