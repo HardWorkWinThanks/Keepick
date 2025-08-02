@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    database-platform: org.hibernate.dialect.H2Dialect
+
+  h2:
+    console:
+      enabled: true
+
+# JWT 설정 (테스트용)
+jwt:
+  secret: test-super-secret-jwt-key-for-testing-minimum-32-characters-long
+  expiredMs: 86400000
+
+# 로깅 설정
+logging:
+  level:
+    org.hibernate: INFO
+    com.ssafy.keepick: DEBUG 
