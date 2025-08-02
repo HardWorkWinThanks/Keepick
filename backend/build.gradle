@@ -24,6 +24,17 @@ repositories {
 }
 
 dependencies {
+	// jwt 토큰 생성 및 검증
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.3'			
+    implementation 'io.jsonwebtoken:jjwt-impl:0.12.3'				
+    implementation 'io.jsonwebtoken:jjwt-jackson:0.12.3'			
+	
+	// OAuth2 클라이언트 지원
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+	
+	// Spring Security
+    implementation 'org.springframework.boot:spring-boot-starter-security'	
+
 	implementation 'org.springframework.boot:spring-boot-starter-web'		// Spring MVC + REST API + Tomcat
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'			// 자동 재시작, LiveReload 등 개발 지원
 	compileOnly 'org.projectlombok:lombok'									// Lombok (코드 간결화를 위한 어노테이션)
