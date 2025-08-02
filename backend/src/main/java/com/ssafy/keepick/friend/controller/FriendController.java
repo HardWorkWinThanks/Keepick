@@ -28,9 +28,17 @@ public class FriendController {
     }
 
     @PostMapping("/requests/{requestId}")
-    public ApiResponse<?> acceptRequest(@PathVariable Long requestId, Authentication authentication) {
+    public ApiResponse<?> acceptFriendRequest(@PathVariable Long requestId, Authentication authentication) {
         Long loginMemberId = getLoginMemberId(authentication);
         FriendshipDto dto = friendService.acceptFriendRequest(requestId, loginMemberId);
+        FriendResultResponse response = FriendResultResponse.toResponse(dto);
+        return ApiResponse.ok(response);
+    }
+
+    @DeleteMapping("/requests/{requestId}")
+    public ApiResponse<?> rejectFriendRequest(@PathVariable Long requestId, Authentication authentication) {
+        Long loginMemberId = getLoginMemberId(authentication);
+        FriendshipDto dto = friendService.rejectFriendRequest(requestId, loginMemberId);
         FriendResultResponse response = FriendResultResponse.toResponse(dto);
         return ApiResponse.ok(response);
     }

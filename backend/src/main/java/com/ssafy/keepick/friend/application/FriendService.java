@@ -43,6 +43,14 @@ public class FriendService {
         return dto;
     }
 
+    public FriendshipDto rejectFriendRequest(Long requestId, Long loginMemberId) {
+        Friendship friendship = friendshipRepository.findById(requestId).orElseThrow(() -> new BaseException(FRIENDSHIP_NOT_FOUND));
+        validateFriendship(friendship, loginMemberId);
+        friendship.reject();
+        FriendshipDto dto = FriendshipDto.from(friendship);
+        return dto;
+    }
+
     private void validateFriendship(Friendship friendship, Long loginMemberId) {
         if (!Objects.equals(friendship.getReceiver().getId(), loginMemberId)) {
             throw new BaseException(FRIENDSHIP_FORBIDDEN);
