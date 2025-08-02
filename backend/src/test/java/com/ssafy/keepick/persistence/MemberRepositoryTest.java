@@ -1,6 +1,7 @@
 package com.ssafy.keepick.persistence;
 
 import com.ssafy.keepick.member.domain.Member;
+import com.ssafy.keepick.member.persistence.MemberRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

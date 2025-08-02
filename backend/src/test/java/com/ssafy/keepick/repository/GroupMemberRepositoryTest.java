@@ -1,9 +1,12 @@
 package com.ssafy.keepick.repository;
 
-import com.ssafy.keepick.entity.Group;
-import com.ssafy.keepick.entity.GroupMember;
-import com.ssafy.keepick.entity.GroupMemberStatus;
-import com.ssafy.keepick.entity.Member;
+import com.ssafy.keepick.group.domain.Group;
+import com.ssafy.keepick.group.domain.GroupMember;
+import com.ssafy.keepick.group.domain.GroupMemberStatus;
+import com.ssafy.keepick.group.persistence.GroupMemberRepository;
+import com.ssafy.keepick.group.persistence.GroupRepository;
+import com.ssafy.keepick.member.domain.Member;
+import com.ssafy.keepick.member.persistence.MemberRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,9 +23,12 @@ import static org.assertj.core.api.Assertions.*;
 class GroupMemberRepositoryTest {
 
     @Autowired EntityManager em;
-    @Autowired GroupMemberRepository groupMemberRepository;
-    @Autowired MemberRepository memberRepository;
-    @Autowired GroupRepository groupRepository;
+    @Autowired
+    GroupMemberRepository groupMemberRepository;
+    @Autowired
+    MemberRepository memberRepository;
+    @Autowired
+    GroupRepository groupRepository;
 
     @Test
     void findByGroupIdAndMemberIdTest() {

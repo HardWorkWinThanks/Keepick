@@ -13,7 +13,7 @@ import com.ssafy.keepick.auth.application.dto.MemberDto;
 import com.ssafy.keepick.auth.application.dto.NaverProvider;
 import com.ssafy.keepick.auth.application.dto.OAuth2Provider;
 import com.ssafy.keepick.member.domain.Member;
-import com.ssafy.keepick.persistence.MemberRepository;
+import com.ssafy.keepick.member.persistence.MemberRepository;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
