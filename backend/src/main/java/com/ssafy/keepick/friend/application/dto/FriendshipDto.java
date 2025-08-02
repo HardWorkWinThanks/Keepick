@@ -35,4 +35,16 @@ public class FriendshipDto {
                 .updatedAt(friendship.getUpdatedAt())
                 .build();
     }
+
+    public static FriendshipDto fromWithSenderOnly(Friendship friendship) {
+        return FriendshipDto.builder()
+                .friendshipId(friendship.getId())
+                .senderId(friendship.getSender().getId())
+                .senderName(friendship.getSender().getName())
+                .senderNickname(friendship.getSender().getNickname())
+                .status(friendship.getStatus())
+                .createdAt(friendship.getCreatedAt())
+                .updatedAt(friendship.getUpdatedAt())
+                .build();
+    }
 }

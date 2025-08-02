@@ -36,18 +36,18 @@ public class FriendService {
     }
 
     public FriendshipDto acceptFriendRequest(Long requestId, Long loginMemberId) {
-        Friendship friendship = friendshipRepository.findById(requestId).orElseThrow(() -> new BaseException(FRIENDSHIP_NOT_FOUND));
+        Friendship friendship = friendshipRepository.findByIdWithSender(requestId).orElseThrow(() -> new BaseException(FRIENDSHIP_NOT_FOUND));
         validateFriendship(friendship, loginMemberId);
         friendship.accept();
-        FriendshipDto dto = FriendshipDto.from(friendship);
+        FriendshipDto dto = FriendshipDto.fromWithSenderOnly(friendship);
         return dto;
     }
 
     public FriendshipDto rejectFriendRequest(Long requestId, Long loginMemberId) {
-        Friendship friendship = friendshipRepository.findById(requestId).orElseThrow(() -> new BaseException(FRIENDSHIP_NOT_FOUND));
+        Friendship friendship = friendshipRepository.findByIdWithSender(requestId).orElseThrow(() -> new BaseException(FRIENDSHIP_NOT_FOUND));
         validateFriendship(friendship, loginMemberId);
         friendship.reject();
-        FriendshipDto dto = FriendshipDto.from(friendship);
+        FriendshipDto dto = FriendshipDto.fromWithSenderOnly(friendship);
         return dto;
     }
 
