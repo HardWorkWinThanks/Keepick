@@ -1,6 +1,7 @@
 package com.ssafy.keepick.group.controller;
 
 import com.ssafy.keepick.global.response.ApiResponse;
+import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.group.controller.request.GroupInviteRequest;
 import com.ssafy.keepick.group.controller.response.GroupInviteResponse;
 import com.ssafy.keepick.group.controller.response.GroupLinkResponse;
@@ -49,7 +50,8 @@ public class GroupInvitationController {
 
     @GetMapping("/{groupId}/invitation-link/{invitation-link}")
     public ApiResponse<GroupInviteResponse> getInvitationLink(@PathVariable Long groupId, @PathVariable("invitation-link") String inviteToken) {
-        GroupMemberDto dto = groupInvitationService.joinGroupByInvitationLink(groupId, 1L, inviteToken);
+        Long loginMemberId = AuthenticationUtil.getCurrentUserId();
+        GroupMemberDto dto = groupInvitationService.joinGroupByInvitationLink(groupId, loginMemberId, inviteToken);
         GroupInviteResponse response = GroupInviteResponse.toResponse(dto);
         return ApiResponse.ok(response);
     }

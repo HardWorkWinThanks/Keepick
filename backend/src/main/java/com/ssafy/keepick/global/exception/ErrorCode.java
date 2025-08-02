@@ -14,6 +14,9 @@ public enum ErrorCode {
     INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "잘못된 요청 파라미터입니다.", "B004"),
     DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "중복된 리소스입니다.", "B005"),
 
+    // Member
+    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다.", "M001"),
+
     // Group
     GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 그룹입니다.", "G001"),
 

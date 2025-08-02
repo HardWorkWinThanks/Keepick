@@ -2,6 +2,7 @@ package com.ssafy.keepick.group.controller;
 
 import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.global.response.ResponseCode;
+import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.group.controller.request.GroupCreateRequest;
 import com.ssafy.keepick.group.controller.request.GroupUpdateRequest;
 import com.ssafy.keepick.group.controller.response.GroupCreateResponse;
@@ -27,16 +28,17 @@ public class GroupController {
     private final GroupService groupService;
 
     @PostMapping("")
-    public ApiResponse<GroupCreateResponse> createGroup(
-            @Valid @RequestBody GroupCreateRequest request) {
-        GroupDto dto = groupService.createGroup(request, 1L);
+    public ApiResponse<GroupCreateResponse> createGroup(@Valid @RequestBody GroupCreateRequest request) {
+        Long loginMemberId = AuthenticationUtil.getCurrentUserId();
+        GroupDto dto = groupService.createGroup(request, loginMemberId);
         GroupCreateResponse response = GroupCreateResponse.toResponse(dto);
         return ApiResponse.created(response);
     }
 
     @GetMapping("")
     public ApiResponse<List<GroupStatusResponse>> getGroupList(@RequestParam(defaultValue = "ACCEPTED") GroupMemberStatus status) {
-        List<GroupMemberDto> dto = groupService.getGroupList(1L, status);
+        Long loginMemberId = AuthenticationUtil.getCurrentUserId();
+        List<GroupMemberDto> dto = groupService.getGroupList(loginMemberId, status);
         List<GroupStatusResponse> response = dto.stream().map(GroupStatusResponse::toResponse).toList();
         return ApiResponse.ok(response);
     }
@@ -64,7 +66,8 @@ public class GroupController {
 
     @DeleteMapping("/{groupId}/me")
     public ApiResponse<Void> leaveGroup(@PathVariable Long groupId) {
-        groupService.leaveGroup(groupId, 1L);
+        Long loginMemberId = AuthenticationUtil.getCurrentUserId();
+        groupService.leaveGroup(groupId, loginMemberId);
         return ApiResponse.of(ResponseCode.DELETED);
     }
 

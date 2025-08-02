@@ -22,7 +22,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static com.ssafy.keepick.global.exception.ErrorCode.*;
-import static com.ssafy.keepick.global.exception.ErrorCode.NOT_FOUND;
 
 @Service
 @RequiredArgsConstructor
@@ -66,12 +65,12 @@ public class GroupInvitationService {
         return link;
     }
 
-    public GroupMemberDto joinGroupByInvitationLink(Long groupId, Long memberId, String inviteToken) {
+    public GroupMemberDto joinGroupByInvitationLink(Long groupId, Long loginMemberId, String inviteToken) {
         // 초대 토큰 유효성 검사
         validateToken(groupId, inviteToken);
         // 그룹 가입
         Group group = groupRepository.findById(groupId).orElseThrow(() -> new BaseException(GROUP_NOT_FOUND));
-        GroupMember groupMember = processInvitationToGroup(group, memberId);
+        GroupMember groupMember = processInvitationToGroup(group, loginMemberId);
         groupMember.accept();
         return GroupMemberDto.from(groupMember);
     }
@@ -88,7 +87,7 @@ public class GroupInvitationService {
     }
 
     private GroupMember inviteMember(Group group, Long memberId) {
-        Member member = memberRepository.findById(memberId).orElseThrow(() -> new BaseException(NOT_FOUND));
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new BaseException(MEMBER_NOT_FOUND));
         GroupMember groupMember = GroupMember.createGroupMember(group, member);
         groupMemberRepository.save(groupMember);
         return groupMember;
