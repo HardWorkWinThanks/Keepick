@@ -1,5 +1,6 @@
 package com.ssafy.keepick.auth.util;
 
+import com.ssafy.keepick.global.security.util.JWTUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
