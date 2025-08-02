@@ -1,6 +1,5 @@
 package com.ssafy.keepick.group.application;
 
-import com.ssafy.keepick.entity.Member;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.group.controller.request.GroupInviteRequest;
 import com.ssafy.keepick.group.domain.Group;
@@ -8,9 +7,10 @@ import com.ssafy.keepick.group.domain.GroupMember;
 import com.ssafy.keepick.group.domain.GroupMemberStatus;
 import com.ssafy.keepick.group.persistence.GroupMemberRepository;
 import com.ssafy.keepick.group.persistence.GroupRepository;
-import com.ssafy.keepick.member.repository.MemberRepository;
 import com.ssafy.keepick.external.redis.RedisService;
 import com.ssafy.keepick.group.application.dto.GroupMemberDto;
+import com.ssafy.keepick.member.domain.Member;
+import com.ssafy.keepick.member.persistence.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
