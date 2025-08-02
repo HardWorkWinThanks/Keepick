@@ -40,6 +40,9 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok'									// Lombok (코드 간결화를 위한 어노테이션)
 	annotationProcessor 'org.projectlombok:lombok'
 
+	implementation 'org.springframework.boot:spring-boot-starter-validation' // 검증 라이브러리
+	implementation('org.springframework.boot:spring-boot-starter-data-redis') // redis 라이브러리
+
 	// 데이터베이스 관련
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
@@ -47,6 +50,8 @@ dependencies {
 	// 테스트 관련
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testImplementation 'com.h2database:h2' // 테스트용 h2 db
+	testImplementation 'org.mockito:mockito-core:5.8.0' // 테스트 Mockito Core
 }
 
 tasks.named('test') {
