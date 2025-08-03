@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Input } from './input';
-import { Button } from './button';
-import { Label } from './label';
+import React, { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
 interface VersatileInputProps {
   value: string;
@@ -51,8 +51,19 @@ export function VersatileInput({
   const [isLoading, setIsLoading] = useState(false);
   const [internalResult, setInternalResult] = useState<'success' | 'error' | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [initialValue, setInitialValue] = useState(value);
+
+  // 값이 변경되면 결과 상태를 리셋
+  React.useEffect(() => {
+    if (value !== initialValue) {
+      setInternalResult(null);
+    }
+  }, [value, initialValue]);
 
   const result = actionResult !== undefined ? actionResult : internalResult;
+  const hasValueChanged = value !== initialValue;
+  const isSuccess = result === 'success';
+  const shouldShowApplyButton = isSuccess && !hasValueChanged && showApplyButton;
 
   const handleActionClick = async () => {
     if (!onActionClick) return;
@@ -64,11 +75,21 @@ export function VersatileInput({
       const success = await onActionClick(value);
       if (success !== undefined) {
         setInternalResult(success ? 'success' : 'error');
+        if (success) {
+          setInitialValue(value);
+        }
       }
     } catch (error) {
       setInternalResult('error');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleApplyClick = () => {
+    if (onApplyClick) {
+      onApplyClick();
+      setInternalResult(null);
     }
   };
 
@@ -133,28 +154,27 @@ export function VersatileInput({
         
         {showActionButton && onActionClick && (
           <Button
-            onClick={handleActionClick}
+            onClick={shouldShowApplyButton ? handleApplyClick : handleActionClick}
             disabled={isLoading || (onChange && !value.trim())}
             variant="outline"
-            className="whitespace-nowrap bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
+            className={`whitespace-nowrap ${
+              shouldShowApplyButton 
+                ? 'bg-green-500 hover:bg-green-600 text-white border-green-500' 
+                : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
+            }`}
           >
-            {isLoading ? actionButtonLoadingText : actionButtonText}
+            {isLoading 
+              ? actionButtonLoadingText 
+              : shouldShowApplyButton 
+                ? applyButtonText 
+                : actionButtonText
+            }
           </Button>
         )}
       </div>
       
-      {result === 'success' && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-green-600">{successMessage}</p>
-          {showApplyButton && onApplyClick && (
-            <Button
-              onClick={onApplyClick}
-              className="bg-green-500 hover:bg-green-600 text-white whitespace-nowrap h-10 px-4 py-2"
-            >
-              {applyButtonText}
-            </Button>
-          )}
-        </div>
+      {result === 'success' && !shouldShowApplyButton && (
+        <p className="text-sm text-green-600">{successMessage}</p>
       )}
       {result === 'error' && (
         <p className="text-sm text-red-600">{errorMessage}</p>
