@@ -2,9 +2,12 @@ package com.ssafy.keepick.friend.controller;
 
 import com.ssafy.keepick.auth.application.dto.CustomOAuth2Member;
 import com.ssafy.keepick.friend.application.FriendService;
+import com.ssafy.keepick.friend.application.dto.FriendDto;
 import com.ssafy.keepick.friend.application.dto.FriendshipDto;
 import com.ssafy.keepick.friend.controller.request.FriendCreateRequest;
+import com.ssafy.keepick.friend.controller.request.FriendRequestStatus;
 import com.ssafy.keepick.friend.controller.response.FriendCreateResponse;
+import com.ssafy.keepick.friend.controller.response.FriendDetailResponse;
 import com.ssafy.keepick.friend.controller.response.FriendResultResponse;
 import com.ssafy.keepick.global.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -12,12 +15,22 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/friends")
 @RequiredArgsConstructor
 public class FriendController {
 
     private final FriendService friendService;
+
+    @GetMapping("")
+    public ApiResponse<?> getFriendList(@RequestParam(defaultValue = "FRIENDS") FriendRequestStatus status, Authentication authentication) {
+        Long loginMemberId = getLoginMemberId(authentication);
+        List<FriendDto> dto = friendService.getFriendList(loginMemberId, status);
+        List<FriendDetailResponse> response = dto.stream().map(FriendDetailResponse::toResponse).toList();
+        return ApiResponse.ok(response);
+    }
 
     @PostMapping("")
     public ApiResponse<?> createFriendRequest(@Valid @RequestBody FriendCreateRequest request, Authentication authentication) {
