@@ -2,8 +2,8 @@ package com.ssafy.keepick.friend.application;
 
 import com.ssafy.keepick.friend.application.dto.FriendshipDto;
 import com.ssafy.keepick.friend.controller.request.FriendCreateRequest;
-import com.ssafy.keepick.friend.controller.request.FriendRequestStatus;
 import com.ssafy.keepick.friend.domain.Friendship;
+import com.ssafy.keepick.friend.domain.FriendshipStatus;
 import com.ssafy.keepick.friend.persistence.FriendshipRepository;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.member.domain.Member;
@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import static com.ssafy.keepick.global.exception.ErrorCode.*;
 
@@ -26,7 +27,7 @@ public class FriendService {
     private final FriendshipRepository friendshipRepository;
     private final MemberRepository memberRepository;
 
-    public List<FriendshipDto> getFriendList(Long loginMemberId, FriendRequestStatus status) {
+    public List<FriendshipDto> getFriendList(Long loginMemberId, FriendStatus status) {
         List<FriendshipDto> dtos = processFriendList(loginMemberId, status);
         return dtos;
     }
@@ -35,9 +36,21 @@ public class FriendService {
     public FriendshipDto createFriendRequest(@Valid FriendCreateRequest request, long loginMemberId) {
         Member sender = memberRepository.findById(loginMemberId).orElseThrow(() -> new BaseException(NOT_FOUND));
         Member receiver = memberRepository.findById(request.getFriendId()).orElseThrow(() -> new BaseException(NOT_FOUND));
-        Friendship friendship = Friendship.createFriendship(sender, receiver);
-        friendshipRepository.save(friendship);
-        FriendshipDto dto = FriendshipDto.from(friendship, friendship.getReceiver());
+        // 선행 요청 있는지 확인 -> 있으면 상대방 혹은 내가 요청한 것이므로 accept
+        Optional<Friendship> friendship = friendshipRepository.findBySenderIdAndReceiverId(sender.getId(), receiver.getId());
+        Optional<Friendship> reverseFriendship = friendshipRepository.findBySenderIdAndReceiverId(receiver.getId(), sender.getId());
+        if (friendship.isPresent()) {
+           friendship.get().accept();
+           if (reverseFriendship.get().getStatus().equals(FriendshipStatus.ACCEPTED)) return FriendshipDto.from(friendship.get(), receiver, FriendStatus.FRIEND);
+           if (reverseFriendship.get().getStatus().equals(FriendshipStatus.REJECTED)) reverseFriendship.get().request();
+           else return FriendshipDto.from(friendship.get(), receiver, FriendStatus.SENT);
+        }
+        // 새로운 요청 생성
+        Friendship senderFriendship = Friendship.createFriendship(sender, receiver); senderFriendship.accept();
+        Friendship receiverFriendship = Friendship.createFriendship(sender, receiver);
+        friendshipRepository.save(senderFriendship);
+        friendshipRepository.save(receiverFriendship);
+        FriendshipDto dto = FriendshipDto.from(senderFriendship, receiver, FriendStatus.SENT);
         return dto;
     }
 
@@ -66,9 +79,9 @@ public class FriendService {
         return friendship;
     }
 
-    private List<FriendshipDto> processFriendList(Long memberId, FriendRequestStatus status) {
-        if (status.equals(FriendRequestStatus.FRIENDS)) return getMyFriendList(memberId);
-        else if (status.equals(FriendRequestStatus.SENT)) return getSentFriendList(memberId);
+    private List<FriendshipDto> processFriendList(Long memberId, FriendStatus status) {
+        if (status.equals(FriendStatus.FRIEND)) return getMyFriendList(memberId);
+        else if (status.equals(FriendStatus.SENT)) return getSentFriendList(memberId);
         else return getReceivedFriendList(memberId); // RECEIVED
     }
 

@@ -1,5 +1,6 @@
 package com.ssafy.keepick.friend.application.dto;
 
+import com.ssafy.keepick.friend.application.FriendStatus;
 import com.ssafy.keepick.friend.domain.Friendship;
 import com.ssafy.keepick.friend.domain.FriendshipStatus;
 import com.ssafy.keepick.member.domain.Member;
@@ -17,11 +18,12 @@ public class FriendshipDto {
     private String nickname;
     private String profileUrl;
     private String email;
-    private FriendshipStatus status;
+    private FriendshipStatus friendshipStatus;
+    private FriendStatus friendStatus;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static FriendshipDto from(Friendship friendship, Member friend) {
+    public static FriendshipDto from(Friendship friendship, Member friend, FriendStatus status) {
         return FriendshipDto
                 .builder()
                 .friendshipId(friendship.getId())
@@ -30,7 +32,8 @@ public class FriendshipDto {
                 .nickname(friend.getNickname())
                 .profileUrl(friend.getProfileUrl())
                 .email(friend.getEmail())
-                .status(friendship.getStatus())
+                .friendshipStatus(friendship.getStatus())
+                .friendStatus(status)
                 .createdAt(friendship.getCreatedAt())
                 .updatedAt(friendship.getUpdatedAt())
                 .build();

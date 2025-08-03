@@ -4,7 +4,7 @@ import com.ssafy.keepick.auth.application.dto.CustomOAuth2Member;
 import com.ssafy.keepick.friend.application.FriendService;
 import com.ssafy.keepick.friend.application.dto.FriendshipDto;
 import com.ssafy.keepick.friend.controller.request.FriendCreateRequest;
-import com.ssafy.keepick.friend.controller.request.FriendRequestStatus;
+import com.ssafy.keepick.friend.application.FriendStatus;
 import com.ssafy.keepick.friend.controller.response.FriendCreateResponse;
 import com.ssafy.keepick.friend.controller.response.FriendDetailResponse;
 import com.ssafy.keepick.friend.controller.response.FriendResultResponse;
@@ -24,7 +24,7 @@ public class FriendController {
     private final FriendService friendService;
 
     @GetMapping("")
-    public ApiResponse<?> getFriendList(@RequestParam(defaultValue = "FRIENDS") FriendRequestStatus status, Authentication authentication) {
+    public ApiResponse<?> getFriendList(@RequestParam(defaultValue = "FRIEND") FriendStatus status, Authentication authentication) {
         Long loginMemberId = getLoginMemberId(authentication);
         List<FriendshipDto> dto = friendService.getFriendList(loginMemberId, status);
         List<FriendDetailResponse> response = dto.stream().map(FriendDetailResponse::toResponse).toList();

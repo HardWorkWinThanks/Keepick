@@ -25,7 +25,7 @@ public class FriendResultResponse {
                 .friendId(dto.getFriendId())
                 .name(dto.getName())
                 .nickname(dto.getNickname())
-                .status(dto.getStatus())
+                .status(dto.getFriendshipStatus())
                 .requestedAt(dto.getCreatedAt())
                 .respondedAt(dto.getUpdatedAt())
                 .build();

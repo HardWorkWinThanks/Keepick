@@ -13,6 +13,8 @@ public interface FriendshipRepository  extends JpaRepository<Friendship, Long> {
     @EntityGraph(attributePaths = {"sender"})
     Optional<Friendship> findByIdWithSender(Long id);
 
+    Optional<Friendship> findBySenderIdAndReceiverId(Long senderId, Long receiverId);
+
     // 보낸 친구 요청 목록
     @Query("""
         SELECT f
