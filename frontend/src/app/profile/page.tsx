@@ -5,8 +5,8 @@ import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { VersatileInput } from '@/components/ui/versatile-input';
+import { NaverIcon } from '@/shared/assets/NaverIcon';
 
 interface UserProfile {
   profileImage: string;
@@ -34,6 +34,14 @@ export default function ProfilePage() {
         resolve(true);
       }, 1000);
     });
+  };
+
+  const handleNicknameApply = () => {
+    setUserProfile({
+      ...userProfile,
+      nickname: nicknameInput
+    });
+    alert('닉네임이 변경되었습니다.');
   };
 
   const handleProfileImageChange = () => {
@@ -73,8 +81,8 @@ export default function ProfilePage() {
                 <CardTitle className="text-gray-900">기본 프로필</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center space-x-4">
-                  <div className="relative">
+                <div className="flex items-start space-x-6">
+                  <div className="flex flex-col items-center space-y-3">
                     <img
                       src={userProfile.profileImage}
                       alt="프로필 사진"
@@ -82,39 +90,37 @@ export default function ProfilePage() {
                     />
                     <Button
                       size="sm"
-                      className="absolute -bottom-2 -right-2 w-8 h-8 p-0 rounded-full bg-blue-500 hover:bg-blue-600 shadow-lg flex items-center justify-center" 
+                      variant="outline"
+                      className="bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
                       onClick={handleProfileImageChange}
                     >
-                      <span className="text-white text-sm">📷</span>
+                      프로필 사진 변경
                     </Button>
                   </div>
                   <div className="flex-1 space-y-4">
                     <VersatileInput
                       label="이메일"
+                      labelIcon={<NaverIcon />}
                       value={userProfile.email}
                       readOnly={true}
-                      inputClassName="bg-gray-50"
                     />
-                    <div>
-                      <Badge variant="secondary" className="text-sm">
-                        {getSocialTypeLabel(userProfile.socialType)}
-                      </Badge>
-                    </div>
+                    <VersatileInput
+                      label="닉네임"
+                      value={nicknameInput}
+                      onChange={setNicknameInput}
+                      placeholder="닉네임을 입력하세요"
+                      showActionButton={true}
+                      actionButtonText="중복체크"
+                      actionButtonLoadingText="확인중..."
+                      onActionClick={handleNicknameCheck}
+                      successMessage="사용 가능한 닉네임입니다."
+                      errorMessage="이미 사용중인 닉네임입니다."
+                      showApplyButton={true}
+                      applyButtonText="적용하기"
+                      onApplyClick={handleNicknameApply}
+                    />
                   </div>
                 </div>
-                
-                <VersatileInput
-                  label="닉네임"
-                  value={nicknameInput}
-                  onChange={setNicknameInput}
-                  placeholder="닉네임을 입력하세요"
-                  showActionButton={true}
-                  actionButtonText="중복체크"
-                  actionButtonLoadingText="확인중..."
-                  onActionClick={handleNicknameCheck}
-                  successMessage="사용 가능한 닉네임입니다."
-                  errorMessage="이미 사용중인 닉네임입니다."
-                />
               </CardContent>
             </Card>
 
@@ -124,19 +130,20 @@ export default function ProfilePage() {
                 <CardTitle className="text-gray-900">AI 인식 프로필</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center space-x-4">
-                  <div className="relative">
+                <div className="flex items-start space-x-6">
+                  <div className="flex flex-col items-center space-y-3">
                     <img
                       src={userProfile.aiProfileImage}
-                      alt="AI 인식 프로필"
+                      alt="AI 인식 프로필 사진"
                       className="w-32 h-32 rounded-full object-cover"
                     />
                     <Button
                       size="sm"
-                      className="absolute -bottom-2 -right-2 w-8 h-8 p-0 rounded-full bg-blue-500 hover:bg-blue-600 shadow-lg flex items-center justify-center" 
+                      variant="outline"
+                      className="bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
                       onClick={handleAiProfileImageChange}
                     >
-                      <span className="text-white text-sm">📷</span>
+                      AI 인식 프로필 변경
                     </Button>
                   </div>
                   <div className="flex-1">
@@ -147,7 +154,7 @@ export default function ProfilePage() {
                     </div>
                     <Button
                       variant="outline"
-                      className="mt-3 bg-pink-100 hover:bg-pink-200 text-pink-800"
+                      className="mt-3 bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
                     >
                       적절한 사진입니다!
                     </Button>
