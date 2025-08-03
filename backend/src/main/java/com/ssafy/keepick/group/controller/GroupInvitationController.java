@@ -33,7 +33,8 @@ public class GroupInvitationController {
     @Operation(summary = "그룹 초대 수락", description = "로그인한 사용자가 그룹 초대를 수락합니다.")
     @PostMapping("/{groupId}/invitations/{invitationId}")
     public ApiResponse<GroupInviteResponse> acceptInvitation(@PathVariable Long invitationId) {
-        GroupMemberDto dto = groupInvitationService.acceptInvitation(invitationId);
+        Long loginMemberId = AuthenticationUtil.getCurrentUserId();
+        GroupMemberDto dto = groupInvitationService.acceptInvitation(invitationId, loginMemberId);
         GroupInviteResponse response = GroupInviteResponse.toResponse(dto);
         return ApiResponse.ok(response);
     }
@@ -41,7 +42,8 @@ public class GroupInvitationController {
     @Operation(summary = "그룹 초대 거절", description = "로그인한 사용자가 그룹 초대를 거절합니다.")
     @DeleteMapping("/{groupId}/invitations/{invitationId}")
     public ApiResponse<GroupInviteResponse> rejectInvitation(@PathVariable Long invitationId) {
-        GroupMemberDto dto = groupInvitationService.rejectInvitation(invitationId);
+        Long loginMemberId = AuthenticationUtil.getCurrentUserId();
+        GroupMemberDto dto = groupInvitationService.rejectInvitation(invitationId, loginMemberId);
         GroupInviteResponse response = GroupInviteResponse.toResponse(dto);
         return ApiResponse.ok(response);
     }
