@@ -3,7 +3,7 @@ import https from "https";
 import express from "express";
 import fs from "fs";
 import { serverConfig } from "./server.config";
-import { logger } from "../utils/logger";
+import { logger } from "../../utils/logger";
 
 export class ServerManager {
   public server: http.Server | https.Server;
