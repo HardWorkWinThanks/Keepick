@@ -33,12 +33,10 @@ public class Friendship extends BaseTimeEntity {
     }
 
     public void accept() {
-        if(this.status != FriendshipStatus.PENDING) throw new IllegalStateException();
         this.status = FriendshipStatus.ACCEPTED;
     }
 
     public void reject() {
-        if(this.status != FriendshipStatus.PENDING) throw new IllegalStateException();
         this.status = FriendshipStatus.REJECTED;
     }
 
