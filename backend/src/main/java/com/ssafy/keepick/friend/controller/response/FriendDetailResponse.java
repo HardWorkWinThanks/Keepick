@@ -1,6 +1,6 @@
 package com.ssafy.keepick.friend.controller.response;
 
-import com.ssafy.keepick.friend.application.dto.FriendDto;
+import com.ssafy.keepick.friend.application.dto.FriendshipDto;
 import com.ssafy.keepick.friend.domain.FriendshipStatus;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,7 +19,7 @@ public class FriendDetailResponse {
     private LocalDateTime requestedAt;
     private LocalDateTime respondedAt;
 
-    public static FriendDetailResponse toResponse(FriendDto dto) {
+    public static FriendDetailResponse toResponse(FriendshipDto dto) {
         return FriendDetailResponse
                 .builder()
                 .friendshipId(dto.getFriendshipId())

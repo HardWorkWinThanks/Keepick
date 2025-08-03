@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public class FriendResultResponse {
     private Long friendshipId;
     private Long friendId;
+    private String name;
     private String nickname;
     private FriendshipStatus status;
     private LocalDateTime requestedAt;
@@ -21,8 +22,9 @@ public class FriendResultResponse {
         return FriendResultResponse
                 .builder()
                 .friendshipId(dto.getFriendshipId())
-                .friendId(dto.getSenderId())
-                .nickname(dto.getSenderNickname())
+                .friendId(dto.getFriendId())
+                .name(dto.getName())
+                .nickname(dto.getNickname())
                 .status(dto.getStatus())
                 .requestedAt(dto.getCreatedAt())
                 .respondedAt(dto.getUpdatedAt())

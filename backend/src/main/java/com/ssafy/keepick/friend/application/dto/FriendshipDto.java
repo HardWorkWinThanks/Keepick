@@ -2,6 +2,7 @@ package com.ssafy.keepick.friend.application.dto;
 
 import com.ssafy.keepick.friend.domain.Friendship;
 import com.ssafy.keepick.friend.domain.FriendshipStatus;
+import com.ssafy.keepick.member.domain.Member;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -11,37 +12,24 @@ import java.time.LocalDateTime;
 @Builder
 public class FriendshipDto {
     private Long friendshipId;
-    private Long senderId;
-    private String senderName;
-    private String senderNickname;
-    private Long receiverId;
-    private String receiverName;
-    private String receiverNickname;
+    private Long friendId;
+    private String name;
+    private String nickname;
+    private String profileUrl;
+    private String email;
     private FriendshipStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static FriendshipDto from(Friendship friendship) {
-        return FriendshipDto.builder()
+    public static FriendshipDto from(Friendship friendship, Member friend) {
+        return FriendshipDto
+                .builder()
                 .friendshipId(friendship.getId())
-                .senderId(friendship.getSender().getId())
-                .senderName(friendship.getSender().getName())
-                .senderNickname(friendship.getSender().getNickname())
-                .receiverId(friendship.getReceiver().getId())
-                .receiverName(friendship.getReceiver().getName())
-                .receiverNickname(friendship.getReceiver().getNickname())
-                .status(friendship.getStatus())
-                .createdAt(friendship.getCreatedAt())
-                .updatedAt(friendship.getUpdatedAt())
-                .build();
-    }
-
-    public static FriendshipDto fromWithSenderOnly(Friendship friendship) {
-        return FriendshipDto.builder()
-                .friendshipId(friendship.getId())
-                .senderId(friendship.getSender().getId())
-                .senderName(friendship.getSender().getName())
-                .senderNickname(friendship.getSender().getNickname())
+                .friendId(friend.getId())
+                .name(friend.getName())
+                .nickname(friend.getNickname())
+                .profileUrl(friend.getProfileUrl())
+                .email(friend.getEmail())
                 .status(friendship.getStatus())
                 .createdAt(friendship.getCreatedAt())
                 .updatedAt(friendship.getUpdatedAt())

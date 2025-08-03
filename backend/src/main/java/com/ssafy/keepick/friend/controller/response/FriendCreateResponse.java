@@ -13,18 +13,20 @@ public class FriendCreateResponse {
 
     private Long friendshipId;
     private Long friendId;
+    private String name;
+    private String nickname;
     private FriendshipStatus status;
     private LocalDateTime requestedAt;
-    private LocalDateTime respondedAt;
 
     public static FriendCreateResponse toResponse(FriendshipDto dto) {
         return FriendCreateResponse
                 .builder()
                 .friendshipId(dto.getFriendshipId())
-                .friendId(dto.getReceiverId())
+                .friendId(dto.getFriendId())
+                .name(dto.getName())
+                .nickname(dto.getNickname())
                 .status(dto.getStatus())
                 .requestedAt(dto.getCreatedAt())
-                .respondedAt(dto.getUpdatedAt())
                 .build();
     }
 
