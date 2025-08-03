@@ -13,12 +13,13 @@ import com.ssafy.keepick.auth.application.dto.MemberDto;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @AllArgsConstructor
+@Slf4j
 public class JWTFilter extends OncePerRequestFilter {
     private final JWTUtil jwtUtil;
 
@@ -26,26 +27,22 @@ public class JWTFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // cookie들을 불러온 뒤 Authorization Key에 담긴 쿠키를 찾음
-        String authorization = null;
-        Cookie[] cookies = request.getCookies();
-        for (Cookie cookie : cookies) {
-            if (cookie.getName().equals("Authorization")) {
-                authorization = cookie.getValue();
-            }
-        }
+        // Authorization 헤더 가져오기
+        String authorization = request.getHeader("Authorization");
 
         // Authorization 헤더 검증
-        if (authorization == null) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {    
+            log.info("Authorization 헤더가 없거나 유효하지 않습니다.");
             filterChain.doFilter(request, response);
             return;
         }
 
         // 토큰
-        String token = authorization;
+        String token = authorization.split(" ")[1];
 
         // 토큰 소멸 시간 검증
         if (jwtUtil.isExpired(token)) {
+            log.info("토큰이 만료되었습니다.");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             filterChain.doFilter(request, response);
 
