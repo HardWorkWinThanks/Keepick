@@ -63,28 +63,6 @@ public class Member {
     }
     
     /**
-     * 소셜 로그인 시 프로필 정보 업데이트
-     * @param name 최신 이름
-     * @param profileUrl 최신 프로필 이미지 URL
-     * @return 업데이트가 발생했는지 여부
-     */
-    public boolean updateSocialProfile(String name, String profileUrl) {
-        boolean updated = false;
-        
-        if (name != null && !name.equals(this.name)) {
-            this.name = name;
-            updated = true;
-        }
-        
-        if (!isEqual(this.profileUrl, profileUrl)) {
-            this.profileUrl = profileUrl;
-            updated = true;
-        }
-        
-        return updated;
-    }
-    
-    /**
      * 두 문자열이 같은지 null-safe하게 비교
      */
     private boolean isEqual(String str1, String str2) {
