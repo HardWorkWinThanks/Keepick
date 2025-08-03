@@ -3,6 +3,9 @@ package com.ssafy.keepick.global.security.filter;
 import java.io.IOException;
 
 import com.ssafy.keepick.global.security.util.JWTUtil;
+import com.ssafy.keepick.global.response.ResponseCode;
+import com.ssafy.keepick.global.response.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,25 +36,33 @@ public class JWTFilter extends OncePerRequestFilter {
         // Authorization 헤더 검증
         if (authorization == null || !authorization.startsWith("Bearer ")) {    
             log.info("Authorization 헤더가 없거나 유효하지 않습니다.");
-            filterChain.doFilter(request, response);
+            sendErrorResponse(response, ResponseCode.UNAUTHORIZED);
             return;
         }
 
         // 토큰
         String token = authorization.split(" ")[1];
 
-        // 토큰 소멸 시간 검증
-        if (jwtUtil.isExpired(token)) {
-            log.info("토큰이 만료되었습니다.");
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            filterChain.doFilter(request, response);
+        Long memberId;
+        String username;
+        String role;
 
+        try {
+            // 토큰 소멸 시간 검증
+            if (jwtUtil.isExpired(token)) {
+                log.info("토큰이 만료되었습니다.");
+                sendErrorResponse(response, ResponseCode.UNAUTHORIZED);
+                return;
+            }
+
+            memberId = jwtUtil.getMemberId(token);
+            username = jwtUtil.getUsername(token);
+            role = jwtUtil.getRole(token);
+        } catch (Exception e) {
+            log.info("유효하지 않은 토큰입니다: {}", e.getMessage());
+            sendErrorResponse(response, ResponseCode.UNAUTHORIZED);
             return;
         }
-
-        Long memberId = jwtUtil.getMemberId(token);
-        String username = jwtUtil.getUsername(token);
-        String role = jwtUtil.getRole(token);
 
         // userDTO를 생성하여 값 set
         MemberDto memberDto = MemberDto.of(memberId, username, role);
@@ -66,5 +77,16 @@ public class JWTFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(authToken);
 
         filterChain.doFilter(request, response);
+    }
+
+    private void sendErrorResponse(HttpServletResponse response, ResponseCode code) throws IOException {
+        response.setStatus(code.getStatus());
+        response.setContentType("application/json;charset=UTF-8");
+        
+        ApiResponse<Object> apiResponse = ApiResponse.of(code);
+        ObjectMapper objectMapper = new ObjectMapper();
+        String jsonResponse = objectMapper.writeValueAsString(apiResponse);
+        
+        response.getWriter().write(jsonResponse);
     }
 }
