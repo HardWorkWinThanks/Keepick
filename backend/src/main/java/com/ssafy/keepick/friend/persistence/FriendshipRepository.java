@@ -14,11 +14,33 @@ public interface FriendshipRepository  extends JpaRepository<Friendship, Long> {
     Optional<Friendship> findByIdWithSender(Long id);
 
     // 보낸 친구 요청 목록
+    @Query("""
+        SELECT f
+        FROM Friendship f
+            JOIN FETCH f.receiver r
+        WHERE f.status IN (FriendshipStatus.PENDING, FriendshipStatus.REJECTED)
+            AND f.sender.id = :senderId
+        """)
     List<Friendship> findAllWithReceiverBySenderId(Long senderId);
 
     // 받은 친구 요청 목록
+    @Query("""
+        SELECT f
+        FROM Friendship f
+            JOIN FETCH f.sender s
+        WHERE f.status IN (FriendshipStatus.PENDING, FriendshipStatus.REJECTED)
+            AND f.receiver.id = :receiverId
+        """)
     List<Friendship> findAllWithSenderByReceiverId(Long receiverId);
 
     // 친구 목록 조회
+    @Query("""
+        SELECT f
+        FROM Friendship f
+            JOIN FETCH f.sender s
+            JOIN FETCH f.receiver r
+        WHERE f.status = FriendshipStatus.ACCEPTED
+            AND (s.id = :memberId OR r.id = :memberId)
+        """)
     List<Friendship> findAcceptedAllByMemberId(Long memberId);
 }
