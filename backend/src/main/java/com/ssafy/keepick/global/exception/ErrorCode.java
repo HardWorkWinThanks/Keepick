@@ -25,6 +25,8 @@ public enum ErrorCode {
     // Friend
     FRIENDSHIP_FORBIDDEN(HttpStatus.FORBIDDEN, "친구 요청을 처리할 권한이 없습니다", "F001"),
     FRIENDSHIP_NOT_FOUND(HttpStatus.NOT_FOUND, "친구 요청을 찾을 수 없습니다", "F002"),
+    FRIENDSHIP_DUPLICATE(HttpStatus.CONFLICT, "이미 친구인 회원입니다.", "F003"),
+    FRIENDSHIP_INCONSISTENT_STATE(HttpStatus.INTERNAL_SERVER_ERROR, "친구 요청 처리 중 오류가 발생했습니다.", "F004"),
 
     // 시스템 에러
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다.", "S001");

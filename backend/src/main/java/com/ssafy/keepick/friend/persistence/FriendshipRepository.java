@@ -15,6 +15,14 @@ public interface FriendshipRepository  extends JpaRepository<Friendship, Long> {
 
     Optional<Friendship> findBySenderIdAndReceiverId(Long senderId, Long receiverId);
 
+    @Query("""
+        SELECT COUNT(f) > 0
+        FROM Friendship f
+        WHERE f.sender.id = :senderId AND f.receiver.id = :receiverId
+        AND f.status = FriendshipStatus.ACCEPTED
+        """)
+    boolean existsAcceptedFriendshipBetween(Long senderId, Long receiverId);
+
     // 보낸 친구 요청 목록
     @Query("""
         SELECT f
