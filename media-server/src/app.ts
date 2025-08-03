@@ -3,10 +3,11 @@ import https from "https";
 import http from "http"; 
 import cors from "cors";
 
-import { serverConfig } from "./server/server.config";
-import { ServerManager } from './server/server.manager'
-import { SocketManager } from "./socket/socket.manager";
-import { mediasoupService } from "./services/mediasoup.service";
+import { serverConfig } from "./infra/server/server.config";
+import { ServerManager } from './infra/server/server.manager'
+import { SocketManager } from "./infra/socket/socket.manager";
+import { mediasoupService } from "./domain/media/mediasoup.service";
+import { apiRoutes } from "./routes/api.routes";
 
 import { logger } from "./utils/logger";
 
@@ -29,6 +30,8 @@ class Application {
   }
 
   private setupRoutes() {
+    this.app.use("/", apiRoutes);
+
     this.app.get("/", (req, res) => {
       res.send(`
         <h2>MediaSoup SFU Server (${this.serverManager.server instanceof https.Server ? "HTTPS" : "HTTP"})</h2>
