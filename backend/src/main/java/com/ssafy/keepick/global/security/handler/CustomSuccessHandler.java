@@ -15,7 +15,9 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
@@ -36,6 +38,7 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         String token = jwtUtil.createToken(customUserDetails.getMemberId(), username);
 
+        log.info("토큰 생성 완료. {}", token);
         response.addCookie(createCookie("Authorization", token));
         response.sendRedirect(frontendUrl + "/");
     }

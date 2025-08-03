@@ -2,10 +2,6 @@ package com.ssafy.keepick.global.security.filter;
 
 import java.io.IOException;
 
-import com.ssafy.keepick.global.security.util.JWTUtil;
-import com.ssafy.keepick.global.response.ResponseCode;
-import com.ssafy.keepick.global.response.ApiResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -13,6 +9,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.ssafy.keepick.auth.application.dto.CustomOAuth2Member;
 import com.ssafy.keepick.auth.application.dto.MemberDto;
+import com.ssafy.keepick.global.security.util.JWTUtil;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -35,8 +32,8 @@ public class JWTFilter extends OncePerRequestFilter {
 
         // Authorization 헤더 검증
         if (authorization == null || !authorization.startsWith("Bearer ")) {    
-            log.info("Authorization 헤더가 없거나 유효하지 않습니다.");
-            sendErrorResponse(response, ResponseCode.UNAUTHORIZED);
+            log.info("Authorization 헤더가 없습니다.");
+            filterChain.doFilter(request, response);  // 다음 필터로 계속 진행
             return;
         }
 
@@ -51,7 +48,7 @@ public class JWTFilter extends OncePerRequestFilter {
             // 토큰 소멸 시간 검증
             if (jwtUtil.isExpired(token)) {
                 log.info("토큰이 만료되었습니다.");
-                sendErrorResponse(response, ResponseCode.UNAUTHORIZED);
+                filterChain.doFilter(request, response);
                 return;
             }
 
@@ -59,8 +56,8 @@ public class JWTFilter extends OncePerRequestFilter {
             username = jwtUtil.getUsername(token);
             role = jwtUtil.getRole(token);
         } catch (Exception e) {
-            log.info("유효하지 않은 토큰입니다: {}", e.getMessage());
-            sendErrorResponse(response, ResponseCode.UNAUTHORIZED);
+            log.info("유효하지 않은 토큰입니다: {}.", e.getMessage());
+            filterChain.doFilter(request, response);
             return;
         }
 
@@ -76,17 +73,8 @@ public class JWTFilter extends OncePerRequestFilter {
         // 세션에 사용자 등록
         SecurityContextHolder.getContext().setAuthentication(authToken);
 
-        filterChain.doFilter(request, response);
-    }
+        log.info("토큰 검증 완료. {}", memberDto.getMemberId(), memberDto.getUsername(), memberDto.getName());
 
-    private void sendErrorResponse(HttpServletResponse response, ResponseCode code) throws IOException {
-        response.setStatus(code.getStatus());
-        response.setContentType("application/json;charset=UTF-8");
-        
-        ApiResponse<Object> apiResponse = ApiResponse.of(code);
-        ObjectMapper objectMapper = new ObjectMapper();
-        String jsonResponse = objectMapper.writeValueAsString(apiResponse);
-        
-        response.getWriter().write(jsonResponse);
+        filterChain.doFilter(request, response);
     }
 }
