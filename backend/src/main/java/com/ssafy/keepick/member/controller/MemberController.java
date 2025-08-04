@@ -1,9 +1,9 @@
 package com.ssafy.keepick.member.controller;
 
+import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.member.application.MemberService;
 import com.ssafy.keepick.member.controller.response.MemberInfoResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,8 +20,8 @@ public class MemberController {
      * @return 사용자 정보 응답
      */
     @GetMapping("/me")
-    public ResponseEntity<MemberInfoResponse> getCurrentMemberInfo() {
+    public ApiResponse<MemberInfoResponse> getCurrentMemberInfo() {
         MemberInfoResponse response = memberService.getCurrentMemberInfo();
-        return ResponseEntity.ok(response);
+        return ApiResponse.ok(response);
     }
 }
