@@ -1,5 +1,6 @@
 package com.ssafy.keepick.member.controller;
 
+import com.ssafy.keepick.auth.application.dto.MemberDto;
 import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.member.application.MemberService;
 import com.ssafy.keepick.member.controller.response.MemberInfoResponse;
@@ -12,16 +13,18 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/members")
 @RequiredArgsConstructor
 public class MemberController {
-    
+
     private final MemberService memberService;
-    
+
     /**
      * 현재 로그인된 사용자의 정보를 조회합니다.
+     * 
      * @return 사용자 정보 응답
      */
     @GetMapping("/me")
     public ApiResponse<MemberInfoResponse> getCurrentMemberInfo() {
-        MemberInfoResponse response = memberService.getCurrentMemberInfo();
+        MemberDto memberDto = memberService.getCurrentMemberInfo();
+        MemberInfoResponse response = MemberInfoResponse.from(memberDto);
         return ApiResponse.ok(response);
     }
 }
