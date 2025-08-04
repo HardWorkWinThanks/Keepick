@@ -95,7 +95,7 @@ public class SecurityConfig {
                         .requestMatchers("/login/oauth2/**", "/oauth2/**").permitAll()
                         
                         // 개발용 (필요시 주석 해제)
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api-docs").permitAll()
                         
                         // 나머지 모든 요청은 인증 필요 (API 포함)
                         .anyRequest().authenticated());
