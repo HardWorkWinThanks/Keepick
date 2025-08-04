@@ -166,16 +166,85 @@ class FriendServiceTest {
         System.out.println("friendship.getStatus() = " + friendship.getStatus()); // PENDING
     }
 
-
     @DisplayName("친구 요청을 수락한다.")
     @Test
-    void acceptFriendRequest() {
-        
+    void acceptFriendRequestTest() {
+        // given
+        Member sender = createMember(1);
+        Member receiver = createMember(2);
+        memberRepository.save(sender);
+        memberRepository.save(receiver);
+
+        // sender -> receiver 친구 요청 생성
+        Friendship friendship1 = Friendship.createFriendship(sender, receiver); friendship1.accept();
+        Friendship friendship2 = Friendship.createFriendship(receiver, sender);
+        friendshipRepository.save(friendship1);
+        friendshipRepository.save(friendship2);
+
+        // when
+        FriendshipDto dto = friendService.acceptFriendRequest(friendship2.getId(), receiver.getId());
+
+        // then
+        assertThat(dto.getFriendshipStatus()).isEqualTo(FriendshipStatus.ACCEPTED);
+        assertThat(dto.getFriendStatus()).isEqualTo(FriendStatus.FRIEND);
+        assertThat(dto.getFriendId()).isEqualTo(sender.getId());
+
+        boolean b1 = friendshipRepository.existsAcceptedFriendshipBetween(sender.getId(), receiver.getId());
+        boolean b2 = friendshipRepository.existsAcceptedFriendshipBetween(receiver.getId(), sender.getId());
+        assertThat(b1).isTrue();
+        assertThat(b2).isTrue();
     }
 
     @DisplayName("친구 요청을 거절한다.")
     @Test
-    void rejectFriendRequest() {
+    void rejectFriendRequestTest() {
+        // given
+        Member sender = createMember(1);
+        Member receiver = createMember(2);
+        memberRepository.save(sender);
+        memberRepository.save(receiver);
+
+        // sender -> receiver 친구 요청 생성
+        Friendship friendship1 = Friendship.createFriendship(sender, receiver); friendship1.accept();
+        Friendship friendship2 = Friendship.createFriendship(receiver, sender);
+        friendshipRepository.save(friendship1);
+        friendshipRepository.save(friendship2);
+
+        // when
+        FriendshipDto dto = friendService.rejectFriendRequest(friendship2.getId(), receiver.getId());
+
+        // then
+        assertThat(dto.getFriendshipStatus()).isEqualTo(FriendshipStatus.REJECTED);
+        assertThat(dto.getFriendStatus()).isEqualTo(FriendStatus.RECEIVED);
+        assertThat(dto.getFriendId()).isEqualTo(sender.getId());
+
+        boolean b1 = friendshipRepository.existsAcceptedFriendshipBetween(sender.getId(), receiver.getId());
+        boolean b2 = friendshipRepository.existsAcceptedFriendshipBetween(receiver.getId(), sender.getId());
+        assertThat(b1).isTrue();
+        assertThat(b2).isFalse();
+    }
+
+    @DisplayName("자신이 받은 친구 요청만 처리할 수 있다.")
+    @Test
+    void processOnlyFriendRequestToMe() {
+        // given
+        Member sender = createMember(0);
+        Member receiver1 = createMember(1);
+        Member receiver2 = createMember(2);
+        memberRepository.save(sender);
+        memberRepository.save(receiver1);
+
+        // sender -> receiver1 친구 요청 생성
+        Friendship friendship1 = Friendship.createFriendship(sender, receiver1); friendship1.accept();
+        Friendship friendship2 = Friendship.createFriendship(receiver1, sender);
+        friendshipRepository.save(friendship1);
+        friendshipRepository.save(friendship2);
+
+        // when & then
+        assertThatThrownBy(() -> friendService.rejectFriendRequest(friendship2.getId(), receiver2.getId()))
+                .isInstanceOf(BaseException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FRIENDSHIP_FORBIDDEN);
+
     }
 
     private Member createMember(int n) {

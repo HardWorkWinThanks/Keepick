@@ -30,7 +30,7 @@ public class FriendshipRepositoryTest {
 
     @DisplayName("친구 요청한 회원을 함께 조회한다.")
     @Test
-    void findWithSenderById() {
+    void findWithReceiverByIdTest() {
         // given
         Member sender = createMember(1);
         Member receiver = createMember(2);
@@ -45,18 +45,18 @@ public class FriendshipRepositoryTest {
         em.clear();
 
         // when
-        Friendship findFriendship = friendshipRepository.findWithSenderById(friendship.getId()).get();
+        Friendship findFriendship = friendshipRepository.findWithReceiverById(friendship.getId()).get();
 
         // then
         assertThat(findFriendship).isNotNull();
 
-        assertThat(Hibernate.isInitialized(findFriendship.getSender())).isTrue();
-        assertThat(Hibernate.isInitialized(findFriendship.getReceiver())).isFalse();
+        assertThat(Hibernate.isInitialized(findFriendship.getSender())).isFalse();
+        assertThat(Hibernate.isInitialized(findFriendship.getReceiver())).isTrue();
     }
 
     @DisplayName("두 회원이 친구인지 확인한다.")
     @Test
-    void existsAcceptedFriendshipBetween() {
+    void existsAcceptedFriendshipBetweenTest() {
         // given
         Member member = createMember(0);
         Member member1 = createMember(1);

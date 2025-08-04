@@ -10,8 +10,8 @@ import java.util.Optional;
 
 public interface FriendshipRepository  extends JpaRepository<Friendship, Long> {
 
-    @EntityGraph(attributePaths = {"sender"})
-    Optional<Friendship> findWithSenderById(Long id);
+    @EntityGraph(attributePaths = {"receiver"})
+    Optional<Friendship> findWithReceiverById(Long id);
 
     Optional<Friendship> findBySenderIdAndReceiverId(Long senderId, Long receiverId);
 
