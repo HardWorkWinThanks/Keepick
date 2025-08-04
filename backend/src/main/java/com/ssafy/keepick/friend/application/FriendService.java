@@ -35,6 +35,9 @@ public class FriendService {
 
     @Transactional
     public FriendshipDto createFriendRequest(@Valid FriendCreateRequest request, long loginMemberId) {
+        // 자신에게 친구 요청인 경우
+        validateMyself(loginMemberId, request.getFriendId());
+
         // 회원 조회
         Member sender = memberRepository.findById(loginMemberId).orElseThrow(() -> new BaseException(NOT_FOUND));
         Member receiver = memberRepository.findById(request.getFriendId()).orElseThrow(() -> new BaseException(NOT_FOUND));
@@ -65,6 +68,10 @@ public class FriendService {
         friendship.reject();
         FriendshipDto dto = FriendshipDto.from(friendship, friendship.getSender(), FriendStatus.RECEIVED);
         return dto;
+    }
+
+    private void validateMyself(Long senderId, Long receiverId) {
+        if (senderId.equals(receiverId)) throw new BaseException(INVALID_PARAMETER);
     }
 
     private void validateAlreadyFriend(Member sender, Member receiver) {
@@ -102,7 +109,8 @@ public class FriendService {
         senderFriendship.accept();
 
         // receiver -> sender로 요청 생성
-        Friendship receiverFriendship = Friendship.createFriendship(sender, receiver);
+        Friendship receiverFriendship = Friendship.createFriendship(receiver, sender);
+
         friendshipRepository.save(senderFriendship);
         friendshipRepository.save(receiverFriendship);
 
@@ -113,7 +121,7 @@ public class FriendService {
     private Friendship findAndValidateFriendship(Long requestId, Long memberId) {
         Friendship friendship = friendshipRepository.findWithSenderById(requestId).orElseThrow(() -> new BaseException(FRIENDSHIP_NOT_FOUND));
         // 로그인한 회원이 받은 친구 요청인지 확인
-        if (!Objects.equals(friendship.getReceiver().getId(), memberId)) {
+        if (!Objects.equals(friendship.getSender().getId(), memberId)) {
             throw new BaseException(FRIENDSHIP_FORBIDDEN);
         }
         return friendship;
