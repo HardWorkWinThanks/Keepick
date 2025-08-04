@@ -16,7 +16,7 @@ public class FriendCreateResponse {
     private Long friendId;
     private String name;
     private String nickname;
-    private FriendStatus status;
+    private FriendStatus friendStatus;
     private LocalDateTime requestedAt;
 
     public static FriendCreateResponse toResponse(FriendshipDto dto) {
@@ -26,7 +26,7 @@ public class FriendCreateResponse {
                 .friendId(dto.getFriendId())
                 .name(dto.getName())
                 .nickname(dto.getNickname())
-                .status(dto.getFriendStatus())
+                .friendStatus(dto.getFriendStatus())
                 .requestedAt(dto.getCreatedAt())
                 .build();
     }
