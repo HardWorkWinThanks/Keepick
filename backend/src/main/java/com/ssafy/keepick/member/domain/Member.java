@@ -66,14 +66,19 @@ public class Member {
      * 사용자 프로필 정보 업데이트
      * @param nickname 수정할 닉네임
      * @param profileUrl 수정할 프로필 이미지 URL
+     * @param identificationUrl 수정할 신분증 이미지 URL
      */
-    public void updateProfile(String nickname, String profileUrl) {
+    public void updateProfile(String nickname, String profileUrl, String identificationUrl) {
         if (nickname != null && !nickname.equals(this.nickname)) {
             this.nickname = nickname;
         }
         
         if (!isEqual(this.profileUrl, profileUrl)) {
             this.profileUrl = profileUrl;
+        }
+        
+        if (!isEqual(this.identificationUrl, identificationUrl)) {
+            this.identificationUrl = identificationUrl;
         }
     }
     
