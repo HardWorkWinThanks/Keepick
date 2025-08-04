@@ -26,4 +26,10 @@ public class GroupPhotoDto {
                 .height(Photo.getHeight())
                 .build();
     }
+
+    public static GroupPhotoDto from(Long photoId) {
+        return GroupPhotoDto.builder()
+                .photoId(photoId)
+                .build();
+    }
 }

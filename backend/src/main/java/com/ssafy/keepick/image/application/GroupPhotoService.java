@@ -6,6 +6,7 @@ import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.image.application.dto.GroupPhotoDto;
 import com.ssafy.keepick.image.controller.request.GroupPhotoCreateRequest;
+import com.ssafy.keepick.image.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.image.domain.Photo;
 import com.ssafy.keepick.image.persistence.PhotoRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,17 @@ public class GroupPhotoService {
                 .toList();
         photoRepository.saveAll(photoList);
         return photoList.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<GroupPhotoDto> deleteGroupPhoto(Long groupId, GroupPhotoDeleteRequest request) {
+        // 1. 그룹 확인
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
+        // 2. 사진 삭제
+        List<Long> ids = request.getPhotoIds();
+        photoRepository.softDeleteAllById(ids);
+        return ids.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
     }
 
 }

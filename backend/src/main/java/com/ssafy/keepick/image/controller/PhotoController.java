@@ -4,7 +4,9 @@ import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.image.application.GroupPhotoService;
 import com.ssafy.keepick.image.application.dto.GroupPhotoDto;
 import com.ssafy.keepick.image.controller.request.GroupPhotoCreateRequest;
+import com.ssafy.keepick.image.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.image.controller.response.GroupPhotoDetailResponse;
+import com.ssafy.keepick.image.controller.response.GroupPhotoIdResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,8 +36,10 @@ public class PhotoController {
     }
 
     @DeleteMapping("/groups/{groupId}/photos")
-    public ApiResponse<?> deleteGroupPhotos(@PathVariable Long groupId) {
-        return null;
+    public ApiResponse<List<GroupPhotoIdResponse>> deleteGroupPhotos(@PathVariable Long groupId,
+                                            @RequestBody GroupPhotoDeleteRequest request) {
+        List<GroupPhotoDto> result = groupPhotoService.deleteGroupPhoto(groupId, request);
+        return ApiResponse.created(GroupPhotoIdResponse.from(result));
     }
 
 }
