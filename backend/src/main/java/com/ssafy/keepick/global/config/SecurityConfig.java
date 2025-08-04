@@ -54,6 +54,10 @@ public class SecurityConfig {
         // oauth2
         http
                 .oauth2Login((oauth2) -> oauth2
+                        .authorizationEndpoint((authorization) -> authorization
+                                .baseUri("/api/oauth2/authorization"))
+                        .redirectionEndpoint((redirection) -> redirection
+                                .baseUri("/api/login/oauth2/code/*"))
                         .userInfoEndpoint((userInfoEndpointConfig) -> userInfoEndpointConfig
                                 .userService(customOAuth2MemberService))
                         .successHandler(customSuccessHandler));
@@ -92,7 +96,7 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests((auth) -> auth
                         // OAuth 로그인 관련 경로만 인증 불필요
-                        .requestMatchers("/login/oauth2/**", "/oauth2/**").permitAll()
+                        .requestMatchers("/api/login/oauth2/**", "/api/oauth2/**").permitAll()
                         
                         // 개발용 (필요시 주석 해제)
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api-docs").permitAll()
