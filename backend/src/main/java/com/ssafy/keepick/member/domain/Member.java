@@ -63,25 +63,18 @@ public class Member {
     }
     
     /**
-     * 소셜 로그인 시 프로필 정보 업데이트
-     * @param name 최신 이름
-     * @param profileUrl 최신 프로필 이미지 URL
-     * @return 업데이트가 발생했는지 여부
+     * 사용자 프로필 정보 업데이트
+     * @param nickname 수정할 닉네임
+     * @param profileUrl 수정할 프로필 이미지 URL
      */
-    public boolean updateSocialProfile(String name, String profileUrl) {
-        boolean updated = false;
-        
-        if (name != null && !name.equals(this.name)) {
-            this.name = name;
-            updated = true;
+    public void updateProfile(String nickname, String profileUrl) {
+        if (nickname != null && !nickname.equals(this.nickname)) {
+            this.nickname = nickname;
         }
         
         if (!isEqual(this.profileUrl, profileUrl)) {
             this.profileUrl = profileUrl;
-            updated = true;
         }
-        
-        return updated;
     }
     
     /**
