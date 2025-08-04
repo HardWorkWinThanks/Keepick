@@ -46,21 +46,21 @@ public class FileUtils {
         return objectKey.substring(objectKey.lastIndexOf('/') + 1);
     }
 
-    private static void validateContentType(String contentType, String fileName) {
+    public static void validateContentType(String contentType, String fileName) {
         if (contentType == null || !SUPPORTED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
             throw new IllegalArgumentException(String.format(
                     "지원하지 않는 파일 형식입니다: %s (파일: %s)", contentType, fileName));
         }
     }
 
-    private static void validateFileSize(long fileSize, String fileName) {
+    public static void validateFileSize(long fileSize, String fileName) {
         if (fileSize > MAX_FILE_SIZE) {
             throw new IllegalArgumentException(String.format(
                     "파일 크기가 너무 큽니다: %s (최대 %dMB)", fileName, MAX_FILE_SIZE / 1024 / 1024));
         }
     }
 
-    private static void validateFileName(String fileName) {
+    public static void validateFileName(String fileName) {
         if (fileName == null || fileName.trim().isEmpty()) {
             throw new IllegalArgumentException("파일명이 비어있습니다.");
         }

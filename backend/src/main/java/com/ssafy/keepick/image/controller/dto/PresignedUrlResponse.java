@@ -5,18 +5,16 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class PresignedUrlResponse {
-    private List<String> presignedUrls;
+    private String presignedUrl;
 
-    public static PresignedUrlResponse of (List<String> presignedUrls) {
+    public static PresignedUrlResponse of(String string) {
         return PresignedUrlResponse.builder()
-                .presignedUrls(presignedUrls)
+                .presignedUrl(string)
                 .build();
     }
 }

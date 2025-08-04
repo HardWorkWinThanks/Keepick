@@ -3,7 +3,6 @@ import com.ssafy.keepick.external.s3.S3FileOperationService;
 import com.ssafy.keepick.external.s3.S3PresignedUrlService;
 import com.ssafy.keepick.image.application.dto.ImageDto;
 import com.ssafy.keepick.image.controller.dto.ImageUploadRequest;
-import com.ssafy.keepick.image.controller.dto.PresignedUrlResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,10 +20,10 @@ public class ImageService {
         return presignedUrlService.generatePresignedUrl(fileName, contentType);
     }
 
-    public PresignedUrlResponse generatePresignedUrls(ImageUploadRequest fileInfos) {
-        List<ImageDto> imageDtos = fileInfos.toDto();
-        List<String> presignedUrls = presignedUrlService.generatePresignedUrls(imageDtos);
-        return PresignedUrlResponse.of(presignedUrls);
+    public List<String> generatePresignedUrls(ImageUploadRequest request) {
+        List<ImageDto> imageDtoList = ImageDto.from(request);
+        imageDtoList.forEach(ImageDto::validate);
+        return presignedUrlService.generatePresignedUrls(imageDtoList);
     }
 
     // 파일 작업 관련 메서드들
