@@ -31,9 +31,9 @@ public class GroupService {
     private final MemberRepository memberRepository;
 
     @Transactional
-    public GroupDto createGroup(GroupCreateRequest request, Long memberId) {
+    public GroupDto createGroup(GroupCreateRequest request, Long loginMemberId) {
         // 그룹 생성
-        Member member = memberRepository.findById(memberId).orElseThrow(() -> new BaseException(NOT_FOUND));
+        Member member = memberRepository.findById(loginMemberId).orElseThrow(() -> new BaseException(MEMBER_NOT_FOUND));
         Group group = Group.createGroup(request.getName(), member);
         groupRepository.save(group);
         // 그룹 생성자는 그룹에 가입
@@ -42,8 +42,8 @@ public class GroupService {
         return dto;
     }
 
-    public List<GroupMemberDto> getGroupList(Long memberId, GroupMemberStatus status) {
-        List<GroupMember> groupMembers = groupMemberRepository.findGroupsByMember(memberId, status);
+    public List<GroupMemberDto> getGroupList(Long loginMemberId, GroupMemberStatus status) {
+        List<GroupMember> groupMembers = groupMemberRepository.findGroupsByMember(loginMemberId, status);
         List<GroupMemberDto> dto = groupMembers.stream().map(GroupMemberDto::from).toList();
         return dto;
     }
@@ -70,8 +70,8 @@ public class GroupService {
     }
 
     @Transactional
-    public void leaveGroup(Long groupId, Long memberId) {
-        GroupMember groupMember = groupMemberRepository.findByGroupIdAndMemberIdAndStatus(groupId, memberId, GroupMemberStatus.ACCEPTED).orElseThrow(() -> new BaseException(NOT_FOUND));
+    public void leaveGroup(Long groupId, Long loginMemberId) {
+        GroupMember groupMember = groupMemberRepository.findByGroupIdAndMemberIdAndStatus(groupId, loginMemberId, GroupMemberStatus.ACCEPTED).orElseThrow(() -> new BaseException(NOT_FOUND));
         groupMember.leave();
     }
 
