@@ -5,7 +5,7 @@
   export const handleSocialLogin = async (provider: SocialProvider) => {
     try {
       // 타입을 명시적으로 지정
-      const response = await apiClient.get<OAuthUrlResponse>(`/api/auth/${provider}`);
+      const response = await apiClient.get<OAuthUrlResponse>(`/api/oauth2/authorization/${provider}`);
       const { authUrl } = response.data;
 
       window.location.href = authUrl;

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/shared/config";
 import Link from "next/link";
 import {
   Bars3Icon,
@@ -10,7 +12,6 @@ import {
   ArrowLeftStartOnRectangleIcon, // [추가] 대시보드 이동 아이콘
 } from "@heroicons/react/24/outline";
 import Image from "next/image";
-
 
 
 interface HeaderProps {
@@ -24,8 +25,11 @@ export default function Header({
 }: HeaderProps) {
   const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
 
+  // authSlice.ts의 name이 auth, 
+  const user = useSelector((state: RootState) => state.auth.user)
+
   // 실제로는 인증 상태에서 가져올 데이터
-  const user = { name: "wmwogus", imageUrl: "/jaewan1.jpg" };
+  // const user = { name: "wmwogus", imageUrl: "/jaewan1.jpg" };
 
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-sm shadow-sm h-16">
