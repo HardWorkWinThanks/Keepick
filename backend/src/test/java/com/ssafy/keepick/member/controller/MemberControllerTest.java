@@ -21,6 +21,7 @@ import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.member.application.MemberService;
 import com.ssafy.keepick.member.controller.request.MemberUpdateRequest;
 import com.ssafy.keepick.member.controller.response.MemberInfoResponse;
+import com.ssafy.keepick.member.controller.response.MemberSearchResponse;
 
 @ExtendWith(MockitoExtension.class)
 class MemberControllerTest {
@@ -179,5 +180,97 @@ class MemberControllerTest {
                 .isEqualTo(ErrorCode.INVALID_PARAMETER);
 
         verify(memberService).updateCurrentMemberInfo(request);
+    }
+    
+    @Test
+    @DisplayName("닉네임으로 사용자 검색 API 성공")
+    void searchMemberByNickname_Success() {
+        // given
+        String searchNickname = "테스트닉네임";
+        MemberDto mockMemberDto = MemberDto.builder()
+                .memberId(42L)
+                .nickname(searchNickname)
+                .profileUrl("https://example.com/profile.jpg")
+                .email("test@example.com")
+                .provider("kakao")
+                .identificationUrl("https://example.com/id.jpg")
+                .build();
+        
+        given(memberService.searchMemberByNickname(searchNickname)).willReturn(mockMemberDto);
+
+        // when
+        ApiResponse<MemberSearchResponse> response = memberController.searchMemberByNickname(searchNickname);
+
+        // then
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getData()).isNotNull();
+        assertThat(response.getData().getMemberId()).isEqualTo(42L);
+        assertThat(response.getData().getNickname()).isEqualTo(searchNickname);
+        assertThat(response.getData().getProfileUrl()).isEqualTo("https://example.com/profile.jpg");
+        verify(memberService).searchMemberByNickname(searchNickname);
+    }
+    
+    @Test
+    @DisplayName("닉네임으로 사용자 검색 API 성공 - 프로필 이미지가 null인 경우")
+    void searchMemberByNickname_Success_WithNullProfileUrl() {
+        // given
+        String searchNickname = "테스트닉네임";
+        MemberDto mockMemberDto = MemberDto.builder()
+                .memberId(42L)
+                .nickname(searchNickname)
+                .profileUrl(null)
+                .email("test@example.com")
+                .provider("kakao")
+                .identificationUrl("https://example.com/id.jpg")
+                .build();
+        
+        given(memberService.searchMemberByNickname(searchNickname)).willReturn(mockMemberDto);
+
+        // when
+        ApiResponse<MemberSearchResponse> response = memberController.searchMemberByNickname(searchNickname);
+
+        // then
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getData()).isNotNull();
+        assertThat(response.getData().getMemberId()).isEqualTo(42L);
+        assertThat(response.getData().getNickname()).isEqualTo(searchNickname);
+        assertThat(response.getData().getProfileUrl()).isNull();
+        verify(memberService).searchMemberByNickname(searchNickname);
+    }
+    
+    @Test
+    @DisplayName("존재하지 않는 닉네임으로 검색시 예외 처리")
+    void searchMemberByNickname_MemberNotFound_ThrowsException() {
+        // given
+        String searchNickname = "존재하지않는닉네임";
+        given(memberService.searchMemberByNickname(searchNickname))
+                .willThrow(new BaseException(ErrorCode.MEMBER_NOT_FOUND));
+
+        // when & then
+        assertThatThrownBy(() -> memberController.searchMemberByNickname(searchNickname))
+                .isInstanceOf(BaseException.class)
+                .hasMessage("존재하지 않는 회원입니다.")
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
+
+        verify(memberService).searchMemberByNickname(searchNickname);
+    }
+    
+    @Test
+    @DisplayName("잘못된 닉네임으로 검색시 예외 처리")
+    void searchMemberByNickname_InvalidNickname_ThrowsException() {
+        // given
+        String invalidNickname = "";
+        given(memberService.searchMemberByNickname(invalidNickname))
+                .willThrow(new BaseException(ErrorCode.INVALID_PARAMETER));
+
+        // when & then
+        assertThatThrownBy(() -> memberController.searchMemberByNickname(invalidNickname))
+                .isInstanceOf(BaseException.class)
+                .hasMessage("잘못된 요청 파라미터입니다.")
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVALID_PARAMETER);
+
+        verify(memberService).searchMemberByNickname(invalidNickname);
     }
 }

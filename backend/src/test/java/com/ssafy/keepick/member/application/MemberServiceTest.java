@@ -21,6 +21,7 @@ import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.auth.application.dto.MemberDto;
 import com.ssafy.keepick.member.controller.request.MemberUpdateRequest;
 import com.ssafy.keepick.member.controller.response.MemberInfoResponse;
+import com.ssafy.keepick.member.controller.response.MemberSearchResponse;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
 
@@ -211,5 +212,118 @@ class MemberServiceTest {
 
             verify(memberRepository).findById(testMemberId);
         }
+    }
+    
+    @Test
+    @DisplayName("닉네임으로 사용자 검색 성공")
+    void searchMemberByNickname_Success() {
+        // given
+        String searchNickname = "테스트닉네임";
+        given(testMember.getId()).willReturn(testMemberId);
+        given(testMember.getNickname()).willReturn(searchNickname);
+        given(testMember.getProfileUrl()).willReturn("https://example.com/profile.jpg");
+        given(testMember.getEmail()).willReturn("test@example.com");
+        given(testMember.getProvider()).willReturn("kakao");
+        given(testMember.getIdentificationUrl()).willReturn("https://example.com/id.jpg");
+        given(memberRepository.findByNickname(searchNickname)).willReturn(testMember);
+
+        // when
+        MemberDto response = memberService.searchMemberByNickname(searchNickname);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getMemberId()).isEqualTo(testMemberId);
+        assertThat(response.getNickname()).isEqualTo(searchNickname);
+        assertThat(response.getProfileUrl()).isEqualTo("https://example.com/profile.jpg");
+        verify(memberRepository).findByNickname(searchNickname);
+    }
+    
+    @Test
+    @DisplayName("닉네임으로 사용자 검색 성공 - 프로필 이미지가 null인 경우")
+    void searchMemberByNickname_Success_WithNullProfileUrl() {
+        // given
+        String searchNickname = "테스트닉네임";
+        given(testMember.getId()).willReturn(testMemberId);
+        given(testMember.getNickname()).willReturn(searchNickname);
+        given(testMember.getProfileUrl()).willReturn(null);
+        given(testMember.getEmail()).willReturn("test@example.com");
+        given(testMember.getProvider()).willReturn("kakao");
+        given(testMember.getIdentificationUrl()).willReturn("https://example.com/id.jpg");
+        given(memberRepository.findByNickname(searchNickname)).willReturn(testMember);
+
+        // when
+        MemberDto response = memberService.searchMemberByNickname(searchNickname);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getMemberId()).isEqualTo(testMemberId);
+        assertThat(response.getNickname()).isEqualTo(searchNickname);
+        assertThat(response.getProfileUrl()).isNull();
+        verify(memberRepository).findByNickname(searchNickname);
+    }
+    
+    @Test
+    @DisplayName("존재하지 않는 닉네임으로 검색시 예외 발생")
+    void searchMemberByNickname_MemberNotFound_ThrowsException() {
+        // given
+        String searchNickname = "존재하지않는닉네임";
+        given(memberRepository.findByNickname(searchNickname)).willReturn(null);
+
+        // when & then
+        assertThatThrownBy(() -> memberService.searchMemberByNickname(searchNickname))
+                .isInstanceOf(BaseException.class)
+                .hasMessage("존재하지 않는 회원입니다.")
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
+
+        verify(memberRepository).findByNickname(searchNickname);
+    }
+    
+    @Test
+    @DisplayName("빈 닉네임으로 검색시 예외 발생")
+    void searchMemberByNickname_EmptyNickname_ThrowsException() {
+        // given
+        String emptyNickname = "";
+
+        // when & then
+        assertThatThrownBy(() -> memberService.searchMemberByNickname(emptyNickname))
+                .isInstanceOf(BaseException.class)
+                .hasMessage("잘못된 요청 파라미터입니다.")
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVALID_PARAMETER);
+
+        verify(memberRepository, never()).findByNickname(any());
+    }
+    
+    @Test
+    @DisplayName("공백만 있는 닉네임으로 검색시 예외 발생")
+    void searchMemberByNickname_BlankNickname_ThrowsException() {
+        // given
+        String blankNickname = "   ";
+
+        // when & then
+        assertThatThrownBy(() -> memberService.searchMemberByNickname(blankNickname))
+                .isInstanceOf(BaseException.class)
+                .hasMessage("잘못된 요청 파라미터입니다.")
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVALID_PARAMETER);
+
+        verify(memberRepository, never()).findByNickname(any());
+    }
+    
+    @Test
+    @DisplayName("null 닉네임으로 검색시 예외 발생")
+    void searchMemberByNickname_NullNickname_ThrowsException() {
+        // given
+        String nullNickname = null;
+
+        // when & then
+        assertThatThrownBy(() -> memberService.searchMemberByNickname(nullNickname))
+                .isInstanceOf(BaseException.class)
+                .hasMessage("잘못된 요청 파라미터입니다.")
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVALID_PARAMETER);
+
+        verify(memberRepository, never()).findByNickname(any());
     }
 }

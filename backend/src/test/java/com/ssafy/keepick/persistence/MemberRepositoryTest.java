@@ -167,4 +167,64 @@ class MemberRepositoryTest {
         assertThat(savedMember.getProfileUrl()).isNull();
         assertThat(savedMember.getName()).isEqualTo("박길동");
     }
+    
+    @Test
+    @DisplayName("닉네임으로 회원을 조회한다")
+    void shouldFindMemberByNickname() {
+        // given
+        Member member = Member.builder()
+                .name("닉네임테스트")
+                .email("nickname@example.com")
+                .nickname("테스트닉네임")
+                .profileUrl("https://example.com/nickname.jpg")
+                .provider("kakao")
+                .providerId("nickname123")
+                .build();
+        
+        entityManager.persistAndFlush(member);
+
+        // when
+        Member foundMember = memberRepository.findByNickname("테스트닉네임");
+
+        // then
+        assertThat(foundMember).isNotNull();
+        assertThat(foundMember.getName()).isEqualTo("닉네임테스트");
+        assertThat(foundMember.getNickname()).isEqualTo("테스트닉네임");
+        assertThat(foundMember.getEmail()).isEqualTo("nickname@example.com");
+        assertThat(foundMember.getProfileUrl()).isEqualTo("https://example.com/nickname.jpg");
+    }
+    
+    @Test
+    @DisplayName("존재하지 않는 닉네임으로 조회 시 null을 반환한다")
+    void shouldReturnNullWhenNicknameNotFound() {
+        // when
+        Member foundMember = memberRepository.findByNickname("존재하지않는닉네임");
+
+        // then
+        assertThat(foundMember).isNull();
+    }
+    
+    @Test
+    @DisplayName("프로필 URL이 null인 회원도 닉네임으로 조회된다")
+    void shouldFindMemberByNicknameWithNullProfileUrl() {
+        // given
+        Member member = Member.builder()
+                .name("널프로필")
+                .email("nullprofile@example.com")
+                .nickname("널프로필닉네임")
+                .profileUrl(null)
+                .provider("google")
+                .providerId("nullprofile456")
+                .build();
+        
+        entityManager.persistAndFlush(member);
+
+        // when
+        Member foundMember = memberRepository.findByNickname("널프로필닉네임");
+
+        // then
+        assertThat(foundMember).isNotNull();
+        assertThat(foundMember.getNickname()).isEqualTo("널프로필닉네임");
+        assertThat(foundMember.getProfileUrl()).isNull();
+    }
 } 
