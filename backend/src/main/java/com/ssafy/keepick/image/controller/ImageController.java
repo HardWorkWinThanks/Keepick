@@ -10,9 +10,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Slf4j
 @RestController
-@RequestMapping("/api/image")
+@RequestMapping("/api/photos")
 @RequiredArgsConstructor
 public class ImageController {
     private final ImageService imageService;
@@ -21,9 +24,22 @@ public class ImageController {
      * Presigned URL 배열 생성 API
      */
     @PostMapping("/presigned-urls")
-    public ResponseEntity<ApiResponse<PresignedUrlResponse>> generatePresignedUrls(
+    public ResponseEntity<ApiResponse<List<PresignedUrlResponse>>> generatePresignedUrls(
             @Valid @RequestBody ImageUploadRequest request) {
-        PresignedUrlResponse response = imageService.generatePresignedUrls(request);
+        List<String> result = imageService.generatePresignedUrls(request);
+        List<PresignedUrlResponse> response = result.stream()
+                .map(PresignedUrlResponse::of)
+                .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    /**
+     * Presigned URL 생성 API
+     */
+    @PostMapping("/presigned-url")
+    public ResponseEntity<ApiResponse<PresignedUrlResponse>> generatePresignedUrl(
+            @Valid @RequestBody ImageUploadRequest.ImageFileRequest request) {
+        String result = imageService.generatePresignedUrl(request.getFileName(), request.getContentType());
+        return  ResponseEntity.ok(ApiResponse.ok(PresignedUrlResponse.of(result)));
     }
 }
