@@ -15,6 +15,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 
 import com.ssafy.keepick.auth.application.CustomOAuth2MemberService;
 import com.ssafy.keepick.global.security.filter.JWTFilter;
+import com.ssafy.keepick.global.security.handler.CustomAuthenticationEntryPoint;
 import com.ssafy.keepick.global.security.handler.CustomSuccessHandler;
 import com.ssafy.keepick.global.security.util.JWTUtil;
 
@@ -28,6 +29,7 @@ public class SecurityConfig {
 
     private final CustomOAuth2MemberService customOAuth2MemberService;
     private final CustomSuccessHandler customSuccessHandler;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final JWTUtil jwtUtil;
 
     @Value("${app.frontend.url}")
@@ -97,10 +99,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests((auth) -> auth
                         // OAuth 로그인 관련 경로만 인증 불필요
                         .requestMatchers("/api/login/oauth2/**", "/api/oauth2/**").permitAll()
-                        
+
                         // 개발용 (필요시 주석 해제)
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api-docs").permitAll()
-                        
+
                         // 나머지 모든 요청은 인증 필요 (API 포함)
                         .anyRequest().authenticated());
 
@@ -108,6 +110,11 @@ public class SecurityConfig {
         http
                 .sessionManagement((session) -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        // 인증되지 않은 사용자 접근 시 JSON 응답 처리
+        http
+                .exceptionHandling((exceptions) -> exceptions
+                        .authenticationEntryPoint(customAuthenticationEntryPoint));
 
         return http.build();
     }
