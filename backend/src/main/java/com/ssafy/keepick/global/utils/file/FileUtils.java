@@ -1,9 +1,14 @@
 package com.ssafy.keepick.global.utils.file;
 
 
+import com.ssafy.keepick.global.exception.BaseException;
+import com.ssafy.keepick.global.exception.ErrorCode;
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.Set;
 import java.util.UUID;
 
+@Slf4j
 public class FileUtils {
 
     private static final Set<String> SUPPORTED_IMAGE_TYPES = Set.of(
@@ -48,25 +53,26 @@ public class FileUtils {
 
     public static void validateContentType(String contentType, String fileName) {
         if (contentType == null || !SUPPORTED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
-            throw new IllegalArgumentException(String.format(
-                    "지원하지 않는 파일 형식입니다: %s (파일: %s)", contentType, fileName));
+            log.error("지원하지 않는 파일 형식입니다: {} (파일: {})", contentType, fileName);
+            throw new BaseException(ErrorCode.INVALID_FILE);
         }
     }
 
     public static void validateFileSize(long fileSize, String fileName) {
         if (fileSize > MAX_FILE_SIZE) {
-            throw new IllegalArgumentException(String.format(
-                    "파일 크기가 너무 큽니다: %s (최대 %dMB)", fileName, MAX_FILE_SIZE / 1024 / 1024));
+            log.error("파일 크기가 너무 큽니다: {} (최대 {}MB)", fileName, MAX_FILE_SIZE / 1024 / 1024);
+            throw new BaseException(ErrorCode.INVALID_FILE);
         }
     }
 
     public static void validateFileName(String fileName) {
         if (fileName == null || fileName.trim().isEmpty()) {
-            throw new IllegalArgumentException("파일명이 비어있습니다.");
+            log.error("파일명이 비어있습니다.");
+            throw new BaseException(ErrorCode.INVALID_FILE);
         }
         if (fileName.contains("..") || fileName.contains("/")) {
-            throw new IllegalArgumentException(
-                    String.format("허용되지 않는 문자가 포함된 파일명입니다: %s", fileName));
+            log.error("허용되지 않는 문자가 포함된 파일명입니다: {}", fileName);
+            throw new BaseException(ErrorCode.INVALID_FILE);
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.ssafy.keepick.external.s3;
 
+import com.ssafy.keepick.global.exception.BaseException;
+import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.global.utils.file.FileUtils;
 import com.ssafy.keepick.image.application.dto.ImageDto;
 import lombok.RequiredArgsConstructor;
@@ -52,12 +54,12 @@ public class S3PresignedUrlService {
             PresignedPutObjectRequest presignedRequest = s3Presigner.presignPutObject(presignRequest);
             String presignedUrl = presignedRequest.url().toString();
 
-            log.info("Generated presigned URL for file: {} -> {}", fileName, objectKey);
+            log.debug("Presigned URL 생성: {} -> {}", fileName, objectKey);
             return presignedUrl;
 
         } catch (Exception e) {
-            log.error("Failed to generate presigned URL for file: {}", fileName, e);
-            throw new RuntimeException("Presigned URL 생성 실패: " + e.getMessage(), e);
+            log.error("Presigned URL 생성 실패: {}", fileName, e);
+            throw new BaseException(ErrorCode.PRESIGNED_URL_GENERATION_FAILED);
         }
     }
 

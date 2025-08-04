@@ -1,5 +1,7 @@
 package com.ssafy.keepick.external.s3;
 
+import com.ssafy.keepick.global.exception.BaseException;
+import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.global.utils.file.FileUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,15 +41,15 @@ public class S3FileOperationService {
             ResponseInputStream<GetObjectResponse> response = s3Client.getObject(getObjectRequest);
             byte[] fileContent = response.readAllBytes();
 
-            log.info("Downloaded file from S3: {} ({} bytes)", objectKey, fileContent.length);
+            log.debug("S3에서 파일 다운로드: {} ({} bytes)", objectKey, fileContent.length);
             return fileContent;
 
         } catch (IOException e) {
-            log.error("Failed to read file content from S3: {}", objectKey, e);
-            throw new RuntimeException("S3 파일 읽기 실패: " + e.getMessage(), e);
+            log.error("S3 파일 읽기 실패: {}", objectKey, e);
+            throw new BaseException(ErrorCode.INTERNAL_S3_ERROR);
         } catch (Exception e) {
-            log.error("Failed to download file from S3: {}", objectKey, e);
-            throw new RuntimeException("S3 파일 다운로드 실패: " + e.getMessage(), e);
+            log.error("S3 파일 다운로드 실패3: {}", objectKey, e);
+            throw new BaseException(ErrorCode.INTERNAL_S3_ERROR);
         }
     }
 
@@ -66,11 +68,11 @@ public class S3FileOperationService {
             s3Client.putObject(putObjectRequest,
                     RequestBody.fromInputStream(new ByteArrayInputStream(fileContent), fileContent.length));
 
-            log.info("Uploaded file to S3: {} ({} bytes)", objectKey, fileContent.length);
+            log.debug("S3 파일 업로드: {} ({} bytes)", objectKey, fileContent.length);
 
         } catch (Exception e) {
-            log.error("Failed to upload file to S3: {}", objectKey, e);
-            throw new RuntimeException("S3 파일 업로드 실패: " + e.getMessage(), e);
+            log.error("S3 파일 업로드 실패: {}", objectKey, e);
+            throw new BaseException(ErrorCode.INTERNAL_S3_ERROR);
         }
     }
 
@@ -81,7 +83,7 @@ public class S3FileOperationService {
         String fileName = FileUtils.extractFileName(originalObjectKey);
         String thumbnailKey = thumbnailsPrefix + fileName;
         uploadFile(thumbnailKey, thumbnailContent, "image/jpeg");
-        log.info("Uploaded thumbnail: {} -> {}", originalObjectKey, thumbnailKey);
+        log.info("썸네일 업로드: {} -> {}", originalObjectKey, thumbnailKey);
     }
 
     /**
@@ -100,7 +102,7 @@ public class S3FileOperationService {
         } catch (NoSuchKeyException e) {
             return false;
         } catch (Exception e) {
-            log.error("Error checking if file exists: {}", objectKey, e);
+            log.error("S3 파일이 존재하지 않음: {}", objectKey, e);
             return false;
         }
     }
