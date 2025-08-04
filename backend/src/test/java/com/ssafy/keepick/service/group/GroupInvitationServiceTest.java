@@ -119,14 +119,14 @@ public class GroupInvitationServiceTest {
         groupMemberRepository.save(groupMember);
 
         // when
-        GroupMemberDto result = groupInvitationService.acceptInvitation(groupMember.getId());
+        GroupMemberDto result = groupInvitationService.acceptInvitation(groupMember.getId(), member.getId());
         List<Long> joinedMemberIds = groupMemberRepository.findJoinedMembersById(group.getId()).stream().map(gm -> gm.getMember().getId()).toList();
 
         // then
         assertThat(result.getStatus()).isEqualTo(GroupMemberStatus.ACCEPTED);
         assertThat(joinedMemberIds).containsExactly(member.getId());
 
-        assertThrows(BaseException.class, () -> groupInvitationService.acceptInvitation(1234567L));
+        assertThrows(BaseException.class, () -> groupInvitationService.acceptInvitation(1234567L, member.getId()));
     }
 
     @DisplayName("그룹 초대를 거절한다")
@@ -143,14 +143,14 @@ public class GroupInvitationServiceTest {
         groupMemberRepository.save(groupMember);
 
         // when
-        GroupMemberDto result = groupInvitationService.rejectInvitation(groupMember.getId());
+        GroupMemberDto result = groupInvitationService.rejectInvitation(groupMember.getId(), member.getId());
         List<Long> rejectGroupIds = groupMemberRepository.findGroupsByMember(member.getId(), GroupMemberStatus.REJECTED).stream().map(gm -> gm.getGroup().getId()).toList();
 
         // then
         assertThat(result.getStatus()).isEqualTo(GroupMemberStatus.REJECTED);
         assertThat(rejectGroupIds).containsExactly(group.getId());
 
-        assertThrows(BaseException.class, () -> groupInvitationService.rejectInvitation(1234567L));
+        assertThrows(BaseException.class, () -> groupInvitationService.rejectInvitation(1234567L, member.getId()));
     }
 
     @DisplayName("그룹 초대 링크를 생성한다")

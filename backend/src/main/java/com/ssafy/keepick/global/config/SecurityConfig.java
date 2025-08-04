@@ -91,7 +91,13 @@ public class SecurityConfig {
         // 경로별 인가 작업
         http
                 .authorizeHttpRequests((auth) -> auth
-                        .requestMatchers("/**").permitAll()
+                        // OAuth 로그인 관련 경로만 인증 불필요
+                        .requestMatchers("/login/oauth2/**", "/oauth2/**").permitAll()
+                        
+                        // 개발용 (필요시 주석 해제)
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api-docs").permitAll()
+                        
+                        // 나머지 모든 요청은 인증 필요 (API 포함)
                         .anyRequest().authenticated());
 
         // 세션 설정 : STATELESS
