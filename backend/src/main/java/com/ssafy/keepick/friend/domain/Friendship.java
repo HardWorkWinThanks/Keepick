@@ -4,10 +4,13 @@ import com.ssafy.keepick.global.entity.BaseTimeEntity;
 import com.ssafy.keepick.group.domain.GroupMemberStatus;
 import com.ssafy.keepick.member.domain.Member;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Friendship extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

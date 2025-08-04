@@ -16,7 +16,8 @@ public class FriendDetailResponse {
     private String name;
     private String nickname;
     private String profileUrl;
-    private FriendStatus status;
+    private FriendshipStatus friendshipStatus;
+    private FriendStatus friendStatus;
     private LocalDateTime requestedAt;
     private LocalDateTime respondedAt;
 
@@ -28,7 +29,8 @@ public class FriendDetailResponse {
                 .name(dto.getName())
                 .nickname(dto.getNickname())
                 .profileUrl(dto.getProfileUrl())
-                .status(dto.getFriendStatus())
+                .friendshipStatus(dto.getFriendshipStatus())
+                .friendStatus(dto.getFriendStatus())
                 .requestedAt(dto.getCreatedAt())
                 .respondedAt(dto.getUpdatedAt())
                 .build();

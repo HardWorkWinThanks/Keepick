@@ -28,8 +28,9 @@ public class FriendService {
     private final MemberRepository memberRepository;
 
     public List<FriendshipDto> getFriendList(Long loginMemberId, FriendStatus status) {
-        List<FriendshipDto> dtos = processFriendList(loginMemberId, status);
-        return dtos;
+        if (status.equals(FriendStatus.FRIEND)) return getMyFriendList(loginMemberId);
+        else if (status.equals(FriendStatus.SENT)) return getSentFriendList(loginMemberId);
+        else return getReceivedFriendList(loginMemberId); // RECEIVED
     }
 
     @Transactional
@@ -62,7 +63,7 @@ public class FriendService {
     public FriendshipDto rejectFriendRequest(Long requestId, Long loginMemberId) {
         Friendship friendship = findAndValidateFriendship(requestId, loginMemberId);
         friendship.reject();
-        FriendshipDto dto = FriendshipDto.from(friendship, friendship.getSender(), FriendStatus.NONE);
+        FriendshipDto dto = FriendshipDto.from(friendship, friendship.getSender(), FriendStatus.RECEIVED);
         return dto;
     }
 
@@ -110,7 +111,7 @@ public class FriendService {
     }
 
     private Friendship findAndValidateFriendship(Long requestId, Long memberId) {
-        Friendship friendship = friendshipRepository.findByIdWithSender(requestId).orElseThrow(() -> new BaseException(FRIENDSHIP_NOT_FOUND));
+        Friendship friendship = friendshipRepository.findWithSenderById(requestId).orElseThrow(() -> new BaseException(FRIENDSHIP_NOT_FOUND));
         // 로그인한 회원이 받은 친구 요청인지 확인
         if (!Objects.equals(friendship.getReceiver().getId(), memberId)) {
             throw new BaseException(FRIENDSHIP_FORBIDDEN);
@@ -118,33 +119,21 @@ public class FriendService {
         return friendship;
     }
 
-    private List<FriendshipDto> processFriendList(Long memberId, FriendStatus status) {
-        if (status.equals(FriendStatus.FRIEND)) return getMyFriendList(memberId);
-        else if (status.equals(FriendStatus.SENT)) return getSentFriendList(memberId);
-        else return getReceivedFriendList(memberId); // RECEIVED
-    }
-
     private List<FriendshipDto> getMyFriendList(Long memberId) {
         List<Friendship> friendships = friendshipRepository.findAcceptedAllByMemberId(memberId);
-        List<FriendshipDto> dtos = friendships
-                .stream()
-                .map(friendship -> {
-                    Member friend = friendship.getSender().getId().equals(memberId) ? friendship.getReceiver() : friendship.getSender();
-                    return FriendshipDto.from(friendship, friend, FriendStatus.FRIEND);
-                })
-                .toList();
+        List<FriendshipDto> dtos = friendships.stream().map(friendship -> FriendshipDto.from(friendship, friendship.getSender(), FriendStatus.FRIEND)).toList();
         return dtos;
     }
 
     private List<FriendshipDto> getSentFriendList(Long memberId) {
-        List<Friendship> friendships = friendshipRepository.findAllWithReceiverBySenderId(memberId);
-        List<FriendshipDto> dtos = friendships.stream().map(friendship -> FriendshipDto.from(friendship, friendship.getReceiver(), FriendStatus.SENT)).toList();
+        List<Friendship> friendships = friendshipRepository.findSentAllByMemberId(memberId);
+        List<FriendshipDto> dtos = friendships.stream().map(friendship -> FriendshipDto.from(friendship, friendship.getSender(), FriendStatus.SENT)).toList();
         return dtos;
     }
 
     private List<FriendshipDto> getReceivedFriendList(Long memberId) {
-        List<Friendship> friendships = friendshipRepository.findAllWithSenderByReceiverId(memberId);
-        List<FriendshipDto> dtos = friendships.stream().map(friendship -> FriendshipDto.from(friendship, friendship.getSender(), FriendStatus.RECEIVED)).toList();
+        List<Friendship> friendships = friendshipRepository.findReceivedAllByMemberId(memberId);
+        List<FriendshipDto> dtos = friendships.stream().map(friendship -> FriendshipDto.from(friendship, friendship.getReceiver(), FriendStatus.RECEIVED)).toList();
         return dtos;
     }
 
