@@ -24,32 +24,36 @@ public class FriendController {
 
     private final FriendService friendService;
 
+    @Operation(summary = "친구 목록 조회", description = "로그인한 사용자의 친구/요청한/요청받은 친구 목록을 조회합니다.")
     @GetMapping("")
-    public ApiResponse<?> getFriendList(@RequestParam(defaultValue = "FRIEND") FriendStatus status) {
+    public ApiResponse<List<FriendDetailResponse>> getFriendList(@Parameter(description = "조회할 친구 조건")  @RequestParam(defaultValue = "FRIEND") FriendStatus status) {
         Long loginMemberId = AuthenticationUtil.getCurrentUserId();
         List<FriendshipDto> dto = friendService.getFriendList(loginMemberId, status);
         List<FriendDetailResponse> response = dto.stream().map(FriendDetailResponse::toResponse).toList();
         return ApiResponse.ok(response);
     }
 
+    @Operation(summary = "친구 요청 생성", description = "로그인한 사용자가 다른 회원에게 친구 요청을 합니다.")
     @PostMapping("")
-    public ApiResponse<?> createFriendRequest(@Valid @RequestBody FriendCreateRequest request) {
+    public ApiResponse<FriendCreateResponse> createFriendRequest(@Parameter(description = "친구 요청할 회원의 ID") @Valid @RequestBody FriendCreateRequest request) {
         Long loginMemberId = AuthenticationUtil.getCurrentUserId();
         FriendshipDto dto = friendService.createFriendRequest(request, loginMemberId);
         FriendCreateResponse response = FriendCreateResponse.toResponse(dto);
         return ApiResponse.ok(response);
     }
 
+    @Operation(summary = "친구 요청 수락", description = "로그인한 사용자가 받은 친구 요청을 수락합니다.")
     @PostMapping("/requests/{requestId}")
-    public ApiResponse<?> acceptFriendRequest(@PathVariable Long requestId) {
+    public ApiResponse<FriendResultResponse> acceptFriendRequest(@PathVariable Long requestId) {
         Long loginMemberId = AuthenticationUtil.getCurrentUserId();
         FriendshipDto dto = friendService.acceptFriendRequest(requestId, loginMemberId);
         FriendResultResponse response = FriendResultResponse.toResponse(dto);
         return ApiResponse.ok(response);
     }
 
+    @Operation(summary = "친구 요청 수락", description = "로그인한 사용자가 받은 친구 요청을 거절합니다.")
     @DeleteMapping("/requests/{requestId}")
-    public ApiResponse<?> rejectFriendRequest(@PathVariable Long requestId) {
+    public ApiResponse<FriendResultResponse> rejectFriendRequest(@PathVariable Long requestId) {
         Long loginMemberId = AuthenticationUtil.getCurrentUserId();
         FriendshipDto dto = friendService.rejectFriendRequest(requestId, loginMemberId);
         FriendResultResponse response = FriendResultResponse.toResponse(dto);
