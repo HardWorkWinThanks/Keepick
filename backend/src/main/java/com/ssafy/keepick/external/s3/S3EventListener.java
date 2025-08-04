@@ -2,6 +2,7 @@ package com.ssafy.keepick.external.s3;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.keepick.external.redis.RedisService;
 import io.awspring.cloud.sqs.annotation.SqsListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,9 +11,9 @@ import org.springframework.stereotype.Component;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
-import java.util.Set;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+
 
 @Slf4j
 @Component
@@ -21,15 +22,13 @@ public class S3EventListener {
 
     private final ThumbnailService thumbnailService;
     private final ObjectMapper objectMapper;
+    private final RedisService redisService;
 
     @Value("${app.aws.s3.bucket-name}")
     private String bucketName;
 
     @Value("${app.aws.s3.originals-prefix}")
     private String originalsPrefix;
-
-    // 중복 처리 방지를 위한 처리된 메시지 ID 저장
-    private final Set<String> processedMessages = new HashSet<>();
 
     /**
      * SQS 메시지 수신 및 처리
@@ -98,7 +97,7 @@ public class S3EventListener {
             }
 
             // PUT 이벤트만 처리
-            if (!eventName.startsWith("s3:ObjectCreated:")) {
+            if (!eventName.startsWith("ObjectCreated:PUT")) {
                 log.debug("Ignoring non-create event: {}", eventName);
                 return;
             }
@@ -111,19 +110,11 @@ public class S3EventListener {
 
             // 중복 처리 방지
             String messageId = generateMessageId(eventName, bucketNameFromEvent, objectKey);
-            if (processedMessages.contains(messageId)) {
+            if (isDuplicate(messageId)) {
                 log.warn("Duplicate message ignored: {}", messageId);
                 return;
             }
 
-            // 처리된 메시지로 마킹 (메모리 기반, 실제 운영에서는 Redis 등 사용 권장)
-            processedMessages.add(messageId);
-
-            // 메시지 ID 캐시 크기 제한 (메모리 누수 방지)
-            if (processedMessages.size() > 1000) {
-                processedMessages.clear();
-                log.info("Cleared processed messages cache");
-            }
 
             // 비동기로 썸네일 생성 처리
             CompletableFuture<Void> thumbnailFuture = thumbnailService.processImageIfSupported(
@@ -144,6 +135,16 @@ public class S3EventListener {
             log.error("Failed to process S3 event record: {}", record, e);
             throw new RuntimeException("S3 이벤트 레코드 처리 실패", e);
         }
+    }
+
+    public boolean isDuplicate(String messageId) {
+        // Redis에 key가 남아있다면 중복
+        if (redisService.getValue(messageId) != null) {
+            return true;
+        }
+        // 없으면 등록 (TTL: 10분)
+        redisService.setValue(messageId, "1", Duration.ofMinutes(10));
+        return false;
     }
 
     /**
