@@ -1,5 +1,6 @@
 package com.ssafy.keepick.external.s3;
 
+import com.ssafy.keepick.global.utils.file.FileUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,7 +19,6 @@ import java.io.IOException;
 public class S3FileOperationService {
 
     private final S3Client s3Client;
-    private final FileNameGenerator fileNameGenerator;
 
     @Value("${app.aws.s3.bucket-name}")
     private String bucketName;
@@ -78,7 +78,7 @@ public class S3FileOperationService {
      * 썸네일 파일을 S3에 업로드
      */
     public void uploadThumbnail(String originalObjectKey, byte[] thumbnailContent) {
-        String fileName = fileNameGenerator.extractFileName(originalObjectKey);
+        String fileName = FileUtils.extractFileName(originalObjectKey);
         String thumbnailKey = thumbnailsPrefix + fileName;
         uploadFile(thumbnailKey, thumbnailContent, "image/jpeg");
         log.info("Uploaded thumbnail: {} -> {}", originalObjectKey, thumbnailKey);

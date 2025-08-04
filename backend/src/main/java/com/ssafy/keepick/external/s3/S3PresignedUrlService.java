@@ -1,5 +1,6 @@
 package com.ssafy.keepick.external.s3;
 
+import com.ssafy.keepick.global.utils.file.FileUtils;
 import com.ssafy.keepick.image.application.dto.ImageDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +20,6 @@ import java.util.List;
 public class S3PresignedUrlService {
 
     private final S3Presigner s3Presigner;
-    private final FileNameGenerator fileNameGenerator;
 
     @Value("${app.aws.s3.bucket-name}")
     private String bucketName;
@@ -35,7 +35,7 @@ public class S3PresignedUrlService {
      */
     public String generatePresignedUrl(String fileName, String contentType) {
         try {
-            String uniqueFileName = fileNameGenerator.generateUniqueFileName(fileName);
+            String uniqueFileName = FileUtils.generateUniqueFileName(fileName);
             String objectKey = originalsPrefix + uniqueFileName;
 
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()

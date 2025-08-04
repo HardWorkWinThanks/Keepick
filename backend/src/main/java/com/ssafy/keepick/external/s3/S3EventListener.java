@@ -3,6 +3,7 @@ package com.ssafy.keepick.external.s3;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keepick.external.redis.RedisService;
+import com.ssafy.keepick.global.utils.file.FileUtils;
 import io.awspring.cloud.sqs.annotation.SqsListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -119,7 +120,7 @@ public class S3EventListener {
             // 비동기로 썸네일 생성 처리
             CompletableFuture<Void> thumbnailFuture = thumbnailService.processImageIfSupported(
                     objectKey,
-                    guessContentTypeFromKey(objectKey)
+                    FileUtils.guessContentType(objectKey)
             );
 
             // 썸네일 처리 결과 로깅 (논블로킹)
@@ -152,24 +153,5 @@ public class S3EventListener {
      */
     private String generateMessageId(String eventName, String bucketName, String objectKey) {
         return String.format("%s:%s:%s", eventName, bucketName, objectKey);
-    }
-
-    /**
-     * Object Key로부터 Content-Type 추정
-     */
-    private String guessContentTypeFromKey(String objectKey) {
-        String lowerKey = objectKey.toLowerCase();
-
-        if (lowerKey.endsWith(".jpg") || lowerKey.endsWith(".jpeg")) {
-            return "image/jpeg";
-        } else if (lowerKey.endsWith(".png")) {
-            return "image/png";
-        } else if (lowerKey.endsWith(".gif")) {
-            return "image/gif";
-        } else if (lowerKey.endsWith(".webp")) {
-            return "image/webp";
-        }
-
-        return null; // 알 수 없는 형식
     }
 }
