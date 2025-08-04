@@ -12,7 +12,6 @@ import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
 import com.ssafy.keepick.testconfig.TestSecurityConfig;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,9 +37,62 @@ class FriendServiceTest {
     @Autowired
     FriendService friendService;
 
-    @DisplayName("상태에 따른 친구 목록을 한다.")
+    @DisplayName("나의/요청한/요청받은 친구 목록 조회 한다.")
     @Test
-    void getFriendList() {
+    void getMyFriendListTest() {
+        // given
+        Member member = createMember(0);
+        Member member1 = createMember(1);
+        Member member2 = createMember(2);
+        Member member3 = createMember(3);
+        Member member4 = createMember(4);
+        Member member5 = createMember(5);
+        memberRepository.save(member);
+        memberRepository.save(member1);
+        memberRepository.save(member2);
+        memberRepository.save(member3);
+        memberRepository.save(member4);
+        memberRepository.save(member5);
+
+        createFriend(member, member1); // member <-> member1
+        createFriend(member2, member); // member2 <-> member
+        sendFriend(member, member3); // member -> member3
+        rejectFriend(member, member4); // member -> member4
+        sendFriend(member5, member); // member5 -> member
+
+        // when
+        List<FriendshipDto> myFriendList = friendService.getFriendList(member.getId(), FriendStatus.FRIEND);
+        List<FriendshipDto> sentFriendList = friendService.getFriendList(member.getId(), FriendStatus.SENT);
+        List<FriendshipDto> receivedFriendList = friendService.getFriendList(member.getId(), FriendStatus.RECEIVED);
+
+        // then
+        // 나의 친구 목록
+        assertThat(myFriendList.size()).isEqualTo(2);
+        assertThat(myFriendList)
+                .extracting("friendId")
+                .contains(member1.getId(), member2.getId());
+        assertThat(myFriendList)
+                .extracting("friendStatus")
+                .containsOnly(FriendStatus.FRIEND);
+
+        // 내가 요청한 친구 목록
+        assertThat(sentFriendList.size()).isEqualTo(2);
+        assertThat(sentFriendList)
+                .extracting("friendId")
+                .contains(member3.getId(), member4.getId());
+        assertThat(sentFriendList)
+                .extracting("friendStatus")
+                .containsOnly(FriendStatus.SENT);
+
+        // 내가 요청받은 친구 목록
+        assertThat(receivedFriendList.size()).isEqualTo(1);
+        assertThat(receivedFriendList)
+                .extracting("friendId")
+                .contains(member5.getId());
+        assertThat(receivedFriendList)
+                .extracting("friendStatus")
+                .containsOnly(FriendStatus.RECEIVED);
+
     }
 
     @DisplayName("새로운 친구 요청을 생성한다.")
@@ -249,6 +301,27 @@ class FriendServiceTest {
 
     private Member createMember(int n) {
         return Member.builder().name("test"+n).email("email"+n).nickname("nick"+n).provider("google").providerId("google"+n).identificationUrl("url").build();
+    }
+
+    private void createFriend(Member sender, Member receiver) {
+        Friendship friendship1 = Friendship.createFriendship(sender, receiver); friendship1.accept();
+        Friendship friendship2 = Friendship.createFriendship(receiver, sender); friendship2.accept();
+        friendshipRepository.save(friendship1);
+        friendshipRepository.save(friendship2);
+    }
+
+    private void sendFriend(Member sender, Member receiver) {
+        Friendship friendship1 = Friendship.createFriendship(sender, receiver); friendship1.accept();
+        Friendship friendship2 = Friendship.createFriendship(receiver, sender);
+        friendshipRepository.save(friendship1);
+        friendshipRepository.save(friendship2);
+    }
+
+    private void rejectFriend(Member sender, Member receiver) {
+        Friendship friendship1 = Friendship.createFriendship(sender, receiver); friendship1.accept();
+        Friendship friendship2 = Friendship.createFriendship(receiver, sender); friendship2.reject();
+        friendshipRepository.save(friendship1);
+        friendshipRepository.save(friendship2);
     }
 
 }
