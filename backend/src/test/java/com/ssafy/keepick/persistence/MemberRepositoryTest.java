@@ -101,14 +101,14 @@ class MemberRepositoryTest {
         Long memberId = savedMember.getId();
 
         // when
-        savedMember.updateSocialProfile("이길동수정", "https://example.com/new.jpg");
+        savedMember.updateProfile("새닉네임", "https://example.com/new.jpg");
         entityManager.flush();
         entityManager.clear(); // 영속성 컨텍스트 클리어
 
         // then
         Member updatedMember = memberRepository.findById(memberId).orElse(null);
         assertThat(updatedMember).isNotNull();
-        assertThat(updatedMember.getName()).isEqualTo("이길동수정");
+        assertThat(updatedMember.getNickname()).isEqualTo("새닉네임");
         assertThat(updatedMember.getProfileUrl()).isEqualTo("https://example.com/new.jpg");
         assertThat(updatedMember.getUpdatedAt()).isAfter(updatedMember.getCreatedAt());
     }

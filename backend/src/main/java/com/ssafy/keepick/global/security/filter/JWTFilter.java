@@ -2,7 +2,6 @@ package com.ssafy.keepick.global.security.filter;
 
 import java.io.IOException;
 
-import com.ssafy.keepick.global.security.util.JWTUtil;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -10,15 +9,17 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.ssafy.keepick.auth.application.dto.CustomOAuth2Member;
 import com.ssafy.keepick.auth.application.dto.MemberDto;
+import com.ssafy.keepick.global.security.util.JWTUtil;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @AllArgsConstructor
+@Slf4j
 public class JWTFilter extends OncePerRequestFilter {
     private final JWTUtil jwtUtil;
 
@@ -26,35 +27,39 @@ public class JWTFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // cookie들을 불러온 뒤 Authorization Key에 담긴 쿠키를 찾음
-        String authorization = null;
-        Cookie[] cookies = request.getCookies();
-        for (Cookie cookie : cookies) {
-            if (cookie.getName().equals("Authorization")) {
-                authorization = cookie.getValue();
-            }
-        }
+        // Authorization 헤더 가져오기
+        String authorization = request.getHeader("Authorization");
 
         // Authorization 헤더 검증
-        if (authorization == null) {
-            filterChain.doFilter(request, response);
+        if (authorization == null || !authorization.startsWith("Bearer ")) {    
+            log.info("Authorization 헤더가 없습니다.");
+            filterChain.doFilter(request, response);  // 다음 필터로 계속 진행
             return;
         }
 
         // 토큰
-        String token = authorization;
+        String token = authorization.split(" ")[1];
 
-        // 토큰 소멸 시간 검증
-        if (jwtUtil.isExpired(token)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        Long memberId;
+        String username;
+        String role;
+
+        try {
+            // 토큰 소멸 시간 검증
+            if (jwtUtil.isExpired(token)) {
+                log.info("토큰이 만료되었습니다.");
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            memberId = jwtUtil.getMemberId(token);
+            username = jwtUtil.getUsername(token);
+            role = jwtUtil.getRole(token);
+        } catch (Exception e) {
+            log.info("유효하지 않은 토큰입니다: {}.", e.getMessage());
             filterChain.doFilter(request, response);
-
             return;
         }
-
-        Long memberId = jwtUtil.getMemberId(token);
-        String username = jwtUtil.getUsername(token);
-        String role = jwtUtil.getRole(token);
 
         // userDTO를 생성하여 값 set
         MemberDto memberDto = MemberDto.of(memberId, username, role);
@@ -67,6 +72,8 @@ public class JWTFilter extends OncePerRequestFilter {
                 customOAuth2User.getAuthorities());
         // 세션에 사용자 등록
         SecurityContextHolder.getContext().setAuthentication(authToken);
+
+        log.info("토큰 검증 완료. {}", memberDto.getMemberId(), memberDto.getUsername(), memberDto.getName());
 
         filterChain.doFilter(request, response);
     }

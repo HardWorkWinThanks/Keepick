@@ -15,6 +15,7 @@ public class MemberDto {
     private final String profileUrl;
     private final String provider;
     private final String providerId;
+    private final String identificationUrl;
 
     // JWT 인증용 - 기본 정보만으로 생성
     public static MemberDto of(Long memberId, String username, String role) {
@@ -37,6 +38,7 @@ public class MemberDto {
                 .profileUrl(member.getProfileUrl())
                 .provider(member.getProvider())
                 .providerId(member.getProviderId())
+                .identificationUrl(member.getIdentificationUrl())
                 .build();
     }
 }

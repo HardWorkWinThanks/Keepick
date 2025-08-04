@@ -18,11 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
 import static com.ssafy.keepick.global.exception.ErrorCode.*;
-import static com.ssafy.keepick.global.exception.ErrorCode.NOT_FOUND;
 
 @Service
 @RequiredArgsConstructor
@@ -44,15 +44,15 @@ public class GroupInvitationService {
         return dto;
     }
 
-    public GroupMemberDto acceptInvitation(Long groupMemberId) {
-        GroupMember groupMember = groupMemberRepository.findPendingInvitationById(groupMemberId).orElseThrow(() -> new BaseException(INVITATION_NOT_FOUND));
+    public GroupMemberDto acceptInvitation(Long groupMemberId, Long loginMemberId) {
+        GroupMember groupMember = findAndValidateGroupInvitation(groupMemberId, loginMemberId);
         groupMember.accept();
         GroupMemberDto dto = GroupMemberDto.from(groupMember);
         return dto;
     }
 
-    public GroupMemberDto rejectInvitation(Long groupMemberId) {
-        GroupMember groupMember = groupMemberRepository.findPendingInvitationById(groupMemberId).orElseThrow(() -> new BaseException(INVITATION_NOT_FOUND));
+    public GroupMemberDto rejectInvitation(Long groupMemberId, Long loginMemberId) {
+        GroupMember groupMember = findAndValidateGroupInvitation(groupMemberId, loginMemberId);
         groupMember.reject();
         GroupMemberDto dto = GroupMemberDto.from(groupMember);
         return dto;
@@ -66,12 +66,12 @@ public class GroupInvitationService {
         return link;
     }
 
-    public GroupMemberDto joinGroupByInvitationLink(Long groupId, Long memberId, String inviteToken) {
+    public GroupMemberDto joinGroupByInvitationLink(Long groupId, Long loginMemberId, String inviteToken) {
         // 초대 토큰 유효성 검사
         validateToken(groupId, inviteToken);
         // 그룹 가입
         Group group = groupRepository.findById(groupId).orElseThrow(() -> new BaseException(GROUP_NOT_FOUND));
-        GroupMember groupMember = processInvitationToGroup(group, memberId);
+        GroupMember groupMember = processInvitationToGroup(group, loginMemberId);
         groupMember.accept();
         return GroupMemberDto.from(groupMember);
     }
@@ -88,7 +88,7 @@ public class GroupInvitationService {
     }
 
     private GroupMember inviteMember(Group group, Long memberId) {
-        Member member = memberRepository.findById(memberId).orElseThrow(() -> new BaseException(NOT_FOUND));
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new BaseException(MEMBER_NOT_FOUND));
         GroupMember groupMember = GroupMember.createGroupMember(group, member);
         groupMemberRepository.save(groupMember);
         return groupMember;
@@ -97,6 +97,16 @@ public class GroupInvitationService {
     private static GroupMember reinviteMember(GroupMember groupMember) {
         // 이미 그룹에 가입한 회원일 경우 다시 초대할 수 없음
         if(groupMember.getStatus() != GroupMemberStatus.ACCEPTED) groupMember.invite();
+        return groupMember;
+    }
+
+    private GroupMember findAndValidateGroupInvitation(Long groupMemberId, Long memberId) {
+        // 초대 조회
+        GroupMember groupMember = groupMemberRepository.findPendingInvitationById(groupMemberId).orElseThrow(() -> new BaseException(INVITATION_NOT_FOUND));
+        // 초대받은 회원이 맞는지 확인
+        if (!Objects.equals(groupMember.getMember().getId(), memberId)) {
+            throw new BaseException(INVITATION_FORBIDDEN);
+        }
         return groupMember;
     }
 

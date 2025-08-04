@@ -15,13 +15,15 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
     private final JWTUtil jwtUtil;
 
-    @Value("${cookie.maxAge:86400}")
+    @Value("${cookie.maxAge}")
     private int cookieMaxAge;
 
     @Value("${app.frontend.url}")
@@ -32,18 +34,18 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             Authentication authentication) throws IOException {
         // OAuth2User
         CustomOAuth2Member customUserDetails = (CustomOAuth2Member) authentication.getPrincipal();
-
         String username = customUserDetails.getUsername();
 
         String token = jwtUtil.createToken(customUserDetails.getMemberId(), username);
 
+        log.info("토큰 생성 완료. {}", token);
         response.addCookie(createCookie("Authorization", token));
         response.sendRedirect(frontendUrl + "/");
     }
 
     private Cookie createCookie(String key, String value) {
         Cookie cookie = new Cookie(key, value);
-        cookie.setHttpOnly(true);      // XSS 방지
+        cookie.setHttpOnly(false); // JS에서 접근 가능
         cookie.setSecure(true);        // HTTPS에서만 전송
         cookie.setMaxAge(cookieMaxAge); // 환경변수로 설정된 시간
         cookie.setPath("/");           // 전체 경로에서 사용

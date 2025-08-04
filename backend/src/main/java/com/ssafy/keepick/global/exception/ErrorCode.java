@@ -14,6 +14,9 @@ public enum ErrorCode {
     INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "잘못된 요청 파라미터입니다.", "B004"),
     DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "중복된 리소스입니다.", "B005"),
 
+    // Member
+    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다.", "M001"),
+
     // Group
     GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 그룹입니다.", "G001"),
 
@@ -21,6 +24,11 @@ public enum ErrorCode {
     INVITATION_DUPLICATE(HttpStatus.CONFLICT, "이미 그룹에 가입한 회원입니다", "GM001"),
     INVITATION_NOT_FOUND(HttpStatus.FORBIDDEN, "그룹 초대 요청을 찾을 수 없습니다", "GM002"),
     INVITATION_TOKEN_NOT_FOUND(HttpStatus.FORBIDDEN, "유효하지 않거나 만료된 링크입니다.", "GM003"),
+
+    // Auth
+    INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "잘못된 입력값입니다.", "A001"),
+    OAUTH2_AUTHENTICATION_FAILED(HttpStatus.UNAUTHORIZED, "OAuth2 인증에 실패했습니다.", "A002"),
+    UNSUPPORTED_OAUTH2_PROVIDER(HttpStatus.BAD_REQUEST, "지원하지 않는 OAuth2 제공자입니다.", "A003"),
 
     // Photo
     INVALID_FILE(HttpStatus.BAD_REQUEST, "처리할 수 없는 이미지 파일입니다.", "P001"),
