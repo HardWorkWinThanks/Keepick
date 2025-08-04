@@ -10,19 +10,19 @@ public class MemberInfoResponse {
     
     private Long memberId;
     private String nickname;
-    private String profile_url;
+    private String profileUrl;
     private String email;
     private String provider;
-    private String identification_url;
+    private String identificationUrl;
     
     public static MemberInfoResponse from(Member member) {
         return MemberInfoResponse.builder()
                 .memberId(member.getId())
                 .nickname(member.getNickname())
-                .profile_url(member.getProfileUrl())
+                .profileUrl(member.getProfileUrl())
                 .email(member.getEmail())
                 .provider(member.getProvider())
-                .identification_url(member.getIdentificationUrl())
+                .identificationUrl(member.getIdentificationUrl())
                 .build();
     }
 }
