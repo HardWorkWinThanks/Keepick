@@ -1,24 +1,27 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { AuthUser } from "@/shared/types/api";
 
 // 우리 앱에서 사용할 사용자 정보의 타입
-interface User {
-  id: number;
-  name: string;
-  email: string;
-}
+// interface User {
+//   id: number;
+//   name: string;
+//   email: string;
+// }
+
+// access Token 제거, 쿠키로 관리한다.
 
 // 이 Slice가 관리할 상태(state)의 타입
 interface AuthState {
   isAuthenticated: boolean;
-  user: User | null;
-  accessToken: string | null;
+  user: AuthUser | null;
+  // accessToken: string | null; 
 }
 
 // 초기 상태
 const initialState: AuthState = {
   isAuthenticated: false,
   user: null,
-  accessToken: null,
+  // accessToken: null,
 };
 
 const authSlice = createSlice({
@@ -29,17 +32,17 @@ const authSlice = createSlice({
     // 로그인 성공 시 호출될 리듀서
     setAuth: (
       state,
-      action: PayloadAction<{ user: User; accessToken: string }>
+      action: PayloadAction<{ user: AuthUser;}>
     ) => {
       state.isAuthenticated = true;
       state.user = action.payload.user;
-      state.accessToken = action.payload.accessToken;
+      // state.accessToken = action.payload.accessToken;
     },
     // 로그아웃 시 호출될 리듀서
     clearAuth: (state) => {
       state.isAuthenticated = false;
       state.user = null;
-      state.accessToken = null;
+      // state.accessToken = null;
     },
   },
 });

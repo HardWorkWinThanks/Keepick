@@ -11,6 +11,8 @@ import {
 } from "@heroicons/react/24/outline";
 import Image from "next/image";
 
+
+
 interface HeaderProps {
   onMenuClick?: () => void;
   onBackToDashboard?: () => void; // [추가] 대시보드로 돌아가기 함수 prop
@@ -86,6 +88,7 @@ export default function Header({
                 width={32}
                 height={32}
                 className="rounded-full w-8 h-8 object-cover"
+                quality={90}
               />
               <span className="font-semibold text-sm text-gray-800 hidden sm:block">
                 {user.name}

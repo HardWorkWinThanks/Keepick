@@ -1,11 +1,12 @@
-'use client';
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { VersatileInput } from '@/shared/ui';
-import { NaverIcon } from '@/shared/assets/NaverIcon';
-import { useProfileEdit } from '../model/useProfileEdit';
-import { UserProfile } from '../model/types';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { VersatileInput } from "@/shared/ui";
+import { NaverIcon } from "@/shared/assets/NaverIcon";
+import { useProfileEdit } from "../model/useProfileEdit";
+import { UserProfile } from "../model/types";
+import Image from "next/image";
 
 interface ProfileFormProps {
   initialProfile: UserProfile;
@@ -25,7 +26,7 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
   return (
     <div className="container mx-auto max-w-4xl">
       <h1 className="text-2xl font-bold mb-6 text-gray-900">나의 프로필</h1>
-      
+
       {/* 기본 프로필 */}
       <Card className="mb-6">
         <CardHeader>
@@ -34,10 +35,13 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
         <CardContent className="space-y-6">
           <div className="flex items-start space-x-6">
             <div className="flex flex-col items-center space-y-3">
-              <img
+              <Image
                 src={userProfile.profileImage}
                 alt="프로필 사진"
+                width={256}
+                height={256}
                 className="w-32 h-32 rounded-full object-cover"
+                quality={90}
               />
               <Button
                 size="sm"
@@ -83,10 +87,13 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
         <CardContent>
           <div className="flex items-start space-x-6">
             <div className="flex flex-col items-center space-y-3">
-              <img
+              <Image
                 src={userProfile.aiProfileImage}
                 alt="AI 인식 프로필"
+                width={256}
+                height={256}
                 className="w-32 h-32 rounded-full object-cover"
+                quality={90}
               />
               <Button
                 size="sm"

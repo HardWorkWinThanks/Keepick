@@ -3,9 +3,9 @@
 import { handleSocialLogin } from "../lib/handleSocialLogin";
 import { NaverIcon } from "@/shared/assets/NaverIcon";
 import { KakaoIcon } from "@/shared/assets/KakaoIcon";
+import { GoogleIcon } from "@/shared/assets/GoogleIcon";
 import { SocialProvider } from "../model/types";
 
-// 각 소셜별 스타일 정의
 const providerStyles = {
   naver: "bg-[#03C75A] text-white hover:bg-[#03C75A]/90",
   kakao: "bg-[#FEE500] text-black hover:bg-[#FEE500]/90",
@@ -21,7 +21,7 @@ const providerLabels = {
 const providerIcons = {
   naver: <NaverIcon />,
   kakao: <KakaoIcon />,
-  google: null, // 구글 아이콘 추가
+  google: <GoogleIcon />, 
 };
 
 interface SocialLoginButtonProps {
@@ -32,7 +32,8 @@ export function SocialLoginButton({ provider }: SocialLoginButtonProps) {
   return (
     <button
       onClick={() => handleSocialLogin(provider)}
-      className={`flex w-full items-center justify-center gap-3 rounded-md px-3 py-3 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${providerStyles[provider]}`}
+      className={`flex w-full items-center justify-center gap-3 rounded-md px-3 py-3 text-sm font-semibold
+  focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${providerStyles[provider]}`}
     >
       <span className="h-6 w-6">{providerIcons[provider]}</span>
       <span>{providerLabels[provider]}</span>

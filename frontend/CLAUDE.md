@@ -34,6 +34,9 @@ The project follows Feature-Sliced Design with these main layers:
 
 - **State Management**: Redux Toolkit with auth slice
 - **Data Fetching**: TanStack Query (React Query) v5
+  - **IMPORTANT**: Use v5 syntax - NO `onSuccess`/`onError` callbacks in useQuery/useMutation
+  - Handle side effects in `useEffect` or separate mutation success handlers
+  - Use `data`, `error`, `isLoading` return values from hooks
 - **UI Components**: Radix UI with custom components in `src/components/ui/`
 - **Styling**: TailwindCSS with CVA (Class Variance Authority)
 - **Forms**: React Hook Form with Zod validation
