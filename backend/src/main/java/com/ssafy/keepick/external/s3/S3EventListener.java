@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keepick.external.redis.RedisService;
 import com.ssafy.keepick.global.utils.file.FileUtils;
+import com.ssafy.keepick.image.application.ThumbnailService;
 import io.awspring.cloud.sqs.annotation.SqsListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

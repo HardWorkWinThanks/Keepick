@@ -1,7 +1,6 @@
-package com.ssafy.keepick.external.s3;
+package com.ssafy.keepick.image.application;
 
 import com.ssafy.keepick.global.utils.file.FileUtils;
-import com.ssafy.keepick.image.application.ImageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
@@ -36,8 +35,6 @@ public class ThumbnailService {
     @Async("thumbnailExecutor")
     public CompletableFuture<Void> generateAndUploadThumbnail(String objectKey) {
         try {
-            log.info("Starting thumbnail generation for: {}", objectKey);
-
             // S3에서 원본 이미지 다운로드
             byte[] originalImageData = s3Service.downloadFile(objectKey);
 
@@ -47,11 +44,10 @@ public class ThumbnailService {
             // S3에 썸네일 업로드
             s3Service.uploadThumbnail(objectKey, thumbnailData);
 
-            log.info("Successfully generated and uploaded thumbnail for: {}", objectKey);
+            log.info("썸네일 이미지 생성 성공: {}", objectKey);
             return CompletableFuture.completedFuture(null);
 
         } catch (Exception e) {
-            log.error("Failed to generate thumbnail for: {}", objectKey, e);
             throw new RuntimeException("썸네일 생성 실패: " + e.getMessage(), e);
         }
     }
@@ -69,15 +65,9 @@ public class ThumbnailService {
                     .outputFormat(thumbnailFormat)
                     .toOutputStream(outputStream);
 
-            byte[] thumbnailData = outputStream.toByteArray();
-
-            log.debug("Generated thumbnail: original size={}, thumbnail size={}",
-                    originalImageData.length, thumbnailData.length);
-
-            return thumbnailData;
+            return outputStream.toByteArray();
 
         } catch (IOException e) {
-            log.error("Failed to generate thumbnail from image data", e);
             throw new RuntimeException("썸네일 생성 중 오류 발생: " + e.getMessage(), e);
         }
     }
@@ -88,25 +78,31 @@ public class ThumbnailService {
     @Async("thumbnailExecutor")
     public CompletableFuture<Void> processImageIfSupported(String objectKey, String contentType) {
         try {
-            // Content-Type이 없으면 파일 확장자로 추정
-            String actualContentType = contentType != null ? contentType : FileUtils.guessContentType(objectKey);
-
-            if (!FileUtils.isSupportedImageType(actualContentType)) {
-                log.warn("Unsupported image type for thumbnail generation: {} ({})", objectKey, actualContentType);
-                return CompletableFuture.completedFuture(null);
-            }
-
-            // 파일이 실제로 존재하는지 확인
-            if (!s3Service.fileExists(objectKey)) {
-                log.warn("File does not exist in S3: {}", objectKey);
+            if (!validateOriginImage(objectKey, contentType)) {
                 return CompletableFuture.completedFuture(null);
             }
 
             return generateAndUploadThumbnail(objectKey);
 
         } catch (Exception e) {
-            log.error("Error processing image: {}", objectKey, e);
             return CompletableFuture.failedFuture(e);
         }
+    }
+
+    private boolean validateOriginImage(String objectKey, String contentType) {
+        // Content-Type이 없으면 파일 확장자로 추정
+        String actualContentType = contentType != null ? contentType : FileUtils.guessContentType(objectKey);
+
+        if (!FileUtils.isSupportedImageType(actualContentType)) {
+            log.warn("Unsupported image type for thumbnail generation: {} ({})", objectKey, actualContentType);
+            return false;
+        }
+
+        if (!s3Service.fileExists(objectKey)) {
+            log.warn("File does not exist in S3: {}", objectKey);
+            return false;
+        }
+
+        return true;
     }
 }
