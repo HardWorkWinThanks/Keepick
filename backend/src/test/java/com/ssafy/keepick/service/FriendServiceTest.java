@@ -2,6 +2,7 @@ package com.ssafy.keepick.service;
 
 import com.ssafy.keepick.friend.application.FriendService;
 import com.ssafy.keepick.friend.application.FriendStatus;
+import com.ssafy.keepick.friend.application.FriendInteractionService;
 import com.ssafy.keepick.friend.application.dto.FriendshipDto;
 import com.ssafy.keepick.friend.controller.request.FriendCreateRequest;
 import com.ssafy.keepick.friend.domain.Friendship;
@@ -33,6 +34,9 @@ class FriendServiceTest {
 
     @Autowired
     FriendshipRepository friendshipRepository;
+
+    @Autowired
+    FriendInteractionService friendInteractionService;
 
     @Autowired
     FriendService friendService;
@@ -107,7 +111,7 @@ class FriendServiceTest {
         FriendCreateRequest request = FriendCreateRequest.builder().friendId(receiver.getId()).build();
 
         // when
-        FriendshipDto dto = friendService.createFriendRequest(request, sender.getId());
+        FriendshipDto dto = friendInteractionService.createFriendRequest(request, sender.getId());
 
         // then
         // Dto 검증
@@ -136,8 +140,8 @@ class FriendServiceTest {
         FriendCreateRequest request2 = FriendCreateRequest.builder().friendId(sender.getId()).build();
 
         // when
-        FriendshipDto dto1 = friendService.createFriendRequest(request1, sender.getId());
-        FriendshipDto dto2 = friendService.createFriendRequest(request2, receiver.getId());
+        FriendshipDto dto1 = friendInteractionService.createFriendRequest(request1, sender.getId());
+        FriendshipDto dto2 = friendInteractionService.createFriendRequest(request2, receiver.getId());
 
         // then
         // Dto 검증
@@ -171,7 +175,7 @@ class FriendServiceTest {
         FriendCreateRequest request = FriendCreateRequest.builder().friendId(receiver.getId()).build();
 
         // when & then
-        assertThatThrownBy(() -> friendService.createFriendRequest(request, sender.getId()))
+        assertThatThrownBy(() -> friendInteractionService.createFriendRequest(request, sender.getId()))
                 .isInstanceOf(BaseException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FRIENDSHIP_DUPLICATE);
     }
@@ -186,7 +190,7 @@ class FriendServiceTest {
         FriendCreateRequest request = FriendCreateRequest.builder().friendId(member.getId()).build();
 
         // when & then
-        assertThatThrownBy(() -> friendService.createFriendRequest(request, member.getId()))
+        assertThatThrownBy(() -> friendInteractionService.createFriendRequest(request, member.getId()))
                 .isInstanceOf(BaseException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_PARAMETER);
     }
@@ -201,13 +205,13 @@ class FriendServiceTest {
         memberRepository.save(receiver);
 
         FriendCreateRequest request = FriendCreateRequest.builder().friendId(receiver.getId()).build();
-        friendService.createFriendRequest(request, sender.getId());
+        friendInteractionService.createFriendRequest(request, sender.getId());
         Friendship friendship = friendshipRepository.findBySenderIdAndReceiverId(receiver.getId(), sender.getId()).get();
         friendship.reject(); // receiver가 sender에게 받은 친구 요청 거절
         System.out.println("friendship.getStatus() = " + friendship.getStatus()); // REJECTED
 
         // when
-        FriendshipDto dto = friendService.createFriendRequest(request, sender.getId());
+        FriendshipDto dto = friendInteractionService.createFriendRequest(request, sender.getId());
         
         // then
         assertThat(dto.getFriendshipStatus()).isEqualTo(FriendshipStatus.ACCEPTED);
@@ -234,7 +238,7 @@ class FriendServiceTest {
         friendshipRepository.save(friendship2);
 
         // when
-        FriendshipDto dto = friendService.acceptFriendRequest(friendship2.getId(), receiver.getId());
+        FriendshipDto dto = friendInteractionService.acceptFriendRequest(friendship2.getId(), receiver.getId());
 
         // then
         assertThat(dto.getFriendshipStatus()).isEqualTo(FriendshipStatus.ACCEPTED);
@@ -263,7 +267,7 @@ class FriendServiceTest {
         friendshipRepository.save(friendship2);
 
         // when
-        FriendshipDto dto = friendService.rejectFriendRequest(friendship2.getId(), receiver.getId());
+        FriendshipDto dto = friendInteractionService.rejectFriendRequest(friendship2.getId(), receiver.getId());
 
         // then
         assertThat(dto.getFriendshipStatus()).isEqualTo(FriendshipStatus.REJECTED);
@@ -293,7 +297,7 @@ class FriendServiceTest {
         friendshipRepository.save(friendship2);
 
         // when & then
-        assertThatThrownBy(() -> friendService.rejectFriendRequest(friendship2.getId(), receiver2.getId()))
+        assertThatThrownBy(() -> friendInteractionService.rejectFriendRequest(friendship2.getId(), receiver2.getId()))
                 .isInstanceOf(BaseException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FRIENDSHIP_FORBIDDEN);
 

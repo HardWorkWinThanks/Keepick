@@ -1,12 +1,13 @@
 package com.ssafy.keepick.friend.controller;
 
+import com.ssafy.keepick.friend.application.FriendInteractionService;
 import com.ssafy.keepick.friend.application.FriendService;
 import com.ssafy.keepick.friend.application.dto.FriendshipDto;
 import com.ssafy.keepick.friend.controller.request.FriendCreateRequest;
 import com.ssafy.keepick.friend.application.FriendStatus;
 import com.ssafy.keepick.friend.controller.response.FriendCreateResponse;
 import com.ssafy.keepick.friend.controller.response.FriendDetailResponse;
-import com.ssafy.keepick.friend.controller.response.FriendResultResponse;
+import com.ssafy.keepick.friend.controller.response.FriendStatusChangeResponse;
 import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,6 +24,7 @@ import java.util.List;
 public class FriendController {
 
     private final FriendService friendService;
+    private final FriendInteractionService friendInteractionService;
 
     @Operation(summary = "친구 목록 조회", description = "로그인한 사용자의 친구/요청한/요청받은 친구 목록을 조회합니다.")
     @GetMapping("")
@@ -37,26 +39,26 @@ public class FriendController {
     @PostMapping("")
     public ApiResponse<FriendCreateResponse> createFriendRequest(@Parameter(description = "친구 요청할 회원의 ID") @Valid @RequestBody FriendCreateRequest request) {
         Long loginMemberId = AuthenticationUtil.getCurrentUserId();
-        FriendshipDto dto = friendService.createFriendRequest(request, loginMemberId);
+        FriendshipDto dto = friendInteractionService.createFriendRequest(request, loginMemberId);
         FriendCreateResponse response = FriendCreateResponse.toResponse(dto);
         return ApiResponse.ok(response);
     }
 
     @Operation(summary = "친구 요청 수락", description = "로그인한 사용자가 받은 친구 요청을 수락합니다.")
     @PostMapping("/requests/{requestId}")
-    public ApiResponse<FriendResultResponse> acceptFriendRequest(@PathVariable Long requestId) {
+    public ApiResponse<FriendStatusChangeResponse> acceptFriendRequest(@PathVariable Long requestId) {
         Long loginMemberId = AuthenticationUtil.getCurrentUserId();
-        FriendshipDto dto = friendService.acceptFriendRequest(requestId, loginMemberId);
-        FriendResultResponse response = FriendResultResponse.toResponse(dto);
+        FriendshipDto dto = friendInteractionService.acceptFriendRequest(requestId, loginMemberId);
+        FriendStatusChangeResponse response = FriendStatusChangeResponse.toResponse(dto);
         return ApiResponse.ok(response);
     }
 
     @Operation(summary = "친구 요청 수락", description = "로그인한 사용자가 받은 친구 요청을 거절합니다.")
     @DeleteMapping("/requests/{requestId}")
-    public ApiResponse<FriendResultResponse> rejectFriendRequest(@PathVariable Long requestId) {
+    public ApiResponse<FriendStatusChangeResponse> rejectFriendRequest(@PathVariable Long requestId) {
         Long loginMemberId = AuthenticationUtil.getCurrentUserId();
-        FriendshipDto dto = friendService.rejectFriendRequest(requestId, loginMemberId);
-        FriendResultResponse response = FriendResultResponse.toResponse(dto);
+        FriendshipDto dto = friendInteractionService.rejectFriendRequest(requestId, loginMemberId);
+        FriendStatusChangeResponse response = FriendStatusChangeResponse.toResponse(dto);
         return ApiResponse.ok(response);
     }
 

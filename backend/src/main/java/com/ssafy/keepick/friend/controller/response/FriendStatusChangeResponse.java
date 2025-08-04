@@ -10,23 +10,19 @@ import java.time.LocalDateTime;
 
 @Getter
 @Builder
-public class FriendResultResponse {
+public class FriendStatusChangeResponse {
     private Long friendshipId;
     private Long friendId;
-    private String name;
-    private String nickname;
     private FriendshipStatus friendshipStatus;
     private FriendStatus friendStatus;
     private LocalDateTime requestedAt;
     private LocalDateTime respondedAt;
 
-    public static FriendResultResponse toResponse(FriendshipDto dto) {
-        return FriendResultResponse
+    public static FriendStatusChangeResponse toResponse(FriendshipDto dto) {
+        return FriendStatusChangeResponse
                 .builder()
                 .friendshipId(dto.getFriendshipId())
                 .friendId(dto.getFriendId())
-                .name(dto.getName())
-                .nickname(dto.getNickname())
                 .friendshipStatus(dto.getFriendshipStatus())
                 .friendStatus(dto.getFriendStatus())
                 .requestedAt(dto.getCreatedAt())

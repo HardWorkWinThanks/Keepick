@@ -25,14 +25,18 @@ public class Friendship extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     private Member receiver;
 
-    private Friendship(Member sender, Member receiver) {
+    private Friendship(Member sender, Member receiver, FriendshipStatus status) {
         this.sender = sender;
         this.receiver = receiver;
-        this.status = FriendshipStatus.PENDING;
+        this.status = status;
     }
 
     public static Friendship createFriendship(Member sender, Member receiver) {
-        return new Friendship(sender, receiver);
+        return new Friendship(sender, receiver, FriendshipStatus.PENDING);
+    }
+
+    public static Friendship createAcceptedFriendship(Member sender, Member receiver) {
+        return new Friendship(sender, receiver, FriendshipStatus.ACCEPTED);
     }
 
     public void accept() {
@@ -43,8 +47,15 @@ public class Friendship extends BaseTimeEntity {
         this.status = FriendshipStatus.REJECTED;
     }
 
-    public void request() {
-        this.status = FriendshipStatus.PENDING;
+    public boolean request() {
+        // sender -> receiver 로 친구 요청을 처리하고, 수락되었는지 여부를 반환
+        if (this.status == FriendshipStatus.ACCEPTED) {
+            return true;
+        }
+        if (this.status != FriendshipStatus.PENDING) {
+            this.status = FriendshipStatus.PENDING;
+        }
+        return false;
     }
 
 }
