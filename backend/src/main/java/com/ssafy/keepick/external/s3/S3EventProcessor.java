@@ -39,7 +39,7 @@ class S3EventProcessor {
         // bucket 이름이 잘못된 경우
         if (!bucketName.equals(eventBucket)) return;
         // put 이벤트가 아닌 경우
-        if (!eventName.startsWith("ObjectCreated:PUT")) return;
+        if (!eventName.startsWith("ObjectCreated:Put")) return;
         // original 이미지가 아닌 경우
         if (!objectKey.startsWith(originalsPrefix)) return;
 
