@@ -1,13 +1,20 @@
 package com.ssafy.keepick.image.controller;
 
 import com.ssafy.keepick.global.response.ApiResponse;
+import com.ssafy.keepick.image.application.GroupPhotoService;
+import com.ssafy.keepick.image.application.dto.GroupPhotoDto;
+import com.ssafy.keepick.image.controller.request.GroupPhotoCreateRequest;
+import com.ssafy.keepick.image.controller.response.GroupPhotoDetailResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
 public class PhotoController {
+    private final GroupPhotoService groupPhotoService;
 
     @GetMapping("/photos/random")
     public ApiResponse<?>  getRandomPhotos() {
@@ -20,11 +27,13 @@ public class PhotoController {
     }
 
     @PostMapping("/groups/{groupId}/photos")
-    public ApiResponse<?>  createGroupPhotos(@PathVariable Long groupId) {
-        return null;
+    public ApiResponse<List<GroupPhotoDetailResponse>> createGroupPhotos(@PathVariable Long groupId,
+                                            @RequestBody List<GroupPhotoCreateRequest> request) {
+        List<GroupPhotoDto> result = groupPhotoService.createGroupPhoto(groupId, request);
+        return ApiResponse.created(GroupPhotoDetailResponse.from(result));
     }
 
-    @PostMapping("/groups/{groupId}/photos")
+    @DeleteMapping("/groups/{groupId}/photos")
     public ApiResponse<?> deleteGroupPhotos(@PathVariable Long groupId) {
         return null;
     }
