@@ -6,6 +6,7 @@ import com.ssafy.keepick.friend.persistence.FriendshipRepository;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
 import jakarta.persistence.EntityManager;
+import org.hibernate.Hibernate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,64 @@ public class FriendshipRepositoryTest {
 
     @Autowired
     MemberRepository memberRepository;
+
+    @DisplayName("친구 요청한 회원을 함께 조회한다.")
+    @Test
+    void findWithSenderById() {
+        // given
+        Member sender = createMember(1);
+        Member receiver = createMember(2);
+
+        memberRepository.save(sender);
+        memberRepository.save(receiver);
+
+        Friendship friendship = Friendship.createFriendship(sender, receiver);
+        friendshipRepository.save(friendship);
+
+        em.flush();
+        em.clear();
+
+        // when
+        Friendship findFriendship = friendshipRepository.findWithSenderById(friendship.getId()).get();
+
+        // then
+        assertThat(findFriendship).isNotNull();
+
+        assertThat(Hibernate.isInitialized(findFriendship.getSender())).isTrue();
+        assertThat(Hibernate.isInitialized(findFriendship.getReceiver())).isFalse();
+    }
+
+    @DisplayName("두 회원이 친구인지 확인한다.")
+    @Test
+    void existsAcceptedFriendshipBetween() {
+        // given
+        Member member = createMember(0);
+        Member member1 = createMember(1);
+        Member member2 = createMember(2);
+        Member member3 = createMember(3);
+
+        memberRepository.save(member);
+        memberRepository.save(member1);
+        memberRepository.save(member2);
+        memberRepository.save(member3);
+
+        Friendship friendship1 = Friendship.createFriendship(member, member1);
+        Friendship friendship2 = Friendship.createFriendship(member, member2); friendship2.accept();
+        Friendship friendship3 = Friendship.createFriendship(member, member3); friendship3.reject();
+        friendshipRepository.save(friendship1);
+        friendshipRepository.save(friendship2);
+        friendshipRepository.save(friendship3);
+
+        // when
+        boolean b1 = friendshipRepository.existsAcceptedFriendshipBetween(member.getId(), member1.getId());
+        boolean b2 = friendshipRepository.existsAcceptedFriendshipBetween(member.getId(), member2.getId());
+        boolean b3 = friendshipRepository.existsAcceptedFriendshipBetween(member.getId(), member3.getId());
+
+        // then
+        assertThat(b1).isFalse();
+        assertThat(b2).isTrue();
+        assertThat(b3).isFalse();
+    }
 
     @DisplayName("회원이 보낸 친구 요청을 조회한다.")
     @Test
@@ -88,7 +147,7 @@ public class FriendshipRepositoryTest {
     }
 
 
-    @DisplayName("회원과 친구 관계인 회원을 모두 조회한다.")
+    @DisplayName("회원과 친구인 회원을 모두 조회한다.")
     @Test
     void findAcceptedAllByMemberIdTest() {
         // given
