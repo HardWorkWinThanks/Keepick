@@ -11,7 +11,7 @@ import TimelineAlbumView from "@/components/group/TimelineAlbumView";
 import HighlightAlbumView from "@/components/group/HighlightAlbumView";
 import { PlusIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
-import GroupChatFloatingButton from "@/components/group/GroupChatFloatingButton";
+import GroupChatFloatingButton from "@/widgets/group-chat/ui/GroupChatFloatingButton";
 
 type AlbumType = "timeline" | "tier" | "highlight";
 

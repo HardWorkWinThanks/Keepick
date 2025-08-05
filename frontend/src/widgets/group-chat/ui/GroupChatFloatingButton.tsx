@@ -3,13 +3,10 @@
 
 import Link from "next/link";
 import { VideoCameraIcon } from "@heroicons/react/24/solid";
+import { GroupChatFloatingButtonProps } from "./types";
 
-interface GroupChatFloatingButtonProps {
-  groupName: string;
-  isChatActive: boolean;
-}
 
-const GroupChatFloatingButton: React.FC<GroupChatFloatingButtonProps> = ({
+export const GroupChatFloatingButton: React.FC<GroupChatFloatingButtonProps> = ({
   groupName,
   isChatActive,
 }) => {
