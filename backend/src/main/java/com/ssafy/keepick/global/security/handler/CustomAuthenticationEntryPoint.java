@@ -24,7 +24,13 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
     public void commence(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException authException) throws IOException, ServletException {
 
-        log.info("인증되지 않은 사용자의 API 접근 시도: {} {}", request.getMethod(), request.getRequestURI());
+        String method = request.getMethod();
+        String requestURI = request.getRequestURI();
+        String userAgent = request.getHeader("User-Agent");
+
+        log.warn("🚨 CustomAuthenticationEntryPoint 호출됨!");
+        log.warn("🔒 인증 실패 상세: {} {} | User-Agent: {} | Exception: {}", 
+                method, requestURI, userAgent, authException.getMessage());
 
         // 응답 설정
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
