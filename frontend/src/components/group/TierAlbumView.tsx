@@ -6,20 +6,11 @@ import Image from "next/image";
 import { ArrowUturnLeftIcon, BoltIcon } from "@heroicons/react/24/outline";
 import TierBattleModal from "./TierBattleModal";
 
+import { Photo } from "@/entities/photo";
+import { BattleSequence, TierData, DragOverPosition } from "@/entities/album";
+
 // 타입 정의
-interface Photo {
-  id: string;
-  src: string;
-  name: string;
-}
-interface BattleSequence {
-  newPhoto: Photo;
-  opponents: Photo[];
-  currentOpponentIndex: number;
-  targetTier: string;
-  targetIndex: number;
-  sourceType: string;
-}
+
 interface TierAlbumViewProps {
   albumId: string;
   albumTitle: string;

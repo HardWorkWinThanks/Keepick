@@ -11,22 +11,10 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 
-// 타입 정의
-interface Photo {
-  id: string;
-  src: string;
-  name: string;
-}
+import { Photo } from "@/entities/photo";
+import { TimelineEvent } from "@/entities/album";
 
-interface TimelineEvent {
-  id: string;
-  title: string;
-  date: string;
-  location: string;
-  emoji: string;
-  description: string;
-  photos: Photo[];
-}
+// 타입 정의
 
 interface TimelineAlbumViewProps {
   albumId: string;

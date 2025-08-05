@@ -8,10 +8,8 @@ import {
   CursorArrowRaysIcon,
 } from "@heroicons/react/24/outline";
 
-interface Photo {
-  id: string;
-  src: string;
-}
+import { Photo } from "@/entities/photo";
+import { EmotionCategory } from "@/entities/album";
 
 interface HighlightAlbumViewProps {
   albumId: string;
@@ -20,7 +18,7 @@ interface HighlightAlbumViewProps {
 }
 
 // [수정] 레이아웃 클래스 제거하여 데이터 구조 단순화
-const emotionCategories = [
+const emotionCategories: EmotionCategory[] = [
   {
     id: "lol",
     title: "웃음 대폭발의 순간",
