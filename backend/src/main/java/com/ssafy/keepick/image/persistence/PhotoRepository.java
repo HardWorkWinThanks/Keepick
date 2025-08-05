@@ -22,6 +22,7 @@ public interface PhotoRepository extends JpaRepository<Photo,Long>, PhotoQueryFa
             "FROM Photo p " +
             "JOIN GroupMember gm ON p.group = gm.group " +
             "WHERE gm.member.id = :memberId " +
+            "AND p.deletedAt is null " +
             "ORDER BY p.createdAt DESC " +
             "LIMIT :size")
     List<Photo> findRandomByMemberId(@Param("memberId") Long memberId, @Param("size")  int size);
