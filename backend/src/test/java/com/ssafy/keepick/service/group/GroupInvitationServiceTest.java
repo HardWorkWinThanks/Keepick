@@ -1,5 +1,6 @@
 package com.ssafy.keepick.service.group;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keepick.external.redis.RedisService;
 import com.ssafy.keepick.global.exception.BaseException;
 
@@ -23,7 +24,10 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -177,11 +181,13 @@ public class GroupInvitationServiceTest extends RedisTestContainer {
         // when
         String link = groupInvitationService.createInvitationLink(group.getId());
         System.out.println("link = " + link);
-        String token = link.substring((frontendUrl+"/invite/").length());
+        String encodedToken = link.substring((frontendUrl+"/invite/").length());
 
         // then
-        String value = redisService.getValue("invite:" + token);
+        String inviteToken = decodeInviteToken(encodedToken);
+        String value = redisService.getValue("invite:" + inviteToken);
         assertThat(value).isEqualTo(group.getId().toString());
+
 
 //        Thread.sleep(5000);
 //        String timeoutValue = redisService.getValue("invite:"+result.getToken());
@@ -199,10 +205,11 @@ public class GroupInvitationServiceTest extends RedisTestContainer {
         groupRepository.save(group);
 
         String link = groupInvitationService.createInvitationLink(group.getId());
-        String token = link.substring((frontendUrl+"/invite/").length());
+        String encodedToken = link.substring((frontendUrl+"/invite/").length());
+        String inviteToken = decodeInviteToken(encodedToken);
 
         // when
-        GroupMemberDto result = groupInvitationService.joinGroupByInvitationLink(group.getId(), member.getId(), token);
+        GroupMemberDto result = groupInvitationService.joinGroupByInvitationLink(group.getId(), member.getId(), inviteToken);
 
         // then
         List<Group> groups = groupMemberRepository.findGroupsByMember(member.getId(), GroupMemberStatus.ACCEPTED).stream().map(gm -> gm.getGroup()).toList();
@@ -212,4 +219,19 @@ public class GroupInvitationServiceTest extends RedisTestContainer {
     Member createMember(int i) {
         return Member.builder().name("test" + i).email("email" + i).nickname("nick" + i).provider("google" + i).providerId("pid" + i).identificationUrl("url" + i).build();
     }
+
+    String decodeInviteToken(String encoded) {
+        System.out.println("encoded = " + encoded);
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            byte[] decodedBytes = Base64.getUrlDecoder().decode(encoded);
+            String json = new String(decodedBytes, StandardCharsets.UTF_8);
+            Map<String, String> decoded = objectMapper.readValue(json, Map.class);
+            System.out.println("decoded = " + decoded);
+            return decoded.get("token");
+        } catch (Exception e) {
+            throw new RuntimeException("초대토큰 디코딩 실패", e);
+        }
+    }
+
 }
