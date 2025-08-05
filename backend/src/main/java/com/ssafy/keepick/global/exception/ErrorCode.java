@@ -30,6 +30,12 @@ public enum ErrorCode {
     OAUTH2_AUTHENTICATION_FAILED(HttpStatus.UNAUTHORIZED, "OAuth2 인증에 실패했습니다.", "A002"),
     UNSUPPORTED_OAUTH2_PROVIDER(HttpStatus.BAD_REQUEST, "지원하지 않는 OAuth2 제공자입니다.", "A003"),
 
+    // Friend
+    FRIENDSHIP_FORBIDDEN(HttpStatus.FORBIDDEN, "친구 요청을 처리할 권한이 없습니다", "F001"),
+    FRIENDSHIP_NOT_FOUND(HttpStatus.NOT_FOUND, "친구 요청을 찾을 수 없습니다", "F002"),
+    FRIENDSHIP_DUPLICATE(HttpStatus.CONFLICT, "이미 친구인 회원입니다.", "F003"),
+    FRIENDSHIP_INCONSISTENT_STATE(HttpStatus.INTERNAL_SERVER_ERROR, "친구 요청 처리 중 오류가 발생했습니다.", "F004"),
+
     // Photo
     INVALID_FILE(HttpStatus.BAD_REQUEST, "처리할 수 없는 이미지 파일입니다.", "P001"),
     PRESIGNED_URL_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "presigned url 생성에 실패했습니다.", "P002"),

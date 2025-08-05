@@ -1,0 +1,38 @@
+package com.ssafy.keepick.friend.controller.response;
+
+import com.ssafy.keepick.friend.application.FriendStatus;
+import com.ssafy.keepick.friend.application.dto.FriendshipDto;
+import com.ssafy.keepick.friend.domain.FriendshipStatus;
+import lombok.Builder;
+import lombok.Getter;
+
+import java.time.LocalDateTime;
+
+@Builder
+@Getter
+public class FriendDetailResponse {
+    private Long friendshipId;
+    private Long friendId;
+    private String name;
+    private String nickname;
+    private String profileUrl;
+    private FriendshipStatus friendshipStatus;
+    private FriendStatus friendStatus;
+    private LocalDateTime requestedAt;
+    private LocalDateTime respondedAt;
+
+    public static FriendDetailResponse toResponse(FriendshipDto dto) {
+        return FriendDetailResponse
+                .builder()
+                .friendshipId(dto.getFriendshipId())
+                .friendId(dto.getFriendId())
+                .name(dto.getName())
+                .nickname(dto.getNickname())
+                .profileUrl(dto.getProfileUrl())
+                .friendshipStatus(dto.getFriendshipStatus())
+                .friendStatus(dto.getFriendStatus())
+                .requestedAt(dto.getCreatedAt())
+                .respondedAt(dto.getUpdatedAt())
+                .build();
+    }
+}

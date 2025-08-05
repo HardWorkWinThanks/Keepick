@@ -18,6 +18,22 @@ spring:
     console:
       enabled: true
 
+# 테스트용 시큐리티 빈 오버라이딩
+  main:
+    allow-bean-definition-overriding: true
+
+# Redis 설정
+  redis:
+    host: localhost
+    port: 6379
+
+cookie:
+  maxAge: 64800
+
+app:
+  frontend:
+    url: http://localhost:3000
+
 # JWT 설정 (테스트용)
 jwt:
   secret: test-super-secret-jwt-key-for-testing-minimum-32-characters-long
