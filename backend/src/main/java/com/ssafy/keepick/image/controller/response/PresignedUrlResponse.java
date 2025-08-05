@@ -1,4 +1,4 @@
-package com.ssafy.keepick.image.controller.dto;
+package com.ssafy.keepick.image.controller.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -1,4 +1,4 @@
-package com.ssafy.keepick.image.controller.dto;
+package com.ssafy.keepick.image.controller.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;

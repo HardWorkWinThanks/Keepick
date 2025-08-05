@@ -2,7 +2,7 @@ package com.ssafy.keepick.image.application;
 import com.ssafy.keepick.external.s3.S3FileOperationService;
 import com.ssafy.keepick.external.s3.S3PresignedUrlService;
 import com.ssafy.keepick.image.application.dto.ImageDto;
-import com.ssafy.keepick.image.controller.dto.ImageUploadRequest;
+import com.ssafy.keepick.image.controller.request.ImageUploadRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

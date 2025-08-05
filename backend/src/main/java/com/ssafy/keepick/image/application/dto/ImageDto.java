@@ -1,7 +1,7 @@
 package com.ssafy.keepick.image.application.dto;
 
 import com.ssafy.keepick.global.utils.file.FileUtils;
-import com.ssafy.keepick.image.controller.dto.ImageUploadRequest;
+import com.ssafy.keepick.image.controller.request.ImageUploadRequest;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
