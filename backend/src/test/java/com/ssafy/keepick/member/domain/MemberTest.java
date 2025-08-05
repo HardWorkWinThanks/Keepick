@@ -30,7 +30,7 @@ class MemberTest {
         String newProfileUrl = "https://new-profile.jpg";
 
         // when
-        member.updateProfile(newNickname, newProfileUrl);
+        member.updateProfile(newNickname, newProfileUrl, null);
 
         // then
         assertThat(member.getNickname()).isEqualTo(newNickname);
@@ -45,7 +45,7 @@ class MemberTest {
         String sameProfileUrl = "https://old-profile.jpg";
 
         // when
-        member.updateProfile(newNickname, sameProfileUrl);
+        member.updateProfile(newNickname, sameProfileUrl, null);
 
         // then
         assertThat(member.getNickname()).isEqualTo(newNickname);
@@ -60,7 +60,7 @@ class MemberTest {
         String newProfileUrl = "https://new-profile.jpg";
 
         // when
-        member.updateProfile(sameNickname, newProfileUrl);
+        member.updateProfile(sameNickname, newProfileUrl, null);
 
         // then
         assertThat(member.getNickname()).isEqualTo(sameNickname);
@@ -75,7 +75,7 @@ class MemberTest {
         String sameProfileUrl = "https://old-profile.jpg";
 
         // when
-        member.updateProfile(sameNickname, sameProfileUrl);
+        member.updateProfile(sameNickname, sameProfileUrl, null);
 
         // then
         assertThat(member.getNickname()).isEqualTo(sameNickname);
@@ -90,7 +90,7 @@ class MemberTest {
         String nullProfileUrl = null;
 
         // when
-        member.updateProfile(sameNickname, nullProfileUrl);
+        member.updateProfile(sameNickname, nullProfileUrl, null);
 
         // then 
         assertThat(member.getProfileUrl()).isNull();
@@ -113,7 +113,7 @@ class MemberTest {
         String newProfileUrl = "https://new-profile.jpg";
 
         // when
-        memberWithNullProfile.updateProfile(sameNickname, newProfileUrl);
+        memberWithNullProfile.updateProfile(sameNickname, newProfileUrl, null);
 
         // then
         assertThat(memberWithNullProfile.getProfileUrl()).isEqualTo(newProfileUrl);
@@ -128,7 +128,7 @@ class MemberTest {
         String newProfileUrl = "https://new-profile.jpg";
 
         // when
-        member.updateProfile(nullNickname, newProfileUrl);
+        member.updateProfile(nullNickname, newProfileUrl, null);
 
         // then
         assertThat(member.getNickname()).isEqualTo(originalNickname); // 닉네임은 변경되지 않음

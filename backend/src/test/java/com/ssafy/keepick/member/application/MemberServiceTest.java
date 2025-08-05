@@ -18,6 +18,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.global.security.util.AuthenticationUtil;
+import com.ssafy.keepick.auth.application.dto.MemberDto;
+import com.ssafy.keepick.member.controller.request.MemberUpdateRequest;
 import com.ssafy.keepick.member.controller.response.MemberInfoResponse;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
@@ -57,16 +59,16 @@ class MemberServiceTest {
             given(memberRepository.findById(testMemberId)).willReturn(Optional.of(testMember));
 
             // when
-            MemberInfoResponse response = memberService.getCurrentMemberInfo();
+            MemberDto response = memberService.getCurrentMemberInfo();
 
             // then
             assertThat(response).isNotNull();
             assertThat(response.getMemberId()).isEqualTo(testMemberId);
             assertThat(response.getNickname()).isEqualTo("박재완");
-            assertThat(response.getProfile_url()).isEqualTo("https://cdn.keepick.com/profile/42.png");
+            assertThat(response.getProfileUrl()).isEqualTo("https://cdn.keepick.com/profile/42.png");
             assertThat(response.getEmail()).isEqualTo("jaewan@example.com");
             assertThat(response.getProvider()).isEqualTo("kakao");
-            assertThat(response.getIdentification_url()).isEqualTo("https://example.com");
+            assertThat(response.getIdentificationUrl()).isEqualTo("https://example.com");
 
             verify(memberRepository).findById(testMemberId);
         }
@@ -107,6 +109,107 @@ class MemberServiceTest {
                     .isEqualTo(ErrorCode.UNAUTHORIZED);
 
             verify(memberRepository, never()).findById(any());
+        }
+    }
+    
+    @Test
+    @DisplayName("사용자 정보 수정 성공 - 닉네임만 수정")
+    void updateCurrentMemberInfo_Success_UpdateNicknameOnly() {
+        // given
+        String newNickname = "새로운닉네임";
+        MemberUpdateRequest request = new MemberUpdateRequest(newNickname, null, null);
+        
+        given(testMember.getId()).willReturn(testMemberId);
+        given(testMember.getNickname()).willReturn(newNickname);
+        given(testMember.getProfileUrl()).willReturn("https://cdn.keepick.com/profile/42.png");
+        given(testMember.getEmail()).willReturn("jaewan@example.com");
+        given(testMember.getProvider()).willReturn("kakao");
+        given(testMember.getIdentificationUrl()).willReturn("https://example.com");
+        
+        try (MockedStatic<AuthenticationUtil> mockedAuthUtil = mockStatic(AuthenticationUtil.class)) {
+            mockedAuthUtil.when(AuthenticationUtil::getCurrentUserId).thenReturn(testMemberId);
+            given(memberRepository.findById(testMemberId)).willReturn(Optional.of(testMember));
+
+            // when
+            MemberDto response = memberService.updateCurrentMemberInfo(request);
+
+            // then
+            assertThat(response).isNotNull();
+            assertThat(response.getNickname()).isEqualTo(newNickname);
+            verify(testMember).updateProfile(newNickname, null, null);
+        }
+    }
+    
+    @Test
+    @DisplayName("사용자 정보 수정 성공 - 모든 필드 수정")
+    void updateCurrentMemberInfo_Success_UpdateAllFields() {
+        // given
+        String newNickname = "새로운닉네임";
+        String newProfileUrl = "https://cdn.keepick.com/profile/new.png";
+        String newIdentificationUrl = "https://example.com/new.jpg";
+        MemberUpdateRequest request = new MemberUpdateRequest(newNickname, newProfileUrl, newIdentificationUrl);
+        
+        given(testMember.getId()).willReturn(testMemberId);
+        given(testMember.getNickname()).willReturn(newNickname);
+        given(testMember.getProfileUrl()).willReturn(newProfileUrl);
+        given(testMember.getEmail()).willReturn("jaewan@example.com");
+        given(testMember.getProvider()).willReturn("kakao");
+        given(testMember.getIdentificationUrl()).willReturn(newIdentificationUrl);
+        
+        try (MockedStatic<AuthenticationUtil> mockedAuthUtil = mockStatic(AuthenticationUtil.class)) {
+            mockedAuthUtil.when(AuthenticationUtil::getCurrentUserId).thenReturn(testMemberId);
+            given(memberRepository.findById(testMemberId)).willReturn(Optional.of(testMember));
+
+            // when
+            MemberDto response = memberService.updateCurrentMemberInfo(request);
+
+            // then
+            assertThat(response).isNotNull();
+            assertThat(response.getNickname()).isEqualTo(newNickname);
+            assertThat(response.getProfileUrl()).isEqualTo(newProfileUrl);
+            assertThat(response.getIdentificationUrl()).isEqualTo(newIdentificationUrl);
+            verify(testMember).updateProfile(newNickname, newProfileUrl, newIdentificationUrl);
+        }
+    }
+    
+    @Test
+    @DisplayName("수정할 정보가 없을 때 예외 발생")
+    void updateCurrentMemberInfo_NoUpdateFields_ThrowsException() {
+        // given
+        MemberUpdateRequest request = new MemberUpdateRequest(null, null, null);
+        
+        try (MockedStatic<AuthenticationUtil> mockedAuthUtil = mockStatic(AuthenticationUtil.class)) {
+            mockedAuthUtil.when(AuthenticationUtil::getCurrentUserId).thenReturn(testMemberId);
+
+            // when & then
+            assertThatThrownBy(() -> memberService.updateCurrentMemberInfo(request))
+                    .isInstanceOf(BaseException.class)
+                    .hasMessage("잘못된 요청 파라미터입니다.")
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.INVALID_PARAMETER);
+
+            verify(memberRepository, never()).findById(any());
+        }
+    }
+    
+    @Test
+    @DisplayName("존재하지 않는 회원 정보 수정시 예외 발생")
+    void updateCurrentMemberInfo_MemberNotFound_ThrowsException() {
+        // given
+        MemberUpdateRequest request = new MemberUpdateRequest("새로운닉네임", null, null);
+        
+        try (MockedStatic<AuthenticationUtil> mockedAuthUtil = mockStatic(AuthenticationUtil.class)) {
+            mockedAuthUtil.when(AuthenticationUtil::getCurrentUserId).thenReturn(testMemberId);
+            given(memberRepository.findById(testMemberId)).willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> memberService.updateCurrentMemberInfo(request))
+                    .isInstanceOf(BaseException.class)
+                    .hasMessage("존재하지 않는 회원입니다.")
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
+
+            verify(memberRepository).findById(testMemberId);
         }
     }
 }
