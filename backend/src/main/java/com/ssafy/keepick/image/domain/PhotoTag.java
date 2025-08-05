@@ -18,4 +18,13 @@ public class PhotoTag {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Photo photo;
+
+    private PhotoTag(Photo photo, Tag tag) {
+        this.photo = photo;
+        this.tag = tag;
+    }
+
+    public static PhotoTag of(Photo photo, Tag tag) {
+        return new PhotoTag(photo, tag);
+    }
 }

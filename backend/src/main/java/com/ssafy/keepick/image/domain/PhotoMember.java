@@ -20,4 +20,13 @@ public class PhotoMember {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Member member;
+
+    private PhotoMember(Photo photo, Member member) {
+        this.photo = photo;
+        this.member = member;
+    }
+
+    public static PhotoMember of(Photo photo, Member member) {
+        return new PhotoMember(photo, member);
+    }
 }

@@ -51,4 +51,8 @@ public class Photo extends BaseTimeEntity {
         this.group = group;
     }
 
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
 }
