@@ -71,11 +71,13 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
   // });
 
   // 인증이 필요한 보호된 경로에서만 리다이렉트
-  const protectedPaths = ['/profile', '/group', '/chat'];
-  const isProtectedPath = protectedPaths.some(path => pathname?.startsWith(path));
+  const protectedPaths = ["/profile", "/group", "/chat"];
+  const isProtectedPath = pathname
+    ? protectedPaths.some((path) => pathname.startsWith(path))
+    : false;
 
   if (isProtectedPath && !hasToken && !isInitializing) {
-    console.log('🚨 보호된 경로에서 리다이렉트 실행!');
+    // console.log('🚨 보호된 경로에서 리다이렉트 실행!');
     redirect("/login");
   }
   return <>{children}</>;
