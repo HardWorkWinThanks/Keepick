@@ -6,10 +6,15 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
+@ToString(exclude = {"group", "sections"})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -37,6 +42,9 @@ public class TimelineAlbum extends BaseTimeEntity {
     private Integer photoCount;
 
     private LocalDateTime deletedAt;
+
+    @OneToMany(mappedBy = "album")
+    private List<TimelineSection> sections = new ArrayList<>();
 
 }
 

@@ -4,9 +4,14 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
+@ToString(exclude = {"photos", "album"})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -27,4 +32,8 @@ public class TimelineSection {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private TimelineAlbum album;
+
+    @OneToMany(mappedBy = "section")
+    @BatchSize(size = 100)
+    private List<TimelineSectionPhoto> photos = new ArrayList<>();
 }

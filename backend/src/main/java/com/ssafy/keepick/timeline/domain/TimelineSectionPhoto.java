@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
+@ToString(exclude = "section")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity

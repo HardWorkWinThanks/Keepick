@@ -47,7 +47,7 @@ public class TimelineAlbumDto {
     }
 
     private void setSections(List<TimelineSection> sections) {
-        this.sections = sections.stream().map(TimelineSectionDto::from).toList();
+        this.sections = sections.stream().map(section -> TimelineSectionDto.from(section, section.getPhotos())).toList();
     }
 
 }

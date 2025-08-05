@@ -3,8 +3,11 @@ package com.ssafy.keepick.timeline.controller;
 import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.timeline.application.TimelineService;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
+import com.ssafy.keepick.timeline.controller.response.TimelineDetailResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -25,7 +28,9 @@ public class TimelineController {
 
     @GetMapping("/{albumId}")
     public ApiResponse<?> getTimelineAlbum(@PathVariable Long albumId) {
-        return null;
+        TimelineAlbumDto dto = timelineService.getTimelineAlbum(albumId);
+        TimelineDetailResponse response = TimelineDetailResponse.toResponse(dto);
+        return ApiResponse.ok(response);
     }
 
     @DeleteMapping("/{albumId}")

@@ -2,12 +2,11 @@ package com.ssafy.keepick.timeline.domain;
 
 import com.ssafy.keepick.group.domain.Group;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.*;
 
+@ToString(exclude = "group")
 @Getter
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 // 임시 Photo 클래스
 public class Photo {
@@ -23,4 +22,5 @@ public class Photo {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Group group;
+
 }
