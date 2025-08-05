@@ -7,9 +7,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <StoreProvider>
       <QueryProvider>
-        {/* <AuthInitializer> */}
+        <AuthInitializer>
           {children}
-        {/* </AuthInitializer> */}
+        </AuthInitializer>
       </QueryProvider>
     </StoreProvider>
   );

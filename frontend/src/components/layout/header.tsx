@@ -12,7 +12,7 @@ import {
   ArrowLeftStartOnRectangleIcon, // [추가] 대시보드 이동 아이콘
 } from "@heroicons/react/24/outline";
 import Image from "next/image";
-
+import { useAppSelector } from "@/shared/config/hooks";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -25,11 +25,15 @@ export default function Header({
 }: HeaderProps) {
   const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
 
-  // authSlice.ts의 name이 auth, 
-  // const user = useSelector((state: RootState) => state.auth.user)
+  const { currentUser } = useAppSelector((state) => state.user);
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
 
   // 실제로는 인증 상태에서 가져올 데이터
-  const user = { name: "wmwogus", imageUrl: "/jaewan1.jpg" };
+  // const user = { name: "wmwogus", imageUrl: "/jaewan1.jpg" };
+  const user = {
+    name: currentUser?.nickname || "Guest",
+    imageUrl: currentUser?.profileUrl || "/jaewan1.jpg"
+  };
 
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-sm shadow-sm h-16">

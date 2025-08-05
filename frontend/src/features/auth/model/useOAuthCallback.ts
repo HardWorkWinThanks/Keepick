@@ -48,7 +48,7 @@
       dispatch(setAuthLoading(true));
 
       try {
-        // /api/me 호출하여 사용자 정보 조회
+        // /api/members/me 호출하여 사용자 정보 조회
         const data = await authApi.getCurrentUser();
         // entities/user에 사용자 정보 저장
         dispatch(setUser(data.user));

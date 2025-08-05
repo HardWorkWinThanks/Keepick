@@ -6,22 +6,34 @@ import { VersatileInput } from "@/shared/ui";
 import { NaverIcon } from "@/shared/assets/NaverIcon";
 import { useProfileEdit } from "../model/useProfileEdit";
 import { UserProfile } from "../model/types";
+import { useAppSelector } from "@/shared/config/hooks";
 import Image from "next/image";
 
 interface ProfileFormProps {
-  initialProfile: UserProfile;
+  initialProfile?: UserProfile;
 }
 
-export function ProfileForm({ initialProfile }: ProfileFormProps) {
-  const {
-    userProfile,
-    nicknameInput,
-    setNicknameInput,
-    handleNicknameCheck,
-    handleNicknameApply,
-    handleProfileImageChange,
-    handleAiProfileImageChange,
-  } = useProfileEdit(initialProfile);
+  export function ProfileForm({ initialProfile }: ProfileFormProps) {
+    const { currentUser } = useAppSelector((state) => state.user);
+
+    // Redux 데이터를 우선 사용, prop이 있으면 fallback
+    const profileData: UserProfile = initialProfile || {
+      profileImage: currentUser?.profileUrl || '/dummy/dummy1.jpg',
+      email: currentUser?.email || 'user@example.com',
+      socialType: 'naver',
+      nickname: currentUser?.nickname || '사용자123',
+      aiProfileImage: '/dummy/dummy2.jpg'
+    };
+
+    const {
+      userProfile,
+      nicknameInput,
+      setNicknameInput,
+      handleNicknameCheck,
+      handleNicknameApply,
+      handleProfileImageChange,
+      handleAiProfileImageChange,
+    } = useProfileEdit(profileData);
 
   return (
     <div className="container mx-auto max-w-4xl">

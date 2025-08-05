@@ -5,8 +5,8 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 export interface User {
   id: number;
   email: string;
-  name: string;
-  profileImage?: string; // 선택적 프로필 이미지
+  nickname: string;
+  profileUrl?: string; // 선택적 프로필 이미지
   createdAt: string;
   updatedAt: string;
 }

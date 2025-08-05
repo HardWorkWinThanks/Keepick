@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Providers } from "@/shared/config";
+import { Providers } from "@/app/providers/Providers";
 import "@/shared/styles/globals.css";
 
 import { Inter } from "next/font/google";

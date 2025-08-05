@@ -23,7 +23,7 @@ export interface UserResponse {
 export const authApi = {
   // 현재 사용자 정보 조회
   getCurrentUser: async (): Promise<UserResponse> => {
-    const response = await apiClient.get<UserResponse>("/api/me");
+    const response = await apiClient.get<UserResponse>("/api/members/me");
     return response.data;
   },
 

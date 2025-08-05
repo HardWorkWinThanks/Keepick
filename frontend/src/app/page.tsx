@@ -6,6 +6,9 @@ import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import Image from "next/image";
 import Link from "next/link";
+
+import { useOAuthCallback } from "@/features/auth/model/useOAuthCallback";
+
 // [수정] 더 명확한 아이콘들을 solid 버전으로 가져옵니다.
 import {
   PlusCircleIcon,
@@ -23,6 +26,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      <>{useOAuthCallback()}</>
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ${
