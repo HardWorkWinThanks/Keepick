@@ -46,25 +46,37 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
       const refreshToken = localStorage.getItem("refreshToken");
 
       if (accessToken && !isAuthenticated) {
-        // 토큰이 있으면 로그아웃 상태일 수 없음 → 세션스토리지 정리
-        sessionStorage.removeItem("isLoggedOut");
-
-        dispatch(setTokens({ accessToken, refreshToken: refreshToken || undefined }));
+        dispatch(
+          setTokens({ accessToken, refreshToken: refreshToken || undefined })
+        );
         fetchUserInfo();
       }
     }
   }, [isAuthenticated, dispatch]);
 
-  // 리다이렉트는 토큰이 없고 명시적으로 로그아웃한 경우만
-  const isLoggedOut = typeof window !== "undefined" &&
-    sessionStorage.getItem("isLoggedOut") === "true";
-  const hasToken = typeof window !== "undefined" &&
-    localStorage.getItem("accessToken");
+  const hasToken =
+    typeof window !== "undefined" && localStorage.getItem("accessToken");
+  const isInitializing = authLoading || userLoading;
 
-  if (pathname !== "/login" && isLoggedOut && !hasToken) {
-    sessionStorage.removeItem("isLoggedOut");
+  // 🔍 디버깅 로그 추가
+  // console.log("🔍 AuthInitializer 상태:", {
+  //   pathname,
+  //   hasToken: !!hasToken,
+  //   isAuthenticated,
+  //   currentUser: !!currentUser,
+  //   authLoading,
+  //   userLoading,
+  //   isInitializing,
+  //   willRedirect: pathname !== "/login" && !hasToken && !isInitializing,
+  // });
+
+  // 인증이 필요한 보호된 경로에서만 리다이렉트
+  const protectedPaths = ['/profile', '/group', '/chat'];
+  const isProtectedPath = protectedPaths.some(path => pathname?.startsWith(path));
+
+  if (isProtectedPath && !hasToken && !isInitializing) {
+    console.log('🚨 보호된 경로에서 리다이렉트 실행!');
     redirect("/login");
   }
-
   return <>{children}</>;
 }

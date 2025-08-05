@@ -62,8 +62,7 @@ const authSlice = createSlice({
       if (typeof window !== "undefined") {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
-        // 명시적 로그아웃 상태 표시
-        sessionStorage.setItem("isLoggedOut", "true");
+
       }
     },
 

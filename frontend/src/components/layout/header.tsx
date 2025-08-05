@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useSelector } from "react-redux";
-import { RootState } from "@/shared/config";
+import { useLogout } from "@/features/auth/model/useLogout";
+
 import Link from "next/link";
 import {
   Bars3Icon,
@@ -24,15 +24,16 @@ export default function Header({
   onBackToDashboard,
 }: HeaderProps) {
   const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
-
   const { currentUser } = useAppSelector((state) => state.user);
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+
+  const logout = useLogout();
 
   // 실제로는 인증 상태에서 가져올 데이터
   // const user = { name: "wmwogus", imageUrl: "/jaewan1.jpg" };
   const user = {
     name: currentUser?.nickname || "Guest",
-    imageUrl: currentUser?.profileUrl || "/jaewan1.jpg"
+    imageUrl: currentUser?.profileUrl || "/jaewan1.jpg",
   };
 
   return (
@@ -117,7 +118,7 @@ export default function Header({
                 >
                   <UserCircleIcon className="w-5 h-5" /> 프로필
                 </Link>
-                <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                   <ArrowRightOnRectangleIcon className="w-5 h-5" /> 로그아웃
                 </button>
               </div>
