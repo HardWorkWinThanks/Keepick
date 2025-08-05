@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -64,7 +65,7 @@ class MobileLoginServiceTest {
         given(member.getId()).willReturn(1L);
         given(member.getEmail()).willReturn("test@gmail.com");
         
-        given(memberRepository.findByEmail("test@gmail.com")).willReturn(member);
+        given(memberRepository.findByEmail("test@gmail.com")).willReturn(Optional.of(member));
         given(jwtUtil.createToken(1L, "test@gmail.com")).willReturn("jwt-token");
         given(restTemplate.exchange(anyString(), any(), any(), eq(Map.class)))
                 .willReturn(new ResponseEntity<>(googleUserInfo, HttpStatus.OK));
@@ -118,7 +119,7 @@ class MobileLoginServiceTest {
         given(savedMember.getId()).willReturn(1L);
         given(savedMember.getEmail()).willReturn("test@gmail.com");
         
-        given(memberRepository.findByEmail("test@gmail.com")).willReturn(null); // 신규 회원
+        given(memberRepository.findByEmail("test@gmail.com")).willReturn(Optional.empty()); // 신규 회원
         given(memberRepository.save(any(Member.class))).willReturn(savedMember);
         given(jwtUtil.createToken(1L, "test@gmail.com")).willReturn("jwt-token");
         given(restTemplate.exchange(anyString(), any(), any(), eq(Map.class)))
@@ -141,7 +142,7 @@ class MobileLoginServiceTest {
         given(existingMember.getId()).willReturn(1L);
         given(existingMember.getEmail()).willReturn("test@gmail.com");
         
-        given(memberRepository.findByEmail("test@gmail.com")).willReturn(existingMember); // 기존 회원
+        given(memberRepository.findByEmail("test@gmail.com")).willReturn(Optional.of(existingMember)); // 기존 회원
         given(jwtUtil.createToken(1L, "test@gmail.com")).willReturn("jwt-token");
         given(restTemplate.exchange(anyString(), any(), any(), eq(Map.class)))
                 .willReturn(new ResponseEntity<>(googleUserInfo, HttpStatus.OK));

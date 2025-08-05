@@ -53,4 +53,20 @@ public class MemberService {
         
         return MemberDto.from(member);
     }
+    
+    /**
+     * 닉네임으로 사용자를 검색합니다.
+     * @param nickname 검색할 닉네임
+     * @return 검색된 사용자 정보
+     */
+    public MemberDto searchMemberByNickname(String nickname) {
+        if (nickname == null || nickname.trim().isEmpty()) {
+            throw new BaseException(ErrorCode.INVALID_PARAMETER);
+        }
+        
+        Member member = memberRepository.findByNickname(nickname.trim())
+                .orElseThrow(() -> new BaseException(ErrorCode.MEMBER_NOT_FOUND));
+        
+        return MemberDto.from(member);
+    }
 }

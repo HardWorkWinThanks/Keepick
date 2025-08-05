@@ -4,6 +4,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ssafy.keepick.auth.application.dto.MemberDto;
@@ -11,6 +12,7 @@ import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.member.application.MemberService;
 import com.ssafy.keepick.member.controller.request.MemberUpdateRequest;
 import com.ssafy.keepick.member.controller.response.MemberInfoResponse;
+import com.ssafy.keepick.member.controller.response.MemberSearchResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -43,6 +45,19 @@ public class MemberController {
     public ApiResponse<MemberInfoResponse> updateCurrentMemberInfo(@RequestBody MemberUpdateRequest request) {
         MemberDto memberDto = memberService.updateCurrentMemberInfo(request);
         MemberInfoResponse response = MemberInfoResponse.from(memberDto);
+        return ApiResponse.ok(response);
+    }
+    
+    /**
+     * 닉네임으로 사용자를 검색합니다.
+     * 
+     * @param nickname 검색할 닉네임 (쿼리 파라미터)
+     * @return 검색된 사용자 정보
+     */
+    @GetMapping
+    public ApiResponse<MemberSearchResponse> searchMemberByNickname(@RequestParam String nickname) {
+        MemberDto memberDto = memberService.searchMemberByNickname(nickname);
+        MemberSearchResponse response = MemberSearchResponse.from(memberDto);
         return ApiResponse.ok(response);
     }
 }

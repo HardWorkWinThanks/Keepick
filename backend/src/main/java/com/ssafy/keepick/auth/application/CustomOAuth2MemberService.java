@@ -49,7 +49,7 @@ public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
 
         String email = oAuth2Response.getEmail();
         log.debug("OAuth2 이메일: {}", email);
-        Member existMember = memberRepository.findByEmail(email);
+        Member existMember = memberRepository.findByEmail(email).orElse(null);
 
         // 존재하지 않는 회원이면 회원 생성
         if (existMember == null) {
