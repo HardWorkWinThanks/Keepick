@@ -1,20 +1,12 @@
-// src/app/invite/[inviteToken]/page.tsx
-
 import Link from "next/link";
 
-// 1. props 타입에서 searchParams를 완전히 제거합니다.
-//    이제 이 컴포넌트는 params 객체만 신경 씁니다.
-interface InvitePageProps {
-  params: {
-    inviteToken: string;
-  };
-}
+type InvitePageProps = {
+  params: Promise<{ inviteToken: string }>;
+};
 
-// 2. 컴포넌트가 받는 props에서 searchParams를 제거합니다.
-export default function InvitePage({ params }: InvitePageProps) {
-  const { inviteToken } = params;
+export default async function InvitePage({ params }: InvitePageProps) {
+  const { inviteToken } = await params;
 
-  // inviteToken은 사용되므로 경고가 발생하지 않습니다.
   console.log("초대 토큰:", inviteToken);
 
   const playStoreUrl =
@@ -28,7 +20,11 @@ export default function InvitePage({ params }: InvitePageProps) {
       <br />
       <Link href={playStoreUrl} passHref>
         <button
-          style={{ padding: "10px 20px", fontSize: "16px", cursor: "pointer" }}
+          style={{
+            padding: "10px 20px",
+            fontSize: "16px",
+            cursor: "pointer",
+          }}
         >
           Google Play Store로 이동
         </button>
