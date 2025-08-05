@@ -17,8 +17,8 @@ public class TimelineSectionPhoto {
     @ManyToOne(fetch = FetchType.LAZY)
     private TimelineSection section;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    private Photo photo;
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Photo photo;
 
     private Integer sequence;
 }

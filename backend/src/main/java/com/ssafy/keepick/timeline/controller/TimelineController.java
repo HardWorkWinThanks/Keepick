@@ -2,6 +2,7 @@ package com.ssafy.keepick.timeline.controller;
 
 import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.timeline.application.TimelineService;
+import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,27 +14,27 @@ public class TimelineController {
     private final TimelineService timelineService;
 
     @GetMapping("")
-    public ApiResponse<?> getTimelineAlbums() {
+    public ApiResponse<?> getTimelineAlbumList(@PathVariable Long groupId) {
         return null;
     }
 
     @PostMapping("")
-    public ApiResponse<?> createTimelineAlbum() {
+    public ApiResponse<?> createTimelineAlbum(@PathVariable Long groupId) {
         return null;
     }
 
     @GetMapping("/{albumId}")
-    public ApiResponse<?> getTimelineAlbum() {
+    public ApiResponse<?> getTimelineAlbum(@PathVariable Long albumId) {
         return null;
     }
 
     @DeleteMapping("/{albumId}")
-    public ApiResponse<?> deleteTimelineAlbum() {
+    public ApiResponse<?> deleteTimelineAlbum(@PathVariable Long albumId) {
         return null;
     }
 
     @PutMapping("/{albumId}")
-    public ApiResponse<?> updateTimelineAlbum() {
+    public ApiResponse<?> updateTimelineAlbum(@PathVariable Long albumId) {
         return null;
     }
 

@@ -15,7 +15,7 @@ public class TimelineSection {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String title;
+    private String name;
 
     private LocalDate startDate;
 

@@ -15,23 +15,23 @@ public class TimelineService {
 
     private final TimelineAlbumRepository timelineAlbumRepository;
 
-    public List<TimelineAlbumDto> getTimelineAlbums() {
+    public List<TimelineAlbumDto> getTimelineAlbumList(Long groupId) {
         return null;
     }
 
-    public TimelineAlbumDto createTimelineAlbum() {
+    public TimelineAlbumDto createTimelineAlbum(Long groupId) {
         return null;
     }
 
-    public TimelineAlbumDto getTimelineAlbum() {
+    public TimelineAlbumDto getTimelineAlbum(Long albumId) {
         return null;
     }
 
-    public TimelineAlbumDto deleteTimelineAlbum() {
+    public TimelineAlbumDto deleteTimelineAlbum(Long albumId) {
         return null;
     }
 
-    public TimelineAlbumDto updateTimelineAlbum() {
+    public TimelineAlbumDto updateTimelineAlbum(Long albumId) {
         return null;
     }
 
