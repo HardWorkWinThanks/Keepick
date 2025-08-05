@@ -56,10 +56,10 @@ export interface ConsumeData {
   roomId: string;
 }
 
-export interface JoinRoomData {
-  room: string;
-  rtpCapabilities: mediasoup.types.RtpCapabilities;
-}
+// export interface JoinRoomData {
+//   room: string;
+//   rtpCapabilities: mediasoup.types.RtpCapabilities;
+// }
 
 export interface ProducerInfo {
   producerId: string;

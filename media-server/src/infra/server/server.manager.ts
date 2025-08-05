@@ -15,6 +15,7 @@ export class ServerManager {
         cert: fs.readFileSync(serverConfig.ssl.certPath),
       };
       this.server = https.createServer(httpsOptions, app);
+      // this.server = http.createServer(app);
       logger.info("HTTPS server created successfully.");
     } else {
       this.server = http.createServer(app);
@@ -27,7 +28,7 @@ export class ServerManager {
     const host = serverConfig.host;
     this.server.listen(port, host, () => {
       logger.info(" ================================");
-      logger.info(`  Media Server Started (${this.server instanceof https.Server ? "HTTPS" : "HTTP"})`);
+      logger.info(`  Real Time Server Started (${this.server instanceof https.Server ? "HTTPS" : "HTTP"})`);
       logger.info(`  Port: ${port}`);
       logger.info(`  Host: ${host}`);
       logger.info(`  URL: ${this.server instanceof https.Server ? "https" : "http"}://${host}:${port}`);
