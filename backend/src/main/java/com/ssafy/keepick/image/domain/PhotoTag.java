@@ -14,17 +14,17 @@ public class PhotoTag {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Tag tag;
+    private String tag;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Photo photo;
 
-    private PhotoTag(Photo photo, Tag tag) {
+    private PhotoTag(Photo photo, String tag) {
         this.photo = photo;
         this.tag = tag;
     }
 
-    public static PhotoTag of(Photo photo, Tag tag) {
+    public static PhotoTag of(Photo photo, String tag) {
         return new PhotoTag(photo, tag);
     }
 }

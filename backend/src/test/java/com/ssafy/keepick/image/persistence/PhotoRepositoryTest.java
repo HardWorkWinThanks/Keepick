@@ -14,7 +14,6 @@ import com.ssafy.keepick.group.domain.GroupMember;
 import com.ssafy.keepick.image.domain.Photo;
 import com.ssafy.keepick.image.domain.PhotoMember;
 import com.ssafy.keepick.image.domain.PhotoTag;
-import com.ssafy.keepick.image.domain.Tag;
 import com.ssafy.keepick.member.domain.Member;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,7 +44,7 @@ class PhotoRepositoryTest {
     private Group testGroup;
     private Member testMember1, testMember2;
     private Photo testPhoto1, testPhoto2, testPhoto3, deletedPhoto;
-    private Tag tag1, tag2;
+    private String tag1, tag2;
 
     @BeforeEach
     void setUp() {
@@ -82,8 +81,8 @@ class PhotoRepositoryTest {
         entityManager.persist(groupMember2);
 
         // 태그 생성
-        tag1 = Tag.FOOD;
-        tag2 = Tag.SCENERY;
+        tag1 = "FOOD";
+        tag2 = "SCENERY";
 
         // 사진 생성
         testPhoto1 = Photo.builder()
@@ -308,7 +307,7 @@ class PhotoRepositoryTest {
         void findAllPhotosByGroupIdAndOption_Success_WithTagFilter() {
             // given
             Pageable pageable = PageRequest.of(0, 10);
-            List<Tag> tags = Arrays.asList(tag1);
+            List<String> tags = Arrays.asList(tag1);
 
             // when
             Page<Photo> result = photoRepository.findAllPhotosByGroupIdAndOption(
@@ -342,7 +341,7 @@ class PhotoRepositoryTest {
             // given
             Pageable pageable = PageRequest.of(0, 10);
             List<Long> memberIds = Arrays.asList(testMember1.getId());
-            List<Tag> tags = Arrays.asList(tag1);
+            List<String> tags = Arrays.asList(tag1);
             LocalDate startDate = LocalDate.now().minusDays(2);
             LocalDate endDate = LocalDate.now();
 
@@ -430,7 +429,7 @@ class PhotoRepositoryTest {
             // given
             Pageable pageable = PageRequest.of(0, 10);
             List<Long> emptyMemberIds = Collections.emptyList();
-            List<Tag> emptyTags = Collections.emptyList();
+            List<String> emptyTags = Collections.emptyList();
 
             // when
             Page<Photo> result = photoRepository.findAllPhotosByGroupIdAndOption(

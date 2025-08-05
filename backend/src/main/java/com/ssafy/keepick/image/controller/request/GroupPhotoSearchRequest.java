@@ -1,6 +1,5 @@
 package com.ssafy.keepick.image.controller.request;
 
-import com.ssafy.keepick.image.domain.Tag;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -13,7 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 public class GroupPhotoSearchRequest {
     private List<Long> memberIds;
-    private List<Tag> tags;
+    private List<String> tags;
     private LocalDate startDate;
     private LocalDate endDate;
     private int page = 0;

@@ -18,7 +18,6 @@ import com.ssafy.keepick.image.application.dto.GroupPhotoDto;
 import com.ssafy.keepick.image.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.image.controller.request.GroupPhotoSearchRequest;
 import com.ssafy.keepick.image.domain.Photo;
-import com.ssafy.keepick.image.domain.Tag;
 import com.ssafy.keepick.image.persistence.PhotoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -68,7 +67,7 @@ public class PhotoServiceTest {
                 .page(0)
                 .size(10)
                 .memberIds(Arrays.asList(1L, 2L))
-                .tags(Arrays.asList(Tag.FOOD))
+                .tags(Arrays.asList("FOOD"))
                 .startDate(LocalDate.now().minusDays(7))
                 .endDate(LocalDate.now())
                 .build();

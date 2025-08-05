@@ -6,7 +6,6 @@ import com.ssafy.keepick.image.domain.Photo;
 
 import static com.ssafy.keepick.image.domain.QPhoto.*;
 
-import com.ssafy.keepick.image.domain.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -23,7 +22,7 @@ public class PhotoQueryFactoryImpl implements PhotoQueryFactory {
     private final JPAQueryFactory jpaQueryFactory;
 
     @Override
-    public Page<Photo> findAllPhotosByGroupIdAndOption(Pageable pageable, Long groupId, List<Long> memberIds, List<Tag> tags, LocalDate startDate, LocalDate endDate) {
+    public Page<Photo> findAllPhotosByGroupIdAndOption(Pageable pageable, Long groupId, List<Long> memberIds, List<String> tags, LocalDate startDate, LocalDate endDate) {
         List<Photo> photos = jpaQueryFactory
                 .selectFrom(photo)
                 .where(
@@ -66,7 +65,7 @@ public class PhotoQueryFactoryImpl implements PhotoQueryFactory {
                 : null;
     }
 
-    private BooleanExpression tagIn(List<Tag> tags) {
+    private BooleanExpression tagIn(List<String> tags) {
         return tags != null && !tags.isEmpty()
                 ? photo.tags.any().tag.in(tags)
                 : null;
