@@ -1,34 +1,16 @@
-import Link from "next/link";
+import InviteClient from "./InviteClient"; // 방금 만든 자식 컴포넌트를 임포트합니다.
 
+// props 타입은 공식 문서와 동일하게 Promise를 명시합니다.
 type InvitePageProps = {
   params: Promise<{ inviteToken: string }>;
 };
 
+// 이 페이지는 async 서버 컴포넌트입니다.
 export default async function InvitePage({ params }: InvitePageProps) {
+  // await으로 Promise에서 실제 토큰 값을 추출합니다.
   const { inviteToken } = await params;
 
-  console.log("초대 토큰:", inviteToken);
-
-  const playStoreUrl =
-    "https://play.google.com/store/apps/details?id=com.ssafy.keepick";
-
-  return (
-    <div style={{ padding: "40px", textAlign: "center" }}>
-      <h1>KeePick 그룹 초대</h1>
-      <p>초대에 응하려면 KeePick 앱이 필요합니다.</p>
-      <p>아래 버튼을 눌러 앱을 설치하거나 실행해주세요.</p>
-      <br />
-      <Link href={playStoreUrl} passHref>
-        <button
-          style={{
-            padding: "10px 20px",
-            fontSize: "16px",
-            cursor: "pointer",
-          }}
-        >
-          Google Play Store로 이동
-        </button>
-      </Link>
-    </div>
-  );
+  // 이제 이 페이지는 UI 렌더링을 자식에게 위임합니다.
+  // 실제 값으로 변환된 inviteToken을 props로 넘겨줍니다.
+  return <InviteClient inviteToken={inviteToken} />;
 }
