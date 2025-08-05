@@ -5,17 +5,17 @@ export interface ApiResponse<T = unknown> {
   message?: string;
 }
 
-// 인증 관련 타입들
-export interface AuthUser {
-  id: number;
-  name: string;
-  email: string;
-  profileImage?: string;
-}
+// // 인증 관련 타입들
+// export interface AuthUser {
+//   id: number;
+//   name: string;
+//   email: string;
+//   profileImage?: string;
+// }
 
-export interface AuthResponse {
-  user: AuthUser;
-}
+// export interface AuthResponse {
+//   user: AuthUser;
+// }
 
 export interface OAuthUrlResponse {
   authUrl: string;

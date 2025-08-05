@@ -1,23 +1,7 @@
 // features/auth/api/authApi.ts
 import { apiClient } from "@/shared/api/http";
+import { TokenRefreshResponse, UserResponse } from "./types";
 
-// 토큰 갱신 응답 인터페이스
-export interface TokenRefreshResponse {
-  accessToken: string;
-  refreshToken?: string; // 새 refreshToken (선택적)
-}
-
-// 사용자 정보 응답 인터페이스
-export interface UserResponse {
-  user: {
-    id: number;
-    email: string;
-    name: string;
-    profileImage?: string;
-    createdAt: string;
-    updatedAt: string;
-  };
-}
 
 // 인증 관련 API 함수들
 export const authApi = {

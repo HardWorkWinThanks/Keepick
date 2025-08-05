@@ -1,8 +1,8 @@
 export { apiClient } from "./client";
 export type {
   ApiResponse,
-  AuthUser,
-  AuthResponse,
+  // AuthUser,
+  // AuthResponse,
   OAuthUrlResponse,
   ApiError,
 } from "../../types/api";

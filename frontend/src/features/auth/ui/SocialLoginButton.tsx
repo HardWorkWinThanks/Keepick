@@ -4,7 +4,7 @@ import { handleSocialLogin } from "../model/handleSocialLogin";
 import { NaverIcon } from "@/shared/assets/NaverIcon";
 import { KakaoIcon } from "@/shared/assets/KakaoIcon";
 import { GoogleIcon } from "@/shared/assets/GoogleIcon";
-import { SocialProvider } from "../types";
+import { SocialLoginButtonProps } from "./types";
 
 const providerStyles = {
   naver: "bg-[#03C75A] text-white hover:bg-[#03C75A]/90",
@@ -24,9 +24,7 @@ const providerIcons = {
   google: <GoogleIcon />, 
 };
 
-interface SocialLoginButtonProps {
-  provider: SocialProvider;
-}
+
 
 export function SocialLoginButton({ provider }: SocialLoginButtonProps) {
   return (

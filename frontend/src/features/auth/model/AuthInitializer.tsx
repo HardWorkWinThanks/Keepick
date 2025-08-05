@@ -14,8 +14,12 @@ interface AuthInitializerProps {
 export function AuthInitializer({ children }: AuthInitializerProps) {
   const dispatch = useAppDispatch();
   const pathname = usePathname();
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
-  const { currentUser } = useAppSelector((state) => state.user);
+  const { isAuthenticated, isLoading: authLoading } = useAppSelector(
+    (state) => state.auth
+  ); // 인증 로딩 상태 추가
+  const { currentUser, isLoading: userLoading } = useAppSelector(
+    (state) => state.user
+  ); // 사용자 로딩 상태 추가
 
   // 유저 정보 가져오는 함수
   const fetchUserInfo = async () => {
@@ -42,18 +46,23 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
       const refreshToken = localStorage.getItem("refreshToken");
 
       if (accessToken && !isAuthenticated) {
-        // 토큰을 Redux에 복원
-        dispatch(
-          setTokens({ accessToken, refreshToken: refreshToken || undefined })
-        );
-        // 사용자 정보 가져오기
+        // 토큰이 있으면 로그아웃 상태일 수 없음 → 세션스토리지 정리
+        sessionStorage.removeItem("isLoggedOut");
+
+        dispatch(setTokens({ accessToken, refreshToken: refreshToken || undefined }));
         fetchUserInfo();
       }
     }
   }, [isAuthenticated, dispatch]);
 
-  // 인증이 필요한 페이지에서만 체크
-  if (pathname !== "/login" && !currentUser && !isAuthenticated) {
+  // 리다이렉트는 토큰이 없고 명시적으로 로그아웃한 경우만
+  const isLoggedOut = typeof window !== "undefined" &&
+    sessionStorage.getItem("isLoggedOut") === "true";
+  const hasToken = typeof window !== "undefined" &&
+    localStorage.getItem("accessToken");
+
+  if (pathname !== "/login" && isLoggedOut && !hasToken) {
+    sessionStorage.removeItem("isLoggedOut");
     redirect("/login");
   }
 

@@ -41,7 +41,7 @@ The project follows Feature-Sliced Design with these main layers:
 - **Styling**: TailwindCSS with CVA (Class Variance Authority)
 - **Forms**: React Hook Form with Zod validation
 - **Real-time Communication**: Socket.io client and MediaSoup for WebRTC
-- **Authentication**: Social login (Naver, Kakao) with custom handlers
+- **Authentication**: Social login (Naver, Kakao, Google) with custom handlers
 
 ### Provider Hierarchy
 ```
@@ -212,6 +212,7 @@ reducer: {
 2. **Explain what needs to be changed** and let the user copy-paste
 3. **Only modify files when explicitly requested** by the user
 4. **Provide clear instructions** on which files to modify and how
+5. **Include brief comments in Korean** to explain the changes when showing code examples
 
 ## Important Notes
 - The project uses Next.js App Router (not Pages Router)

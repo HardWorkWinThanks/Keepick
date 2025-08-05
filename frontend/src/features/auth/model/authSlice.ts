@@ -1,13 +1,7 @@
 // features/auth/model/authSlice.ts
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { AuthState } from "./types";
 
-// 인증 상태 인터페이스 (사용자 데이터는 포함하지 않음)
-interface AuthState {
-  isAuthenticated: boolean; // 인증 여부
-  accessToken: string | null; // JWT 액세스 토큰
-  refreshToken: string | null; // JWT 리프레시 토큰
-  isLoading: boolean; // 인증 처리 로딩 상태
-}
 
 // 초기 상태 정의
 const initialState: AuthState = {
@@ -68,6 +62,8 @@ const authSlice = createSlice({
       if (typeof window !== "undefined") {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        // 명시적 로그아웃 상태 표시
+        sessionStorage.setItem("isLoggedOut", "true");
       }
     },
 
