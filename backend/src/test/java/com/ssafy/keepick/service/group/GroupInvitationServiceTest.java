@@ -1,6 +1,8 @@
 package com.ssafy.keepick.service.group;
 
+import com.ssafy.keepick.external.redis.RedisService;
 import com.ssafy.keepick.global.exception.BaseException;
+
 import com.ssafy.keepick.group.controller.request.GroupInviteRequest;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.domain.GroupMember;
@@ -10,23 +12,32 @@ import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.group.persistence.GroupMemberRepository;
 import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.member.persistence.MemberRepository;
-import com.ssafy.keepick.external.redis.RedisService;
 import com.ssafy.keepick.group.application.dto.GroupMemberDto;
-import jakarta.transaction.Transactional;
+import com.ssafy.keepick.testconfig.RedisTestContainer;
+import com.ssafy.keepick.testconfig.TestRedisConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.TestPropertySource;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@SpringBootTest
-@Transactional
-public class GroupInvitationServiceTest {
+@Import({
+        RedisService.class,
+        TestRedisConfig.class,
+        GroupInvitationService.class,
+})
+@DataJpaTest
+@TestPropertySource(properties = {
+        "app.frontend.url=http://localhost:3000"
+})
+public class GroupInvitationServiceTest extends RedisTestContainer {
 
     @Autowired
     GroupRepository groupRepository;
