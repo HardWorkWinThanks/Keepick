@@ -5,12 +5,14 @@ import com.ssafy.keepick.timeline.application.dto.TimelineSectionDto;
 import com.ssafy.keepick.timeline.application.dto.TimelineSectionPhotoDto;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.ToString;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @Getter
 @Builder
+@ToString
 public class TimelineDetailResponse {
 
     private Long albumId;
@@ -24,6 +26,7 @@ public class TimelineDetailResponse {
 
     @Getter
     @Builder
+    @ToString
     static class Section {
         private Long sectionId;
         private String name;
@@ -46,6 +49,7 @@ public class TimelineDetailResponse {
 
     @Getter
     @Builder
+    @ToString
     static class Photo {
         private Long photoId;
         private String originalUrl;

@@ -5,7 +5,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -34,6 +33,9 @@ public class TimelineSection {
     private TimelineAlbum album;
 
     @OneToMany(mappedBy = "section")
-    @BatchSize(size = 100)
     private List<TimelineSectionPhoto> photos = new ArrayList<>();
+
+    public void loadPhotos(List<TimelineSectionPhoto> photos) {
+        this.photos = (photos != null) ? photos : List.of();
+    }
 }
