@@ -9,6 +9,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Entity
@@ -33,6 +35,12 @@ public class Photo extends BaseTimeEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Group group;
+
+    @OneToMany(mappedBy = "photo", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<PhotoMember> members = new ArrayList<>();
+
+    @OneToMany(mappedBy = "photo", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<PhotoTag> tags = new ArrayList<>();
 
     @Builder
     public Photo(String originalUrl, LocalDateTime takenAt, Integer width, Integer height, Group group) {
