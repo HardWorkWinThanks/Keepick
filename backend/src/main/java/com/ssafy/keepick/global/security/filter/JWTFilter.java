@@ -28,7 +28,10 @@ public class JWTFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String uri = request.getRequestURI();
-        if (uri.startsWith("/api/oauth2/authorization") || uri.startsWith("/api/login/oauth2/code")) {
+        if (uri.startsWith("/api/oauth2/authorization")
+                || uri.startsWith("/api/login/oauth2/code")
+                || uri.equals("/api/auth/login")
+                || uri.equals("/.well-known/assetlinks.json")) {
             filterChain.doFilter(request, response);
             return;
         }
