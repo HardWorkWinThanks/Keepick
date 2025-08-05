@@ -225,7 +225,7 @@ class MemberServiceTest {
         given(testMember.getEmail()).willReturn("test@example.com");
         given(testMember.getProvider()).willReturn("kakao");
         given(testMember.getIdentificationUrl()).willReturn("https://example.com/id.jpg");
-        given(memberRepository.findByNickname(searchNickname)).willReturn(testMember);
+        given(memberRepository.findByNickname(searchNickname)).willReturn(Optional.of(testMember));
 
         // when
         MemberDto response = memberService.searchMemberByNickname(searchNickname);
@@ -249,7 +249,7 @@ class MemberServiceTest {
         given(testMember.getEmail()).willReturn("test@example.com");
         given(testMember.getProvider()).willReturn("kakao");
         given(testMember.getIdentificationUrl()).willReturn("https://example.com/id.jpg");
-        given(memberRepository.findByNickname(searchNickname)).willReturn(testMember);
+        given(memberRepository.findByNickname(searchNickname)).willReturn(Optional.of(testMember));
 
         // when
         MemberDto response = memberService.searchMemberByNickname(searchNickname);
@@ -267,7 +267,7 @@ class MemberServiceTest {
     void searchMemberByNickname_MemberNotFound_ThrowsException() {
         // given
         String searchNickname = "존재하지않는닉네임";
-        given(memberRepository.findByNickname(searchNickname)).willReturn(null);
+        given(memberRepository.findByNickname(searchNickname)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> memberService.searchMemberByNickname(searchNickname))

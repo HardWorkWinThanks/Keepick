@@ -10,6 +10,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
 import static org.assertj.core.api.Assertions.*;
 
+import java.util.Optional;
+
 @DataJpaTest
 class MemberRepositoryTest {
 
@@ -64,10 +66,11 @@ class MemberRepositoryTest {
         entityManager.persistAndFlush(member);
 
         // when
-        Member foundMember = memberRepository.findByEmail("kim@example.com");
+        Optional<Member> foundMemberOpt = memberRepository.findByEmail("kim@example.com");
 
         // then
-        assertThat(foundMember).isNotNull();
+        assertThat(foundMemberOpt).isPresent();
+        Member foundMember = foundMemberOpt.get();
         assertThat(foundMember.getName()).isEqualTo("김길동");
         assertThat(foundMember.getEmail()).isEqualTo("kim@example.com");
         assertThat(foundMember.getProvider()).isEqualTo("google");
@@ -75,13 +78,13 @@ class MemberRepositoryTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 이메일로 조회 시 null을 반환한다")
-    void shouldReturnNullWhenEmailNotFound() {
+    @DisplayName("존재하지 않는 이메일로 조회 시 빈 Optional을 반환한다")
+    void shouldReturnEmptyOptionalWhenEmailNotFound() {
         // when
-        Member foundMember = memberRepository.findByEmail("notfound@example.com");
+        Optional<Member> foundMemberOpt = memberRepository.findByEmail("notfound@example.com");
 
         // then
-        assertThat(foundMember).isNull();
+        assertThat(foundMemberOpt).isEmpty();
     }
 
     @Test
@@ -184,10 +187,11 @@ class MemberRepositoryTest {
         entityManager.persistAndFlush(member);
 
         // when
-        Member foundMember = memberRepository.findByNickname("테스트닉네임");
+        Optional<Member> foundMemberOpt = memberRepository.findByNickname("테스트닉네임");
 
         // then
-        assertThat(foundMember).isNotNull();
+        assertThat(foundMemberOpt).isPresent();
+        Member foundMember = foundMemberOpt.get();
         assertThat(foundMember.getName()).isEqualTo("닉네임테스트");
         assertThat(foundMember.getNickname()).isEqualTo("테스트닉네임");
         assertThat(foundMember.getEmail()).isEqualTo("nickname@example.com");
@@ -195,13 +199,13 @@ class MemberRepositoryTest {
     }
     
     @Test
-    @DisplayName("존재하지 않는 닉네임으로 조회 시 null을 반환한다")
-    void shouldReturnNullWhenNicknameNotFound() {
+    @DisplayName("존재하지 않는 닉네임으로 조회 시 빈 Optional을 반환한다")
+    void shouldReturnEmptyOptionalWhenNicknameNotFound() {
         // when
-        Member foundMember = memberRepository.findByNickname("존재하지않는닉네임");
+        Optional<Member> foundMemberOpt = memberRepository.findByNickname("존재하지않는닉네임");
 
         // then
-        assertThat(foundMember).isNull();
+        assertThat(foundMemberOpt).isEmpty();
     }
     
     @Test
@@ -220,10 +224,11 @@ class MemberRepositoryTest {
         entityManager.persistAndFlush(member);
 
         // when
-        Member foundMember = memberRepository.findByNickname("널프로필닉네임");
+        Optional<Member> foundMemberOpt = memberRepository.findByNickname("널프로필닉네임");
 
         // then
-        assertThat(foundMember).isNotNull();
+        assertThat(foundMemberOpt).isPresent();
+        Member foundMember = foundMemberOpt.get();
         assertThat(foundMember.getNickname()).isEqualTo("널프로필닉네임");
         assertThat(foundMember.getProfileUrl()).isNull();
     }
