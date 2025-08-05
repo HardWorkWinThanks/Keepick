@@ -44,6 +44,7 @@ public class GroupPhotoService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
         // 2. 사진 삭제
+        // TODO: 앨범에 포함된 사진인 경우 삭제 건너뛰기
         List<Long> ids = request.getPhotoIds();
         photoRepository.softDeleteAllById(ids);
         return ids.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
