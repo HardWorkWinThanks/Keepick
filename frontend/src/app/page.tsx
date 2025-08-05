@@ -8,7 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
-import OAuthHandler from "@/features/auth/model/OAuthHandler";
+
 
 // [수정] 더 명확한 아이콘들을 solid 버전으로 가져옵니다.
 import {
