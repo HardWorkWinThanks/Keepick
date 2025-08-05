@@ -26,7 +26,7 @@ public class FriendInteractionService {
 
     public FriendshipDto createFriendRequest(FriendCreateRequest request, long loginMemberId) {
         // 자신에게 친구 요청인 경우
-        validateMyself(loginMemberId, request.getFriendId());
+        validateNotSelf(loginMemberId, request.getFriendId());
 
         // 회원 조회
         Member sender = memberRepository.findById(loginMemberId).orElseThrow(() -> new BaseException(NOT_FOUND));
@@ -60,7 +60,7 @@ public class FriendInteractionService {
         return dto;
     }
 
-    private void validateMyself(Long senderId, Long receiverId) {
+    private void validateNotSelf(Long senderId, Long receiverId) {
         if (senderId.equals(receiverId)) throw new BaseException(INVALID_PARAMETER);
     }
 
@@ -108,8 +108,8 @@ public class FriendInteractionService {
 
     private Friendship findAndValidateFriendship(Long requestId, Long memberId) {
         Friendship friendship = friendshipRepository.findWithReceiverById(requestId).orElseThrow(() -> new BaseException(FRIENDSHIP_NOT_FOUND));
-        // 로그인한 회원이 받은 친구 요청인지 확인
-        if (!friendship.getSender().getId().equals(memberId)) {
+        // 로그인한 회원이 처리할 수 있는 요청인지 확인
+        if (!friendship.isProcessableBy(memberId)) {
             throw new BaseException(FRIENDSHIP_FORBIDDEN);
         }
         return friendship;

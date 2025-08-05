@@ -58,5 +58,9 @@ public class Friendship extends BaseTimeEntity {
         return false;
     }
 
+    public boolean isProcessableBy(Long memberId) {
+        return this.sender.getId().equals(memberId);
+    }
+
 }
 

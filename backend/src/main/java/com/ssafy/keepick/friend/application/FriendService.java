@@ -3,7 +3,6 @@ package com.ssafy.keepick.friend.application;
 import com.ssafy.keepick.friend.application.dto.FriendshipDto;
 import com.ssafy.keepick.friend.domain.Friendship;
 import com.ssafy.keepick.friend.persistence.FriendshipRepository;
-import com.ssafy.keepick.member.persistence.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,7 +15,6 @@ import java.util.List;
 public class FriendService {
 
     private final FriendshipRepository friendshipRepository;
-    private final MemberRepository memberRepository;
 
     public List<FriendshipDto> getFriendList(Long loginMemberId, FriendStatus status) {
         return switch (status) {
