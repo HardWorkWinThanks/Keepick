@@ -60,8 +60,12 @@ public class SecurityConfig {
         // 경로별 권한 설정
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers(
+                        // OAuth2 관련 경로
                         "/api/oauth2/**",
                         "/api/login/oauth2/**",
+                        // 모바일 인증 관련 경로
+                        "/api/auth/login",
+                        // Swagger 문서 관련 경로
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/api-docs")
