@@ -2,11 +2,15 @@ package com.ssafy.keepick.image.controller.request;
 
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.image.domain.Photo;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
 
 @Getter
+@Builder
+@AllArgsConstructor
 public class GroupPhotoCreateRequest {
     private String originalUrl;
     private LocalDateTime takenAt;
