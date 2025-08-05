@@ -221,9 +221,10 @@ public class PhotoServiceTest {
             // given
             Long memberId = 1L;
             int size = 5;
+            int offset = 0;
             List<Photo> randomPhotos = Arrays.asList(testPhoto);
 
-            given(photoRepository.findRandomByMemberId(memberId, size))
+            given(photoRepository.findRandomByMemberId(memberId, size, offset))
                     .willReturn(randomPhotos);
 
             // when
@@ -231,7 +232,7 @@ public class PhotoServiceTest {
 
             // then
             assertThat(result).hasSize(1);
-            verify(photoRepository).findRandomByMemberId(memberId, size);
+            verify(photoRepository).findRandomByMemberId(memberId, size, offset);
         }
 
         @Test
@@ -240,8 +241,9 @@ public class PhotoServiceTest {
             // given
             Long memberId = 1L;
             int size = 5;
+            int offset = 0;
 
-            given(photoRepository.findRandomByMemberId(memberId, size))
+            given(photoRepository.findRandomByMemberId(memberId, size, offset))
                     .willReturn(Collections.emptyList());
 
             // when
@@ -249,7 +251,7 @@ public class PhotoServiceTest {
 
             // then
             assertThat(result).isEmpty();
-            verify(photoRepository).findRandomByMemberId(memberId, size);
+            verify(photoRepository).findRandomByMemberId(memberId, size, offset);
         }
     }
 }

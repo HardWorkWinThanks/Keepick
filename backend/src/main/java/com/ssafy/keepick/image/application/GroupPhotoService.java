@@ -63,7 +63,9 @@ public class GroupPhotoService {
 
     @Transactional(readOnly = true)
     public List<GroupPhotoDto> getRandomPhotos(Long memberId, int size) {
-        List<Photo> photoList = photoRepository.findRandomByMemberId(memberId, size);
+        int total = photoRepository.countByMemberId(memberId);
+        int offset = (int) (Math.random() * Math.max(1, total - size));
+        List<Photo> photoList = photoRepository.findRandomByMemberId(memberId, size, offset);
         return photoList.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
     }
 

@@ -213,7 +213,7 @@ class PhotoRepositoryTest {
         @DisplayName("멤버의 랜덤 사진 조회 테스트")
         void findRandomByMemberId_Success() {
             // when
-            List<Photo> result = photoRepository.findRandomByMemberId(testMember1.getId(), 10);
+            List<Photo> result = photoRepository.findRandomByMemberId(testMember1.getId(), 10, 0);
 
             // then
             assertThat(result).isNotEmpty();
@@ -226,7 +226,7 @@ class PhotoRepositoryTest {
         @DisplayName("멤버의 랜덤 사진 조회 1개 제한 테스트")
         void findRandomByMemberId_Success_WithSizeLimit() {
             // when
-            List<Photo> result = photoRepository.findRandomByMemberId(testMember1.getId(), 1);
+            List<Photo> result = photoRepository.findRandomByMemberId(testMember1.getId(), 1, 0);
 
             // then
             assertThat(result).hasSize(1);
@@ -248,7 +248,7 @@ class PhotoRepositoryTest {
             entityManager.persistAndFlush(memberWithNoPhotos);
 
             // when
-            List<Photo> result = photoRepository.findRandomByMemberId(memberWithNoPhotos.getId(), 10);
+            List<Photo> result = photoRepository.findRandomByMemberId(memberWithNoPhotos.getId(), 10, 0);
 
             // then
             assertThat(result).isEmpty();
@@ -258,7 +258,7 @@ class PhotoRepositoryTest {
         @DisplayName("크기 0으로 랜덤 사진 요청한 경우 테스트")
         void findRandomByMemberId_Success_ZeroSize() {
             // when
-            List<Photo> result = photoRepository.findRandomByMemberId(testMember1.getId(), 0);
+            List<Photo> result = photoRepository.findRandomByMemberId(testMember1.getId(), 0, 0);
 
             // then
             assertThat(result).isEmpty();
