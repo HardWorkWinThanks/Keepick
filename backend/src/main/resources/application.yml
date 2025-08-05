@@ -112,3 +112,11 @@ springdoc:
     operations-sorter: alpha
   paths-to-match: /api/**
   use-fqn: true
+
+# 로그 설정
+logging:
+  level:
+    com.ssafy.keepick.global.security: INFO
+    org.springframework.security: WARN
+    org.springframework.web.filter: WARN
+    root: INFO
