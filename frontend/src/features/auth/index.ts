@@ -1,1 +1,1 @@
-export { SocialLoginButton } from "./social-login";
+export { SocialLoginButton } from "./ui/SocialLoginButton";

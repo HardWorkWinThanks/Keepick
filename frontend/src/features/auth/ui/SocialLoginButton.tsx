@@ -1,10 +1,10 @@
 "use client";
 
-import { handleSocialLogin } from "../lib/handleSocialLogin";
+import { handleSocialLogin } from "../model/handleSocialLogin";
 import { NaverIcon } from "@/shared/assets/NaverIcon";
 import { KakaoIcon } from "@/shared/assets/KakaoIcon";
 import { GoogleIcon } from "@/shared/assets/GoogleIcon";
-import { SocialProvider } from "../model/types";
+import { SocialProvider } from "../types";
 
 const providerStyles = {
   naver: "bg-[#03C75A] text-white hover:bg-[#03C75A]/90",
@@ -15,7 +15,7 @@ const providerStyles = {
 const providerLabels = {
   naver: "네이버 로그인",
   kakao: "카카오 로그인",
-  google: "Google로 로그인",
+  google: "Google 로그인",
 };
 
 const providerIcons = {

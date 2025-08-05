@@ -1,7 +1,7 @@
 "use client"; // useSearchParams를 사용하기 위해 클라이언트 컴포넌트로 전환
 
 import { useSearchParams } from "next/navigation";
-import { SocialLoginButton } from "@/features/auth/social-login/ui/SocialLoginButton";
+import { SocialLoginButton } from "@/features/auth/ui/SocialLoginButton";
 
 // 에러 메시지를 표시할 컴포넌트
 function ErrorMessage() {

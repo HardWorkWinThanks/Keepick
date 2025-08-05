@@ -1,5 +1,4 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
-import { getJwtFromCookie } from "@/shared/lib/cookies";
 
 class ApiClient {
   private instance: AxiosInstance;
@@ -20,9 +19,11 @@ class ApiClient {
     // 요청 인터셉터: 자동으로 JWT 헤더 추가
     this.instance.interceptors.request.use(
       (config) => {
-        const token = getJwtFromCookie();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+        if (typeof window !== "undefined") {
+          const token = localStorage.getItem("accessToken");
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
         }
         return config;
       },
@@ -32,12 +33,44 @@ class ApiClient {
       }
     );
 
-    // 응답 인터셉터: 401 에러 시 자동 로그아웃
+    // 응답 인터셉터: 401 에러 시 토큰 갱신 시도 후 로그아웃
     this.instance.interceptors.response.use(
       (response) => response,
-      (error) => {
+      async (error) => {
         if (error.response?.status === 401) {
-          console.warn("401 Unauthorized - 자동 로그아웃");
+          // 토큰 갱신 시도
+          const refreshToken = localStorage.getItem("refreshToken");
+          if (refreshToken) {
+            try {
+              // authApi의 refreshToken 함수 사용하면 순환참조 발생하므로 직접 호출
+              const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/refresh`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ refreshToken }),
+                }
+              );
+
+              if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem("accessToken", data.accessToken);
+                if (data.refreshToken) {
+                  localStorage.setItem("refreshToken", data.refreshToken);
+                }
+
+                // 원래 요청 재시도
+                error.config.headers.Authorization = `Bearer ${data.accessToken}`;
+                return this.instance.request(error.config);
+              }
+            } catch (refreshError) {
+              console.error("Token refresh failed:", refreshError);
+            }
+          }
+
+          // 토큰 갱신 실패 시 로그아웃
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
           if (typeof window !== "undefined") {
             window.location.href = "/login";
           }
