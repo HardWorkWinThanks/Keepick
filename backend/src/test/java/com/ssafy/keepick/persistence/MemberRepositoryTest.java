@@ -101,7 +101,7 @@ class MemberRepositoryTest {
         Long memberId = savedMember.getId();
 
         // when
-        savedMember.updateProfile("새닉네임", "https://example.com/new.jpg");
+        savedMember.updateProfile("새닉네임", "https://example.com/new.jpg", null);
         entityManager.flush();
         entityManager.clear(); // 영속성 컨텍스트 클리어
 

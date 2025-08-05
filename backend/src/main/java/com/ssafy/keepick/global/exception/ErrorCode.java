@@ -20,10 +20,10 @@ public enum ErrorCode {
     // Group
     GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 그룹입니다.", "G001"),
 
-    // Group_Member
+    // Group Member
     INVITATION_FORBIDDEN(HttpStatus.FORBIDDEN, "초대 요청을 처리할 권한이 없습니다.", "GM001"),
-    INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "그룹 초대 요청을 찾을 수 없습니다", "GM002"),
-    INVITATION_TOKEN_NOT_FOUND(HttpStatus.BAD_REQUEST, "유효하지 않거나 만료된 링크입니다.", "GM003"),
+    INVITATION_NOT_FOUND(HttpStatus.FORBIDDEN, "그룹 초대 요청을 찾을 수 없습니다", "GM002"),
+    INVITATION_TOKEN_NOT_FOUND(HttpStatus.FORBIDDEN, "유효하지 않거나 만료된 링크입니다.", "GM003"),
 
     // Auth
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "잘못된 입력값입니다.", "A001"),
@@ -36,8 +36,13 @@ public enum ErrorCode {
     FRIENDSHIP_DUPLICATE(HttpStatus.CONFLICT, "이미 친구인 회원입니다.", "F003"),
     FRIENDSHIP_INCONSISTENT_STATE(HttpStatus.INTERNAL_SERVER_ERROR, "친구 요청 처리 중 오류가 발생했습니다.", "F004"),
 
+    // Photo
+    INVALID_FILE(HttpStatus.BAD_REQUEST, "처리할 수 없는 이미지 파일입니다.", "P001"),
+    PRESIGNED_URL_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "presigned url 생성에 실패했습니다.", "P002"),
+
     // 시스템 에러
-    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다.", "S001");
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다.", "S001"),
+    INTERNAL_S3_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S3 서버에서 발생한 오류입니다.", "S002");
 
     private final HttpStatus status;
     private final String message;
