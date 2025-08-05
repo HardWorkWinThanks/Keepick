@@ -23,10 +23,10 @@ export default function HomePage() {
   const userName = "WebrtcMaster";
   const totalPhotos = 2845;
   const totalAlbums = 17;
+  useOAuthCallback()
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <>{useOAuthCallback()}</>
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ${
