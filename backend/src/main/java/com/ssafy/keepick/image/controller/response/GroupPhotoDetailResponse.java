@@ -20,14 +20,18 @@ public class GroupPhotoDetailResponse {
 
     public static List<GroupPhotoDetailResponse> from (List<GroupPhotoDto> dtoList) {
         return dtoList.stream()
-                .map(dto -> GroupPhotoDetailResponse.builder()
-                    .photoId(dto.getPhotoId())
-                    .originalUrl(dto.getOriginalUrl())
-                    .thumbnailUrl(dto.getThumbnailUrl())
-                    .takenAt(dto.getTakenAt().toString())
-                    .width(dto.getWidth())
-                    .height(dto.getHeight())
-                    .build())
+                .map(GroupPhotoDetailResponse::from)
                 .toList();
+    }
+
+    public static GroupPhotoDetailResponse from (GroupPhotoDto dto) {
+        return GroupPhotoDetailResponse.builder()
+                .photoId(dto.getPhotoId())
+                .originalUrl(dto.getOriginalUrl())
+                .thumbnailUrl(dto.getThumbnailUrl())
+                .takenAt(dto.getTakenAt().toString())
+                .width(dto.getWidth())
+                .height(dto.getHeight())
+                .build();
     }
 }
