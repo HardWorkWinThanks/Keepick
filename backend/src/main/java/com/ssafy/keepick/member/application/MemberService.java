@@ -64,11 +64,8 @@ public class MemberService {
             throw new BaseException(ErrorCode.INVALID_PARAMETER);
         }
         
-        Member member = memberRepository.findByNickname(nickname.trim());
-        
-        if (member == null) {
-            throw new BaseException(ErrorCode.MEMBER_NOT_FOUND);
-        }
+        Member member = memberRepository.findByNickname(nickname.trim())
+                .orElseThrow(() -> new BaseException(ErrorCode.MEMBER_NOT_FOUND));
         
         return MemberDto.from(member);
     }

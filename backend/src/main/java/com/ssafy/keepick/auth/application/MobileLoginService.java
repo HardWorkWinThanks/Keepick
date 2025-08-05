@@ -54,7 +54,7 @@ public class MobileLoginService {
         
         // 2. 이메일로 기존 회원 조회
         String email = oauth2Provider.getEmail();
-        Member existMember = memberRepository.findByEmail(email);
+        Member existMember = memberRepository.findByEmail(email).orElse(null);
         
         Member member;
         
