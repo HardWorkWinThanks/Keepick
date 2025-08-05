@@ -68,7 +68,8 @@ public class SecurityConfig {
                         // Swagger 문서 관련 경로
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
-                        "/api-docs")
+                        "/api-docs",
+                        "/.well-known/assetlinks.json")
                 .permitAll()
                 .anyRequest().authenticated());
 
