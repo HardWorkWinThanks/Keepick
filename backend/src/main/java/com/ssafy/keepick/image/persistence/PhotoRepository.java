@@ -17,4 +17,12 @@ public interface PhotoRepository extends JpaRepository<Photo,Long>, PhotoQueryFa
             "SET p.deletedAt = CURRENT_TIMESTAMP " +
             "WHERE p.id IN :ids")
     void softDeleteAllById(@Param("ids") List<Long> ids);
+
+    @Query("SELECT p " +
+            "FROM Photo p " +
+            "JOIN GroupMember gm ON p.group = gm.group " +
+            "WHERE gm.member.id = :memberId " +
+            "ORDER BY p.createdAt DESC " +
+            "LIMIT :size")
+    List<Photo> findRandomByMemberId(@Param("memberId") Long memberId, @Param("size")  int size);
 }

@@ -2,6 +2,7 @@ package com.ssafy.keepick.image.controller;
 
 import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.global.response.PagingResponse;
+import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.image.application.GroupPhotoService;
 import com.ssafy.keepick.image.application.dto.GroupPhotoDto;
 import com.ssafy.keepick.image.controller.request.GroupPhotoCreateRequest;
@@ -22,8 +23,10 @@ public class PhotoController {
     private final GroupPhotoService groupPhotoService;
 
     @GetMapping("/photos/random")
-    public ApiResponse<List<GroupPhotoDetailResponse>>  getRandomPhotos() {
-        return null;
+    public ApiResponse<List<GroupPhotoDetailResponse>> getRandomPhotos(@RequestParam(defaultValue = "10") int size) {
+        Long memberId = AuthenticationUtil.getCurrentUserId();
+        List<GroupPhotoDto> result = groupPhotoService.getRandomPhotos(memberId, size);
+        return ApiResponse.ok(GroupPhotoDetailResponse.from(result));
     }
 
     @GetMapping("/groups/{groupId}/photos")

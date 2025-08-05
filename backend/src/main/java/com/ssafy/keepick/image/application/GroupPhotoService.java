@@ -2,7 +2,6 @@ package com.ssafy.keepick.image.application;
 
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
-import com.ssafy.keepick.global.response.PagingResponse;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.image.application.dto.GroupPhotoDto;
@@ -59,6 +58,12 @@ public class GroupPhotoService {
                 request.getStartDate(),
                 request.getEndDate());
         return photoPage.map(GroupPhotoDto::from);
+    }
+
+    @Transactional(readOnly = true)
+    public List<GroupPhotoDto> getRandomPhotos(Long memberId, int size) {
+        List<Photo> photoList = photoRepository.findRandomByMemberId(memberId, size);
+        return photoList.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
     }
 
 }
