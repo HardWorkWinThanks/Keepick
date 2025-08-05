@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface PhotoRepository extends JpaRepository<Photo,Long> {
+public interface PhotoRepository extends JpaRepository<Photo,Long>, PhotoQueryFactory {
 
     @Modifying
     @Query("UPDATE Photo p " +

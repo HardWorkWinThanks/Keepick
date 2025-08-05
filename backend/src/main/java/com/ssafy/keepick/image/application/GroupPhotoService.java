@@ -2,14 +2,18 @@ package com.ssafy.keepick.image.application;
 
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
+import com.ssafy.keepick.global.response.PagingResponse;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.image.application.dto.GroupPhotoDto;
 import com.ssafy.keepick.image.controller.request.GroupPhotoCreateRequest;
 import com.ssafy.keepick.image.controller.request.GroupPhotoDeleteRequest;
+import com.ssafy.keepick.image.controller.request.GroupPhotoSearchRequest;
 import com.ssafy.keepick.image.domain.Photo;
 import com.ssafy.keepick.image.persistence.PhotoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +48,17 @@ public class GroupPhotoService {
         List<Long> ids = request.getPhotoIds();
         photoRepository.softDeleteAllById(ids);
         return ids.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<GroupPhotoDto> getGroupPhotos(Long groupId, GroupPhotoSearchRequest request) {
+        Page<Photo> photoPage = photoRepository.findAllPhotosByGroupIdAndOption(PageRequest.of(request.getPage(), request.getSize()),
+                groupId,
+                request.getMemberIds(),
+                request.getTags(),
+                request.getStartDate(),
+                request.getEndDate());
+        return photoPage.map(GroupPhotoDto::from);
     }
 
 }
