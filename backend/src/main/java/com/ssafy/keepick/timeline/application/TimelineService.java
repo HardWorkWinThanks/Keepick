@@ -21,7 +21,9 @@ public class TimelineService {
     private final TimelineAlbumRepository timelineAlbumRepository;
 
     public List<TimelineAlbumDto> getTimelineAlbumList(Long groupId) {
-        return null;
+        List<TimelineAlbum> albums = timelineAlbumRepository.findAllByGroupId(groupId);
+        List<TimelineAlbumDto> dtos = albums.stream().map(TimelineAlbumDto::from).toList();
+        return dtos;
     }
 
     public TimelineAlbumDto createTimelineAlbum(Long groupId) {

@@ -4,6 +4,7 @@ import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.timeline.application.TimelineService;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import com.ssafy.keepick.timeline.controller.response.TimelineDetailResponse;
+import com.ssafy.keepick.timeline.controller.response.TimelineInfoResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,7 +19,10 @@ public class TimelineController {
 
     @GetMapping("")
     public ApiResponse<?> getTimelineAlbumList(@PathVariable Long groupId) {
-        return null;
+        // 페이징 추가하기
+        List<TimelineAlbumDto> dtos = timelineService.getTimelineAlbumList(groupId);
+        List<TimelineInfoResponse> response = dtos.stream().map(TimelineInfoResponse::toResponse).toList();
+        return ApiResponse.ok(response);
     }
 
     @PostMapping("")

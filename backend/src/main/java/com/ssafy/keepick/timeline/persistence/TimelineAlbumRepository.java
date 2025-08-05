@@ -11,12 +11,14 @@ import java.util.Optional;
 public interface TimelineAlbumRepository extends JpaRepository<TimelineAlbum, Long> {
 
     @Query("""
-        select a
+        select distinct a
         from TimelineAlbum a join fetch a.sections s
         where a.id = :id
         and a.deletedAt is null
         order by s.sequence
     """)
     Optional<TimelineAlbum> findAlbumById(Long id);
+
+    List<TimelineAlbum> findAllByGroupId(Long groupId);
 
 }
