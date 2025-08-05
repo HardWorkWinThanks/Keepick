@@ -1,9 +1,12 @@
 // handlers/socket.handler.ts
 import { Server, Socket } from "socket.io";
 import { roomService } from "../../domain/room/factory/room.factory";
+import { chatService } from "../../domain/chat/factory/chat.factory";
 import { RoomEventsHandler } from "../../domain/room/service/room-events.handler";
 import { TransportEventsHandler } from "../../domain/transport/service/transport-events.handler";
 import { MediaEventsHandler } from "../../domain/media/media-events.handler";
+import { ChatEventsHandler } from "../../domain/chat/service/chat-events.handler";
+
 import {
   CreateTransportData,
   ConnectTransportData,
@@ -11,6 +14,13 @@ import {
   ConsumeData,
   JoinRoomData,
 } from "../../domain/room/types/room.types";
+import {
+  SendMessageData,
+  EditMessageData,
+  DeleteMessageData,
+  TypingData,
+  GetMessagesData,
+} from "../../domain/chat/types/chat.types";
 
 export function setupSocketHandlers(io: Server): void {
   io.on("connection", (socket: Socket) => {
@@ -18,20 +28,30 @@ export function setupSocketHandlers(io: Server): void {
     const roomEventsHandler = new RoomEventsHandler(roomService);
     const transportEventsHandler = new TransportEventsHandler(roomService);
     const mediaEventsHandler = new MediaEventsHandler(roomService, roomEventsHandler);
+    const chatEventsHandler = new ChatEventsHandler(chatService);
 
+    // =========================
     // Room 관련 이벤트
     socket.on("join_room", async (data: JoinRoomData) => {
       await roomEventsHandler.handleJoinRoom(socket, data);
+      // 룸 입장 시 자동으로 채팅방도 입장
+      await chatEventsHandler.handleJoinChat(socket, {
+        roomId: data.roomId,
+        userName: data.userName,
+      });
     });
 
     socket.on("leave_room", () => {
       roomEventsHandler.handleLeaveRoom(socket);
+      // 룸 퇴장 시 채팅방도 퇴장
+      chatEventsHandler.handleLeaveChat(socket);
     });
 
     socket.on("get_room_info", (data: { roomId: string }) => {
       roomEventsHandler.handleGetRoomInfo(socket, data);
     });
 
+    // =========================
     // Transport 관련 이벤트
     socket.on("create_producer_transport", async (data: CreateTransportData) => {
       await transportEventsHandler.handleCreateProducerTransport(socket, data);
@@ -45,6 +65,7 @@ export function setupSocketHandlers(io: Server): void {
       await transportEventsHandler.handleConnectTransport(socket, data);
     });
 
+    // =========================
     // Media 관련 이벤트
     socket.on("produce", async (data: ProduceData) => {
       await mediaEventsHandler.handleProduce(socket, data);
@@ -53,14 +74,50 @@ export function setupSocketHandlers(io: Server): void {
     socket.on("consume", async (data: ConsumeData) => {
       await mediaEventsHandler.handleConsume(socket, data);
     });
-
+    
     socket.on("resume_consumer", async (data: { consumerId: string }) => {
       await mediaEventsHandler.handleResumeConsumer(socket, data);
     });
+    
+    // =========================
+    // Chat 관련 이벤트
+    socket.on("chat_join", async (data: { roomId: string; userName: string }) => {
+      await chatEventsHandler.handleJoinChat(socket, data);
+    });
+    
+    socket.on("chat_leave", (data?: { roomId: string }) => {
+      chatEventsHandler.handleLeaveChat(socket, data);
+    });
 
+    socket.on("chat_send_message", async (data: SendMessageData) => {
+      await chatEventsHandler.handleSendMessage(socket, data);
+    });
+
+    socket.on("chat_edit_message", async (data: EditMessageData) => {
+      await chatEventsHandler.handleEditMessage(socket, data);
+    });
+
+    socket.on("chat_delete_message", async (data: DeleteMessageData) => {
+      await chatEventsHandler.handleDeleteMessage(socket, data);
+    });
+
+    socket.on("chat_typing", async (data: TypingData) => {
+      await chatEventsHandler.handleTyping(socket, data);
+    });
+
+    socket.on("chat_get_messages", async (data: GetMessagesData) => {
+      await chatEventsHandler.handleGetMessages(socket, data);
+    });
+
+    socket.on("chat_get_info", (data: { roomId: string }) => {
+      chatEventsHandler.handleGetChatInfo(socket, data);
+    });
+
+    // =========================
     // 연결 해제
     socket.on("disconnect", () => {
       roomEventsHandler.handleDisconnect(socket);
+      chatEventsHandler.handleLeaveChat(socket); // 모든 채팅방에서 퇴장
     });
   });
 }
