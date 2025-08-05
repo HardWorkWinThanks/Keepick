@@ -7,9 +7,11 @@ import { serverConfig } from "./infra/server/server.config";
 import { ServerManager } from './infra/server/server.manager'
 import { SocketManager } from "./infra/socket/socket.manager";
 import { mediasoupService } from "./domain/media/mediasoup.service";
-import { apiRoutes } from "./routes/api.routes";
+import { mediaRouter } from "./routes/media.routes";
+import { chatRouter } from "./routes/chat.routes";
 
 import { logger } from "./utils/logger";
+
 
 class Application {
   private app: express.Application;
@@ -30,7 +32,9 @@ class Application {
   }
 
   private setupRoutes() {
-    this.app.use("/", apiRoutes);
+    this.app.use("/", mediaRouter);
+
+    this.app.use("/", chatRouter);
 
     this.app.get("/", (req, res) => {
       res.send(`
