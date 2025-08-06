@@ -7,6 +7,7 @@ import com.ssafy.keepick.image.controller.response.GroupPhotoDetailResponse;
 import com.ssafy.keepick.timeline.application.TimelineService;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import com.ssafy.keepick.timeline.controller.request.TimelineCreateRequest;
+import com.ssafy.keepick.timeline.controller.request.TimelineUpdateRequest;
 import com.ssafy.keepick.timeline.controller.response.TimelineCreateResponse;
 import com.ssafy.keepick.timeline.controller.response.TimelineDetailResponse;
 import com.ssafy.keepick.timeline.controller.response.TimelineInfoResponse;
@@ -55,8 +56,10 @@ public class TimelineController {
     }
 
     @PutMapping("/{albumId}")
-    public ApiResponse<?> updateTimelineAlbum(@PathVariable Long albumId) {
-        return null;
+    public ApiResponse<?> updateTimelineAlbum(@PathVariable Long albumId, @Valid @RequestBody TimelineUpdateRequest request) {
+        TimelineAlbumDto timelineAlbumDto = timelineService.updateTimelineAlbum(albumId, request);
+        TimelineInfoResponse response = TimelineInfoResponse.toResponse(timelineAlbumDto);
+        return ApiResponse.ok(response);
     }
 
 }

@@ -40,6 +40,7 @@ public enum ErrorCode {
     // Photo
     INVALID_FILE(HttpStatus.BAD_REQUEST, "처리할 수 없는 이미지 파일입니다.", "P001"),
     PRESIGNED_URL_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "presigned url 생성에 실패했습니다.", "P002"),
+    PHOTO_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사진입니다.", "P003"),
 
     // ALBUM
     ALBUM_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 앨범입니다.", "AB001"),

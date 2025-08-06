@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @ToString(exclude = {"group", "sections"})
 @Getter
@@ -64,6 +65,12 @@ public class TimelineAlbum extends BaseTimeEntity {
         return album;
     }
 
+    public TimelineAlbumSection createTimelineAlbumSection() {
+        TimelineAlbumSection section = TimelineAlbumSection.createTimelineAlbumSection(this);
+        this.sections.add(section);
+        return section;
+    }
+
     public void addPhoto(Photo photo) {
         TimelineAlbumPhoto albumPhoto = TimelineAlbumPhoto.createTimelineAlbumPhoto(this, photo);
         this.photos.add(albumPhoto);
@@ -71,6 +78,42 @@ public class TimelineAlbum extends BaseTimeEntity {
 
     public void loadPhotos(List<TimelineAlbumPhoto> photos) {
         this.photos = (photos != null) ? photos : List.of();
+    }
+
+    public void update(String name, String description, Photo thumbnail, LocalDate startDate, LocalDate endDate) {
+        if (!Objects.equals(this.name, name)) {
+            this.name = name;
+        }
+        if (!Objects.equals(this.description, description)) {
+            this.description = description;
+        }
+        if (!Objects.equals(this.originalUrl, thumbnail.getOriginalUrl())) {
+            this.originalUrl = thumbnail.getOriginalUrl();
+            this.thumbnailUrl = thumbnail.getThumbnailUrl();
+        }
+        if (!Objects.equals(this.startDate, startDate)) {
+            this.startDate = startDate;
+        }
+        if (!Objects.equals(this.endDate, endDate)) {
+            this.endDate = endDate;
+        }
+    }
+
+    public void addSection(TimelineAlbumSection section) {
+        this.sections.add(section);
+    }
+
+    public void deleteSection(TimelineAlbumSection section) {
+        this.sections.remove(section);
+        section.delete();
+    }
+
+    public void increasePhotoCount() {
+        this.photoCount++;
+    }
+
+    public void decreasePhotoCount() {
+        this.photoCount--;
     }
 
 }

@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface TimelineAlbumPhotoRepository extends JpaRepository<TimelineAlbumPhoto, Long> {
 
@@ -16,4 +17,6 @@ public interface TimelineAlbumPhotoRepository extends JpaRepository<TimelineAlbu
         ORDER BY tap.section.id, tap.sequence
     """)
     List<TimelineAlbumPhoto> findPhotosByAlbumId(Long albumId);
+
+    Optional<TimelineAlbumPhoto> findByPhotoId(Long photoId);
 }
