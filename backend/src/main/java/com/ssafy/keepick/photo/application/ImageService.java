@@ -33,8 +33,8 @@ public class ImageService {
         fileOperationService.uploadFile(objectKey, fileContent, contentType);
     }
 
-    public void uploadThumbnail(String originalObjectKey, byte[] thumbnailContent) {
-        fileOperationService.uploadThumbnail(originalObjectKey, thumbnailContent);
+    public String uploadThumbnail(String originalObjectKey, byte[] thumbnailContent) {
+        return fileOperationService.uploadThumbnail(originalObjectKey, thumbnailContent);
     }
 
     public boolean fileExists(String objectKey) {

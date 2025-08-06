@@ -65,6 +65,11 @@ public class Photo extends BaseTimeEntity {
         this.status = PhotoStatus.UPLOADED;
     }
 
+    public void uploadThumbnail(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
+        this.status = PhotoStatus.THUMBNAIL_READY;
+    }
+
     public static Photo createPhoto(LocalDateTime takenAt, Integer width, Integer height, Group group) {
         return Photo.builder()
                 .takenAt(takenAt)

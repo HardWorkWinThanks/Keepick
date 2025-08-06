@@ -51,6 +51,15 @@ public class FileUtils {
         return objectKey.substring(objectKey.lastIndexOf('/') + 1);
     }
 
+    public static String extractImageNumber(String objectKey) {
+        String[] parts = objectKey.split("/");
+        if (parts.length >= 2) {
+            return parts[1];
+        }
+        log.error("objectKey 형식이 잘못되었습니다: {}", objectKey);
+        throw new BaseException(ErrorCode.INVALID_FILE);
+    }
+
     public static void validateContentType(String contentType, String fileName) {
         if (contentType == null || !SUPPORTED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
             log.error("지원하지 않는 파일 형식입니다: {} (파일: {})", contentType, fileName);

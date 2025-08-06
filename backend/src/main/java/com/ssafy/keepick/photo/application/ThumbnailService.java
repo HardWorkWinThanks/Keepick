@@ -1,6 +1,10 @@
 package com.ssafy.keepick.photo.application;
 
+import com.ssafy.keepick.global.exception.BaseException;
+import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.global.utils.file.FileUtils;
+import com.ssafy.keepick.photo.domain.Photo;
+import com.ssafy.keepick.photo.persistence.PhotoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
@@ -17,8 +21,8 @@ import java.util.concurrent.CompletableFuture;
 @Service
 @RequiredArgsConstructor
 public class ThumbnailService {
-
     private final ImageService s3Service;
+    private final PhotoRepository photoRepository;
 
     @Value("${app.thumbnail.width}")
     private int thumbnailWidth;
@@ -42,14 +46,23 @@ public class ThumbnailService {
             byte[] thumbnailData = generateThumbnail(originalImageData);
 
             // S3에 썸네일 업로드
-            s3Service.uploadThumbnail(objectKey, thumbnailData);
+            String thumbnailKey = s3Service.uploadThumbnail(objectKey, thumbnailData);
+            updatePhotoAddThumbnail(thumbnailKey);
 
-            log.info("썸네일 이미지 생성 성공: {}", objectKey);
+            log.info("썸네일 이미지 생성 성공: {} -> {}", objectKey, thumbnailKey);
             return CompletableFuture.completedFuture(null);
 
         } catch (Exception e) {
             throw new RuntimeException("썸네일 생성 실패: " + e.getMessage(), e);
         }
+    }
+
+    public void updatePhotoAddThumbnail(String objectKey) {
+        Long ImageId = Long.parseLong(FileUtils.extractImageNumber(objectKey));
+        Photo photo = photoRepository.findById(ImageId)
+                .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND));
+        photo.uploadThumbnail(objectKey);
+        photoRepository.save(photo);
     }
 
     /**
