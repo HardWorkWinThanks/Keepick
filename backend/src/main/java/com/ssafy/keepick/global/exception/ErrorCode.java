@@ -24,6 +24,7 @@ public enum ErrorCode {
     INVITATION_FORBIDDEN(HttpStatus.FORBIDDEN, "초대 요청을 처리할 권한이 없습니다.", "GM001"),
     INVITATION_NOT_FOUND(HttpStatus.FORBIDDEN, "그룹 초대 요청을 찾을 수 없습니다", "GM002"),
     INVITATION_TOKEN_NOT_FOUND(HttpStatus.FORBIDDEN, "유효하지 않거나 만료된 링크입니다.", "GM003"),
+    INVITATION_TOKEN_CREATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "그룹 초대 링크 생성 중 오류가 발생했습니다.", "GM004"),
 
     // Auth
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "잘못된 입력값입니다.", "A001"),

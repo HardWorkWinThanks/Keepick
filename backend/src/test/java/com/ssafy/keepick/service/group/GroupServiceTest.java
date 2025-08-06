@@ -13,19 +13,21 @@ import com.ssafy.keepick.group.application.dto.GroupDto;
 import com.ssafy.keepick.group.application.dto.GroupMemberDto;
 import com.ssafy.keepick.group.application.dto.MemberDto;
 import com.ssafy.keepick.member.persistence.MemberRepository;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-@Transactional
+@Import({
+        GroupService.class
+})
+@DataJpaTest
 class GroupServiceTest {
 
     @Autowired

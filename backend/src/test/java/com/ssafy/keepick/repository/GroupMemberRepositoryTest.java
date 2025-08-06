@@ -19,7 +19,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 
 @DataJpaTest
-@Transactional
 class GroupMemberRepositoryTest {
 
     @Autowired EntityManager em;

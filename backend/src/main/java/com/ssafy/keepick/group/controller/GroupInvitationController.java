@@ -48,7 +48,9 @@ public class GroupInvitationController {
         return ApiResponse.ok(response);
     }
 
-    @Operation(summary = "그룹 초대 링크 생성", description = "특정 그룹의 초대 링크를 생성합니다.")
+    @Operation(summary = "그룹 초대 링크 생성", description = "특정 그룹의 초대 링크를 생성합니다. " +
+            "링크는 https://i13d207.p.ssafy.io/invite/초대토큰 형태로 주어집니다. 초대토큰은 Base64 인코딩 되었습니다. " +
+            "토큰을 Base64 디코딩 ➡️ JSON 변환 ️(groupId, groupName, token) ️➡️ 디코딩된 token으로 [그룹 초대 링크로 그룹 가입 API]에 요청보내면 가입됩니다.")
     @PostMapping("/{groupId}/invitation-link")
     public ApiResponse<GroupLinkResponse> createInvitationLink(@PathVariable Long groupId) {
         String dto = groupInvitationService.createInvitationLink(groupId);
@@ -57,8 +59,8 @@ public class GroupInvitationController {
     }
 
     @Operation(summary = "그룹 초대 링크로 그룹 가입", description = "로그인한 사용자가 그룹 초대 링크를 통해 그룹에 가입합니다.")
-    @GetMapping("/{groupId}/invitation-link/{invitation-link}")
-    public ApiResponse<GroupInviteResponse> getInvitationLink(@PathVariable Long groupId, @PathVariable("invitation-link") String inviteToken) {
+    @GetMapping("/{groupId}/invitation-link/{invitation-token}")
+    public ApiResponse<GroupInviteResponse> joinGroupByInvitationLink(@PathVariable Long groupId, @PathVariable("invitation-token") String inviteToken) {
         Long loginMemberId = AuthenticationUtil.getCurrentUserId();
         GroupMemberDto dto = groupInvitationService.joinGroupByInvitationLink(groupId, loginMemberId, inviteToken);
         GroupInviteResponse response = GroupInviteResponse.toResponse(dto);
