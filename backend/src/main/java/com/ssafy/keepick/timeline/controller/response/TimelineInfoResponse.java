@@ -3,12 +3,14 @@ package com.ssafy.keepick.timeline.controller.response;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.ToString;
 
 import java.time.LocalDate;
 
 
 @Getter
 @Builder
+@ToString
 public class TimelineInfoResponse {
 
     private Long albumId;

@@ -9,6 +9,9 @@ import com.ssafy.keepick.timeline.domain.TimelineAlbumSection;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumRepository;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumPhotoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,10 +27,10 @@ public class TimelineService {
     private final TimelineAlbumRepository timelineAlbumRepository;
     private final TimelineAlbumPhotoRepository timelinePhotoRepository;
 
-    public List<TimelineAlbumDto> getTimelineAlbumList(Long groupId) {
-        List<TimelineAlbum> albums = timelineAlbumRepository.findAllByGroupId(groupId);
-        List<TimelineAlbumDto> timelineAlbumDtos = albums.stream().map(TimelineAlbumDto::from).toList();
-        return timelineAlbumDtos;
+    public Page<TimelineAlbumDto> getTimelineAlbumList(Long groupId, Integer page, Integer size) {
+        Page<TimelineAlbum> albumPage = timelineAlbumRepository.findAllByGroupIdAndDeletedAtIsNull(groupId, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+        Page<TimelineAlbumDto> albumDtoPage = albumPage.map(TimelineAlbumDto::from);
+        return albumDtoPage;
     }
 
     public TimelineAlbumDto createTimelineAlbum(Long groupId) {

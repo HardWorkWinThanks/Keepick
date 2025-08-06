@@ -1,11 +1,15 @@
 package com.ssafy.keepick.timeline.controller;
 
 import com.ssafy.keepick.global.response.ApiResponse;
+import com.ssafy.keepick.global.response.PagingResponse;
+import com.ssafy.keepick.image.application.dto.GroupPhotoDto;
+import com.ssafy.keepick.image.controller.response.GroupPhotoDetailResponse;
 import com.ssafy.keepick.timeline.application.TimelineService;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import com.ssafy.keepick.timeline.controller.response.TimelineDetailResponse;
 import com.ssafy.keepick.timeline.controller.response.TimelineInfoResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,10 +22,13 @@ public class TimelineController {
     private final TimelineService timelineService;
 
     @GetMapping("")
-    public ApiResponse<?> getTimelineAlbumList(@PathVariable Long groupId) {
-        // 페이징 추가하기
-        List<TimelineAlbumDto> timelineAlbumDtos = timelineService.getTimelineAlbumList(groupId);
-        List<TimelineInfoResponse> response = timelineAlbumDtos.stream().map(TimelineInfoResponse::toResponse).toList();
+    public ApiResponse<?> getTimelineAlbumList(
+            @PathVariable Long groupId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<TimelineAlbumDto> albumDtoPage = timelineService.getTimelineAlbumList(groupId, page, size);
+        PagingResponse<TimelineInfoResponse> response = PagingResponse.from(albumDtoPage, TimelineInfoResponse::toResponse);
         return ApiResponse.ok(response);
     }
 

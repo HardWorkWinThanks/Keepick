@@ -1,7 +1,8 @@
 package com.ssafy.keepick.timeline.persistence;
 
 import com.ssafy.keepick.timeline.domain.TimelineAlbum;
-import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -19,6 +20,6 @@ public interface TimelineAlbumRepository extends JpaRepository<TimelineAlbum, Lo
     """)
     Optional<TimelineAlbum> findAlbumById(Long id);
 
-    List<TimelineAlbum> findAllByGroupId(Long groupId);
+    Page<TimelineAlbum> findAllByGroupIdAndDeletedAtIsNull(Long groupId, Pageable pageable);
 
 }
