@@ -15,9 +15,9 @@ public class GroupPhotoCommandDto {
     private final String contentType;
     private final Long fileSize;
 
-    public static GroupPhotoCommandDto from(Long imageId, GroupPhotoUploadRequest.ImageFileRequest request) {
+    public static GroupPhotoCommandDto from(Long photoId, GroupPhotoUploadRequest.ImageFileRequest request) {
         return GroupPhotoCommandDto.builder()
-                .fileName(imageId+"/"+request.getFileName())
+                .fileName(photoId+"/"+request.getFileName())
                 .contentType(request.getContentType())
                 .fileSize(request.getFileSize())
                 .build();

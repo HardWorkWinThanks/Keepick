@@ -1,6 +1,5 @@
 package com.ssafy.keepick.photo.controller.request;
 
-import com.ssafy.keepick.photo.domain.Photo;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;

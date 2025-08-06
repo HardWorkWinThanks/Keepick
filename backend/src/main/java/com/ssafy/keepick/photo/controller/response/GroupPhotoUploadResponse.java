@@ -10,20 +10,20 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PhotoUploadResponse {
+public class GroupPhotoUploadResponse {
     private String presignedUrl;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Long imageId;
 
-    public static PhotoUploadResponse of(String presignedUrl, Long imageId) {
-        return PhotoUploadResponse.builder()
+    public static GroupPhotoUploadResponse of(String presignedUrl, Long imageId) {
+        return GroupPhotoUploadResponse.builder()
                 .presignedUrl(presignedUrl)
                 .imageId(imageId)
                 .build();
     }
 
-    public static PhotoUploadResponse of(String presignedUrl) {
-        return PhotoUploadResponse.builder()
+    public static GroupPhotoUploadResponse of(String presignedUrl) {
+        return GroupPhotoUploadResponse.builder()
                 .presignedUrl(presignedUrl)
                 .build();
     }

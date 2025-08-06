@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 @Service
 @RequiredArgsConstructor
 public class ThumbnailService {
-    private final ImageService s3Service;
+    private final ImageService imageService;
     private final PhotoRepository photoRepository;
 
     @Value("${app.thumbnail.width}")
@@ -40,13 +40,13 @@ public class ThumbnailService {
     public CompletableFuture<Void> generateAndUploadThumbnail(String objectKey) {
         try {
             // S3에서 원본 이미지 다운로드
-            byte[] originalImageData = s3Service.downloadFile(objectKey);
+            byte[] originalImageData = imageService.downloadFile(objectKey);
 
             // 썸네일 생성
             byte[] thumbnailData = generateThumbnail(originalImageData);
 
             // S3에 썸네일 업로드
-            String thumbnailKey = s3Service.uploadThumbnail(objectKey, thumbnailData);
+            String thumbnailKey = imageService.uploadThumbnail(objectKey, thumbnailData);
             updatePhotoAddThumbnail(thumbnailKey);
 
             log.info("썸네일 이미지 생성 성공: {} -> {}", objectKey, thumbnailKey);
@@ -107,12 +107,12 @@ public class ThumbnailService {
         String actualContentType = contentType != null ? contentType : FileUtils.guessContentType(objectKey);
 
         if (!FileUtils.isSupportedImageType(actualContentType)) {
-            log.warn("Unsupported image type for thumbnail generation: {} ({})", objectKey, actualContentType);
+            log.warn("지원되지 않는 썸네일 형식입니다.: {} ({})", objectKey, actualContentType);
             return false;
         }
 
-        if (!s3Service.fileExists(objectKey)) {
-            log.warn("File does not exist in S3: {}", objectKey);
+        if (!imageService.fileExists(objectKey)) {
+            log.warn("S3에 파일이 존재하지 않습니다.: {}", objectKey);
             return false;
         }
 

@@ -10,7 +10,7 @@ import com.ssafy.keepick.photo.controller.request.GroupPhotoSearchRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
 import com.ssafy.keepick.photo.controller.response.GroupPhotoDetailResponse;
 import com.ssafy.keepick.photo.controller.response.GroupPhotoIdResponse;
-import com.ssafy.keepick.photo.controller.response.PhotoUploadResponse;
+import com.ssafy.keepick.photo.controller.response.GroupPhotoUploadResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -34,12 +34,12 @@ public class PhotoController {
 
 
     @PostMapping("/groups/{groupId}/photos/presigned-urls")
-    public ApiResponse<List<PhotoUploadResponse>> generatePresignedUrls(
+    public ApiResponse<List<GroupPhotoUploadResponse>> generatePresignedUrls(
             @PathVariable Long groupId,
             @Valid @RequestBody GroupPhotoUploadRequest request) {
         List<String> result = groupPhotoService.uploadGroupPhoto(groupId, request);
-        List<PhotoUploadResponse> response = result.stream()
-                .map(PhotoUploadResponse::of)
+        List<GroupPhotoUploadResponse> response = result.stream()
+                .map(GroupPhotoUploadResponse::of)
                 .collect(Collectors.toList());
         return ApiResponse.ok(response);
     }
