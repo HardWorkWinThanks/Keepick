@@ -11,6 +11,8 @@ import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
 import com.ssafy.keepick.photo.controller.response.GroupPhotoDetailResponse;
 import com.ssafy.keepick.photo.controller.response.GroupPhotoIdResponse;
 import com.ssafy.keepick.photo.controller.response.GroupPhotoUploadResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,9 +24,11 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@Tag(name="Photo", description = "그룹 사진 관련 API")
 public class PhotoController {
     private final GroupPhotoService groupPhotoService;
 
+    @Operation(summary = "랜덤 사진 조회 API", description = "사용자가 속한 그룹에 있는 사진 중 랜덤으로 n개를 반환합니다.")
     @GetMapping("/photos/random")
     public ApiResponse<List<GroupPhotoDetailResponse>> getRandomPhotos(@RequestParam(defaultValue = "10") int size) {
         Long memberId = AuthenticationUtil.getCurrentUserId();
@@ -32,7 +36,10 @@ public class PhotoController {
         return ApiResponse.ok(GroupPhotoDetailResponse.from(result));
     }
 
-
+    @Operation(summary = "다수 이미지 업로드 요청 API", description = """
+        이미지를 업로드할 수 있는 presigned URL을 반환하는 API입니다.  
+        URL에 photo ID를 포함시키기 위해, 먼저 메타데이터와 함께 비어 있는 photo 객체를 생성해 저장한 후 presigned URL을 발급합니다.
+        """)
     @PostMapping("/groups/{groupId}/photos/presigned-urls")
     public ApiResponse<List<GroupPhotoUploadResponse>> generatePresignedUrls(
             @PathVariable Long groupId,
@@ -45,6 +52,7 @@ public class PhotoController {
     }
 
 
+    @Operation(summary = "그룹 갤러리 사진 필터링 조회 API", description = "그룹 갤러리의 사진 중 여러 필터링 조건을 적용해서 결과를 페이징하여 반환합니다.")
     @GetMapping("/groups/{groupId}/photos")
     public ApiResponse<PagingResponse<GroupPhotoDetailResponse>>  getGroupPhotos(
             @PathVariable Long groupId,
@@ -54,6 +62,7 @@ public class PhotoController {
     }
 
 
+    @Operation(summary = "그룹 사진 삭제 API", description = "아직 구현 중 / 앨범에 포함된 사진은 삭제되지 않습니다.")
     @DeleteMapping("/groups/{groupId}/photos")
     public ApiResponse<List<GroupPhotoIdResponse>> deleteGroupPhotos(@PathVariable Long groupId,
                                             @RequestBody GroupPhotoDeleteRequest request) {
