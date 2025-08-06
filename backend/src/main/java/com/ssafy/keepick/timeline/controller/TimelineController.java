@@ -26,7 +26,7 @@ public class TimelineController {
     private final TimelineService timelineService;
 
     @GetMapping("")
-    public ApiResponse<?> getTimelineAlbumList(
+    public ApiResponse<PagingResponse<TimelineInfoResponse>> getTimelineAlbumList(
             @PathVariable Long groupId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
@@ -37,7 +37,7 @@ public class TimelineController {
     }
 
     @PostMapping("")
-    public ApiResponse<?> createTimelineAlbum(@PathVariable Long groupId, @Valid @RequestBody TimelineCreateRequest request) {
+    public ApiResponse<TimelineCreateResponse> createTimelineAlbum(@PathVariable Long groupId, @Valid @RequestBody TimelineCreateRequest request) {
         TimelineAlbumDto albumDto = timelineService.createTimelineAlbum(groupId, request);
         TimelineCreateResponse response = TimelineCreateResponse.toResponse(albumDto);
         return ApiResponse.created(response);

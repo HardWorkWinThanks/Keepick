@@ -40,11 +40,11 @@ public class TimelineAlbum extends BaseTimeEntity {
 
     private LocalDate endDate;
 
-    private Integer photoCount;
+    private Integer photoCount = 0;
 
     private LocalDateTime deletedAt;
 
-    @OneToMany(mappedBy = "album")
+    @OneToMany(mappedBy = "album", cascade = CascadeType.ALL)
     private List<TimelineAlbumSection> sections = new ArrayList<>();
 
     @OneToMany(mappedBy = "album", cascade = CascadeType.ALL)
@@ -76,8 +76,16 @@ public class TimelineAlbum extends BaseTimeEntity {
         this.photos.add(albumPhoto);
     }
 
+    public void loadSections(List<TimelineAlbumSection> sections) {
+        if (sections != null) {
+            this.sections = sections;
+        }
+    }
+
     public void loadPhotos(List<TimelineAlbumPhoto> photos) {
-        this.photos = (photos != null) ? photos : List.of();
+        if (photos != null) {
+            this.photos = photos;
+        }
     }
 
     public void update(String name, String description, Photo thumbnail, LocalDate startDate, LocalDate endDate) {
@@ -99,10 +107,6 @@ public class TimelineAlbum extends BaseTimeEntity {
         }
     }
 
-    public void addSection(TimelineAlbumSection section) {
-        this.sections.add(section);
-    }
-
     public void deleteSection(TimelineAlbumSection section) {
         this.sections.remove(section);
         section.delete();
@@ -113,6 +117,9 @@ public class TimelineAlbum extends BaseTimeEntity {
     }
 
     public void decreasePhotoCount() {
+        if (this.photoCount == 0) {
+            throw new IllegalStateException();
+        }
         this.photoCount--;
     }
 

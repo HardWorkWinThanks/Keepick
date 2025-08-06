@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.ToString;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 
 @Getter
@@ -21,6 +22,8 @@ public class TimelineInfoResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private Integer photoCount;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     public static TimelineInfoResponse toResponse(TimelineAlbumDto dto) {
         return TimelineInfoResponse
@@ -33,6 +36,8 @@ public class TimelineInfoResponse {
                 .startDate(dto.getStartDate())
                 .endDate(dto.getEndDate())
                 .photoCount(dto.getPhotoCount())
+                .createdAt(dto.getCreatedAt())
+                .updatedAt(dto.getUpdatedAt())
                 .build();
     }
 

@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.ToString;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -22,6 +23,9 @@ public class TimelineDetailResponse {
     private String originalUrl;
     private LocalDate startDate;
     private LocalDate endDate;
+    private Integer photoCount;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private List<Section> sections;
     private List<Photo> unusedPhotos;
 
@@ -77,6 +81,9 @@ public class TimelineDetailResponse {
                 .originalUrl(dto.getOriginalUrl())
                 .startDate(dto.getStartDate())
                 .endDate(dto.getEndDate())
+                .photoCount(dto.getPhotoCount())
+                .createdAt(dto.getCreatedAt())
+                .updatedAt(dto.getUpdatedAt())
                 .sections(dto.getSections().stream().map(Section::from).toList())
                 .unusedPhotos(dto.getUnusedPhotos().stream().map(Photo::from).toList())
                 .build();

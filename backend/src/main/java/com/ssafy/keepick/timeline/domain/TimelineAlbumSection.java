@@ -1,6 +1,5 @@
 package com.ssafy.keepick.timeline.domain;
 
-import com.ssafy.keepick.image.domain.Photo;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -11,11 +10,10 @@ import java.util.List;
 import java.util.Objects;
 
 @EqualsAndHashCode(of = {"id"})
-@Builder
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @ToString(exclude = {"photos", "album"})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Entity
 public class TimelineAlbumSection {
     @Id
@@ -48,10 +46,6 @@ public class TimelineAlbumSection {
         return new TimelineAlbumSection(album);
     }
 
-    public void loadPhotos(List<TimelineAlbumPhoto> photos) {
-        this.photos = (photos != null) ? photos : List.of();
-    }
-
     public void update(String name, String description, LocalDate startDate, LocalDate endDate) {
         if (!Objects.equals(this.name, name)) {
             this.name = name;
@@ -64,6 +58,12 @@ public class TimelineAlbumSection {
         }
         if (!Objects.equals(this.endDate, endDate)) {
             this.endDate = endDate;
+        }
+    }
+
+    public void updateSequence(Integer sequence) {
+        if (!Objects.equals(sequence, this.sequence)) {
+            this.sequence = sequence;
         }
     }
 
