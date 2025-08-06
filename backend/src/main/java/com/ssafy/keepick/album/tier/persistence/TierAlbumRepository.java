@@ -35,4 +35,32 @@ public interface TierAlbumRepository extends JpaRepository<TierAlbum, Long> {
         AND t.deletedAt IS NULL
     """)
     Optional<TierAlbum> findAlbumById(@Param("albumId") Long albumId);
+
+    // 앨범과 사진들을 함께 조회 (Fetch Join)
+    @Query("""
+        SELECT DISTINCT t FROM TierAlbum t
+        LEFT JOIN FETCH t.tierAlbumPhotos tp
+        LEFT JOIN FETCH tp.photo
+        WHERE t.id = :albumId 
+        AND t.deletedAt IS NULL
+        ORDER BY tp.sequence
+    """)
+    Optional<TierAlbum> findAlbumWithPhotosById(@Param("albumId") Long albumId);
+
+    // 그룹별 앨범 개수 조회
+    @Query("""
+        SELECT COUNT(t) FROM TierAlbum t 
+        WHERE t.groupId = :groupId 
+        AND t.deletedAt IS NULL
+    """)
+    long countByGroupId(@Param("groupId") Long groupId);
+
+    // 그룹별 앨범 목록 조회 (페이징)
+    @Query("""
+        SELECT t FROM TierAlbum t 
+        WHERE t.groupId = :groupId 
+        AND t.deletedAt IS NULL 
+        ORDER BY t.createdAt DESC
+    """)
+    List<TierAlbum> findByGroupIdWithPaging(@Param("groupId") Long groupId, @Param("offset") int offset, @Param("size") int size);
 }
