@@ -4,7 +4,6 @@ import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.global.response.PagingResponse;
 import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.photo.application.GroupPhotoService;
-import com.ssafy.keepick.photo.application.ImageService;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoUrlDto;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoDeleteRequest;
@@ -26,22 +25,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PhotoController {
     private final GroupPhotoService groupPhotoService;
-    private final ImageService imageService;
-
-    /**
-     * Presigned URL 배열 생성 API
-     */
-    @PostMapping("/groups/{groupId}/photos/presigned-urls")
-    public ApiResponse<List<PhotoUploadResponse>> generatePresignedUrls(
-            @PathVariable Long groupId,
-            @Valid @RequestBody GroupPhotoUploadRequest request) {
-        List<GroupPhotoUrlDto> result = groupPhotoService.uploadGroupPhoto(groupId, request);
-        List<PhotoUploadResponse> response = result.stream()
-                .map(r -> PhotoUploadResponse.of(r.getUrl(), r.getPhotoId()))
-                .collect(Collectors.toList());
-        return ApiResponse.ok(response);
-    }
-
 
     @GetMapping("/photos/random")
     public ApiResponse<List<GroupPhotoDetailResponse>> getRandomPhotos(@RequestParam(defaultValue = "10") int size) {
@@ -49,6 +32,19 @@ public class PhotoController {
         List<GroupPhotoDto> result = groupPhotoService.getRandomPhotos(memberId, size);
         return ApiResponse.ok(GroupPhotoDetailResponse.from(result));
     }
+
+
+    @PostMapping("/groups/{groupId}/photos/presigned-urls")
+    public ApiResponse<List<PhotoUploadResponse>> generatePresignedUrls(
+            @PathVariable Long groupId,
+            @Valid @RequestBody GroupPhotoUploadRequest request) {
+        List<GroupPhotoUrlDto> result = groupPhotoService.uploadGroupPhoto(groupId, request);
+        List<PhotoUploadResponse> response = result.stream()
+                .map(r -> PhotoUploadResponse.of(r.getUrl(), r.getImageId()))
+                .collect(Collectors.toList());
+        return ApiResponse.ok(response);
+    }
+
 
     @GetMapping("/groups/{groupId}/photos")
     public ApiResponse<PagingResponse<GroupPhotoDetailResponse>>  getGroupPhotos(

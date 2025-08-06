@@ -8,12 +8,12 @@ import lombok.Getter;
 @Builder
 @AllArgsConstructor
 public class GroupPhotoUrlDto {
-    private Long photoId;
+    private Long ImageId;
     private String url;
 
-    public static GroupPhotoUrlDto of(Long photoId, String url) {
+    public static GroupPhotoUrlDto of(Long ImageId, String url) {
         return GroupPhotoUrlDto.builder()
-                .photoId(photoId)
+                .ImageId(ImageId)
                 .url(url)
                 .build();
     }
