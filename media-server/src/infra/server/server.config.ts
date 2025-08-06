@@ -9,13 +9,15 @@ const SSL_CERT_PATH = "certs/server.cert";
 
 export const serverConfig = {
   port: isProduction ? PRODUCTION_PORT : 8443,
-  host: isProduction ? BASE_URL : "localhost",
+  host: isProduction ? BASE_URL : "192.168.0.24",
   cors: {
     origin: [
       BASE_URL,
       FRONT_URL,
       "https://172.30.1.82:3000",
-      "https://localhost:3000"
+      "https://localhost:3000",
+      "http://localhost:3000",
+      "https://192.168.0.24:3000"
     ].filter((url): url is string => !!url),
     credentials: true,
     methods: ["GET", "POST"],
@@ -26,4 +28,16 @@ export const serverConfig = {
       keyPath: SSL_KEY_PATH,
       certPath: SSL_CERT_PATH,
     },
+  socket: {
+    pingTimeout: 60000,
+    pingInterval: 25000
+  },
+  chat: {
+    maxMessageLength: 1000,
+    maxUsernameLength: 30,
+    minUsernameLength: 2,
+    maxRoomNameLength: 50,
+    defaultRoom: 'general',
+    messageHistoryLimit: 100
+  }
 };

@@ -10,4 +10,4 @@ router.get("/rooms", roomController.getAllRooms);
 router.delete("/rooms/:roomId", roomController.deleteRoom);
 router.get("/rooms/:roomId/peers/:peerId", roomController.getPeerInfo);
 router.get("/system/stats", roomController.getSystemStats);
-export { router as apiRoutes };
+export { router as mediaRouter };

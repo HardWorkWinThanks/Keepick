@@ -12,7 +12,7 @@ export class RoomEventsHandler {
     try {
       const { roomId, userName } = data;
       logger.info(
-        `🚪 Join room request for room: ${roomId} from ${socket.id} as "${userName}"`
+        `Join room request for room: ${roomId} from ${socket.id} as "${userName}"`
       );
 
       // 먼저 기존 연결이 있다면 정리 (중복 방지)
