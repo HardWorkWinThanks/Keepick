@@ -33,6 +33,8 @@ public class Photo extends BaseTimeEntity {
 
     private Integer height;
 
+    private PhotoStatus status;
+
     @ManyToOne(fetch = FetchType.LAZY)
     private Group group;
 
@@ -43,16 +45,21 @@ public class Photo extends BaseTimeEntity {
     private List<PhotoTag> tags = new ArrayList<>();
 
     @Builder
-    public Photo(String originalUrl, LocalDateTime takenAt, Integer width, Integer height, Group group) {
+    public Photo(String originalUrl, LocalDateTime takenAt, Integer width, Integer height, Group group, PhotoStatus status) {
         this.originalUrl = originalUrl;
         this.takenAt = takenAt;
         this.width = width;
         this.height = height;
+        this.status = status;
         this.group = group;
     }
 
     public void delete() {
         this.deletedAt = LocalDateTime.now();
+    }
+
+    public void upload(String originalUrl) {
+        this.originalUrl = originalUrl;
     }
 
 }
