@@ -11,7 +11,7 @@ import lombok.ToString;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-public class TimelinePhoto {
+public class TimelineAlbumPhoto {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,13 +21,12 @@ public class TimelinePhoto {
     private TimelineAlbum album;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private TimelineSection section;
+    private TimelineAlbumSection section;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Photo photo;
 
     private Integer sequence;
 
-    private Boolean included;
 }
 

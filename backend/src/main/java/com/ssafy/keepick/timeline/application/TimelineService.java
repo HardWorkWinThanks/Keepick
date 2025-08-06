@@ -4,10 +4,10 @@ import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import com.ssafy.keepick.timeline.domain.TimelineAlbum;
-import com.ssafy.keepick.timeline.domain.TimelineSection;
-import com.ssafy.keepick.timeline.domain.TimelinePhoto;
+import com.ssafy.keepick.timeline.domain.TimelineAlbumPhoto;
+import com.ssafy.keepick.timeline.domain.TimelineAlbumSection;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumRepository;
-import com.ssafy.keepick.timeline.persistence.TimelinePhotoRepository;
+import com.ssafy.keepick.timeline.persistence.TimelineAlbumPhotoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public class TimelineService {
 
     private final TimelineAlbumRepository timelineAlbumRepository;
-    private final TimelinePhotoRepository timelinePhotoRepository;
+    private final TimelineAlbumPhotoRepository timelinePhotoRepository;
 
     public List<TimelineAlbumDto> getTimelineAlbumList(Long groupId) {
         List<TimelineAlbum> albums = timelineAlbumRepository.findAllByGroupId(groupId);
@@ -38,29 +38,32 @@ public class TimelineService {
         // 앨범 조회
         TimelineAlbum timelineAlbum = timelineAlbumRepository.findAlbumById(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
 
-        // 섹션별 사진 조회
-        List<TimelineSection> sections = timelineAlbum.getSections();
-        Map<Long, List<TimelinePhoto>> photosBySection = fetchPhotosBySection(sections);
+        // 앨범 사진 조회
+        Map<Long, List<TimelineAlbumPhoto>> photosBySection = fetchPhotosBySection(albumId);
         
         // 섹션별 사진 매핑
+        List<TimelineAlbumSection> sections = timelineAlbum.getSections();
         sections.forEach(section -> {
             section.loadPhotos(photosBySection.getOrDefault(section.getId(), List.of()));
         });
-        
+
+        // 섹션에 포함되지 않은 사진
+        List<TimelineAlbumPhoto> photos = photosBySection.get(0L);
+        timelineAlbum.loadPhotos(photos);
+
         // DTO 변환
-        TimelineAlbumDto timelineAlbumDto = TimelineAlbumDto.from(timelineAlbum, timelineAlbum.getSections());
+        TimelineAlbumDto timelineAlbumDto = TimelineAlbumDto.fromDetail(timelineAlbum);
         return timelineAlbumDto;
     }
 
-    private Map<Long, List<TimelinePhoto>> fetchPhotosBySection(List<TimelineSection> sections) {
+    private Map<Long, List<TimelineAlbumPhoto>> fetchPhotosBySection(Long albumId) {
         // 앨범의 섹션 ID로 사진 조회
-        List<Long> sectionIds = sections.stream().map(TimelineSection::getId).toList();
-        List<TimelinePhoto> photos = timelinePhotoRepository.findPhotosBySectionIds(sectionIds);
+        List<TimelineAlbumPhoto> photos = timelinePhotoRepository.findPhotosByAlbumId(albumId);
 
         // 섹션 ID를 기준으로 사진 그룹핑
-        Map<Long, List<TimelinePhoto>> photosBySection = photos.stream()
+        Map<Long, List<TimelineAlbumPhoto>> photosBySection = photos.stream()
                 .collect(Collectors.groupingBy(
-                        photo -> photo.getSection().getId(),
+                        photo -> photo.getSection() != null ? photo.getSection().getId() : 0L,
                         Collectors.toList()
                 ));
         return photosBySection;

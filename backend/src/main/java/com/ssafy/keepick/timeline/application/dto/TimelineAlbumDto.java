@@ -1,7 +1,6 @@
 package com.ssafy.keepick.timeline.application.dto;
 
 import com.ssafy.keepick.timeline.domain.TimelineAlbum;
-import com.ssafy.keepick.timeline.domain.TimelineSection;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -13,7 +12,7 @@ import java.util.List;
 @Builder
 public class TimelineAlbumDto {
 
-    private Long timelineAlbumId;
+    private Long albumId;
     private String name;
     private String description;
     private String thumbnailUrl;
@@ -23,11 +22,12 @@ public class TimelineAlbumDto {
     private Integer photoCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private List<TimelineSectionDto> sections;
+    private List<TimelineAlbumSectionDto> sections;
+    private List<TimelineAlbumPhotoDto> unusedPhotos;
 
     public static TimelineAlbumDto from(TimelineAlbum album) {
         return TimelineAlbumDto.builder()
-                .timelineAlbumId(album.getId())
+                .albumId(album.getId())
                 .name(album.getName())
                 .description(album.getDescription())
                 .thumbnailUrl(album.getThumbnailUrl())
@@ -40,14 +40,21 @@ public class TimelineAlbumDto {
                 .build();
     }
 
-    public static TimelineAlbumDto from(TimelineAlbum album, List<TimelineSection> sections) {
-        TimelineAlbumDto dto = TimelineAlbumDto.from(album);
-        dto.setSections(sections);
-        return dto;
-    }
-
-    private void setSections(List<TimelineSection> sections) {
-        this.sections = sections.stream().map(section -> TimelineSectionDto.from(section, section.getPhotos())).toList();
+    public static TimelineAlbumDto fromDetail(TimelineAlbum album) {
+        return TimelineAlbumDto.builder()
+                .albumId(album.getId())
+                .name(album.getName())
+                .description(album.getDescription())
+                .thumbnailUrl(album.getThumbnailUrl())
+                .originalUrl(album.getOriginalUrl())
+                .startDate(album.getStartDate())
+                .endDate(album.getEndDate())
+                .photoCount(album.getPhotoCount())
+                .createdAt(album.getCreatedAt())
+                .updatedAt(album.getUpdatedAt())
+                .sections(album.getSections().stream().map(TimelineAlbumSectionDto::fromDetail).toList())
+                .unusedPhotos(album.getPhotos().stream().map(TimelineAlbumPhotoDto::from).toList())
+                .build();
     }
 
 }

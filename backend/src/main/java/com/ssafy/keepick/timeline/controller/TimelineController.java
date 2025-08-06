@@ -31,7 +31,7 @@ public class TimelineController {
     }
 
     @GetMapping("/{albumId}")
-    public ApiResponse<?> getTimelineAlbum(@PathVariable Long albumId) {
+    public ApiResponse<TimelineDetailResponse> getTimelineAlbum(@PathVariable Long albumId) {
         TimelineAlbumDto timelineAlbumDto = timelineService.getTimelineAlbum(albumId);
         TimelineDetailResponse response = TimelineDetailResponse.toResponse(timelineAlbumDto);
         return ApiResponse.ok(response);

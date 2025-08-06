@@ -23,7 +23,7 @@ public class TimelineInfoResponse {
     public static TimelineInfoResponse toResponse(TimelineAlbumDto dto) {
         return TimelineInfoResponse
                 .builder()
-                .albumId(dto.getTimelineAlbumId())
+                .albumId(dto.getAlbumId())
                 .name(dto.getName())
                 .description(dto.getDescription())
                 .thumbnailUrl(dto.getThumbnailUrl())

@@ -14,7 +14,7 @@ import java.util.List;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-public class TimelineSection {
+public class TimelineAlbumSection {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -33,9 +33,9 @@ public class TimelineSection {
     private TimelineAlbum album;
 
     @OneToMany(mappedBy = "section")
-    private List<TimelinePhoto> photos = new ArrayList<>();
+    private List<TimelineAlbumPhoto> photos = new ArrayList<>();
 
-    public void loadPhotos(List<TimelinePhoto> photos) {
+    public void loadPhotos(List<TimelineAlbumPhoto> photos) {
         this.photos = (photos != null) ? photos : List.of();
     }
 }

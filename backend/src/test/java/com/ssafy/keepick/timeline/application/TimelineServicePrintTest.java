@@ -2,8 +2,8 @@ package com.ssafy.keepick.timeline.application;
 
 import com.ssafy.keepick.global.config.QueryDslConfig;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
-import com.ssafy.keepick.timeline.application.dto.TimelineSectionDto;
-import com.ssafy.keepick.timeline.application.dto.TimelinePhotoDto;
+import com.ssafy.keepick.timeline.application.dto.TimelineAlbumSectionDto;
+import com.ssafy.keepick.timeline.application.dto.TimelineAlbumPhotoDto;
 import com.ssafy.keepick.timeline.controller.response.TimelineDetailResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,16 +30,21 @@ class TimelineServicePrintTest {
 
         TimelineAlbumDto dto = timelineService.getTimelineAlbum(1L);
 
-        System.out.println("album =" + dto.getTimelineAlbumId() + " " + dto.getName());
+        System.out.println("album =" + dto.getAlbumId() + " " + dto.getName());
 
-        List<TimelineSectionDto> sections = dto.getSections();
+        List<TimelineAlbumSectionDto> sections = dto.getSections();
         for (var section : sections) {
             System.out.println("section = " + section.getSequence() + " " + section.getName());
 
-            List<TimelinePhotoDto> photos = section.getPhotos();
+            List<TimelineAlbumPhotoDto> photos = section.getPhotos();
             for (var photo : photos) {
                 System.out.println("photo = " + photo.getSequence() + " " + photo.getOriginalUrl());
             }
+        }
+
+        List<TimelineAlbumPhotoDto> unusedPhotos = dto.getUnusedPhotos();
+        for (var photo : unusedPhotos) {
+            System.out.println("photo = " + photo.getSequence() + " " + photo.getOriginalUrl());
         }
 
     }

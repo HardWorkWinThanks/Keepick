@@ -7,7 +7,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -44,7 +43,14 @@ public class TimelineAlbum extends BaseTimeEntity {
     private LocalDateTime deletedAt;
 
     @OneToMany(mappedBy = "album")
-    private List<TimelineSection> sections = new ArrayList<>();
+    private List<TimelineAlbumSection> sections = new ArrayList<>();
+
+    @OneToMany(mappedBy = "album")
+    private List<TimelineAlbumPhoto> photos = new ArrayList<>();
+
+    public void loadPhotos(List<TimelineAlbumPhoto> photos) {
+        this.photos = (photos != null) ? photos : List.of();
+    }
 
 }
 
