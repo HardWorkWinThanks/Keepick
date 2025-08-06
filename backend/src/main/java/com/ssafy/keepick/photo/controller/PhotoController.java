@@ -4,23 +4,44 @@ import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.global.response.PagingResponse;
 import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.photo.application.GroupPhotoService;
+import com.ssafy.keepick.photo.application.ImageService;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
-import com.ssafy.keepick.photo.controller.request.GroupPhotoCreateRequest;
+import com.ssafy.keepick.photo.application.dto.GroupPhotoUrlDto;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoSearchRequest;
+import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
 import com.ssafy.keepick.photo.controller.response.GroupPhotoDetailResponse;
 import com.ssafy.keepick.photo.controller.response.GroupPhotoIdResponse;
+import com.ssafy.keepick.photo.controller.response.PhotoUploadResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
 public class PhotoController {
     private final GroupPhotoService groupPhotoService;
+    private final ImageService imageService;
+
+    /**
+     * Presigned URL 배열 생성 API
+     */
+    @PostMapping("/groups/{groupId}/photos/presigned-urls")
+    public ApiResponse<List<PhotoUploadResponse>> generatePresignedUrls(
+            @PathVariable Long groupId,
+            @Valid @RequestBody GroupPhotoUploadRequest request) {
+        List<GroupPhotoUrlDto> result = groupPhotoService.uploadGroupPhoto(groupId, request);
+        List<PhotoUploadResponse> response = result.stream()
+                .map(r -> PhotoUploadResponse.of(r.getUrl(), r.getPhotoId()))
+                .collect(Collectors.toList());
+        return ApiResponse.ok(response);
+    }
+
 
     @GetMapping("/photos/random")
     public ApiResponse<List<GroupPhotoDetailResponse>> getRandomPhotos(@RequestParam(defaultValue = "10") int size) {
@@ -37,12 +58,6 @@ public class PhotoController {
         return ApiResponse.ok(PagingResponse.from(result, GroupPhotoDetailResponse::from));
     }
 
-    @PostMapping("/groups/{groupId}/photos")
-    public ApiResponse<List<GroupPhotoDetailResponse>> createGroupPhotos(@PathVariable Long groupId,
-                                            @RequestBody List<GroupPhotoCreateRequest> request) {
-        List<GroupPhotoDto> result = groupPhotoService.createGroupPhoto(groupId, request);
-        return ApiResponse.created(GroupPhotoDetailResponse.from(result));
-    }
 
     @DeleteMapping("/groups/{groupId}/photos")
     public ApiResponse<List<GroupPhotoIdResponse>> deleteGroupPhotos(@PathVariable Long groupId,
