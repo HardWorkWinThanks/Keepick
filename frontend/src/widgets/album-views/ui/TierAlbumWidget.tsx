@@ -15,6 +15,7 @@ import {
   TierControls,
   TierGrid,
   TierBattleModal,
+  TierData,
 } from "@/features/tier-battle";
 import { PhotoModal } from "@/features/photos-viewing";
 
@@ -59,7 +60,7 @@ export function TierAlbumWidget({
     const result = loadAlbumData(`tier_${albumId}`);
     if (result.success && result.data) {
       setTierPhotos(
-        result.data.tierPhotos || {
+        result.data?.tierPhotos as TierData || {
           S: [{ id: "photo_s1", src: "/jaewan1.jpg", name: "S급 사진1" }],
           A: [],
           B: [],

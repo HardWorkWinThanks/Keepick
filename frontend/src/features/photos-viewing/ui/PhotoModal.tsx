@@ -67,8 +67,7 @@ export function PhotoModal({ photo, isOpen, onClose }: PhotoModalProps) {
 
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 bg-black/50 text-white rounded-full flex
-  items-center justify-center hover:bg-black/70 transition-colors"
+          className="absolute top-4 right-4 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
           aria-label="닫기"
         >
           ✕
