@@ -14,6 +14,7 @@ public class TierAlbumDto {
     private String name;
     private String description;
     private String thumbnailUrl;
+    private String originalUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Integer photoCount;
@@ -25,6 +26,7 @@ public class TierAlbumDto {
                 .name(tierAlbum.getName())
                 .description(tierAlbum.getDescription())
                 .thumbnailUrl(tierAlbum.getThumbnailUrl())
+                .originalUrl(tierAlbum.getOriginalUrl())
                 .createdAt(tierAlbum.getCreatedAt())
                 .updatedAt(tierAlbum.getUpdatedAt())
                 .photoCount(tierAlbum.getPhotoCount())
