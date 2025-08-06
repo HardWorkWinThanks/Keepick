@@ -2,7 +2,12 @@ package com.ssafy.keepick.timeline.application;
 
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
+import com.ssafy.keepick.group.domain.Group;
+import com.ssafy.keepick.group.persistence.GroupRepository;
+import com.ssafy.keepick.image.domain.Photo;
+import com.ssafy.keepick.image.persistence.PhotoRepository;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
+import com.ssafy.keepick.timeline.controller.request.TimelineCreateRequest;
 import com.ssafy.keepick.timeline.domain.TimelineAlbum;
 import com.ssafy.keepick.timeline.domain.TimelineAlbumPhoto;
 import com.ssafy.keepick.timeline.domain.TimelineAlbumSection;
@@ -26,6 +31,8 @@ public class TimelineService {
 
     private final TimelineAlbumRepository timelineAlbumRepository;
     private final TimelineAlbumPhotoRepository timelinePhotoRepository;
+    private final GroupRepository groupRepository;
+    private final PhotoRepository photoRepository;
 
     public Page<TimelineAlbumDto> getTimelineAlbumList(Long groupId, Integer page, Integer size) {
         Page<TimelineAlbum> albumPage = timelineAlbumRepository.findAllByGroupIdAndDeletedAtIsNull(groupId, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
@@ -33,8 +40,17 @@ public class TimelineService {
         return albumDtoPage;
     }
 
-    public TimelineAlbumDto createTimelineAlbum(Long groupId) {
-        return null;
+    public TimelineAlbumDto createTimelineAlbum(Long groupId, TimelineCreateRequest request) {
+        // 그룹 & 사진 조회
+        Group group = groupRepository.findById(groupId).orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
+        List<Photo> photos = photoRepository.findAllById(request.getPhotoIds());
+        
+        // 타임라인 앨범 생성
+        TimelineAlbum album = TimelineAlbum.createTimelineAlbum(group, photos);
+        timelineAlbumRepository.save(album);
+
+        TimelineAlbumDto albumDto = TimelineAlbumDto.from(album);
+        return albumDto;
     }
 
     public TimelineAlbumDto getTimelineAlbum(Long albumId) {

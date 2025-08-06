@@ -28,5 +28,13 @@ public class TimelineAlbumPhoto {
 
     private Integer sequence;
 
+    private TimelineAlbumPhoto(TimelineAlbum album, Photo photo) {
+        this.photo = photo;
+    }
+
+    public static TimelineAlbumPhoto createTimelineAlbumPhoto(TimelineAlbum album, Photo photo) {
+        return new TimelineAlbumPhoto(album, photo);
+    }
+
 }
 

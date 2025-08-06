@@ -2,6 +2,7 @@ package com.ssafy.keepick.timeline.domain;
 
 import com.ssafy.keepick.global.entity.BaseTimeEntity;
 import com.ssafy.keepick.group.domain.Group;
+import com.ssafy.keepick.image.domain.Photo;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -45,8 +46,28 @@ public class TimelineAlbum extends BaseTimeEntity {
     @OneToMany(mappedBy = "album")
     private List<TimelineAlbumSection> sections = new ArrayList<>();
 
-    @OneToMany(mappedBy = "album")
+    @OneToMany(mappedBy = "album", cascade = CascadeType.ALL)
     private List<TimelineAlbumPhoto> photos = new ArrayList<>();
+
+    private TimelineAlbum(Group group) {
+        this.group = group;
+    }
+
+    public static TimelineAlbum createTimelineAlbum(Group group, List<Photo> photos) {
+        TimelineAlbum album = new TimelineAlbum(group);
+        for (Photo photo : photos) {
+            album.addPhoto(photo);
+        }
+        Photo thumbnail = photos.getFirst();
+        album.originalUrl = thumbnail.getOriginalUrl();
+        album.thumbnailUrl = thumbnail.getThumbnailUrl();
+        return album;
+    }
+
+    public void addPhoto(Photo photo) {
+        TimelineAlbumPhoto albumPhoto = TimelineAlbumPhoto.createTimelineAlbumPhoto(this, photo);
+        this.photos.add(albumPhoto);
+    }
 
     public void loadPhotos(List<TimelineAlbumPhoto> photos) {
         this.photos = (photos != null) ? photos : List.of();
