@@ -57,5 +57,9 @@ public class TimelineAlbumPhoto {
         }
     }
 
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
 }
 

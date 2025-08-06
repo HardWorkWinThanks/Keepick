@@ -62,27 +62,28 @@ public class TimelineService {
         TimelineAlbum timelineAlbum = getTimelineAlbumDetail(albumId);
 
         // DTO 변환
-        TimelineAlbumDto timelineAlbumDto = TimelineAlbumDto.fromDetail(timelineAlbum);
-        return timelineAlbumDto;
+        TimelineAlbumDto albumDto = TimelineAlbumDto.fromDetail(timelineAlbum);
+        return albumDto;
     }
 
     private TimelineAlbum getTimelineAlbumDetail(Long albumId) {
         // 앨범 조회
-        TimelineAlbum timelineAlbum = timelineAlbumRepository.findAlbumByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
+        TimelineAlbum album = timelineAlbumRepository.findAlbumByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
 
         // 앨범 섹션 조회
         List<TimelineAlbumSection> sections = timelineAlbumSectionRepository.findAllByAlbumId(albumId);
-        timelineAlbum.loadSections(sections);
+        album.loadSections(sections);
 
         // 섹션에 포함되지 않은 사진
         List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findUnusedPhotosByAlbumIdAndSectionIsNull(albumId);
-        timelineAlbum.loadPhotos(photos);
-        return timelineAlbum;
+        album.loadPhotos(photos);
+        return album;
     }
 
     @Transactional
-    public TimelineAlbumDto deleteTimelineAlbum(Long albumId) {
-        return null;
+    public void deleteTimelineAlbum(Long albumId) {
+        TimelineAlbum album = timelineAlbumRepository.findAlbumByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
+        album.delete();
     }
 
     @Transactional

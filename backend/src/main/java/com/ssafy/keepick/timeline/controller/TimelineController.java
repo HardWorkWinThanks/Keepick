@@ -2,6 +2,7 @@ package com.ssafy.keepick.timeline.controller;
 
 import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.global.response.PagingResponse;
+import com.ssafy.keepick.global.response.ResponseCode;
 import com.ssafy.keepick.image.application.dto.GroupPhotoDto;
 import com.ssafy.keepick.image.controller.response.GroupPhotoDetailResponse;
 import com.ssafy.keepick.timeline.application.TimelineService;
@@ -51,8 +52,9 @@ public class TimelineController {
     }
 
     @DeleteMapping("/{albumId}")
-    public ApiResponse<?> deleteTimelineAlbum(@PathVariable Long albumId) {
-        return null;
+    public ApiResponse<Void> deleteTimelineAlbum(@PathVariable Long albumId) {
+        timelineService.deleteTimelineAlbum(albumId);
+        return ApiResponse.of(ResponseCode.DELETED);
     }
 
     @PutMapping("/{albumId}")

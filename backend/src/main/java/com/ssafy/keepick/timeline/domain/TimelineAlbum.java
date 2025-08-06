@@ -123,5 +123,9 @@ public class TimelineAlbum extends BaseTimeEntity {
         this.photoCount--;
     }
 
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
 }
 
