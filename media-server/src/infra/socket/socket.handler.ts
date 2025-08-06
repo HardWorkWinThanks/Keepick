@@ -1,4 +1,3 @@
-// handlers/socket.handler.ts
 import { Server, Socket } from "socket.io";
 import { roomService } from "../../domain/room/factory/room.factory";
 import { chatService } from "../../domain/chat/factory/chat.factory";
