@@ -1,5 +1,6 @@
 package com.ssafy.keepick.photo.controller.request;
 
+import com.ssafy.keepick.photo.domain.Photo;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -9,13 +10,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import software.amazon.awssdk.annotations.NotNull;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ImageUploadRequest {
+public class GroupPhotoUploadRequest {
 
     @NotNull
     @Size(min = 1, max = 20, message = "파일은 1개 이상 20개 이하로 선택해주세요")
@@ -36,5 +38,11 @@ public class ImageUploadRequest {
         @NotNull
         @Positive(message = "파일 크기는 양수여야 합니다")
         private Long fileSize;
+
+        private Integer width;
+
+        private Integer height;
+
+        private LocalDateTime takenAt;
     }
 }

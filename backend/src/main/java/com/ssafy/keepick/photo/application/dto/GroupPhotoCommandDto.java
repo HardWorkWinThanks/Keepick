@@ -1,30 +1,28 @@
 package com.ssafy.keepick.photo.application.dto;
 
 import com.ssafy.keepick.global.utils.file.FileUtils;
-import com.ssafy.keepick.photo.controller.request.ImageUploadRequest;
+import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Getter
 @Builder
 @AllArgsConstructor
-public class ImageDto {
+public class GroupPhotoCommandDto {
+    private final Long imageId;
     private final String fileName;
     private final String contentType;
     private final Long fileSize;
 
-    public static List<ImageDto> from(ImageUploadRequest request) {
-        return request.getFiles().stream()
-                .map(file -> ImageDto.builder()
-                        .fileName(file.getFileName())
-                        .contentType(file.getContentType())
-                        .fileSize(file.getFileSize())
-                        .build())
-                .collect(Collectors.toList());
+    public static GroupPhotoCommandDto from(Long ImageId, GroupPhotoUploadRequest.ImageFileRequest request) {
+        return GroupPhotoCommandDto.builder()
+                .imageId(ImageId)
+                .fileName(request.getFileName())
+                .contentType(request.getContentType())
+                .fileSize(request.getFileSize())
+                .build();
     }
 
     public void validate() {
