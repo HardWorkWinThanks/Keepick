@@ -1,4 +1,3 @@
-// components/layout/Sidebar.tsx
 "use client";
 
 import Link from "next/link";
@@ -10,7 +9,7 @@ interface SidebarProps {
   activeGroup?: string;
 }
 
-export default function Sidebar({
+export default function SidebarWidget({
   sidebarOpen,
   setSidebarOpen,
   activeGroup,

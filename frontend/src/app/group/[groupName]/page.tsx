@@ -4,11 +4,9 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Header from "@/components/layout/header";
-import GroupSidebar from "@/components/layout/GroupSidebar";
-import TierAlbumView from "@/components/group/TierAlbumView";
-import TimelineAlbumView from "@/components/group/TimelineAlbumView";
-import HighlightAlbumView from "@/components/group/HighlightAlbumView";
+import Header from "@/widgets/layout/ui/HeaderWidget";
+import GroupSidebar from "@/widgets/layout/ui/GroupSidebar";
+import { TierAlbumWidget, TimelineAlbumWidget, HighlightAlbumWidget } from "@/widgets/album-views";
 import { PlusIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import GroupChatFloatingButton from "@/widgets/group-chat/ui/GroupChatFloatingButton";
@@ -288,7 +286,7 @@ export default function GroupPage({ params }: PageProps) {
     switch (selectedAlbum.type) {
       case "tier":
         return (
-          <TierAlbumView
+          <TierAlbumWidget
             albumId={selectedAlbum.id}
             albumTitle={selectedAlbum.title}
             onBack={handleBackToList}
@@ -296,7 +294,7 @@ export default function GroupPage({ params }: PageProps) {
         );
       case "timeline":
         return (
-          <TimelineAlbumView
+          <TimelineAlbumWidget
             albumId={selectedAlbum.id}
             albumTitle={selectedAlbum.title}
             onBack={handleBackToList}
@@ -304,7 +302,7 @@ export default function GroupPage({ params }: PageProps) {
         );
       case "highlight":
         return (
-          <HighlightAlbumView
+          <HighlightAlbumWidget
             albumId={selectedAlbum.id}
             albumTitle={selectedAlbum.title}
             onBack={handleBackToList}

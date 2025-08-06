@@ -3,19 +3,11 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { Photo } from "@/entities/photo";
+import { BattleSequence } from "../model/types";
 
 // 타입 정의
-interface Photo {
-  id: string;
-  src: string;
-  name: string;
-}
-interface BattleSequence {
-  newPhoto: Photo;
-  opponents: Photo[];
-  currentOpponentIndex: number;
-  targetTier: string;
-}
+
 interface TierBattleModalProps {
   isOpen: boolean;
   battleSequence: BattleSequence | null;

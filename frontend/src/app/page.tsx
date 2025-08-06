@@ -2,13 +2,12 @@
 "use client";
 
 import { useState } from "react";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+import Header from "@/widgets/layout/ui/HeaderWidget";
+import Sidebar from "@/widgets/layout/ui/SidebarWidget";
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
-
 
 // [수정] 더 명확한 아이콘들을 solid 버전으로 가져옵니다.
 import {
@@ -27,11 +26,10 @@ const OAuthHandler = dynamic(
 );
 
 export default function HomePage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const userName = "WebrtcMaster";
   const totalPhotos = 2845;
   const totalAlbums = 17;
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <>
@@ -39,7 +37,7 @@ export default function HomePage() {
       <Suspense fallback={null}>
         <OAuthHandler />
       </Suspense>
-      ;
+
       <div className="min-h-screen bg-gray-50 flex">
         <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <div
@@ -48,7 +46,6 @@ export default function HomePage() {
           }`}
         >
           <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-
           {/* [수정] 메인 콘텐츠를 화면 전체에 채우도록 구조 변경 */}
           <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
             <section className="flex items-center justify-between gap-12 flex-wrap w-full max-w-7xl">

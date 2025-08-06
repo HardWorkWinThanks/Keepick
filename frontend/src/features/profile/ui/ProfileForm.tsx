@@ -1,7 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/shadcn/card";
-import { Button } from "@/components/shadcn/button";
+import { Card, CardContent, CardHeader, CardTitle, Button } from "@/shared/ui/shadcn"
 import { VersatileInput } from "@/shared/ui";
 import { NaverIcon } from "@/shared/assets/NaverIcon";
 import { useProfileEdit } from "../model/useProfileEdit";

@@ -19,7 +19,7 @@ interface HeaderProps {
   onBackToDashboard?: () => void; // [추가] 대시보드로 돌아가기 함수 prop
 }
 
-export default function Header({
+export default function HeaderWidget({
   onMenuClick,
   onBackToDashboard,
 }: HeaderProps) {
@@ -118,7 +118,10 @@ export default function Header({
                 >
                   <UserCircleIcon className="w-5 h-5" /> 프로필
                 </Link>
-                <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                >
                   <ArrowRightOnRectangleIcon className="w-5 h-5" /> 로그아웃
                 </button>
               </div>

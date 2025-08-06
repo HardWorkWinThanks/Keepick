@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Input } from '@/components/shadcn/input';
-import { Button } from '@/components/shadcn/button';
-import { Label } from '@/components/shadcn/label';
+import { Input } from '@/shared/ui/shadcn/input';
+import { Button } from '@/shared/ui/shadcn/button';
+import { Label } from '@/shared/ui/shadcn/label';
 
 interface VersatileInputProps {
   value: string;

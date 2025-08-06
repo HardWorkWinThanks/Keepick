@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
-import { ProfileForm } from '@/features/profile';
-import { UserProfile } from '@/features/profile';
+import { useState } from "react";
+import Header from "@/widgets/layout/ui/HeaderWidget";
+import Sidebar from "@/widgets/layout/ui/SidebarWidget";
+import { ProfileForm } from "@/features/profile";
+import { UserProfile } from "@/features/profile";
 
 export default function ProfilePage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  
   const initialProfile: UserProfile = {
-    profileImage: '/dummy/dummy1.jpg',
-    email: 'user@example.com',
-    socialType: 'naver',
-    nickname: '사용자123',
-    aiProfileImage: '/dummy/dummy2.jpg'
+    profileImage: "/dummy/dummy1.jpg",
+    email: "user@example.com",
+    socialType: "naver",
+    nickname: "사용자123",
+    aiProfileImage: "/dummy/dummy2.jpg",
   };
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -27,6 +27,7 @@ export default function ProfilePage() {
       >
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
+        {/* 기존 main 태그 그대로 */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           <ProfileForm initialProfile={initialProfile} />
         </main>
