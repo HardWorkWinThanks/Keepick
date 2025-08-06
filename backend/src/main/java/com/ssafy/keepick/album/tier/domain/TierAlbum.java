@@ -7,6 +7,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "tier_album")
@@ -38,6 +42,9 @@ public class TierAlbum extends BaseTimeEntity {
 
     @Column(name = "photo_count")
     private Integer photoCount = 0;
+
+    @OneToMany(mappedBy = "album", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<TierAlbumPhoto> tierAlbumPhotos = new ArrayList<>();
 
     private TierAlbum(String name, String description, String thumbnailUrl, String originalUrl, Long groupId) {
         this.name = name;
@@ -72,7 +79,18 @@ public class TierAlbum extends BaseTimeEntity {
         }
     }
 
+    public void updatePhotoCount(int count) {
+        this.photoCount = count;
+    }
+
     public boolean isDeleted() {
         return this.deletedAt != null;
+    }
+
+    // 모든 사진 목록 조회 (순서대로)
+    public List<TierAlbumPhoto> getAllPhotos() {
+        return this.tierAlbumPhotos.stream()
+            .sorted((p1, p2) -> Integer.compare(p1.getSequence(), p2.getSequence()))
+            .collect(Collectors.toList());
     }
 }

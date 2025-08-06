@@ -1,5 +1,7 @@
 package com.ssafy.keepick.album.tier.domain;
 
+import com.ssafy.keepick.image.domain.Photo;
+
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -15,11 +17,13 @@ public class TierAlbumPhoto {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "album_id")
-    private Long albumId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "album_id")
+    private TierAlbum album;
 
-    @Column(name = "photo_id")
-    private Long photoId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "photo_id")
+    private Photo photo;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tier")
@@ -28,15 +32,15 @@ public class TierAlbumPhoto {
     @Column(name = "sequence")
     private Integer sequence;
 
-    private TierAlbumPhoto(Long albumId, Long photoId, Tier tier, Integer sequence) {
-        this.albumId = albumId;
-        this.photoId = photoId;
+    private TierAlbumPhoto(TierAlbum album, Photo photo, Tier tier, Integer sequence) {
+        this.album = album;
+        this.photo = photo;
         this.tier = tier;
         this.sequence = sequence;
     }
 
-    public static TierAlbumPhoto createTierAlbumPhoto(Long albumId, Long photoId, Tier tier, Integer sequence) {
-        return new TierAlbumPhoto(albumId, photoId, tier, sequence);
+    public static TierAlbumPhoto createTierAlbumPhoto(TierAlbum album, Photo photo, Tier tier, Integer sequence) {
+        return new TierAlbumPhoto(album, photo, tier, sequence);
     }
 
     public void updateTier(Tier tier) {
@@ -45,9 +49,5 @@ public class TierAlbumPhoto {
 
     public void updateSequence(Integer sequence) {
         this.sequence = sequence;
-    }
-
-    public void updatePhoto(Long photoId) {
-        this.photoId = photoId;
     }
 }
