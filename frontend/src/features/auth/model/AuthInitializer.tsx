@@ -77,6 +77,7 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
   // 보호된 경로에 토큰 없이 접근하려고 하고, 초기화 과정이 끝났다면 로그인 페이지로 리디렉션합니다.
   if (isProtectedPath && !hasToken && !isInitializing) {
     redirect("/login");
+    return null; // redirect 후 렌더링 중단
   }
 
   // 자식 컴포넌트를 렌더링합니다.

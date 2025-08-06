@@ -2,7 +2,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle, Button } from "@/shared/ui/shadcn"
 import { VersatileInput } from "@/shared/ui";
-import { NaverIcon } from "@/shared/assets/NaverIcon";
 import { useProfileEdit } from "../model/useProfileEdit";
 import { UserProfile } from "../model/types";
 import { useAppSelector } from "@/shared/config/hooks";
@@ -31,6 +30,7 @@ export function ProfileForm() {
   const {
     userProfile,
     nicknameInput,
+    getProviderIcon,
     setNicknameInput,
     handleNicknameCheck,
     handleNicknameApply,
@@ -72,7 +72,7 @@ export function ProfileForm() {
               {/* 이메일 (읽기 전용) */}
               <VersatileInput
                 label="이메일"
-                labelIcon={<NaverIcon />} // 소셜 로그인 아이콘 표시
+                labelIcon={getProviderIcon(userProfile.provider)} // 소셜 로그인 아이콘 표시
                 value={userProfile.email}
                 readOnly={true}
               />

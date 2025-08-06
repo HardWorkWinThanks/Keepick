@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { UserProfile } from './types';
+import { NaverIcon, KakaoIcon, GoogleIcon } from '@/shared/assets'
 
 /**
  * 프로필 수정 페이지의 상태와 비즈니스 로직을 관리하는 커스텀 훅입니다.
@@ -57,16 +58,17 @@ export function useProfileEdit(initialProfile: UserProfile) {
   };
 
   /**
-   * 소셜 로그인 타입(영문)을 한글 레이블로 변환합니다.
+   * 소셜 로그인 타입에 따라 아이콘으로 반환
    * @param type - 'naver', 'kakao', 'google' 등
    * @returns '네이버', '카카오', '구글' 등 한글 문자열
    */
-  const getProviderLabel = (type: string) => {
-    switch (type) {
-      case 'naver': return '네이버';
-      case 'kakao': return '카카오';
-      case 'google': return '구글';
-      default: return type;
+  // 소셜 타입에 따라 아이콘 동적 선택
+  const getProviderIcon = (provider: string) => {
+    switch (provider) {
+      case 'naver': return <NaverIcon />;
+      case 'kakao': return <KakaoIcon />;
+      case 'google': return <GoogleIcon />;
+      default: return <NaverIcon />;
     }
   };
 
@@ -78,6 +80,6 @@ export function useProfileEdit(initialProfile: UserProfile) {
     handleNicknameApply,
     handleProfileUrlChange,
     handleIdentificationUrlChange,
-    getProviderLabel,
+    getProviderIcon,
   };
 }
