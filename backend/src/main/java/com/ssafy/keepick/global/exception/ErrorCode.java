@@ -41,6 +41,9 @@ public enum ErrorCode {
     INVALID_FILE(HttpStatus.BAD_REQUEST, "처리할 수 없는 이미지 파일입니다.", "P001"),
     PRESIGNED_URL_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "presigned url 생성에 실패했습니다.", "P002"),
 
+    // ALBUM
+    ALBUM_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 앨범입니다.", "AB001"),
+
     // 시스템 에러
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다.", "S001"),
     INTERNAL_S3_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S3 서버에서 발생한 오류입니다.", "S002");
