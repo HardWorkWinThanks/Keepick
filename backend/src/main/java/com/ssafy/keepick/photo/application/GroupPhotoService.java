@@ -38,33 +38,27 @@ public class GroupPhotoService {
                 .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
 
         // 2. photo 객체 생성 (originalUrl 없이)
-        List<Photo> savedPhotos = request.getFiles().stream()
-                .map(file -> Photo.builder()
-                        .takenAt(file.getTakenAt())
-                        .height(file.getHeight())
-                        .width(file.getWidth())
-                        .group(group)
-                        .status(PhotoStatus.PENDING_UPLOAD)
-                        .build())
+        List<Photo> photos = request.getFiles().stream()
+                .map(file -> Photo.createPhoto(file.getTakenAt(), file.getWidth(), file.getHeight(), group))
                 .collect(Collectors.toList());
-        photoRepository.saveAll(savedPhotos);
+        photoRepository.saveAll(photos);
 
         // 3. 요청 → 커맨드 DTO로 변환 (photoId와 이미지 정보 묶기)
-        List<GroupPhotoCommandDto> commandDtos = IntStream.range(0, savedPhotos.size())
-                .mapToObj(i -> GroupPhotoCommandDto.from(savedPhotos.get(i).getId(), request.getFiles().get(i)))
+        List<GroupPhotoCommandDto> commandDtos = IntStream.range(0, photos.size())
+                .mapToObj(i -> GroupPhotoCommandDto.from(photos.get(i).getId(), request.getFiles().get(i)))
                 .collect(Collectors.toList());
 
         // 4. presigned URL 발급
         List<String> originalUrls = imageService.generatePresignedUrls(commandDtos);
 
-        // 5. originalUrl 세팅 및 상태 유지 (status: PENDING_UPLOAD)
-        IntStream.range(0, savedPhotos.size())
-                .forEach(i -> savedPhotos.get(i).upload(originalUrls.get(i)));
-        photoRepository.saveAll(savedPhotos); // 변경사항 저장
+        // 5. originalUrl 세팅 및 상태 변경 (status: UPLOAD)
+        IntStream.range(0, photos.size())
+                .forEach(i -> photos.get(i).upload(originalUrls.get(i)));
+        photoRepository.saveAll(photos); // 변경사항 저장
 
         // 6. 응답 DTO 변환
-        return IntStream.range(0, savedPhotos.size())
-                .mapToObj(i -> new GroupPhotoUrlDto(savedPhotos.get(i).getId(), originalUrls.get(i)))
+        return IntStream.range(0, photos.size())
+                .mapToObj(i -> new GroupPhotoUrlDto(photos.get(i).getId(), originalUrls.get(i)))
                 .collect(Collectors.toList());
     }
 

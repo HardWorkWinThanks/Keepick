@@ -60,6 +60,17 @@ public class Photo extends BaseTimeEntity {
 
     public void upload(String originalUrl) {
         this.originalUrl = originalUrl;
+        this.status = PhotoStatus.UPLOADED;
+    }
+
+    public static Photo createPhoto(LocalDateTime takenAt, Integer width, Integer height, Group group) {
+        return Photo.builder()
+                .takenAt(takenAt)
+                .width(width)
+                .height(height)
+                .group(group)
+                .status(PhotoStatus.PENDING_UPLOAD)
+                .build();
     }
 
 }
