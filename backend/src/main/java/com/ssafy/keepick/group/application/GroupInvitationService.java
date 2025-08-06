@@ -1,5 +1,6 @@
 package com.ssafy.keepick.group.application;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.group.controller.request.GroupInviteRequest;
 import com.ssafy.keepick.group.domain.Group;
@@ -16,11 +17,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static com.ssafy.keepick.global.exception.ErrorCode.*;
 
@@ -59,10 +58,19 @@ public class GroupInvitationService {
     }
 
     public String createInvitationLink(Long groupId) {
-        // 유효기간이 하루인 초대 토큰 생성
+        Group group = groupRepository.findById(groupId).orElseThrow(() -> new BaseException(GROUP_NOT_FOUND));
+
+        // 초대 토큰 생성
         String inviteToken = UUID.randomUUID().toString();
-        redisService.setValue("invite:" + inviteToken, String.valueOf(groupId), Duration.ofDays(1));
-        String link = frontendUrl + "/invite/" + inviteToken;
+
+        // 그룹 정보와 초대 토큰으로 JSON -> Base64 인코등
+        String encodedInviteToken = encodeInviteToken(group, inviteToken);
+
+        // 초대 토큰의 유효기간을 1일로 저장
+        redisService.setValue("invite:" + inviteToken, group.getId().toString(), Duration.ofDays(1));
+
+        // 초대 링크 반환
+        String link = frontendUrl + "/invite/" + encodedInviteToken;
         return link;
     }
 
@@ -74,6 +82,22 @@ public class GroupInvitationService {
         GroupMember groupMember = processInvitationToGroup(group, loginMemberId);
         groupMember.accept();
         return GroupMemberDto.from(groupMember);
+    }
+
+    private String encodeInviteToken(Group group, String inviteToken) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            Map<String, String> data = Map.of(
+                    "groupId", group.getId().toString(),
+                    "groupName", group.getName(),
+                    "token", inviteToken
+            );
+            String json = objectMapper.writeValueAsString(data);
+            return Base64.getUrlEncoder().withoutPadding()
+                    .encodeToString(json.getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            throw new BaseException(INVITATION_TOKEN_CREATION_FAILED);
+        }
     }
 
     private void validateToken(Long groupId, String inviteToken) {
