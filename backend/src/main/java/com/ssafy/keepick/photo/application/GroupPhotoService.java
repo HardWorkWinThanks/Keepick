@@ -6,12 +6,10 @@ import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoCommandDto;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
-import com.ssafy.keepick.photo.application.dto.GroupPhotoUrlDto;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoSearchRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
 import com.ssafy.keepick.photo.domain.Photo;
-import com.ssafy.keepick.photo.domain.PhotoStatus;
 import com.ssafy.keepick.photo.persistence.PhotoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,6 +17,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -32,10 +31,14 @@ public class GroupPhotoService {
 
 
     @Transactional
-    public List<GroupPhotoUrlDto> uploadGroupPhoto(Long groupId, GroupPhotoUploadRequest request) {
+    public List<String> uploadGroupPhoto(Long groupId, GroupPhotoUploadRequest request) {
         // 1. 그룹 확인
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
+
+        if (request.getFiles().isEmpty()) {
+            return Collections.emptyList();
+        }
 
         // 2. photo 객체 생성 (originalUrl 없이)
         List<Photo> photos = request.getFiles().stream()
@@ -56,10 +59,7 @@ public class GroupPhotoService {
                 .forEach(i -> photos.get(i).upload(originalUrls.get(i)));
         photoRepository.saveAll(photos); // 변경사항 저장
 
-        // 6. 응답 DTO 변환
-        return IntStream.range(0, photos.size())
-                .mapToObj(i -> new GroupPhotoUrlDto(photos.get(i).getId(), originalUrls.get(i)))
-                .collect(Collectors.toList());
+        return originalUrls;
     }
 
     @Transactional
