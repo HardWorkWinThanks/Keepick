@@ -70,7 +70,7 @@ public class FileUtils {
             log.error("파일명이 비어있습니다.");
             throw new BaseException(ErrorCode.INVALID_FILE);
         }
-        if (fileName.contains("..") || fileName.contains("/")) {
+        if (fileName.contains("..")) {
             log.error("허용되지 않는 문자가 포함된 파일명입니다: {}", fileName);
             throw new BaseException(ErrorCode.INVALID_FILE);
         }

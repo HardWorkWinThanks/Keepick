@@ -21,8 +21,10 @@ public class Photo extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(length = 500)
     private String originalUrl;
 
+    @Column(length = 500)
     private String thumbnailUrl;
 
     private LocalDateTime takenAt;
