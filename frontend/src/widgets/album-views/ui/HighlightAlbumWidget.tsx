@@ -13,7 +13,7 @@
     CategoryGrid,
     ImageGallery,
     EmptyState
-  } from "@/features/emotion-categorization";
+  } from "@/features/highlight-categorization";
 
   export function HighlightAlbumWidget({
     albumId,

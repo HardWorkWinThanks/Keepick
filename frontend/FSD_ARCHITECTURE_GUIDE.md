@@ -69,7 +69,7 @@ features/ - 비즈니스 기능
 - features/album-management/ - 앨범 공통 기능
 - features/tier-battle/ - 티어 배틀 시스템
 - features/timeline-editing/ - 타임라인 편집
-- features/emotion-categorization/ - 감정 카테고리
+- features/highlight-categorization/ - 하이라이트 앨범 감정별 카테고리
 - features/photo-viewing/ - 사진 보기
 - features/photo-drag-drop/ - 드래그 앤 드롭
 

@@ -1,4 +1,3 @@
-// features/emotion-categorization/index.ts
 export * from "./model/types";
 export * from "./model/emotionCategories";
 export * from "./model/useEmotionCategories";
