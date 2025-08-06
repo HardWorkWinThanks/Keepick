@@ -2,7 +2,7 @@ package com.ssafy.keepick.timeline.controller.response;
 
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import com.ssafy.keepick.timeline.application.dto.TimelineSectionDto;
-import com.ssafy.keepick.timeline.application.dto.TimelineSectionPhotoDto;
+import com.ssafy.keepick.timeline.application.dto.TimelinePhotoDto;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
@@ -35,14 +35,14 @@ public class TimelineDetailResponse {
         private LocalDate endDate;
         private List<Photo> photos;
 
-        static Section of(TimelineSectionDto dto) {
+        static Section from(TimelineSectionDto dto) {
             return Section.builder()
                     .sectionId(dto.getTimelineSectionId())
                     .name(dto.getName())
                     .description(dto.getDescription())
                     .startDate(dto.getStartDate())
                     .endDate(dto.getEndDate())
-                    .photos(dto.getPhotos().stream().map(Photo::of).toList())
+                    .photos(dto.getPhotos().stream().map(Photo::from).toList())
                     .build();
         }
     }
@@ -55,7 +55,7 @@ public class TimelineDetailResponse {
         private String originalUrl;
         private String thumbnailUrl;
 
-        static Photo of(TimelineSectionPhotoDto dto) {
+        static Photo from(TimelinePhotoDto dto) {
             return Photo
                     .builder()
                     .photoId(dto.getPhotoId())
@@ -76,7 +76,7 @@ public class TimelineDetailResponse {
                 .originalUrl(dto.getOriginalUrl())
                 .startDate(dto.getStartDate())
                 .endDate(dto.getEndDate())
-                .sections(dto.getSections().stream().map(Section::of).toList())
+                .sections(dto.getSections().stream().map(Section::from).toList())
                 .build();
     }
 

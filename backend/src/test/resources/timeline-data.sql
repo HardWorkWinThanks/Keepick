@@ -19,7 +19,7 @@ INSERT INTO timeline_section (
     (1, 1, '1일차 - 도착', '공항 도착 후 해변 산책', '2025-04-10', '2025-04-10', 1),
     (2, 1, '2일차 - 관광', '성산일출봉, 우도 방문', '2025-04-11', '2025-04-11', 2);
 
-INSERT INTO photo (
+INSERT INTO "photo" (
     id, width, height, original_url, thumbnail_url, "group_id"
 ) VALUES
     (1, 1920, 1080, 'https://example.com/photo1.jpg', 'https://example.com/thumb1_1.jpg', 100),
@@ -27,8 +27,8 @@ INSERT INTO photo (
     (3, 1920, 1080, 'https://example.com/photo3.jpg', 'https://example.com/thumb2_1.jpg', 100),
     (4, 1920, 1080, 'https://example.com/photo4.jpg', 'https://example.com/thumb2_2.jpg', 100);
 
-INSERT INTO timeline_section_photo (
-    id, section_id, photo_id, sequence
+INSERT INTO timeline_photo (
+    id, section_id, "photo_id", sequence
 ) VALUES
     (1, 1, 1, 1),
     (2, 1, 2, 2),

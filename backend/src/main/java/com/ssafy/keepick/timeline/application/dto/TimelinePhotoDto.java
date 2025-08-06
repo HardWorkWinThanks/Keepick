@@ -1,12 +1,12 @@
 package com.ssafy.keepick.timeline.application.dto;
 
-import com.ssafy.keepick.timeline.domain.TimelineSectionPhoto;
+import com.ssafy.keepick.timeline.domain.TimelinePhoto;
 import lombok.Builder;
 import lombok.Getter;
 
 @Getter
 @Builder
-public class TimelineSectionPhotoDto {
+public class TimelinePhotoDto {
 
     private Long timelineSectionPhotoId;
     private Long timelineSectionId;
@@ -15,8 +15,8 @@ public class TimelineSectionPhotoDto {
     private String originalUrl;
     private String thumbnailUrl;
 
-    public static TimelineSectionPhotoDto from(TimelineSectionPhoto timelineSectionPhoto) {
-        return TimelineSectionPhotoDto
+    public static TimelinePhotoDto from(TimelinePhoto timelineSectionPhoto) {
+        return TimelinePhotoDto
                 .builder()
                 .timelineSectionPhotoId(timelineSectionPhoto.getId())
                 .timelineSectionId(timelineSectionPhoto.getSection().getId())

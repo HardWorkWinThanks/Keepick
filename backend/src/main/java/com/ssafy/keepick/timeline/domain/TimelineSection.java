@@ -33,9 +33,9 @@ public class TimelineSection {
     private TimelineAlbum album;
 
     @OneToMany(mappedBy = "section")
-    private List<TimelineSectionPhoto> photos = new ArrayList<>();
+    private List<TimelinePhoto> photos = new ArrayList<>();
 
-    public void loadPhotos(List<TimelineSectionPhoto> photos) {
+    public void loadPhotos(List<TimelinePhoto> photos) {
         this.photos = (photos != null) ? photos : List.of();
     }
 }

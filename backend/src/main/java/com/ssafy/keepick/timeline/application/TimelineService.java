@@ -5,9 +5,9 @@ import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import com.ssafy.keepick.timeline.domain.TimelineAlbum;
 import com.ssafy.keepick.timeline.domain.TimelineSection;
-import com.ssafy.keepick.timeline.domain.TimelineSectionPhoto;
+import com.ssafy.keepick.timeline.domain.TimelinePhoto;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumRepository;
-import com.ssafy.keepick.timeline.persistence.TimelineSectionPhotoRepository;
+import com.ssafy.keepick.timeline.persistence.TimelinePhotoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,12 +22,12 @@ import java.util.stream.Collectors;
 public class TimelineService {
 
     private final TimelineAlbumRepository timelineAlbumRepository;
-    private final TimelineSectionPhotoRepository timelineSectionPhotoRepository;
+    private final TimelinePhotoRepository timelinePhotoRepository;
 
     public List<TimelineAlbumDto> getTimelineAlbumList(Long groupId) {
         List<TimelineAlbum> albums = timelineAlbumRepository.findAllByGroupId(groupId);
-        List<TimelineAlbumDto> dtos = albums.stream().map(TimelineAlbumDto::from).toList();
-        return dtos;
+        List<TimelineAlbumDto> timelineAlbumDtos = albums.stream().map(TimelineAlbumDto::from).toList();
+        return timelineAlbumDtos;
     }
 
     public TimelineAlbumDto createTimelineAlbum(Long groupId) {
@@ -40,7 +40,7 @@ public class TimelineService {
 
         // 섹션별 사진 조회
         List<TimelineSection> sections = timelineAlbum.getSections();
-        Map<Long, List<TimelineSectionPhoto>> photosBySection = fetchPhotosBySection(sections);
+        Map<Long, List<TimelinePhoto>> photosBySection = fetchPhotosBySection(sections);
         
         // 섹션별 사진 매핑
         sections.forEach(section -> {
@@ -52,13 +52,13 @@ public class TimelineService {
         return timelineAlbumDto;
     }
 
-    private Map<Long, List<TimelineSectionPhoto>> fetchPhotosBySection(List<TimelineSection> sections) {
+    private Map<Long, List<TimelinePhoto>> fetchPhotosBySection(List<TimelineSection> sections) {
         // 앨범의 섹션 ID로 사진 조회
         List<Long> sectionIds = sections.stream().map(TimelineSection::getId).toList();
-        List<TimelineSectionPhoto> photos = timelineSectionPhotoRepository.findPhotosBySectionIds(sectionIds);
+        List<TimelinePhoto> photos = timelinePhotoRepository.findPhotosBySectionIds(sectionIds);
 
         // 섹션 ID를 기준으로 사진 그룹핑
-        Map<Long, List<TimelineSectionPhoto>> photosBySection = photos.stream()
+        Map<Long, List<TimelinePhoto>> photosBySection = photos.stream()
                 .collect(Collectors.groupingBy(
                         photo -> photo.getSection().getId(),
                         Collectors.toList()

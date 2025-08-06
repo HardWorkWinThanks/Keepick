@@ -1,7 +1,7 @@
 package com.ssafy.keepick.timeline.application.dto;
 
 import com.ssafy.keepick.timeline.domain.TimelineSection;
-import com.ssafy.keepick.timeline.domain.TimelineSectionPhoto;
+import com.ssafy.keepick.timeline.domain.TimelinePhoto;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -19,7 +19,7 @@ public class TimelineSectionDto {
     private LocalDate endDate;
     private String description;
     private Integer sequence;
-    private List<TimelineSectionPhotoDto> photos;
+    private List<TimelinePhotoDto> photos;
 
     public static TimelineSectionDto from(TimelineSection timelineSection) {
         return TimelineSectionDto.builder()
@@ -33,14 +33,14 @@ public class TimelineSectionDto {
                 .build();
     }
 
-    public static TimelineSectionDto from(TimelineSection timelineSection, List<TimelineSectionPhoto> photos) {
+    public static TimelineSectionDto from(TimelineSection timelineSection, List<TimelinePhoto> photos) {
         TimelineSectionDto dto = TimelineSectionDto.from(timelineSection);
         dto.setPhotos(photos);
         return dto;
     }
 
-    private void setPhotos(List<TimelineSectionPhoto> photos) {
-        this.photos = photos.stream().map(TimelineSectionPhotoDto::from).toList();
+    private void setPhotos(List<TimelinePhoto> photos) {
+        this.photos = photos.stream().map(TimelinePhotoDto::from).toList();
     }
 
 }

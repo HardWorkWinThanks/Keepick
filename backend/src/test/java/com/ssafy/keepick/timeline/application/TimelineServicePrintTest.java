@@ -1,8 +1,9 @@
 package com.ssafy.keepick.timeline.application;
 
+import com.ssafy.keepick.global.config.QueryDslConfig;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import com.ssafy.keepick.timeline.application.dto.TimelineSectionDto;
-import com.ssafy.keepick.timeline.application.dto.TimelineSectionPhotoDto;
+import com.ssafy.keepick.timeline.application.dto.TimelinePhotoDto;
 import com.ssafy.keepick.timeline.controller.response.TimelineDetailResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,8 @@ import java.util.List;
 
 @Sql("/timeline-data.sql")
 @Import({
-        TimelineService.class
+        TimelineService.class,
+        QueryDslConfig.class
 })
 @DataJpaTest
 class TimelineServicePrintTest {
@@ -34,7 +36,7 @@ class TimelineServicePrintTest {
         for (var section : sections) {
             System.out.println("section = " + section.getSequence() + " " + section.getName());
 
-            List<TimelineSectionPhotoDto> photos = section.getPhotos();
+            List<TimelinePhotoDto> photos = section.getPhotos();
             for (var photo : photos) {
                 System.out.println("photo = " + photo.getSequence() + " " + photo.getOriginalUrl());
             }

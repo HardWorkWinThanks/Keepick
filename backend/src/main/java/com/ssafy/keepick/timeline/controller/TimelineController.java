@@ -20,8 +20,8 @@ public class TimelineController {
     @GetMapping("")
     public ApiResponse<?> getTimelineAlbumList(@PathVariable Long groupId) {
         // 페이징 추가하기
-        List<TimelineAlbumDto> dtos = timelineService.getTimelineAlbumList(groupId);
-        List<TimelineInfoResponse> response = dtos.stream().map(TimelineInfoResponse::toResponse).toList();
+        List<TimelineAlbumDto> timelineAlbumDtos = timelineService.getTimelineAlbumList(groupId);
+        List<TimelineInfoResponse> response = timelineAlbumDtos.stream().map(TimelineInfoResponse::toResponse).toList();
         return ApiResponse.ok(response);
     }
 
@@ -32,8 +32,8 @@ public class TimelineController {
 
     @GetMapping("/{albumId}")
     public ApiResponse<?> getTimelineAlbum(@PathVariable Long albumId) {
-        TimelineAlbumDto dto = timelineService.getTimelineAlbum(albumId);
-        TimelineDetailResponse response = TimelineDetailResponse.toResponse(dto);
+        TimelineAlbumDto timelineAlbumDto = timelineService.getTimelineAlbum(albumId);
+        TimelineDetailResponse response = TimelineDetailResponse.toResponse(timelineAlbumDto);
         return ApiResponse.ok(response);
     }
 
