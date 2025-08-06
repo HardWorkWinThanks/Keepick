@@ -11,24 +11,20 @@ import Image from "next/image";
 /**
  * 사용자 프로필 정보를 표시하고 수정하는 UI를 제공하는 폼 컴포넌트입니다.
  */
-interface ProfileFormProps {
-  // 초기 프로필 정보를 props로 받을 수 있도록 정의 (선택 사항)
-  initialProfile?: UserProfile;
-}
 
-export function ProfileForm({ initialProfile }: ProfileFormProps) {
+export function ProfileForm() {
   // Redux 스토어에서 현재 로그인된 사용자 정보를 가져옵니다.
   const { currentUser } = useAppSelector((state) => state.user);
 
   // 표시할 프로필 데이터를 결정합니다.
   // Redux에 사용자 정보가 있으면 그 데이터를 우선적으로 사용하고,
-  // 없다면 props로 받은 initialProfile을, 그것도 없다면 기본 더미 데이터를 사용합니다.
-  const profileData: UserProfile = initialProfile || {
-    profileImage: currentUser?.profileUrl || 'basic_profile.webp',
+  // 없다면 기본 더미 데이터를 사용합니다.
+  const profileData: UserProfile = {
+    profileUrl: currentUser?.profileUrl || '/basic_profile.webp',
     email: currentUser?.email || 'user@example.com',
-    socialType: 'naver', // 소셜 타입은 현재 하드코딩되어 있음 (개선 필요)
+    provider: currentUser?.provider || 'kakao',
     nickname: currentUser?.nickname || '사용자123',
-    aiProfileImage: '/dummy/dummy2.jpg'
+    identificationUrl: currentUser?.identificationUrl || '/dummy/dummy2.jpg'
   };
 
   // 프로필 수정과 관련된 상태와 핸들러 함수들을 커스텀 훅에서 가져옵니다.
@@ -38,8 +34,8 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
     setNicknameInput,
     handleNicknameCheck,
     handleNicknameApply,
-    handleProfileImageChange,
-    handleAiProfileImageChange,
+    handleProfileUrlChange,
+    handleIdentificationUrlChange,
   } = useProfileEdit(profileData);
 
   return (
@@ -56,7 +52,7 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
             {/* 프로필 이미지 표시 및 변경 버튼 */}
             <div className="flex flex-col items-center space-y-3">
               <Image
-                src={userProfile.profileImage}
+                src={userProfile.profileUrl}
                 alt="프로필 사진"
                 width={256}
                 height={256}
@@ -67,7 +63,7 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
                 size="sm"
                 variant="outline"
                 className="bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
-                onClick={handleProfileImageChange}
+                onClick={handleProfileUrlChange}
               >
                 프로필 사진 변경
               </Button>
@@ -110,7 +106,7 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
           <div className="flex items-start space-x-6">
             <div className="flex flex-col items-center space-y-3">
               <Image
-                src={userProfile.aiProfileImage}
+                src={userProfile.identificationUrl}
                 alt="AI 인식 프로필"
                 width={256}
                 height={256}
@@ -121,7 +117,7 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
                 size="sm"
                 variant="outline"
                 className="bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
-                onClick={handleAiProfileImageChange}
+                onClick={handleIdentificationUrlChange}
               >
                 AI 프로필 변경
               </Button>

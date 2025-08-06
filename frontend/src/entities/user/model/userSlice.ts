@@ -6,8 +6,8 @@ export interface User {
   memberId: number; // 사용자 고유 ID
   email: string; // 이메일 (로그인 시 사용)
   nickname: string; // 닉네임
-  profileUrl?: string; // 프로필 이미지 URL (선택 사항)
   provider: string; // 소셜 로그인 제공자
+  profileUrl?: string; // 프로필 이미지 URL (선택 사항)
   identificationUrl?: string; // AI 프로필 URL (선택 사항)
 }
 

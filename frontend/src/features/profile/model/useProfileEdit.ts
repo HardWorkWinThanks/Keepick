@@ -44,7 +44,7 @@ export function useProfileEdit(initialProfile: UserProfile) {
    * 프로필 사진 변경 버튼 클릭 시 호출되는 핸들러입니다.
    * @todo 실제 파일 업로드 및 이미지 변경 로직을 구현해야 합니다.
    */
-  const handleProfileImageChange = () => {
+  const handleProfileUrlChange = () => {
     alert('프로필 사진 변경 기능');
   };
 
@@ -52,7 +52,7 @@ export function useProfileEdit(initialProfile: UserProfile) {
    * AI 프로필 사진 변경 버튼 클릭 시 호출되는 핸들러입니다.
    * @todo 실제 파일 업로드 및 이미지 변경 로직을 구현해야 합니다.
    */
-  const handleAiProfileImageChange = () => {
+  const handleIdentificationUrlChange = () => {
     alert('AI 프로필 사진 변경 기능');
   };
 
@@ -61,7 +61,7 @@ export function useProfileEdit(initialProfile: UserProfile) {
    * @param type - 'naver', 'kakao', 'google' 등
    * @returns '네이버', '카카오', '구글' 등 한글 문자열
    */
-  const getSocialTypeLabel = (type: string) => {
+  const getProviderLabel = (type: string) => {
     switch (type) {
       case 'naver': return '네이버';
       case 'kakao': return '카카오';
@@ -76,8 +76,8 @@ export function useProfileEdit(initialProfile: UserProfile) {
     setNicknameInput,
     handleNicknameCheck,
     handleNicknameApply,
-    handleProfileImageChange,
-    handleAiProfileImageChange,
-    getSocialTypeLabel,
+    handleProfileUrlChange,
+    handleIdentificationUrlChange,
+    getProviderLabel,
   };
 }

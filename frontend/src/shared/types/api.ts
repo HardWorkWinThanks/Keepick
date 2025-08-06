@@ -10,7 +10,7 @@ export interface ApiResponse<T = unknown> {
 //   id: number;
 //   name: string;
 //   email: string;
-//   profileImage?: string;
+//   profileUrl?: string;
 // }
 
 // export interface AuthResponse {

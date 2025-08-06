@@ -4,16 +4,8 @@ import { useState } from "react";
 import Header from "@/widgets/layout/ui/HeaderWidget";
 import Sidebar from "@/widgets/layout/ui/SidebarWidget";
 import { ProfileForm } from "@/features/profile";
-import { UserProfile } from "@/features/profile";
 
 export default function ProfilePage() {
-  const initialProfile: UserProfile = {
-    profileImage: "/dummy/dummy1.jpg",
-    email: "user@example.com",
-    socialType: "naver",
-    nickname: "사용자123",
-    aiProfileImage: "/dummy/dummy2.jpg",
-  };
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -29,7 +21,7 @@ export default function ProfilePage() {
 
         {/* 기존 main 태그 그대로 */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          <ProfileForm initialProfile={initialProfile} />
+          <ProfileForm />
         </main>
       </div>
     </div>
