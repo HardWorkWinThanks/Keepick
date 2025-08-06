@@ -1,61 +1,61 @@
 // entities/user/model/userSlice.ts
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-// 사용자 엔티티 인터페이스 정의
+// 사용자 엔티티의 데이터 구조를 정의합니다.
 export interface User {
-  id: number;
-  email: string;
-  nickname: string;
-  profileUrl?: string; // 선택적 프로필 이미지
-  createdAt: string;
-  updatedAt: string;
+  memberId: number; // 사용자 고유 ID
+  email: string; // 이메일 (로그인 시 사용)
+  nickname: string; // 닉네임
+  profileUrl?: string; // 프로필 이미지 URL (선택 사항)
+  provider: string; // 소셜 로그인 제공자
+  identificationUrl?: string; // AI 프로필 URL (선택 사항)
 }
 
-// 사용자 상태 인터페이스
+// Redux 스토어에서 관리할 사용자 상태를 정의합니다.
 interface UserState {
-  currentUser: User | null; // 현재 로그인한 사용자 정보
-  isLoading: boolean; // 사용자 정보 로딩 상태
+  currentUser: User | null; // 현재 로그인된 사용자 정보. 비로그인 시 null.
+  isLoading: boolean; // 사용자 정보를 불러오는 중인지 여부
 }
 
-// 초기 상태 정의
+// 스토어의 초기 상태를 설정합니다.
 const initialState: UserState = {
   currentUser: null,
   isLoading: false,
 };
 
-// 사용자 관련 Redux Slice 생성
+// `createSlice`를 사용하여 사용자 관련 리듀서와 액션을 한번에 생성합니다.
 const userSlice = createSlice({
-  name: "user",
-  initialState,
-  reducers: {
-    // 사용자 정보 설정 (로그인 성공 시)
+  name: "user", // 슬라이스의 이름
+  initialState, // 초기 상태
+  reducers: { // 리듀서 로직 정의
+    // 로그인 성공 시, 서버로부터 받은 사용자 정보를 스토어에 저장합니다.
     setUser: (state, action: PayloadAction<User>) => {
-      state.currentUser = action.payload;
-      state.isLoading = false; // 로딩 완료
+      state.currentUser = action.payload; // 전달받은 사용자 정보로 상태 업데이트
+      state.isLoading = false; // 로딩 상태 종료
     },
 
-    // 사용자 정보 초기화 (로그아웃 시)
+    // 로그아웃 시, 스토어에서 사용자 정보를 제거합니다.
     clearUser: (state) => {
       state.currentUser = null;
       state.isLoading = false;
     },
 
-    // 사용자 정보 로딩 상태 설정
+    // 사용자 정보를 비동기적으로 불러올 때 로딩 상태를 설정합니다.
     setUserLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
     },
 
-    // 사용자 정보 부분 업데이트 (프로필 수정 시)
+    // 프로필 정보 등 사용자의 일부 정보만 업데이트할 때 사용합니다.
     updateUser: (state, action: PayloadAction<Partial<User>>) => {
       if (state.currentUser) {
-        // 기존 사용자 정보와 새 정보 병합
+        // 기존 사용자 정보에 새로운 정보를 덮어씌웁니다 (병합).
         state.currentUser = { ...state.currentUser, ...action.payload };
       }
     },
   },
 });
 
-// 액션과 리듀서 내보내기
+// 생성된 액션 생성자 함수와 리듀서를 내보냅니다.
 export const { setUser, clearUser, setUserLoading, updateUser } =
   userSlice.actions;
 export default userSlice.reducer;

@@ -65,8 +65,8 @@ export const useOAuthCallback = () => {
     try {
       // /api/members/me 호출하여 사용자 정보 조회
       const data = await authApi.getCurrentUser();
-      // entities/user에 사용자 정보 저장
-      dispatch(setUser(data.user));
+      // entities/user에 사용자 정보 저장 (실제 데이터는 data.data 안에 있음)
+      dispatch(setUser(data.data));
     } catch (error) {
       console.error("User info fetch error:", error);
       // 사용자 정보 가져오기 실패 시 에러 페이지로

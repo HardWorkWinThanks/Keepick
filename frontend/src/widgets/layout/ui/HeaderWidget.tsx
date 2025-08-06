@@ -29,11 +29,9 @@ export default function HeaderWidget({
 
   const logout = useLogout();
 
-  // 실제로는 인증 상태에서 가져올 데이터
-  // const user = { name: "wmwogus", imageUrl: "/jaewan1.jpg" };
   const user = {
     name: currentUser?.nickname || "Guest",
-    imageUrl: currentUser?.profileUrl || "/jaewan1.jpg",
+    imageUrl: currentUser?.profileUrl || "/basic_profile.webp",
   };
 
   return (

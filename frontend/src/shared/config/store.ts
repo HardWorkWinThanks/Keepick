@@ -14,6 +14,7 @@ export const makeStore = () => {
           ignoredActions: ["persist/PERSIST"],
         },
       }),
+    devTools: true
   });
 };
 

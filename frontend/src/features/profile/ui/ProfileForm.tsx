@@ -8,43 +8,52 @@ import { UserProfile } from "../model/types";
 import { useAppSelector } from "@/shared/config/hooks";
 import Image from "next/image";
 
+/**
+ * 사용자 프로필 정보를 표시하고 수정하는 UI를 제공하는 폼 컴포넌트입니다.
+ */
 interface ProfileFormProps {
+  // 초기 프로필 정보를 props로 받을 수 있도록 정의 (선택 사항)
   initialProfile?: UserProfile;
 }
 
-  export function ProfileForm({ initialProfile }: ProfileFormProps) {
-    const { currentUser } = useAppSelector((state) => state.user);
+export function ProfileForm({ initialProfile }: ProfileFormProps) {
+  // Redux 스토어에서 현재 로그인된 사용자 정보를 가져옵니다.
+  const { currentUser } = useAppSelector((state) => state.user);
 
-    // Redux 데이터를 우선 사용, prop이 있으면 fallback
-    const profileData: UserProfile = initialProfile || {
-      profileImage: currentUser?.profileUrl || '/dummy/dummy1.jpg',
-      email: currentUser?.email || 'user@example.com',
-      socialType: 'naver',
-      nickname: currentUser?.nickname || '사용자123',
-      aiProfileImage: '/dummy/dummy2.jpg'
-    };
+  // 표시할 프로필 데이터를 결정합니다.
+  // Redux에 사용자 정보가 있으면 그 데이터를 우선적으로 사용하고,
+  // 없다면 props로 받은 initialProfile을, 그것도 없다면 기본 더미 데이터를 사용합니다.
+  const profileData: UserProfile = initialProfile || {
+    profileImage: currentUser?.profileUrl || 'basic_profile.webp',
+    email: currentUser?.email || 'user@example.com',
+    socialType: 'naver', // 소셜 타입은 현재 하드코딩되어 있음 (개선 필요)
+    nickname: currentUser?.nickname || '사용자123',
+    aiProfileImage: '/dummy/dummy2.jpg'
+  };
 
-    const {
-      userProfile,
-      nicknameInput,
-      setNicknameInput,
-      handleNicknameCheck,
-      handleNicknameApply,
-      handleProfileImageChange,
-      handleAiProfileImageChange,
-    } = useProfileEdit(profileData);
+  // 프로필 수정과 관련된 상태와 핸들러 함수들을 커스텀 훅에서 가져옵니다.
+  const {
+    userProfile,
+    nicknameInput,
+    setNicknameInput,
+    handleNicknameCheck,
+    handleNicknameApply,
+    handleProfileImageChange,
+    handleAiProfileImageChange,
+  } = useProfileEdit(profileData);
 
   return (
     <div className="container mx-auto max-w-4xl">
       <h1 className="text-2xl font-bold mb-6 text-gray-900">나의 프로필</h1>
 
-      {/* 기본 프로필 */}
+      {/* 기본 프로필 섹션 */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-gray-900">기본 프로필</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-start space-x-6">
+            {/* 프로필 이미지 표시 및 변경 버튼 */}
             <div className="flex flex-col items-center space-y-3">
               <Image
                 src={userProfile.profileImage}
@@ -64,12 +73,14 @@ interface ProfileFormProps {
               </Button>
             </div>
             <div className="flex-1 space-y-4">
+              {/* 이메일 (읽기 전용) */}
               <VersatileInput
                 label="이메일"
-                labelIcon={<NaverIcon />}
+                labelIcon={<NaverIcon />} // 소셜 로그인 아이콘 표시
                 value={userProfile.email}
                 readOnly={true}
               />
+              {/* 닉네임 (중복 체크 및 적용 기능 포함) */}
               <VersatileInput
                 label="닉네임"
                 value={nicknameInput}
@@ -90,7 +101,7 @@ interface ProfileFormProps {
         </CardContent>
       </Card>
 
-      {/* AI 인식 프로필 */}
+      {/* AI 인식 프로필 섹션 */}
       <Card>
         <CardHeader>
           <CardTitle className="text-gray-900">AI 인식 프로필</CardTitle>

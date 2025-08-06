@@ -1,16 +1,19 @@
+// 사진 엔티티의 기본 데이터 구조
 export interface Photo {
-  id: string;
-  src: string;
-  name?: string;
+  id: string; // 사진 고유 ID
+  src: string; // 이미지 URL
+  name?: string; // 사진 이름 (선택 사항)
 }
 
+// 새로운 사진을 생성할 때 필요한 데이터
 export interface CreatePhotoInput {
   id: string;
   src: string;
   name?: string;
 }
 
+// 사진을 드래그 앤 드롭할 때 전달되는 데이터
 export interface DragPhotoData {
-  photoId: string;
-  source: string | "available";
+  photoId: string; // 드래그하는 사진의 ID
+  source: string | "available"; // 사진의 출처 (어떤 앨범 뷰 또는 'available' 목록)
 }

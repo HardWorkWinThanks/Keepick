@@ -11,26 +11,34 @@ interface AuthInitializerProps {
   children: React.ReactNode;
 }
 
+/**
+ * 애플리케이션의 인증 상태를 초기화하고 관리하는 최상위 컴포넌트입니다.
+ * 앱이 로드될 때 localStorage의 토큰을 확인하여 자동으로 로그인 상태를 복원하고,
+ * 인증이 필요한 페이지에 비로그인 사용자가 접근하는 것을 막습니다.
+ * @param {AuthInitializerProps} props - 자식 컴포넌트를 포함합니다.
+ */
 export function AuthInitializer({ children }: AuthInitializerProps) {
   const dispatch = useAppDispatch();
   const pathname = usePathname();
   const { isAuthenticated, isLoading: authLoading } = useAppSelector(
     (state) => state.auth
-  ); // 인증 로딩 상태 추가
-  const { currentUser, isLoading: userLoading } = useAppSelector(
-    (state) => state.user
-  ); // 사용자 로딩 상태 추가
+  );
+  const { isLoading: userLoading } = useAppSelector((state) => state.user);
 
-  // 유저 정보 가져오는 함수
+  /**
+   * 토큰이 유효할 때, 서버로부터 현재 사용자 정보를 가져오는 함수입니다.
+   */
   const fetchUserInfo = async () => {
     dispatch(setUserLoading(true));
     dispatch(setAuthLoading(true));
 
     try {
       const data = await authApi.getCurrentUser();
-      dispatch(setUser(data.user));
+      // 실제 사용자 데이터는 data.data 안에 있음
+      dispatch(setUser(data.data));
     } catch (error) {
       console.error("사용자 정보 조회 실패:", error);
+      // 유효하지 않은 토큰으로 간주하고, 모든 인증/사용자 정보를 초기화합니다.
       dispatch(clearAuth());
       dispatch(clearUser());
     } finally {
@@ -39,13 +47,16 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
     }
   };
 
+  // 컴포넌트 마운트 시 또는 인증 상태가 변경될 때 한 번만 실행됩니다.
   useEffect(() => {
-    // localStorage에서 토큰 복원
     if (typeof window !== "undefined") {
       const accessToken = localStorage.getItem("accessToken");
       const refreshToken = localStorage.getItem("refreshToken");
 
+      // localStorage에 토큰이 있지만, Redux 스토어에 인증 정보가 없는 경우
+      // (예: 페이지 새로고침)
       if (accessToken && !isAuthenticated) {
+        // Redux 스토어에 토큰을 설정하고, 사용자 정보를 가져옵니다.
         dispatch(
           setTokens({ accessToken, refreshToken: refreshToken || undefined })
         );
@@ -54,31 +65,20 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
     }
   }, [isAuthenticated, dispatch]);
 
-  const hasToken =
-    typeof window !== "undefined" && localStorage.getItem("accessToken");
-  const isInitializing = authLoading || userLoading;
+  const hasToken = typeof window !== "undefined" && localStorage.getItem("accessToken");
+  const isInitializing = authLoading || userLoading; // 인증 또는 유저 정보 로딩 중
 
-  // 🔍 디버깅 로그 추가
-  // console.log("🔍 AuthInitializer 상태:", {
-  //   pathname,
-  //   hasToken: !!hasToken,
-  //   isAuthenticated,
-  //   currentUser: !!currentUser,
-  //   authLoading,
-  //   userLoading,
-  //   isInitializing,
-  //   willRedirect: pathname !== "/login" && !hasToken && !isInitializing,
-  // });
-
-  // 인증이 필요한 보호된 경로에서만 리다이렉트
+  // 인증이 필요한 보호된 경로 목록
   const protectedPaths = ["/profile", "/group", "/chat"];
   const isProtectedPath = pathname
     ? protectedPaths.some((path) => pathname.startsWith(path))
     : false;
 
+  // 보호된 경로에 토큰 없이 접근하려고 하고, 초기화 과정이 끝났다면 로그인 페이지로 리디렉션합니다.
   if (isProtectedPath && !hasToken && !isInitializing) {
-    // console.log('🚨 보호된 경로에서 리다이렉트 실행!');
     redirect("/login");
   }
+
+  // 자식 컴포넌트를 렌더링합니다.
   return <>{children}</>;
 }
