@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { UserProfile } from './types';
-import { NaverIcon, KakaoIcon, GoogleIcon } from '@/shared/assets'
+import { useState } from "react";
+import { UserProfile } from "./types";
+import { NaverIcon, KakaoIcon, GoogleIcon } from "@/shared/assets";
 
 /**
  * 프로필 수정 페이지의 상태와 비즈니스 로직을 관리하는 커스텀 훅입니다.
@@ -36,9 +36,9 @@ export function useProfileEdit(initialProfile: UserProfile) {
   const handleNicknameApply = () => {
     setUserProfile({
       ...userProfile,
-      nickname: nicknameInput
+      nickname: nicknameInput,
     });
-    alert('닉네임이 변경되었습니다.');
+    alert("닉네임이 변경되었습니다.");
   };
 
   /**
@@ -46,7 +46,7 @@ export function useProfileEdit(initialProfile: UserProfile) {
    * @todo 실제 파일 업로드 및 이미지 변경 로직을 구현해야 합니다.
    */
   const handleProfileUrlChange = () => {
-    alert('프로필 사진 변경 기능');
+    alert("프로필 사진 변경 기능");
   };
 
   /**
@@ -54,7 +54,7 @@ export function useProfileEdit(initialProfile: UserProfile) {
    * @todo 실제 파일 업로드 및 이미지 변경 로직을 구현해야 합니다.
    */
   const handleIdentificationUrlChange = () => {
-    alert('AI 프로필 사진 변경 기능');
+    alert("AI 프로필 사진 변경 기능");
   };
 
   /**
@@ -64,11 +64,33 @@ export function useProfileEdit(initialProfile: UserProfile) {
    */
   // 소셜 타입에 따라 아이콘 동적 선택
   const getProviderIcon = (provider: string) => {
+    const baseClasses = "w-4 h-4 rounded flex items-center justify-center";
+
     switch (provider) {
-      case 'naver': return <NaverIcon />;
-      case 'kakao': return <KakaoIcon />;
-      case 'google': return <GoogleIcon />;
-      default: return <NaverIcon />;
+      case "naver":
+        return (
+          <div className={`${baseClasses} bg-[#03C75A]`}>
+            <NaverIcon />
+          </div>
+        );
+      case "kakao":
+        return (
+          <div className={`${baseClasses} bg-[#FEE500]`}>
+            <KakaoIcon />
+          </div>
+        );
+      case "google":
+        return (
+          <div className={`${baseClasses} bg-white border border-gray-300`}>
+            <GoogleIcon />
+          </div>
+        );
+      default:
+        return (
+          <div className={`${baseClasses} bg-[#03C75A]`}>
+            <NaverIcon />
+          </div>
+        );
     }
   };
 

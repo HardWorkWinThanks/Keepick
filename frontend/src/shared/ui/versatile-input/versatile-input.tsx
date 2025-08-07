@@ -109,7 +109,7 @@ export function VersatileInput({
         <div className="flex items-center gap-2">
           <Label className="text-gray-900">{label}</Label>
           {labelIcon && (
-            <div className="w-4 h-4 bg-green-500 rounded flex items-center justify-center">
+            <div className="w-4 h-4 items-center justify-center">
               {labelIcon}
             </div>
           )}

@@ -6,6 +6,7 @@ import { setUser, clearUser, setUserLoading } from "@/entities/user";
 import { authApi } from "../api/authApi";
 import { useEffect } from "react";
 import { usePathname, redirect } from "next/navigation";
+import { useState } from "react";
 
 interface AuthInitializerProps {
   children: React.ReactNode;
@@ -20,25 +21,22 @@ interface AuthInitializerProps {
 export function AuthInitializer({ children }: AuthInitializerProps) {
   const dispatch = useAppDispatch();
   const pathname = usePathname();
+  const [isInitialized, setIsInitialized] = useState(false); // 초기화 플래그 추가
+
   const { isAuthenticated, isLoading: authLoading } = useAppSelector(
     (state) => state.auth
   );
   const { isLoading: userLoading } = useAppSelector((state) => state.user);
 
-  /**
-   * 토큰이 유효할 때, 서버로부터 현재 사용자 정보를 가져오는 함수입니다.
-   */
   const fetchUserInfo = async () => {
     dispatch(setUserLoading(true));
     dispatch(setAuthLoading(true));
 
     try {
       const data = await authApi.getCurrentUser();
-      // 실제 사용자 데이터는 data.data 안에 있음
       dispatch(setUser(data.data));
     } catch (error) {
       console.error("사용자 정보 조회 실패:", error);
-      // 유효하지 않은 토큰으로 간주하고, 모든 인증/사용자 정보를 초기화합니다.
       dispatch(clearAuth());
       dispatch(clearUser());
     } finally {
@@ -47,39 +45,53 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
     }
   };
 
-  // 컴포넌트 마운트 시 또는 인증 상태가 변경될 때 한 번만 실행됩니다.
+  // 앱 시작 시 한 번만 실행되는 초기화
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    const initializeAuth = async () => {
+      if (typeof window === "undefined" || isInitialized) {
+        return; // 서버사이드이거나 이미 초기화된 경우 건너뛰기
+      }
+
       const accessToken = localStorage.getItem("accessToken");
       const refreshToken = localStorage.getItem("refreshToken");
 
-      // localStorage에 토큰이 있지만, Redux 스토어에 인증 정보가 없는 경우
-      // (예: 페이지 새로고침)
-      if (accessToken && !isAuthenticated) {
-        // Redux 스토어에 토큰을 설정하고, 사용자 정보를 가져옵니다.
+      if (accessToken) {
+        console.log("💡 localStorage에서 토큰 발견, 복원 중...");
+
+        // 토큰이 있으면 즉시 인증 상태로 설정
         dispatch(
-          setTokens({ accessToken, refreshToken: refreshToken || undefined })
+          setTokens({
+            accessToken,
+            refreshToken: refreshToken || undefined,
+          })
         );
-        fetchUserInfo();
+
+        // 백그라운드에서 사용자 정보 검증
+        await fetchUserInfo();
+      } else {
+        console.log("💡 localStorage에 토큰 없음, 비로그인 상태 유지");
       }
-    }
-  }, [isAuthenticated, dispatch]);
 
-  const hasToken = typeof window !== "undefined" && localStorage.getItem("accessToken");
-  const isInitializing = authLoading || userLoading; // 인증 또는 유저 정보 로딩 중
+      setIsInitialized(true); // 초기화 완료 표시
+    };
 
-  // 인증이 필요한 보호된 경로 목록
+    initializeAuth();
+  }, []); // 의존성 없음 - 앱 시작 시 한 번만 실행
+
+  const hasToken =
+    typeof window !== "undefined" && localStorage.getItem("accessToken");
+  const isInitializing = !isInitialized || authLoading || userLoading;
+
+  // 보호된 경로 체크
   const protectedPaths = ["/profile", "/group", "/chat"];
   const isProtectedPath = pathname
     ? protectedPaths.some((path) => pathname.startsWith(path))
     : false;
 
-  // 보호된 경로에 토큰 없이 접근하려고 하고, 초기화 과정이 끝났다면 로그인 페이지로 리디렉션합니다.
   if (isProtectedPath && !hasToken && !isInitializing) {
     redirect("/login");
-    return null; // redirect 후 렌더링 중단
+    return null;
   }
 
-  // 자식 컴포넌트를 렌더링합니다.
   return <>{children}</>;
 }
