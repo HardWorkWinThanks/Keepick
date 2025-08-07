@@ -40,9 +40,9 @@ public class TimelineAlbumPhoto {
         return new TimelineAlbumPhoto(album, photo);
     }
 
-    public void deleteFromSection() {
-        updateSection(null);
-        updateSequence(null);
+    public void removeFromSection() {
+        this.section = null;
+        this.sequence = null;
     }
 
     public void updateSection(TimelineAlbumSection section) {
@@ -58,6 +58,13 @@ public class TimelineAlbumPhoto {
     }
 
     public void delete() {
+        // 섹션과 앨범에서 사진 삭제
+        if(this.section != null) {
+            this.section.removePhoto(this);
+        }
+        if(this.album != null) {
+            this.album.getPhotos().remove(this);
+        }
         this.deletedAt = LocalDateTime.now();
     }
 

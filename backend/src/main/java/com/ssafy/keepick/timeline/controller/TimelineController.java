@@ -9,7 +9,7 @@ import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumPhotoDto;
 import com.ssafy.keepick.timeline.controller.request.TimelineCreateRequest;
 import com.ssafy.keepick.timeline.controller.request.TimelineUpdateRequest;
-import com.ssafy.keepick.timeline.controller.request.TimelineUploadRequest;
+import com.ssafy.keepick.timeline.controller.request.TimelinePhotoRequest;
 import com.ssafy.keepick.timeline.controller.response.TimelineCreateResponse;
 import com.ssafy.keepick.timeline.controller.response.TimelineDetailResponse;
 import com.ssafy.keepick.timeline.controller.response.TimelineInfoResponse;
@@ -75,10 +75,17 @@ public class TimelineController {
 
     @Operation(summary = "타임라인 앨범에 사진 업로드", description = "특정 타임라인 앨범에 사진을 업로드합니다.")
     @PostMapping("/{albumId}/photo")
-    public ApiResponse<?> uploadPhotoToTimelineAlbum(@PathVariable Long albumId, @Valid @RequestBody TimelineUploadRequest request) {
+    public ApiResponse<List<TimelineUploadResponse>> uploadPhotoToTimelineAlbum(@PathVariable Long albumId, @Valid @RequestBody TimelinePhotoRequest request) {
         List<TimelineAlbumPhotoDto> timelineAlbumPhotoDtos = timelineInteractionService.addPhotoToTimelineAlbum(albumId, request);
-        TimelineUploadResponse response = TimelineUploadResponse.toResponse(albumId, timelineAlbumPhotoDtos);
+        List<TimelineUploadResponse> response = timelineAlbumPhotoDtos.stream().map(TimelineUploadResponse::toResponse).toList();
         return ApiResponse.ok(response);
+    }
+
+    @Operation(summary = "타임라인 앨범에 사진 삭제", description = "특정 타임라인 앨범에서 사진을 삭제합니다.")
+    @DeleteMapping("/{albumId}/photo")
+    public ApiResponse<List<TimelineUploadResponse>> deletePhotoFromTimelineAlbum(@PathVariable Long albumId, @Valid @RequestBody TimelinePhotoRequest request) {
+        timelineInteractionService.deletePhotoFromTimelineAlbum(albumId, request);
+        return ApiResponse.of(ResponseCode.DELETED);
     }
 
 }

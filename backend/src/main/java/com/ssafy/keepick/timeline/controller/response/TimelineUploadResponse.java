@@ -4,20 +4,20 @@ import com.ssafy.keepick.timeline.application.dto.TimelineAlbumPhotoDto;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.util.List;
-
 @Getter
 @Builder
 public class TimelineUploadResponse {
 
-    private Long albumId;
-    private List<Long> uploadedPhotoIds;
+    private Long photoId;
+    private String originalUrl;
+    private String thumbnailUrl;
 
-    public static TimelineUploadResponse toResponse(Long albumId, List<TimelineAlbumPhotoDto> dtos) {
+    public static TimelineUploadResponse toResponse(TimelineAlbumPhotoDto dto) {
         return TimelineUploadResponse
                 .builder()
-                .albumId(albumId)
-                .uploadedPhotoIds(dtos.stream().map(TimelineAlbumPhotoDto::getPhotoId).toList())
+                .photoId(dto.getPhotoId())
+                .originalUrl(dto.getOriginalUrl())
+                .thumbnailUrl(dto.getThumbnailUrl())
                 .build();
     }
 

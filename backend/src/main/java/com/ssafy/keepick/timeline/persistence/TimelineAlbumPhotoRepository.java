@@ -17,7 +17,7 @@ public interface TimelineAlbumPhotoRepository extends JpaRepository<TimelineAlbu
 
     Optional<TimelineAlbumPhoto> findByAlbumIdAndPhotoIdAndDeletedAtIsNull(Long albumId, Long photoId);
 
-    // 타임라인 앨범에 없는 사진 목록 조회
+    // 주어진 사진 목록 중 타임라인 앨범에 없는 사진 조회
     @Query("""
         SELECT p
         FROM Photo p
@@ -38,5 +38,5 @@ public interface TimelineAlbumPhotoRepository extends JpaRepository<TimelineAlbu
         AND tap.photo.id IN :photoIds
         AND tap.deletedAt IS NULL
     """)
-    List<TimelineAlbumPhoto> findAllByPhotoIdIn(Long albumId, List<Long> photoIds);
+    List<TimelineAlbumPhoto> findAllByPhotoIdIn(@Param("albumId") Long albumId, @Param("photoIds") List<Long> photoIds);
 }

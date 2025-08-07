@@ -8,7 +8,7 @@ import java.util.List;
 
 @Getter
 @Builder
-public class TimelineUploadRequest {
+public class TimelinePhotoRequest {
 
     @NotNull
     private List<Long> photoIds;

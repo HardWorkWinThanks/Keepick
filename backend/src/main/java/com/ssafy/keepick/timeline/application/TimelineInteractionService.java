@@ -10,26 +10,27 @@ import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumPhotoDto;
 import com.ssafy.keepick.timeline.controller.request.TimelineCreateRequest;
 import com.ssafy.keepick.timeline.controller.request.TimelineUpdateRequest;
-import com.ssafy.keepick.timeline.controller.request.TimelineUploadRequest;
+import com.ssafy.keepick.timeline.controller.request.TimelinePhotoRequest;
 import com.ssafy.keepick.timeline.domain.TimelineAlbum;
 import com.ssafy.keepick.timeline.domain.TimelineAlbumPhoto;
 import com.ssafy.keepick.timeline.domain.TimelineAlbumSection;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumPhotoRepository;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumRepository;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumSectionRepository;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class TimelineInteractionService {
 
     private final TimelineAlbumRepository timelineAlbumRepository;
@@ -38,6 +39,7 @@ public class TimelineInteractionService {
     private final GroupRepository groupRepository;
     private final PhotoRepository photoRepository;
 
+    @Transactional
     public TimelineAlbumDto createTimelineAlbum(Long groupId, TimelineCreateRequest request) {
         // 그룹 & 사진 조회
         Group group = groupRepository.findById(groupId).orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
@@ -51,6 +53,7 @@ public class TimelineInteractionService {
         return albumDto;
     }
 
+    @Transactional
     public void deleteTimelineAlbum(Long groupId, Long albumId) {
         TimelineAlbum album = timelineAlbumRepository.findAlbumByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
         if (!Objects.equals(groupId, album.getGroup().getId())) {
@@ -59,6 +62,7 @@ public class TimelineInteractionService {
         album.delete();
     }
 
+    @Transactional
     public TimelineAlbumDto updateTimelineAlbum(Long albumId, TimelineUpdateRequest request) {
         // 수정할 앨범 조회
         TimelineAlbum album = timelineAlbumRepository.findAlbumWithSectionsByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
@@ -71,74 +75,46 @@ public class TimelineInteractionService {
     }
 
     private void updateTimelineAlbumInfo(TimelineAlbum album, TimelineUpdateRequest request) {
-        // 앨범 기본 정보
-        String name = request.getName();
-        String description = request.getDescription();
-        Long thumbnailId = request.getThumbnailId();
-        LocalDate startDate = request.getStartDate();
-        LocalDate endDate = request.getEndDate();
-
         Photo thumbnail = null;
-        if (thumbnailId != null) {
-            thumbnail = photoRepository.findById(thumbnailId).orElseThrow(() -> new BaseException(ErrorCode.PHOTO_NOT_FOUND));
+        if (request.getThumbnailId() != null) {
+            thumbnail = photoRepository.findById(request.getThumbnailId()).orElseThrow(() -> new BaseException(ErrorCode.PHOTO_NOT_FOUND));
         }
 
         // 앨범 기본 정보 수정
-        album.update(name, description, thumbnail, startDate, endDate);
-
-        // 앨범에서 삭제할 사진 처리
-        deleteRemovedPhotos(album, request.getDeletedPhotoIds());
+        album.update(request.getName(), request.getDescription(), thumbnail, request.getStartDate(), request.getEndDate());
 
         // 사용하지 않은 사진 처리
         updateUnusedPhotos(album, request.getUnusedPhotoIds());
 
         // 요청에 없는 섹션은 삭제
-        deleteRemovedSections(album, request.getSections());
+        updateRemovedSections(album, request.getSections());
 
         // 앨범 섹션 수정
         IntStream.range(0, request.getSections().size())
-                .forEach(i -> updateTimelineSection(album, request.getSections().get(i), i + 1));
+                .forEach(i -> updateTimelineSection(album, request.getSections().get(i), i));
 
     }
 
-    private void deleteRemovedPhotos(TimelineAlbum album, List<Long> photoIds) {
-        // 타임라앤 앨범에서 사진 조회
-        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findAllByPhotoIdIn(album.getId(), photoIds);
-        photos.forEach(photo -> {
-            // 섹션에서 사진 삭제
-            Optional.ofNullable(photo.getSection())
-                    .ifPresent(section -> section.deletePhoto(photo));
-            // 앨범에서 사진 삭제
-            album.deletePhoto(photo);
-        });
-    }
 
     private void updateTimelineSection(TimelineAlbum album, TimelineUpdateRequest.SectionUpdateRequest request, int sequence) {
 
         TimelineAlbumSection section = null;
 
-        if (request.getId() != null) {
+        if (request.getId() != null) { // 기존 섹션 조회
             section = timelineAlbumSectionRepository.findById(request.getId()).orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND));
-        } else {
-            // 새로운 섹션 생성
+        } else { // 새로운 섹션 생성
             section = album.createTimelineAlbumSection();
         }
 
         // 섹션 기본 정보 수정
-        String name = request.getName();
-        String description = request.getDescription();
-        LocalDate startDate = request.getStartDate();
-        LocalDate endDate = request.getEndDate();
-
-        section.update(name, description, startDate, endDate);
+        section.update(request.getName(), request.getDescription(), request.getStartDate(), request.getEndDate());
         section.updateSequence(sequence);
 
         // 섹션 내 사진 수정
-        updateTimelineSectionPhotos(album.getId(), section, request);
+        updateTimelineSectionPhotos(album.getId(), section, request.getPhotoIds());
     }
 
-    private void updateTimelineSectionPhotos(Long albumId, TimelineAlbumSection section, TimelineUpdateRequest.SectionUpdateRequest request) {
-        List<Long> photoIds = request.getPhotoIds();
+    private void updateTimelineSectionPhotos(Long albumId, TimelineAlbumSection section, List<Long> photoIds) {
         int photoCount = photoIds.size();
 
         for (int i = 0; i < photoCount; i++) {
@@ -148,13 +124,13 @@ public class TimelineInteractionService {
             TimelineAlbumSection oldSection = photo.getSection();
             if(oldSection != section) {
                 if (oldSection != null) {
-                    section.deletePhoto(photo);
+                    oldSection.removePhoto(photo);
                 }
                 section.addPhoto(photo);
             }
 
             // 섹션 내 사진 순서 변경
-            photo.updateSequence(i + 1);
+            photo.updateSequence(i);
         }
     }
 
@@ -164,33 +140,47 @@ public class TimelineInteractionService {
             TimelineAlbumPhoto photo = timelineAlbumPhotoRepository.findByAlbumIdAndPhotoIdAndDeletedAtIsNull(album.getId(), photoId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_PHOTO_NOT_FOUND));
             TimelineAlbumSection section = photo.getSection();
             if (section != null) {
-                section.deletePhoto(photo);
+                section.removePhoto(photo);
             }
         }
     }
 
-    private void deleteRemovedSections(TimelineAlbum album, List<TimelineUpdateRequest.SectionUpdateRequest> request) {
-        List<Long> requestedSectionIds = request.stream().map(TimelineUpdateRequest.SectionUpdateRequest::getId).filter(Objects::nonNull).toList();
-        List<TimelineAlbumSection> existingSections = album.getSections();
+    private void updateRemovedSections(TimelineAlbum album, List<TimelineUpdateRequest.SectionUpdateRequest> requests) {
+        // 요청에 포함된 섹션
+        Set<Long> requestedIds = requests.stream()
+                .map(TimelineUpdateRequest.SectionUpdateRequest::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
 
-        List<TimelineAlbumSection> notRequestedSections = existingSections.stream().filter(section -> !requestedSectionIds.contains(section.getId())).toList();
+        // 요청에 포함되지 않은 섹션
+        List<TimelineAlbumSection> removedSections = album.getSections().stream()
+                .filter(section -> !requestedIds.contains(section.getId()))
+                .toList();
 
-        for (TimelineAlbumSection section : notRequestedSections) {
-            album.deleteSection(section);
-        }
+        removedSections.forEach(album::removeSection);
     }
 
-    public List<TimelineAlbumPhotoDto> addPhotoToTimelineAlbum(Long albumId, TimelineUploadRequest request) {
+    @Transactional
+    public List<TimelineAlbumPhotoDto> addPhotoToTimelineAlbum(Long albumId, TimelinePhotoRequest request) {
         TimelineAlbum album = timelineAlbumRepository.findAlbumByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
 
         // 앨범에 포함되지 않은 사진만 앨범에 추가
         List<Photo> photos = timelineAlbumPhotoRepository.findNotInAlbumByPhotoIds(albumId, request.getPhotoIds());
-        photos.forEach(p -> System.out.println("p.getId() = " + p.getId()));
-        
+
         // 타임라인 앨범에 사진 추가
         List<TimelineAlbumPhoto> timelineAlbumPhotos = photos.stream().map(album::addPhoto).toList();
 
         List<TimelineAlbumPhotoDto> timelineAlbumPhotoDtos = timelineAlbumPhotos.stream().map(TimelineAlbumPhotoDto::from).toList();
         return timelineAlbumPhotoDtos;
     }
+
+    @Transactional
+    public void deletePhotoFromTimelineAlbum(Long albumId, @Valid TimelinePhotoRequest request) {
+        TimelineAlbum album = timelineAlbumRepository.findAlbumWithSectionsByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
+
+        // 삭제할 사진을 조회하고 삭제
+        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findAllByPhotoIdIn(albumId, request.getPhotoIds());
+        photos.forEach(TimelineAlbumPhoto::delete);
+    }
+
 }

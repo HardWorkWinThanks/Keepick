@@ -34,10 +34,6 @@ public class TimelineUpdateRequest {
     @Schema(description = "섹션에 사용하지 않는 사진 ID 목록")
     @NotNull
     private List<Long> unusedPhotoIds;
-
-    @Schema(description = "앨범에서 삭제할 사진 ID 목록")
-    @NotNull
-    private List<Long> deletedPhotoIds; 
     
     @Getter
     @Builder
