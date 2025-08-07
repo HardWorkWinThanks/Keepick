@@ -88,10 +88,12 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
     ? protectedPaths.some((path) => pathname.startsWith(path))
     : false;
 
-  if (isProtectedPath && !hasToken && !isInitializing) {
-    redirect("/login");
-    return null;
-  }
+  // useEffect 내에서만 redirect 처리
+  useEffect(() => {
+    if (isInitialized && isProtectedPath && !hasToken) {
+      redirect("/login");
+    }
+  }, [isInitialized, isProtectedPath, hasToken]);
 
   return <>{children}</>;
 }

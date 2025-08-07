@@ -1,9 +1,14 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, Button } from "@/shared/ui/shadcn"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Button,
+} from "@/shared/ui/shadcn";
 import { VersatileInput } from "@/shared/ui";
 import { useProfileEdit } from "../model/useProfileEdit";
-import { UserProfile } from "../model/types";
 import { useAppSelector } from "@/shared/config/hooks";
 import Image from "next/image";
 
@@ -15,35 +20,39 @@ export function ProfileForm() {
   // Redux 스토어에서 현재 로그인된 사용자 정보를 가져옵니다.
   const { currentUser } = useAppSelector((state) => state.user);
 
-  // 표시할 프로필 데이터를 결정합니다.
-  // Redux에 사용자 정보가 있으면 그 데이터를 우선적으로 사용하고,
-  // 없다면 기본 더미 데이터를 사용합니다.
-  const profileData: UserProfile = {
-    profileUrl: currentUser?.profileUrl || '/basic_profile.webp',
-    email: currentUser?.email || 'user@example.com',
-    provider: currentUser?.provider || 'kakao',
-    nickname: currentUser?.nickname || '사용자123',
-    identificationUrl: currentUser?.identificationUrl || '/dummy/dummy2.jpg'
-  };
-
   // 프로필 수정과 관련된 상태와 핸들러 함수들을 커스텀 훅에서 가져옵니다.
+  // ✅ 훅에서 핸들러 함수들만 가져오기
   const {
-    userProfile,
     nicknameInput,
-    getProviderIcon,
     setNicknameInput,
+    getProviderIcon,
     handleNicknameCheck,
     handleNicknameApply,
     handleProfileUrlChange,
     handleIdentificationUrlChange,
-  } = useProfileEdit(profileData);
+    isNicknameLoading,
+    isProfileImageLoading,
+    isIdentificationImageLoading,
+  } = useProfileEdit();
+
+  // ✅ 안전한 이미지 URL 처리 (Redux 상태에서 직접)
+  const safeProfileUrl =
+    currentUser?.profileUrl && currentUser.profileUrl.trim() !== ""
+      ? currentUser.profileUrl
+      : "/basic_profile.webp";
+
+  const safeIdentificationUrl =
+    currentUser?.identificationUrl &&
+    currentUser.identificationUrl.trim() !== ""
+      ? currentUser.identificationUrl
+      : "/dummy/dummy2.jpg";
 
   return (
     <div className="container mx-auto max-w-4xl">
       <h1 className="text-2xl font-bold mb-6 text-gray-900">나의 프로필</h1>
 
       {/* 기본 프로필 섹션 */}
-      <Card className="mb-6">
+      <Card className="mb-6 border-none shadow-sm">
         <CardHeader>
           <CardTitle className="text-gray-900">기본 프로필</CardTitle>
         </CardHeader>
@@ -52,7 +61,7 @@ export function ProfileForm() {
             {/* 프로필 이미지 표시 및 변경 버튼 */}
             <div className="flex flex-col items-center space-y-3">
               <Image
-                src={userProfile.profileUrl}
+                src={safeProfileUrl}
                 alt="프로필 사진"
                 width={256}
                 height={256}
@@ -65,15 +74,15 @@ export function ProfileForm() {
                 className="bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
                 onClick={handleProfileUrlChange}
               >
-                프로필 사진 변경
+                {isProfileImageLoading ? "업로드 중..." : "프로필 사진 변경"}
               </Button>
             </div>
             <div className="flex-1 space-y-4">
               {/* 이메일 (읽기 전용) */}
               <VersatileInput
                 label="이메일"
-                labelIcon={getProviderIcon(userProfile.provider)} // 소셜 로그인 아이콘 표시
-                value={userProfile.email}
+                labelIcon={getProviderIcon(currentUser?.provider || 'kakao')} // 소셜 로그인 아이콘 표시
+                value={currentUser?.email || 'user@example.com'}
                 readOnly={true}
               />
               {/* 닉네임 (중복 체크 및 적용 기능 포함) */}
@@ -91,6 +100,7 @@ export function ProfileForm() {
                 showApplyButton={true}
                 applyButtonText="적용하기"
                 onApplyClick={handleNicknameApply}
+                disabled={isNicknameLoading} // ✅ 로딩 상태 추가
               />
             </div>
           </div>
@@ -98,7 +108,7 @@ export function ProfileForm() {
       </Card>
 
       {/* AI 인식 프로필 섹션 */}
-      <Card>
+      <Card className="border-none shadow-sm">
         <CardHeader>
           <CardTitle className="text-gray-900">AI 인식 프로필</CardTitle>
         </CardHeader>
@@ -106,7 +116,7 @@ export function ProfileForm() {
           <div className="flex items-start space-x-6">
             <div className="flex flex-col items-center space-y-3">
               <Image
-                src={userProfile.identificationUrl}
+                src={safeIdentificationUrl}
                 alt="AI 인식 프로필"
                 width={256}
                 height={256}
@@ -118,8 +128,9 @@ export function ProfileForm() {
                 variant="outline"
                 className="bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
                 onClick={handleIdentificationUrlChange}
+                disabled={isIdentificationImageLoading}
               >
-                AI 프로필 변경
+                {isIdentificationImageLoading ? "업로드 중..." : "AI 프로필 변경"}
               </Button>
             </div>
             <div className="flex-1">

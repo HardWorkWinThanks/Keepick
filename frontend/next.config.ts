@@ -27,6 +27,17 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        protocol: "http", // HTTP도 지원
+        hostname: "k.kakaocdn.net",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "keepick-bucket.s3.ap-northeast-2.amazonaws.com",
+        pathname: "**",
+      },
     ],
   },
   eslint: {

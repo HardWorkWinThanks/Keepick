@@ -25,6 +25,7 @@ interface VersatileInputProps {
   onApplyClick?: () => void;
   className?: string;
   inputClassName?: string;
+  disabled?: boolean;
 }
 
 export function VersatileInput({

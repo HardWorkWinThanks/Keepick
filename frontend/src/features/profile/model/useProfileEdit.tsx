@@ -1,26 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { UserProfile } from "./types";
 import { NaverIcon, KakaoIcon, GoogleIcon } from "@/shared/assets";
+import { profileApi } from "../api/profileApi";
+import { useAppDispatch, useAppSelector } from "@/shared/config/hooks";
+import { updateUser } from "@/entities/user/model/userSlice";
 
-/**
- * 프로필 수정 페이지의 상태와 비즈니스 로직을 관리하는 커스텀 훅입니다.
- * @param initialProfile - 컴포넌트가 처음 렌더링될 때 사용할 초기 프로필 데이터
- * @returns 프로필 데이터 상태와 수정을 위한 핸들러 함수들을 반환합니다.
- */
-export function useProfileEdit(initialProfile: UserProfile) {
-  // 전체 프로필 정보를 관리하는 상태
-  const [userProfile, setUserProfile] = useState<UserProfile>(initialProfile);
-  // 닉네임 입력 필드만을 위한 별도의 상태 (중복 체크 등 중간 과정 때문)
-  const [nicknameInput, setNicknameInput] = useState(initialProfile.nickname);
+// 프로필 수정 페이지의 상태와 비즈니스 로직을 관리하는 커스텀 훅입니다.
+export function useProfileEdit() {
+  const dispatch = useAppDispatch();
+  // ✅ Redux에서 직접 사용자 정보 가져오기 (단일 진실의 원천)
+  const { currentUser } = useAppSelector((state) => state.user);
 
-  /**
-   * 닉네임 중복 여부를 비동기적으로 확인하는 함수입니다.
-   * @param nickname - 중복 확인할 닉네임
-   * @returns 사용 가능하면 true, 아니면 false를 반환하는 Promise
-   * @todo 실제 서버 API와 연동해야 합니다.
-   */
+  // ✅ 로컬 상태는 최소한만 사용 (임시 입력값과 로딩 상태만)
+  const [nicknameInput, setNicknameInput] = useState(
+    currentUser?.nickname || ""
+  );
+  const [isNicknameLoading, setIsNicknameLoading] = useState(false);
+  const [isProfileImageLoading, setIsProfileImageLoading] = useState(false);
+  const [isIdentificationImageLoading, setIsIdentificationImageLoading] =
+    useState(false);
+
+  // 닉네임 중복 여부를 비동기적으로 확인하는 함수입니다.
   const handleNicknameCheck = async (nickname: string) => {
     return new Promise<boolean>((resolve) => {
       setTimeout(() => {
@@ -33,28 +34,137 @@ export function useProfileEdit(initialProfile: UserProfile) {
   /**
    * '적용하기' 버튼을 눌렀을 때, 입력된 닉네임을 실제 프로필 데이터에 반영합니다.
    */
-  const handleNicknameApply = () => {
-    setUserProfile({
-      ...userProfile,
-      nickname: nicknameInput,
+  const handleNicknameApply = async (): Promise<void> => {
+    try {
+      setIsNicknameLoading(true);
+
+      const updatedUser = await profileApi.updateUserInfo({
+        nickname: nicknameInput,
+      });
+      // ✅ Redux만 업데이트 (단일 상태 관리)
+      dispatch(updateUser(updatedUser));
+
+      console.log("닉네임 변경 완료!");
+    } catch (error) {
+      console.error("닉네임 변경 실패:", error);
+    } finally {
+      setIsNicknameLoading(false);
+    }
+  };
+
+  /**
+   * 이미지 파일에서 width/height 추출하는 함수
+   */
+  const getImageDimensions = (
+    file: File
+  ): Promise<{ width: number; height: number }> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve({ width: img.width, height: img.height });
+        URL.revokeObjectURL(img.src); // 메모리 해제
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
     });
-    alert("닉네임이 변경되었습니다.");
   };
 
   /**
-   * 프로필 사진 변경 버튼 클릭 시 호출되는 핸들러입니다.
-   * @todo 실제 파일 업로드 및 이미지 변경 로직을 구현해야 합니다.
+   * 범용 이미지 업로드 함수
+   * @param imageType - 'profile' | 'identification'
+   * @param setLoading - 해당 로딩 상태 setter
    */
-  const handleProfileUrlChange = () => {
-    alert("프로필 사진 변경 기능");
+  const handleImageUpload = async (
+    imageType: "profile" | "identification",
+    setLoading: (loading: boolean) => void
+  ): Promise<void> => {
+    try {
+      // 파일 탐색기 열기
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.style.display = "none";
+
+      input.onchange = async (event) => {
+        const target = event.target as HTMLInputElement;
+        const file = target.files?.[0];
+
+        if (!file) {
+          console.log("파일이 선택되지 않았습니다.");
+          return;
+        }
+
+        console.log(
+          `선택된 ${imageType} 파일:`,
+          file.name,
+          file.size,
+          file.type
+        );
+
+        try {
+          setLoading(true);
+
+          // ✅ 이미지 크기 추출
+          const { width, height } = await getImageDimensions(file);
+
+          // 1단계: PreSignedUrl 요청
+          const { presignedUrl } = await profileApi.getPresignedUrl({
+            fileName: file.name,
+            contentType: file.type,
+            fileSize: file.size,
+            width,
+            height,
+            takenAt: new Date().toISOString(),
+          });
+
+          console.log("presignedUrl:", presignedUrl);
+
+          console.log("1단계 완료");
+
+          // 2단계: S3 업로드
+          await profileApi.uploadToS3(presignedUrl, file);
+          console.log("2단계 완료");
+
+          // 3단계: 사용자 정보 업데이트 (타입에 따라 필드 결정)
+          const updateData =
+            imageType === "profile"
+              ? { profileUrl: presignedUrl }
+              : { identificationUrl: presignedUrl };
+
+          const updatedUser = await profileApi.updateUserInfo(updateData);
+
+          // Redux 상태 업데이트
+          dispatch(updateUser(updatedUser));
+
+          console.log(`${imageType} 이미지 변경 완료!`);
+        } catch (error) {
+          console.error(`${imageType} 이미지 업로드 실패:`, error);
+          alert("이미지 업로드에 실패했습니다.");
+        } finally {
+          setLoading(false);
+          document.body.removeChild(input);
+        }
+      };
+
+      document.body.appendChild(input);
+      input.click();
+    } catch (error) {
+      console.error("파일 선택 오류:", error);
+    }
   };
 
   /**
-   * AI 프로필 사진 변경 버튼 클릭 시 호출되는 핸들러입니다.
-   * @todo 실제 파일 업로드 및 이미지 변경 로직을 구현해야 합니다.
+   * 프로필 이미지 변경
    */
-  const handleIdentificationUrlChange = () => {
-    alert("AI 프로필 사진 변경 기능");
+  const handleProfileUrlChange = async (): Promise<void> => {
+    await handleImageUpload("profile", setIsProfileImageLoading);
+  };
+
+  /**
+   * AI 인식 이미지 변경
+   */
+  const handleIdentificationUrlChange = async (): Promise<void> => {
+    await handleImageUpload("identification", setIsIdentificationImageLoading);
   };
 
   /**
@@ -95,7 +205,7 @@ export function useProfileEdit(initialProfile: UserProfile) {
   };
 
   return {
-    userProfile,
+    userProfile: currentUser,
     nicknameInput,
     setNicknameInput,
     handleNicknameCheck,
@@ -103,5 +213,8 @@ export function useProfileEdit(initialProfile: UserProfile) {
     handleProfileUrlChange,
     handleIdentificationUrlChange,
     getProviderIcon,
+    isNicknameLoading,
+    isProfileImageLoading,
+    isIdentificationImageLoading,
   };
 }
