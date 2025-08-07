@@ -1,28 +1,27 @@
 package com.ssafy.keepick.album.tier.application;
 
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.ssafy.keepick.album.tier.persistence.TierAlbumRepository;
-import com.ssafy.keepick.global.exception.BaseException;
-import com.ssafy.keepick.global.exception.ErrorCode;
-import com.ssafy.keepick.image.domain.Photo;
-import com.ssafy.keepick.album.tier.application.dto.TierAlbumDto;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDetailDto;
+import com.ssafy.keepick.album.tier.application.dto.TierAlbumDto;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumListDto;
+import com.ssafy.keepick.album.tier.controller.request.UpdateTierAlbumRequest;
+import com.ssafy.keepick.album.tier.domain.Tier;
 import com.ssafy.keepick.album.tier.domain.TierAlbum;
 import com.ssafy.keepick.album.tier.domain.TierAlbumPhoto;
 import com.ssafy.keepick.album.tier.persistence.TierAlbumPhotoRepository;
-import com.ssafy.keepick.album.tier.controller.request.UpdateTierAlbumRequest;
-import com.ssafy.keepick.image.persistence.PhotoRepository;
-import com.ssafy.keepick.album.tier.domain.Tier;
-import com.ssafy.keepick.group.persistence.GroupRepository;
-import com.ssafy.keepick.group.persistence.GroupMemberRepository;
-import com.ssafy.keepick.group.domain.GroupMemberStatus;
+import com.ssafy.keepick.album.tier.persistence.TierAlbumRepository;
+import com.ssafy.keepick.global.exception.BaseException;
+import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.global.security.util.AuthenticationUtil;
+import com.ssafy.keepick.group.domain.GroupMemberStatus;
+import com.ssafy.keepick.group.persistence.GroupMemberRepository;
+import com.ssafy.keepick.group.persistence.GroupRepository;
+import com.ssafy.keepick.image.domain.Photo;
+import com.ssafy.keepick.image.persistence.PhotoRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -172,6 +171,9 @@ public class TierAlbumService {
                 .filter(photo -> photo.getTier() != null)
                 .count();
             updatedAlbum.updatePhotoCount((int) includedPhotoCount);
+            
+            // 업데이트된 앨범을 반환
+            return TierAlbumDto.from(updatedAlbum);
         }
         
         return TierAlbumDto.from(tierAlbum);

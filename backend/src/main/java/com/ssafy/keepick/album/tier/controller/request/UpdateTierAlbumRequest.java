@@ -3,17 +3,15 @@ package com.ssafy.keepick.album.tier.controller.request;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.validation.constraints.NotBlank;
-import lombok.Getter;
-import lombok.Builder;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
+import lombok.Getter;
 
 @Getter
 @Builder
 @Schema(description = "티어 앨범 수정 요청")
 public class UpdateTierAlbumRequest {
     
-    @NotBlank(message = "앨범 이름은 필수입니다.")
     @Schema(
         description = "앨범 이름",
         example = "여름 휴가 앨범"

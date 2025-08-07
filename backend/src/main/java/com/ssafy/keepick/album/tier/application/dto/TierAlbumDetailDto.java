@@ -48,12 +48,17 @@ public class TierAlbumDetailDto {
             }
         }
 
+        // 실시간으로 photoCount 계산 (tier가 null이 아닌 사진만 카운트)
+        int realTimePhotoCount = (int) allPhotos.stream()
+            .filter(photo -> photo.getTier() != null)
+            .count();
+
         return TierAlbumDetailDto.builder()
             .title(tierAlbum.getName())
             .description(tierAlbum.getDescription())
             .thumbnailUrl(tierAlbum.getThumbnailUrl())
             .originalUrl(tierAlbum.getOriginalUrl())
-            .photoCount(tierAlbum.getPhotoCount())
+            .photoCount(realTimePhotoCount) // 실시간 계산된 값 사용
             .photos(completePhotosByTier)
             .build();
     }
