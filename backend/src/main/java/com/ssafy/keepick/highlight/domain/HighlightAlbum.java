@@ -65,4 +65,8 @@ public class HighlightAlbum extends BaseTimeEntity {
     public void delete() {
         this.deletedAt = LocalDateTime.now();
     }
+
+    public void changeThumbnail(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
+    }
 }

@@ -12,5 +12,6 @@ import java.util.List;
 public class HighlightAlbumUpdateRequest {
     private String name;
     private String description;
+    private Long thumbnailId;
     private List<Long> deletePhotoIds;
 }

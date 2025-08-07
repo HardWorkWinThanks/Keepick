@@ -88,6 +88,10 @@ public class HighlightAlbumService {
 
         album.updateNameAndDesc(request.getName(), request.getDescription());
 
+        HighlightAlbumPhoto photo = highlightAlbumPhotoRepository.findById(request.getThumbnailId())
+                .orElseThrow(() -> new BaseException(ErrorCode.PHOTO_NOT_FOUND));
+        album.changeThumbnail(photo.getPhotoUrl());
+
         List<Long> deletePhotoIds = request.getDeletePhotoIds();
         if (deletePhotoIds != null && !deletePhotoIds.isEmpty()) {
             deletePhotosInAlbum(deletePhotoIds, albumId);
