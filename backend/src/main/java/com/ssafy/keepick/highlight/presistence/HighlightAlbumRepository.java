@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface HighlightAlbumRepository extends JpaRepository<HighlightAlbum, Integer> {
+    boolean existsByChatSessionId(String chatSessionId);
 }
