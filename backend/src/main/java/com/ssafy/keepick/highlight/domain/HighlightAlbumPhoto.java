@@ -30,6 +30,7 @@ public class HighlightAlbumPhoto {
 
     private LocalDateTime deletedAt;
 
+    @Column(length = 500)
     private String photoUrl;
 
     private HighlightType type;
