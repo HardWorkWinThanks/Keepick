@@ -1,6 +1,13 @@
 package com.ssafy.keepick.highlight.controller;
 
 import com.ssafy.keepick.global.response.ApiResponse;
+import com.ssafy.keepick.highlight.application.HighlightAlbumService;
+import com.ssafy.keepick.highlight.application.dto.HighlightAlbumDto;
+import com.ssafy.keepick.highlight.application.dto.HighlightAlbumPhotoDto;
+import com.ssafy.keepick.highlight.controller.request.HighlightAlbumCreateRequest;
+import com.ssafy.keepick.highlight.controller.request.HighlightScreenshotSaveRequest;
+import com.ssafy.keepick.highlight.controller.response.HighlightAlbumCreateResponse;
+import com.ssafy.keepick.highlight.controller.response.HighlightScreenshotSaveResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -11,11 +18,14 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @Tag(name="Highlight Album", description = "하이라이트 앨범 관련 API")
 public class HighlightAlbumController {
+    private final HighlightAlbumService highlightAlbumService;
 
     @PostMapping("/photos")
     @Operation(summary = "하이라이트 스크린샷 업로드", description = "화상채팅 중 감정이 감지되어 캡처된 사진의 S3 URL을 전달받아 저장합니다.")
-    public ApiResponse<?> saveHighlightScreenshot(@PathVariable Long groupId) {
-        return ApiResponse.created(null);
+    public ApiResponse<HighlightScreenshotSaveResponse> saveHighlightScreenshot(@PathVariable Long groupId,
+                                                                                @RequestBody HighlightScreenshotSaveRequest request) {
+        HighlightAlbumPhotoDto result = highlightAlbumService.saveHighlightScreenshot(groupId, request);
+        return ApiResponse.created(HighlightScreenshotSaveResponse.from(result));
     }
 
     @PostMapping()
@@ -23,8 +33,10 @@ public class HighlightAlbumController {
             화상채팅 종료 후 감정이 감지된 참여자들의 스크린샷을 기반으로 하이라이트 앨범을 생성합니다.
             감정이 감지되지 않은 참여자는 앨범에 포함되지 않습니다.
             """)
-    public ApiResponse<?> createHighlightAlbum(@PathVariable Long groupId) {
-        return ApiResponse.created(null);
+    public ApiResponse<HighlightAlbumCreateResponse> createHighlightAlbum(@PathVariable Long groupId,
+                                                                          @RequestBody HighlightAlbumCreateRequest request) {
+        HighlightAlbumDto result = highlightAlbumService.createHighlightAlbum(groupId, request);
+        return ApiResponse.created(HighlightAlbumCreateResponse.from(result));
     }
 
     @PutMapping("{albumId}")
