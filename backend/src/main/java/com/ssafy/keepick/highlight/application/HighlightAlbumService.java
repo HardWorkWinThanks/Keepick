@@ -108,4 +108,20 @@ public class HighlightAlbumService {
         highlightAlbumPhotoRepository.saveAll(photosToDelete);
     }
 
+
+    @Transactional
+    public HighlightAlbumDto deleteHighlightAlbum(Long groupId, Long albumId) {
+        // 1. 앨범 그룹의 소유자가 맞는지 확인
+        HighlightAlbum album = highlightAlbumRepository.findById(albumId)
+                .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
+        if (album.getGroup() == null || !album.getGroup().getId().equals(groupId)) {
+            throw new BaseException(ErrorCode.ALBUM_FORBIDDEN);
+        }
+        // 2. 앨범을 삭제 (논리 삭제)
+        album.delete();
+        // 3. 앨범에 연관된 사진 삭제 (물리 삭제)
+        highlightAlbumPhotoRepository.deleteAll(album.getPhotos());
+
+        return HighlightAlbumDto.from(album);
+    }
 }

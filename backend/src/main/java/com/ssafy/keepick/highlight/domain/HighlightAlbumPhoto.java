@@ -51,4 +51,8 @@ public class HighlightAlbumPhoto {
         this.album = album;
     }
 
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
 }
