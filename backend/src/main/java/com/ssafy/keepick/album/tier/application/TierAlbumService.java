@@ -121,13 +121,22 @@ public class TierAlbumService {
 
     // 티어 앨범 수정
     @Transactional
-    public TierAlbumDto updateTierAlbum(Long tierAlbumId, UpdateTierAlbumRequest request) {
+    public TierAlbumDto updateTierAlbum(Long groupId, Long tierAlbumId, UpdateTierAlbumRequest request) {
+        // 그룹 존재 여부 검증
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
+        
+        // 권한 검증 - 현재 사용자가 그룹 멤버인지 확인
+        Long currentUserId = AuthenticationUtil.getCurrentUserId();
+        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED)) {
+            throw new BaseException(ErrorCode.FORBIDDEN);
+        }
+        
         TierAlbum tierAlbum = tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
         
-        // 권한 검증 - 현재 사용자가 앨범이 속한 그룹의 멤버인지 확인
-        Long currentUserId = AuthenticationUtil.getCurrentUserId();
-        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(tierAlbum.getGroupId(), currentUserId, GroupMemberStatus.ACCEPTED)) {
+        // 앨범이 요청된 그룹에 속하는지 검증
+        if (!tierAlbum.getGroupId().equals(groupId)) {
             throw new BaseException(ErrorCode.FORBIDDEN);
         }
         
@@ -137,6 +146,15 @@ public class TierAlbumService {
         if (request.getThumbnailId() != null) {
             Photo thumbnailPhoto = photoRepository.findById(request.getThumbnailId())
                 .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND));
+            
+            // 썸네일로 지정할 사진이 해당 앨범에 포함되어 있는지 검증
+            boolean isPhotoInAlbum = tierAlbum.getAllPhotos().stream()
+                .anyMatch(albumPhoto -> albumPhoto.getPhoto().getId().equals(request.getThumbnailId()));
+            
+            if (!isPhotoInAlbum) {
+                throw new BaseException(ErrorCode.INVALID_PARAMETER);
+            }
+            
             thumbnailUrl = thumbnailPhoto.getThumbnailUrl();
             originalUrl = thumbnailPhoto.getOriginalUrl();
         }
@@ -163,17 +181,12 @@ public class TierAlbumService {
                 }
             });
             
-            // 3. photoCount 업데이트를 위해 앨범 다시 조회
-            TierAlbum updatedAlbum = tierAlbumRepository.findAlbumWithPhotosById(albumId)
-                .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
-            
-            long includedPhotoCount = updatedAlbum.getAllPhotos().stream()
-                .filter(photo -> photo.getTier() != null)
-                .count();
-            updatedAlbum.updatePhotoCount((int) includedPhotoCount);
+            // 3. photoCount 업데이트 - 요청된 사진들의 총 개수로 계산
+            int totalPhotoCount = allRequestedPhotoIds.size();
+            tierAlbum.updatePhotoCount(totalPhotoCount);
             
             // 업데이트된 앨범을 반환
-            return TierAlbumDto.from(updatedAlbum);
+            return TierAlbumDto.from(tierAlbum);
         }
         
         return TierAlbumDto.from(tierAlbum);

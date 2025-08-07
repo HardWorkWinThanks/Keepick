@@ -278,18 +278,11 @@ public class TierAlbumController {
     @Operation(summary = "티어 앨범 수정", description = "티어 앨범의 이름, 설명, 썸네일, 사진들의 티어 배치를 수정합니다. " +
             "사진들의 티어를 변경할 수 있으며, 각 티어별로 사진 ID 리스트를 제공합니다.")
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "티어 앨범 수정 성공", content = @Content(mediaType = "application/json", schema = @Schema(implementation = TierAlbumDetailResponse.class), examples = @ExampleObject(name = "성공 응답 예시", value = """
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "티어 앨범 수정 성공", content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "성공 응답 예시", value = """
                     {
                         "status": 200,
                         "message": "요청이 성공적으로 처리되었습니다.",
-                        "data": {
-                            "title": "수정된 여름 휴가 앨범",
-                            "description": "2024년 여름 휴가 사진들 (수정됨)",
-                            "thumbnailUrl": "https://example.com/new-thumb.jpg",
-                            "originalUrl": "https://example.com/new-original.jpg",
-                            "photoCount": 6,
-                            "photos": {}
-                        }
+                        "data": null
                     }
                     """))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 (빈 이름, 잘못된 사진 ID 등)", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class), examples = @ExampleObject(name = "빈 이름 예시", value = """
@@ -309,23 +302,12 @@ public class TierAlbumController {
                     }
                     """)))
     })
-    public ApiResponse<TierAlbumDetailResponse> updateTierAlbum(
+    public ApiResponse<Void> updateTierAlbum(
             @Parameter(description = "그룹 ID", example = "1", required = true) @PathVariable Long groupId,
             @Parameter(description = "티어 앨범 ID", example = "1", required = true) @PathVariable Long tierAlbumId,
             @Parameter(description = "티어 앨범 수정 요청", required = true) @Valid @RequestBody UpdateTierAlbumRequest request) {
-        TierAlbumDto updatedTierAlbumDto = tierAlbumService.updateTierAlbum(tierAlbumId, request);
-
-        // TierAlbumDto를 TierAlbumDetailResponse로 변환
-        TierAlbumDetailResponse response = TierAlbumDetailResponse.builder()
-                .title(updatedTierAlbumDto.getName())
-                .description(updatedTierAlbumDto.getDescription())
-                .thumbnailUrl(updatedTierAlbumDto.getThumbnailUrl())
-                .originalUrl(updatedTierAlbumDto.getOriginalUrl())
-                .photoCount(updatedTierAlbumDto.getPhotoCount())
-                .photos(Map.of()) // 수정 시에도 빈 맵 (실제로는 상세 조회에서 티어 정보를 가져옴)
-                .build();
-
-        return ApiResponse.ok(response);
+        tierAlbumService.updateTierAlbum(groupId, tierAlbumId, request);
+        return ApiResponse.ok(null);
     }
 
     @DeleteMapping("/{tierAlbumId}")
