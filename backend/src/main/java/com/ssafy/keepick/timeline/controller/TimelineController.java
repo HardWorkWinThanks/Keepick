@@ -14,6 +14,7 @@ import com.ssafy.keepick.timeline.controller.response.TimelineCreateResponse;
 import com.ssafy.keepick.timeline.controller.response.TimelineDetailResponse;
 import com.ssafy.keepick.timeline.controller.response.TimelineInfoResponse;
 import com.ssafy.keepick.timeline.controller.response.TimelineUploadResponse;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,7 @@ public class TimelineController {
     private final TimelineService timelineService;
     private final TimelineInteractionService timelineInteractionService;
 
+    @Operation(summary = "타임라인 앨범 목록 조회", description = "특정 그룹에 속한 타임라인 앨범 목록을 조회합니다.")
     @GetMapping("")
     public ApiResponse<PagingResponse<TimelineInfoResponse>> getTimelineAlbumList(
             @PathVariable Long groupId,
@@ -40,6 +42,7 @@ public class TimelineController {
         return ApiResponse.ok(response);
     }
 
+    @Operation(summary = "타임라인 앨범 생성", description = "앨범에 쓸 사진 목록을 받아서 빈 타임라인 앨범을 생성합니다.")
     @PostMapping("")
     public ApiResponse<TimelineCreateResponse> createTimelineAlbum(@PathVariable Long groupId, @Valid @RequestBody TimelineCreateRequest request) {
         TimelineAlbumDto albumDto = timelineInteractionService.createTimelineAlbum(groupId, request);
@@ -47,6 +50,7 @@ public class TimelineController {
         return ApiResponse.created(response);
     }
 
+    @Operation(summary = "타임라인 앨범 상세 조회", description = "특정 타임라인 앨범의 기본 정보, 섹션 목록, 사진 목록을 포함한 상세 정보를 조회합니다.")
     @GetMapping("/{albumId}")
     public ApiResponse<TimelineDetailResponse> getTimelineAlbum(@PathVariable Long albumId) {
         TimelineAlbumDto timelineAlbumDto = timelineService.getTimelineAlbum(albumId);
@@ -54,12 +58,14 @@ public class TimelineController {
         return ApiResponse.ok(response);
     }
 
+    @Operation(summary = "타임라인 앨범 삭제", description = "특정 타임라인 앨범을 삭제합니다.")
     @DeleteMapping("/{albumId}")
     public ApiResponse<Void> deleteTimelineAlbum(@PathVariable Long groupId, @PathVariable Long albumId) {
         timelineInteractionService.deleteTimelineAlbum(groupId, albumId);
         return ApiResponse.of(ResponseCode.DELETED);
     }
 
+    @Operation(summary = "타임라인 앨범 수정", description = "특정 타임라인 앨범을 수정합니다. 타임라인 앨범의 기본 정보, 섹션 목록, 사용하지 않은 사진 ID 목록, 삭제할 사진 ID 목록을 받아서 앨범을 수정합니다.")
     @PutMapping("/{albumId}")
     public ApiResponse<TimelineInfoResponse> updateTimelineAlbum(@PathVariable Long albumId, @Valid @RequestBody TimelineUpdateRequest request) {
         TimelineAlbumDto timelineAlbumDto = timelineInteractionService.updateTimelineAlbum(albumId, request);
@@ -67,6 +73,7 @@ public class TimelineController {
         return ApiResponse.ok(response);
     }
 
+    @Operation(summary = "타임라인 앨범에 사진 업로드", description = "특정 타임라인 앨범에 사진을 업로드합니다.")
     @PostMapping("/{albumId}/photo")
     public ApiResponse<?> uploadPhotoToTimelineAlbum(@PathVariable Long albumId, @Valid @RequestBody TimelineUploadRequest request) {
         List<TimelineAlbumPhotoDto> timelineAlbumPhotoDtos = timelineInteractionService.addPhotoToTimelineAlbum(albumId, request);

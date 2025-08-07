@@ -17,7 +17,6 @@ import com.ssafy.keepick.timeline.domain.TimelineAlbumSection;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumPhotoRepository;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumRepository;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumSectionRepository;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -91,7 +90,7 @@ public class TimelineInteractionService {
         deleteRemovedPhotos(album, request.getDeletedPhotoIds());
 
         // 사용하지 않은 사진 처리
-        updateUnusedPhotos(album, request.getPhotoIds());
+        updateUnusedPhotos(album, request.getUnusedPhotoIds());
 
         // 요청에 없는 섹션은 삭제
         deleteRemovedSections(album, request.getSections());
