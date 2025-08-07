@@ -199,20 +199,31 @@ public class TierAlbumController {
 
     @PostMapping("")
     @Operation(summary = "티어 앨범 생성", description = "새로운 티어 앨범을 생성합니다.")
-    public ApiResponse<TierAlbumDto> createTierAlbum(
+    public ApiResponse<Long> createTierAlbum(
             @PathVariable Long groupId, 
             @Valid @RequestBody CreateTierAlbumRequest request) {
         TierAlbumDto tierAlbumDto = tierAlbumService.createTierAlbum(groupId, request.getPhotoIds());
-        return ApiResponse.ok(tierAlbumDto);
+        return ApiResponse.ok(tierAlbumDto.getId());
     }
 
     @PutMapping("/{tierAlbumId}")
     @Operation(summary = "티어 앨범 수정", description = "티어 앨범 정보를 수정합니다.")
-    public ApiResponse<TierAlbumDto> updateTierAlbum(
+    public ApiResponse<TierAlbumDetailResponse> updateTierAlbum(
             @PathVariable Long tierAlbumId, 
             @Valid @RequestBody UpdateTierAlbumRequest request) {
         TierAlbumDto updatedTierAlbumDto = tierAlbumService.updateTierAlbum(tierAlbumId, request);
-        return ApiResponse.ok(updatedTierAlbumDto);
+        
+        // TierAlbumDto를 TierAlbumDetailResponse로 변환
+        TierAlbumDetailResponse response = TierAlbumDetailResponse.builder()
+            .title(updatedTierAlbumDto.getName())
+            .description(updatedTierAlbumDto.getDescription())
+            .thumbnailUrl(updatedTierAlbumDto.getThumbnailUrl())
+            .originalUrl(updatedTierAlbumDto.getOriginalUrl())
+            .photoCount(updatedTierAlbumDto.getPhotoCount())
+            .photos(Map.of()) // 수정 시에도 빈 맵 (실제로는 상세 조회에서 티어 정보를 가져옴)
+            .build();
+            
+        return ApiResponse.ok(response);
     }
 
     @DeleteMapping("/{tierAlbumId}")
