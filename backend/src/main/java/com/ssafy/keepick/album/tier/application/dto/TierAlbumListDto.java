@@ -19,7 +19,7 @@ public class TierAlbumListDto {
             .build();
     }
     
-    public static TierAlbumListDto from(List<TierAlbumDto> albums, int page, int size, long totalElements) {
+    public static TierAlbumListDto of(List<TierAlbumDto> albums, int page, int size, long totalElements) {
         PagingResponse.PageInfo pageInfo = PagingResponse.PageInfo.builder()
             .page(page)
             .size(size)
