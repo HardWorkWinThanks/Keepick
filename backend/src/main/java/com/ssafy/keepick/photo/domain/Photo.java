@@ -21,8 +21,10 @@ public class Photo extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(length = 500)
     private String originalUrl;
 
+    @Column(length = 500)
     private String thumbnailUrl;
 
     private LocalDateTime takenAt;
@@ -32,6 +34,8 @@ public class Photo extends BaseTimeEntity {
     private Integer width;
 
     private Integer height;
+
+    private PhotoStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Group group;
@@ -43,16 +47,37 @@ public class Photo extends BaseTimeEntity {
     private List<PhotoTag> tags = new ArrayList<>();
 
     @Builder
-    public Photo(String originalUrl, LocalDateTime takenAt, Integer width, Integer height, Group group) {
+    public Photo(String originalUrl, LocalDateTime takenAt, Integer width, Integer height, Group group, PhotoStatus status) {
         this.originalUrl = originalUrl;
         this.takenAt = takenAt;
         this.width = width;
         this.height = height;
+        this.status = status;
         this.group = group;
     }
 
     public void delete() {
         this.deletedAt = LocalDateTime.now();
+    }
+
+    public void upload(String originalUrl) {
+        this.originalUrl = originalUrl;
+        this.status = PhotoStatus.UPLOADED;
+    }
+
+    public void uploadThumbnail(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
+        this.status = PhotoStatus.THUMBNAIL_READY;
+    }
+
+    public static Photo createPhoto(LocalDateTime takenAt, Integer width, Integer height, Group group) {
+        return Photo.builder()
+                .takenAt(takenAt)
+                .width(width)
+                .height(height)
+                .group(group)
+                .status(PhotoStatus.PENDING_UPLOAD)
+                .build();
     }
 
 }

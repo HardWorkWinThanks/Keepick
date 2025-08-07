@@ -1,6 +1,10 @@
 package com.ssafy.keepick.photo.application;
 
+import com.ssafy.keepick.global.exception.BaseException;
+import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.global.utils.file.FileUtils;
+import com.ssafy.keepick.photo.domain.Photo;
+import com.ssafy.keepick.photo.persistence.PhotoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
@@ -17,8 +21,8 @@ import java.util.concurrent.CompletableFuture;
 @Service
 @RequiredArgsConstructor
 public class ThumbnailService {
-
-    private final ImageService s3Service;
+    private final ImageService imageService;
+    private final PhotoRepository photoRepository;
 
     @Value("${app.thumbnail.width}")
     private int thumbnailWidth;
@@ -36,20 +40,29 @@ public class ThumbnailService {
     public CompletableFuture<Void> generateAndUploadThumbnail(String objectKey) {
         try {
             // S3에서 원본 이미지 다운로드
-            byte[] originalImageData = s3Service.downloadFile(objectKey);
+            byte[] originalImageData = imageService.downloadFile(objectKey);
 
             // 썸네일 생성
             byte[] thumbnailData = generateThumbnail(originalImageData);
 
             // S3에 썸네일 업로드
-            s3Service.uploadThumbnail(objectKey, thumbnailData);
+            String thumbnailKey = imageService.uploadThumbnail(objectKey, thumbnailData);
+            updatePhotoAddThumbnail(thumbnailKey);
 
-            log.info("썸네일 이미지 생성 성공: {}", objectKey);
+            log.info("썸네일 이미지 생성 성공: {} -> {}", objectKey, thumbnailKey);
             return CompletableFuture.completedFuture(null);
 
         } catch (Exception e) {
             throw new RuntimeException("썸네일 생성 실패: " + e.getMessage(), e);
         }
+    }
+
+    public void updatePhotoAddThumbnail(String objectKey) {
+        Long ImageId = Long.parseLong(FileUtils.extractImageNumber(objectKey));
+        Photo photo = photoRepository.findById(ImageId)
+                .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND));
+        photo.uploadThumbnail(objectKey);
+        photoRepository.save(photo);
     }
 
     /**
@@ -94,12 +107,12 @@ public class ThumbnailService {
         String actualContentType = contentType != null ? contentType : FileUtils.guessContentType(objectKey);
 
         if (!FileUtils.isSupportedImageType(actualContentType)) {
-            log.warn("Unsupported image type for thumbnail generation: {} ({})", objectKey, actualContentType);
+            log.warn("지원되지 않는 썸네일 형식입니다.: {} ({})", objectKey, actualContentType);
             return false;
         }
 
-        if (!s3Service.fileExists(objectKey)) {
-            log.warn("File does not exist in S3: {}", objectKey);
+        if (!imageService.fileExists(objectKey)) {
+            log.warn("S3에 파일이 존재하지 않습니다.: {}", objectKey);
             return false;
         }
 

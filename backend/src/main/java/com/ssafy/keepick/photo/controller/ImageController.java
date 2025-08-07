@@ -2,43 +2,30 @@ package com.ssafy.keepick.photo.controller;
 
 import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.photo.application.ImageService;
-import com.ssafy.keepick.photo.controller.request.ImageUploadRequest;
-import com.ssafy.keepick.photo.controller.response.PresignedUrlResponse;
+import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
+import com.ssafy.keepick.photo.controller.response.GroupPhotoUploadResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/photos")
 @RequiredArgsConstructor
+@Tag(name="Image", description = "이미지 관련 API")
 public class ImageController {
     private final ImageService imageService;
 
-    /**
-     * Presigned URL 배열 생성 API
-     */
-    @PostMapping("/presigned-urls")
-    public ApiResponse<List<PresignedUrlResponse>> generatePresignedUrls(
-            @Valid @RequestBody ImageUploadRequest request) {
-        List<String> result = imageService.generatePresignedUrls(request);
-        List<PresignedUrlResponse> response = result.stream()
-                .map(PresignedUrlResponse::of)
-                .collect(Collectors.toList());
-        return ApiResponse.ok(response);
-    }
 
-    /**
-     * Presigned URL 생성 API
-     */
     @PostMapping("/presigned-url")
-    public ApiResponse<PresignedUrlResponse> generatePresignedUrl(
-            @Valid @RequestBody ImageUploadRequest.ImageFileRequest request) {
+    @Operation(summary = "단일 이미지 presigned url 요청", description = "프로필, 증명용 이미지 등, 그룹 사진과 관련없는 이미지를 처리합니다.")
+    public ApiResponse<GroupPhotoUploadResponse> generatePresignedUrl(
+            @Valid @RequestBody GroupPhotoUploadRequest.ImageFileRequest request) {
         String result = imageService.generatePresignedUrl(request.getFileName(), request.getContentType());
-        return  ApiResponse.ok(PresignedUrlResponse.of(result));
+        return  ApiResponse.ok(GroupPhotoUploadResponse.of(result));
     }
 }
