@@ -98,13 +98,22 @@ public class TierAlbumService {
 
     // 티어 앨범 상세 조회 (사진 목록 포함)
     @Transactional(readOnly = true)
-    public TierAlbumDetailDto getTierAlbumDetail(Long tierAlbumId) {
+    public TierAlbumDetailDto getTierAlbumDetail(Long groupId, Long tierAlbumId) {
+        // 그룹 존재 여부 검증
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
+        
+        // 권한 검증 - 현재 사용자가 그룹 멤버인지 확인
+        Long currentUserId = AuthenticationUtil.getCurrentUserId();
+        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED)) {
+            throw new BaseException(ErrorCode.FORBIDDEN);
+        }
+        
         TierAlbum tierAlbum = tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
         
-        // 권한 검증 - 현재 사용자가 앨범이 속한 그룹의 멤버인지 확인
-        Long currentUserId = AuthenticationUtil.getCurrentUserId();
-        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(tierAlbum.getGroupId(), currentUserId, GroupMemberStatus.ACCEPTED)) {
+        // 앨범이 요청된 그룹에 속하는지 검증
+        if (!tierAlbum.getGroupId().equals(groupId)) {
             throw new BaseException(ErrorCode.FORBIDDEN);
         }
         

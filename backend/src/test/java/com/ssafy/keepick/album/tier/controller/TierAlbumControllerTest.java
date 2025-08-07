@@ -250,7 +250,7 @@ class TierAlbumControllerTest {
         Long groupId = 1L;
         Long tierAlbumId = 1L;
 
-        when(tierAlbumService.getTierAlbumDetail(eq(tierAlbumId)))
+        when(tierAlbumService.getTierAlbumDetail(eq(groupId), eq(tierAlbumId)))
             .thenReturn(tierAlbumDetailDto);
 
         // when & then

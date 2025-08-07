@@ -281,23 +281,28 @@ class TierAlbumServiceTest {
     @DisplayName("티어 앨범 상세 조회 성공")
     void getTierAlbumDetail_Success() {
         // given
+        Long groupId = 1L;
         Long tierAlbumId = 1L;
         Long currentUserId = 1L;
 
         try (var mockedAuth = mockStatic(AuthenticationUtil.class)) {
             mockedAuth.when(AuthenticationUtil::getCurrentUserId).thenReturn(currentUserId);
             
+            when(groupRepository.findById(groupId))
+                .thenReturn(Optional.of(Group.createGroup("테스트 그룹", null)));
+            when(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED))
+                .thenReturn(true);
             when(tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId))
                 .thenReturn(Optional.of(tierAlbum));
-            when(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(tierAlbum.getGroupId(), currentUserId, GroupMemberStatus.ACCEPTED))
-                .thenReturn(true);
 
             // when
-            TierAlbumDetailDto result = tierAlbumService.getTierAlbumDetail(tierAlbumId);
+            TierAlbumDetailDto result = tierAlbumService.getTierAlbumDetail(groupId, tierAlbumId);
 
             // then
             assertThat(result).isNotNull();
             assertThat(result.getTitle()).isEqualTo(tierAlbum.getName());
+            verify(groupRepository).findById(groupId);
+            verify(groupMemberRepository).existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED);
             verify(tierAlbumRepository).findAlbumWithPhotosById(tierAlbumId);
         }
     }
@@ -306,15 +311,99 @@ class TierAlbumServiceTest {
     @DisplayName("티어 앨범 상세 조회 실패 - 존재하지 않는 앨범")
     void getTierAlbumDetail_Fail_AlbumNotFound() {
         // given
+        Long groupId = 1L;
         Long tierAlbumId = 1L;
+        Long currentUserId = 1L;
 
-        when(tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId))
-            .thenReturn(Optional.empty());
+        try (var mockedAuth = mockStatic(AuthenticationUtil.class)) {
+            mockedAuth.when(AuthenticationUtil::getCurrentUserId).thenReturn(currentUserId);
+            
+            when(groupRepository.findById(groupId))
+                .thenReturn(Optional.of(Group.createGroup("테스트 그룹", null)));
+            when(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED))
+                .thenReturn(true);
+            when(tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId))
+                .thenReturn(Optional.empty());
 
-        // when & then
-        assertThatThrownBy(() -> tierAlbumService.getTierAlbumDetail(tierAlbumId))
-            .isInstanceOf(BaseException.class)
-            .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALBUM_NOT_FOUND);
+            // when & then
+            assertThatThrownBy(() -> tierAlbumService.getTierAlbumDetail(groupId, tierAlbumId))
+                .isInstanceOf(BaseException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALBUM_NOT_FOUND);
+        }
+    }
+
+    @Test
+    @DisplayName("티어 앨범 상세 조회 실패 - 존재하지 않는 그룹")
+    void getTierAlbumDetail_Fail_GroupNotFound() {
+        // given
+        Long groupId = 1L;
+        Long tierAlbumId = 1L;
+        Long currentUserId = 1L;
+
+        try (var mockedAuth = mockStatic(AuthenticationUtil.class)) {
+            mockedAuth.when(AuthenticationUtil::getCurrentUserId).thenReturn(currentUserId);
+            
+            when(groupRepository.findById(groupId))
+                .thenReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> tierAlbumService.getTierAlbumDetail(groupId, tierAlbumId))
+                .isInstanceOf(BaseException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_NOT_FOUND);
+        }
+    }
+
+    @Test
+    @DisplayName("티어 앨범 상세 조회 실패 - 그룹 멤버가 아님")
+    void getTierAlbumDetail_Fail_NotGroupMember() {
+        // given
+        Long groupId = 1L;
+        Long tierAlbumId = 1L;
+        Long currentUserId = 1L;
+
+        try (var mockedAuth = mockStatic(AuthenticationUtil.class)) {
+            mockedAuth.when(AuthenticationUtil::getCurrentUserId).thenReturn(currentUserId);
+            
+            when(groupRepository.findById(groupId))
+                .thenReturn(Optional.of(Group.createGroup("테스트 그룹", null)));
+            when(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED))
+                .thenReturn(false);
+
+            // when & then
+            assertThatThrownBy(() -> tierAlbumService.getTierAlbumDetail(groupId, tierAlbumId))
+                .isInstanceOf(BaseException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN);
+        }
+    }
+
+    @Test
+    @DisplayName("티어 앨범 상세 조회 실패 - 앨범이 다른 그룹에 속함")
+    void getTierAlbumDetail_Fail_AlbumBelongsToDifferentGroup() {
+        // given
+        Long groupId = 1L;
+        Long differentGroupId = 2L;
+        Long tierAlbumId = 1L;
+        Long currentUserId = 1L;
+
+        // 다른 그룹에 속한 앨범 생성
+        TierAlbum differentGroupAlbum = TierAlbum.createTierAlbum("다른 그룹 앨범", "다른 그룹 설명", 
+            "https://test.com/thumb.jpg", "https://test.com/original.jpg", differentGroupId);
+
+        try (var mockedAuth = mockStatic(AuthenticationUtil.class)) {
+            mockedAuth.when(AuthenticationUtil::getCurrentUserId).thenReturn(currentUserId);
+            
+            when(groupRepository.findById(groupId))
+                .thenReturn(Optional.of(Group.createGroup("테스트 그룹", null)));
+            when(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED))
+                .thenReturn(true);
+            when(tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId))
+                .thenReturn(Optional.of(differentGroupAlbum));
+
+            // when & then
+            assertThatThrownBy(() -> tierAlbumService.getTierAlbumDetail(groupId, tierAlbumId))
+                .isInstanceOf(BaseException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN);
+        }
     }
 
     @Test
