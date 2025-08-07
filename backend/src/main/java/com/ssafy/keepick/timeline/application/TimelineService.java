@@ -4,17 +4,19 @@ import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import com.ssafy.keepick.timeline.domain.TimelineAlbum;
-import com.ssafy.keepick.timeline.domain.TimelineSection;
-import com.ssafy.keepick.timeline.domain.TimelinePhoto;
+import com.ssafy.keepick.timeline.domain.TimelineAlbumPhoto;
+import com.ssafy.keepick.timeline.domain.TimelineAlbumSection;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumRepository;
-import com.ssafy.keepick.timeline.persistence.TimelinePhotoRepository;
+import com.ssafy.keepick.timeline.persistence.TimelineAlbumPhotoRepository;
+import com.ssafy.keepick.timeline.persistence.TimelineAlbumSectionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,56 +24,35 @@ import java.util.stream.Collectors;
 public class TimelineService {
 
     private final TimelineAlbumRepository timelineAlbumRepository;
-    private final TimelinePhotoRepository timelinePhotoRepository;
+    private final TimelineAlbumSectionRepository timelineAlbumSectionRepository;
+    private final TimelineAlbumPhotoRepository timelineAlbumPhotoRepository;
 
-    public List<TimelineAlbumDto> getTimelineAlbumList(Long groupId) {
-        List<TimelineAlbum> albums = timelineAlbumRepository.findAllByGroupId(groupId);
-        List<TimelineAlbumDto> timelineAlbumDtos = albums.stream().map(TimelineAlbumDto::from).toList();
-        return timelineAlbumDtos;
-    }
-
-    public TimelineAlbumDto createTimelineAlbum(Long groupId) {
-        return null;
+    public Page<TimelineAlbumDto> getTimelineAlbumList(Long groupId, Integer page, Integer size) {
+        Page<TimelineAlbum> albumPage = timelineAlbumRepository.findAllByGroupIdAndDeletedAtIsNull(groupId, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+        Page<TimelineAlbumDto> albumDtoPage = albumPage.map(TimelineAlbumDto::from);
+        return albumDtoPage;
     }
 
     public TimelineAlbumDto getTimelineAlbum(Long albumId) {
-        // 앨범 조회
-        TimelineAlbum timelineAlbum = timelineAlbumRepository.findAlbumById(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
+        TimelineAlbum timelineAlbum = getTimelineAlbumDetail(albumId);
 
-        // 섹션별 사진 조회
-        List<TimelineSection> sections = timelineAlbum.getSections();
-        Map<Long, List<TimelinePhoto>> photosBySection = fetchPhotosBySection(sections);
-        
-        // 섹션별 사진 매핑
-        sections.forEach(section -> {
-            section.loadPhotos(photosBySection.getOrDefault(section.getId(), List.of()));
-        });
-        
         // DTO 변환
-        TimelineAlbumDto timelineAlbumDto = TimelineAlbumDto.from(timelineAlbum, timelineAlbum.getSections());
-        return timelineAlbumDto;
+        TimelineAlbumDto albumDto = TimelineAlbumDto.fromDetail(timelineAlbum);
+        return albumDto;
     }
 
-    private Map<Long, List<TimelinePhoto>> fetchPhotosBySection(List<TimelineSection> sections) {
-        // 앨범의 섹션 ID로 사진 조회
-        List<Long> sectionIds = sections.stream().map(TimelineSection::getId).toList();
-        List<TimelinePhoto> photos = timelinePhotoRepository.findPhotosBySectionIds(sectionIds);
+    private TimelineAlbum getTimelineAlbumDetail(Long albumId) {
+        // 앨범 조회
+        TimelineAlbum album = timelineAlbumRepository.findAlbumByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
 
-        // 섹션 ID를 기준으로 사진 그룹핑
-        Map<Long, List<TimelinePhoto>> photosBySection = photos.stream()
-                .collect(Collectors.groupingBy(
-                        photo -> photo.getSection().getId(),
-                        Collectors.toList()
-                ));
-        return photosBySection;
-    }
+        // 앨범 섹션 조회
+        List<TimelineAlbumSection> sections = timelineAlbumSectionRepository.findAllByAlbumId(albumId);
+        album.loadSections(sections);
 
-    public TimelineAlbumDto deleteTimelineAlbum(Long albumId) {
-        return null;
-    }
-
-    public TimelineAlbumDto updateTimelineAlbum(Long albumId) {
-        return null;
+        // 섹션에 포함되지 않은 사진
+        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findUnusedPhotosByAlbumIdAndSectionIsNull(albumId);
+        album.loadPhotos(photos);
+        return album;
     }
 
 }
