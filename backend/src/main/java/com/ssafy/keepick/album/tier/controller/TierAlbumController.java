@@ -198,10 +198,77 @@ public class TierAlbumController {
     }
 
     @PostMapping("")
-    @Operation(summary = "티어 앨범 생성", description = "새로운 티어 앨범을 생성합니다.")
+    @Operation(
+        summary = "티어 앨범 생성", 
+        description = "새로운 티어 앨범을 생성합니다. 포함할 사진들의 ID 리스트를 받아서 빈 티어 앨범을 생성합니다. 생성된 티어 앨범의 ID를 반환합니다."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "티어 앨범 생성 성공",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    name = "성공 응답 예시",
+                    value = """
+                    {
+                        "status": 200,
+                        "message": "요청이 성공적으로 처리되었습니다.",
+                        "data": 1
+                    }
+                    """
+                )
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "잘못된 요청 (빈 사진 리스트, 잘못된 그룹 ID 등)",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class),
+                examples = @ExampleObject(
+                    name = "빈 사진 리스트 예시",
+                    value = """
+                    {
+                        "status": 400,
+                        "message": "포함할 사진은 최소 1개 이상이어야 합니다.",
+                        "errorCode": "B004",
+                        "timeStamp": "2025-08-07T13:46:08.346331600"
+                    }
+                    """
+                )
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404",
+            description = "사진을 찾을 수 없음",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class),
+                examples = @ExampleObject(
+                    name = "사진 없음 예시",
+                    value = """
+                    {
+                        "status": 404,
+                        "message": "리소스를 찾을 수 없습니다.",
+                        "errorCode": "B003",
+                        "timeStamp": "2025-08-07T14:47:50.902147"
+                    }
+                    """
+                )
+            )
+        )
+    })
     public ApiResponse<Long> createTierAlbum(
-            @PathVariable Long groupId, 
-            @Valid @RequestBody CreateTierAlbumRequest request) {
+            @Parameter(
+                description = "그룹 ID", 
+                example = "1",
+                required = true
+            ) @PathVariable Long groupId, 
+            @Parameter(
+                description = "티어 앨범 생성 요청",
+                required = true
+            ) @Valid @RequestBody CreateTierAlbumRequest request) {
         TierAlbumDto tierAlbumDto = tierAlbumService.createTierAlbum(groupId, request.getPhotoIds());
         return ApiResponse.ok(tierAlbumDto.getId());
     }
