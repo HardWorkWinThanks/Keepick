@@ -61,4 +61,17 @@ public class HighlightAlbumController {
         HighlightAlbumDto result = highlightAlbumService.deleteHighlightAlbum(groupId, albumId);
         return ApiResponse.ok(HighlightAlbumResponse.from(result));
     }
+
+    @GetMapping()
+    @Operation(summary = "하이라이트 앨범 목록 조회")
+    public ApiResponse<HighlightAlbumResponse> getHighlightAlbums(@PathVariable Long groupId) {
+        return ApiResponse.ok(null);
+    }
+
+    @GetMapping("{albumId}")
+    @Operation(summary = "하이라이트 앨범 상세 조회")
+    public ApiResponse<HighlightAlbumResponse> getHighlightAlbumDetail(@PathVariable Long groupId, @PathVariable Long albumId) {
+        HighlightAlbumDto result = highlightAlbumService.getHighlightAlbum(groupId, albumId);
+        return ApiResponse.ok(HighlightAlbumResponse.from(result));
+    }
 }

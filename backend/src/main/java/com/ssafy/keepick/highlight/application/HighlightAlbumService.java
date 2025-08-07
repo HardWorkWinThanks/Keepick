@@ -124,4 +124,20 @@ public class HighlightAlbumService {
 
         return HighlightAlbumDto.from(album);
     }
+
+    @Transactional(readOnly = true)
+    public HighlightAlbumDto getHighlightAlbum(Long groupId, Long albumId) {
+        HighlightAlbum album = highlightAlbumRepository.findById(albumId)
+                .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
+        if (album.getGroup() == null || !album.getGroup().getId().equals(groupId)) {
+            throw new BaseException(ErrorCode.ALBUM_FORBIDDEN);
+        }
+        return HighlightAlbumDto.from(album);
+    }
+
+    @Transactional(readOnly = true)
+    public List<HighlightAlbumDto> getHighlightAlbumList(Long groupId) {
+        List<HighlightAlbum> albumList = highlightAlbumRepository.findAllByGroupId(groupId);
+        return albumList.stream().map(HighlightAlbumDto::from).collect(Collectors.toList());
+    }
 }
