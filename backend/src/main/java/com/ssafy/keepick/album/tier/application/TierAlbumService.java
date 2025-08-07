@@ -187,8 +187,12 @@ public class TierAlbumService {
                 }
             }
             
-            // 7. photoCount 업데이트 - 앨범에 포함된 모든 사진 개수로 계산
-            tierAlbum.updatePhotoCount(allAlbumPhotoIds.size());
+            // 7. photoCount 업데이트 - 티어가 할당된 사진들만 카운트 (UNASSIGNED 제외)
+            int assignedPhotoCount = request.getPhotos().entrySet().stream()
+                .filter(entry -> !"UNASSIGNED".equals(entry.getKey())) // UNASSIGNED 제외
+                .mapToInt(entry -> entry.getValue().size()) // 각 티어의 사진 개수
+                .sum(); // 모든 티어의 사진 개수 합계
+            tierAlbum.updatePhotoCount(assignedPhotoCount);
             
             // 업데이트된 앨범을 반환
             return TierAlbumDto.from(tierAlbum);
