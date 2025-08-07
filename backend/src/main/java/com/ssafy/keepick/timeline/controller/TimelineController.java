@@ -5,6 +5,7 @@ import com.ssafy.keepick.global.response.PagingResponse;
 import com.ssafy.keepick.global.response.ResponseCode;
 import com.ssafy.keepick.image.application.dto.GroupPhotoDto;
 import com.ssafy.keepick.image.controller.response.GroupPhotoDetailResponse;
+import com.ssafy.keepick.timeline.application.TimelineInteractionService;
 import com.ssafy.keepick.timeline.application.TimelineService;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import com.ssafy.keepick.timeline.controller.request.TimelineCreateRequest;
@@ -12,6 +13,7 @@ import com.ssafy.keepick.timeline.controller.request.TimelineUpdateRequest;
 import com.ssafy.keepick.timeline.controller.response.TimelineCreateResponse;
 import com.ssafy.keepick.timeline.controller.response.TimelineDetailResponse;
 import com.ssafy.keepick.timeline.controller.response.TimelineInfoResponse;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,6 +27,7 @@ import java.util.List;
 public class TimelineController {
 
     private final TimelineService timelineService;
+    private final TimelineInteractionService timelineInteractionService;
 
     @GetMapping("")
     public ApiResponse<PagingResponse<TimelineInfoResponse>> getTimelineAlbumList(
@@ -39,7 +42,7 @@ public class TimelineController {
 
     @PostMapping("")
     public ApiResponse<TimelineCreateResponse> createTimelineAlbum(@PathVariable Long groupId, @Valid @RequestBody TimelineCreateRequest request) {
-        TimelineAlbumDto albumDto = timelineService.createTimelineAlbum(groupId, request);
+        TimelineAlbumDto albumDto = timelineInteractionService.createTimelineAlbum(groupId, request);
         TimelineCreateResponse response = TimelineCreateResponse.toResponse(albumDto);
         return ApiResponse.created(response);
     }
@@ -52,14 +55,14 @@ public class TimelineController {
     }
 
     @DeleteMapping("/{albumId}")
-    public ApiResponse<Void> deleteTimelineAlbum(@PathVariable Long albumId) {
-        timelineService.deleteTimelineAlbum(albumId);
+    public ApiResponse<Void> deleteTimelineAlbum(@PathVariable Long groupId, @PathVariable Long albumId) {
+        timelineInteractionService.deleteTimelineAlbum(groupId, albumId);
         return ApiResponse.of(ResponseCode.DELETED);
     }
 
     @PutMapping("/{albumId}")
-    public ApiResponse<?> updateTimelineAlbum(@PathVariable Long albumId, @Valid @RequestBody TimelineUpdateRequest request) {
-        TimelineAlbumDto timelineAlbumDto = timelineService.updateTimelineAlbum(albumId, request);
+    public ApiResponse<TimelineInfoResponse> updateTimelineAlbum(@PathVariable Long albumId, @Valid @RequestBody TimelineUpdateRequest request) {
+        TimelineAlbumDto timelineAlbumDto = timelineInteractionService.updateTimelineAlbum(albumId, request);
         TimelineInfoResponse response = TimelineInfoResponse.toResponse(timelineAlbumDto);
         return ApiResponse.ok(response);
     }
