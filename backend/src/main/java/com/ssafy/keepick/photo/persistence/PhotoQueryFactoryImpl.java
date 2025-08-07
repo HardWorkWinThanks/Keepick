@@ -1,0 +1,89 @@
+package com.ssafy.keepick.photo.persistence;
+
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.ssafy.keepick.photo.domain.Photo;
+
+import static com.ssafy.keepick.photo.domain.QPhoto.*;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+
+@Repository
+@RequiredArgsConstructor
+public class PhotoQueryFactoryImpl implements PhotoQueryFactory {
+    private final JPAQueryFactory jpaQueryFactory;
+
+    @Override
+    public Page<Photo> findAllPhotosByGroupIdAndOption(Pageable pageable, Long groupId, List<Long> memberIds, List<String> tags, LocalDate startDate, LocalDate endDate) {
+        List<Photo> photos = jpaQueryFactory
+                .selectFrom(photo)
+                .where(
+                        groupIdEq(groupId),
+                        memberIdIn(memberIds),
+                        tagIn(tags),
+                        takenAtGoe(startDate),
+                        takenAtLoe(endDate),
+                        notDeleted()
+                )
+                .orderBy(photo.takenAt.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        // total count
+        Long total = jpaQueryFactory
+                .select(photo.count())
+                .from(photo)
+                .where(
+                        groupIdEq(groupId),
+                        memberIdIn(memberIds),
+                        tagIn(tags),
+                        takenAtGoe(startDate),
+                        takenAtLoe(endDate),
+                        notDeleted()
+                )
+                .fetchOne();
+
+        return new PageImpl<>(photos, pageable, total != null ? total : 0);
+    }
+
+    private BooleanExpression groupIdEq(Long groupId) {
+        return photo.group.id.eq(groupId);
+    }
+
+    private BooleanExpression memberIdIn(List<Long> memberIds) {
+        return memberIds != null && !memberIds.isEmpty()
+                ? photo.members.any().member.id.in(memberIds)
+                : null;
+    }
+
+    private BooleanExpression tagIn(List<String> tags) {
+        return tags != null && !tags.isEmpty()
+                ? photo.tags.any().tag.in(tags)
+                : null;
+    }
+
+    private BooleanExpression takenAtGoe(LocalDate startDate) {
+        return startDate != null
+                ? photo.takenAt.goe(startDate.atStartOfDay())
+                : null;
+    }
+
+    private BooleanExpression takenAtLoe(LocalDate endDate) {
+        return endDate != null
+                ? photo.takenAt.loe(endDate.atTime(LocalTime.MAX))
+                : null;
+    }
+
+    private BooleanExpression notDeleted() {
+        return photo.deletedAt.isNull();
+    }
+}

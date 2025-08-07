@@ -79,11 +79,13 @@ public class S3FileOperationService {
     /**
      * 썸네일 파일을 S3에 업로드
      */
-    public void uploadThumbnail(String originalObjectKey, byte[] thumbnailContent) {
+    public String uploadThumbnail(String originalObjectKey, byte[] thumbnailContent) {
         String fileName = FileUtils.extractFileName(originalObjectKey);
-        String thumbnailKey = thumbnailsPrefix + fileName;
+        String ImageNumber = FileUtils.extractImageNumber(originalObjectKey);
+        String thumbnailKey = thumbnailsPrefix + ImageNumber + "/" + fileName;
         uploadFile(thumbnailKey, thumbnailContent, "image/jpeg");
         log.info("썸네일 업로드: {} -> {}", originalObjectKey, thumbnailKey);
+        return thumbnailKey;
     }
 
     /**

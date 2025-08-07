@@ -3,7 +3,7 @@ package com.ssafy.keepick.external.s3;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.global.utils.file.FileUtils;
-import com.ssafy.keepick.image.application.dto.ImageDto;
+import com.ssafy.keepick.photo.application.dto.GroupPhotoCommandDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -66,8 +66,8 @@ public class S3PresignedUrlService {
     /**
      * 여러 파일에 대한 Presigned URL 배열 생성
      */
-    public List<String> generatePresignedUrls(List<ImageDto> fileInfos) {
-        return fileInfos.stream()
+    public List<String> generatePresignedUrls(List<GroupPhotoCommandDto> photoCommandDtoList) {
+        return photoCommandDtoList.stream()
                 .map(info -> generatePresignedUrl(info.getFileName(), info.getContentType()))
                 .toList();
     }
