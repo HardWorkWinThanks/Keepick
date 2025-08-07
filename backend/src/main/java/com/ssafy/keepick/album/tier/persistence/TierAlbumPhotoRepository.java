@@ -46,4 +46,13 @@ public interface TierAlbumPhotoRepository extends JpaRepository<TierAlbumPhoto, 
         WHERE tp.album.id = :albumId AND tp.photo.id IN :photoIds
     """)
     void updateTiersByPhotoIds(@Param("albumId") Long albumId, @Param("tier") Tier tier, @Param("photoIds") List<Long> photoIds);
+
+    // 개별 사진의 티어와 sequence 업데이트
+    @Modifying
+    @Query("""
+        UPDATE TierAlbumPhoto tp 
+        SET tp.tier = :tier, tp.sequence = :sequence 
+        WHERE tp.album.id = :albumId AND tp.photo.id = :photoId
+    """)
+    void updateTierAndSequenceByPhotoId(@Param("albumId") Long albumId, @Param("photoId") Long photoId, @Param("tier") Tier tier, @Param("sequence") int sequence);
 }

@@ -276,7 +276,9 @@ public class TierAlbumController {
 
     @PutMapping("/{tierAlbumId}")
     @Operation(summary = "티어 앨범 수정", description = "티어 앨범의 이름, 설명, 썸네일, 사진들의 티어 배치를 수정합니다. " +
-            "사진들의 티어를 변경할 수 있으며, 각 티어별로 사진 ID 리스트를 제공합니다.")
+            "사진들의 티어를 변경할 수 있으며, 각 티어별로 사진 ID 리스트를 제공합니다. " +
+            "UNASSIGNED도 요청에서 받을 수 있으며, 각 티어 내에서 요청 순서대로 sequence가 설정됩니다. " +
+            "앨범에 포함된 모든 사진을 요청에 포함해야 하며, 앨범에 없는 사진을 요청에 포함할 수 없습니다.")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "티어 앨범 수정 성공", content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "성공 응답 예시", value = """
                     {
