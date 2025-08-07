@@ -5,6 +5,7 @@ import { NaverIcon, KakaoIcon, GoogleIcon } from "@/shared/assets";
 import { profileApi } from "../api/profileApi";
 import { useAppDispatch, useAppSelector } from "@/shared/config/hooks";
 import { updateUser } from "@/entities/user/model/userSlice";
+import { useEffect } from "react";
 
 // 프로필 수정 페이지의 상태와 비즈니스 로직을 관리하는 커스텀 훅입니다.
 export function useProfileEdit() {
@@ -30,6 +31,13 @@ export function useProfileEdit() {
       }, 1000);
     });
   };
+
+  // ✅ currentUser가 변경될 때마다 nicknameInput 동기화
+  useEffect(() => {
+    if (currentUser?.nickname) {
+      setNicknameInput(currentUser.nickname);
+    }
+  }, [currentUser?.nickname]);
 
   /**
    * '적용하기' 버튼을 눌렀을 때, 입력된 닉네임을 실제 프로필 데이터에 반영합니다.
