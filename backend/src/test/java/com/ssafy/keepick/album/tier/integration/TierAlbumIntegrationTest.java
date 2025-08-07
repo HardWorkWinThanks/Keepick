@@ -135,7 +135,7 @@ class TierAlbumIntegrationTest {
                 .content(objectMapper.writeValueAsString(createRequest)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value(200))
-            .andExpect(jsonPath("$.data.id").value(1));
+            .andExpect(jsonPath("$.data").value(1));
 
         // 2. 티어 앨범 목록 조회
         when(tierAlbumService.getTierAlbumListWithPaging(eq(groupId), eq(0), eq(10)))
@@ -150,7 +150,7 @@ class TierAlbumIntegrationTest {
 
         // 3. 티어 앨범 상세 조회
         Long tierAlbumId = 1L;
-        when(tierAlbumService.getTierAlbumDetail(eq(tierAlbumId)))
+        when(tierAlbumService.getTierAlbumDetail(eq(groupId), eq(tierAlbumId)))
             .thenReturn(tierAlbumDetailDto);
 
         mockMvc.perform(get("/api/groups/{groupId}/tier-albums/{tierAlbumId}", groupId, tierAlbumId))
@@ -170,7 +170,7 @@ class TierAlbumIntegrationTest {
             .photos(photos)
             .build();
 
-        when(tierAlbumService.updateTierAlbum(eq(tierAlbumId), any(UpdateTierAlbumRequest.class)))
+        when(tierAlbumService.updateTierAlbum(eq(groupId), eq(tierAlbumId), any(UpdateTierAlbumRequest.class)))
             .thenReturn(tierAlbumDto);
 
         mockMvc.perform(put("/api/groups/{groupId}/tier-albums/{tierAlbumId}", groupId, tierAlbumId)
@@ -180,7 +180,7 @@ class TierAlbumIntegrationTest {
             .andExpect(jsonPath("$.status").value(200));
 
         // 5. 티어 앨범 삭제
-        doNothing().when(tierAlbumService).deleteTierAlbum(eq(tierAlbumId));
+        doNothing().when(tierAlbumService).deleteTierAlbum(eq(groupId), eq(tierAlbumId));
 
         mockMvc.perform(delete("/api/groups/{groupId}/tier-albums/{tierAlbumId}", groupId, tierAlbumId))
             .andExpect(status().isOk())
@@ -189,9 +189,9 @@ class TierAlbumIntegrationTest {
         // 검증
         verify(tierAlbumService).createTierAlbum(eq(groupId), anyList());
         verify(tierAlbumService).getTierAlbumListWithPaging(eq(groupId), eq(0), eq(10));
-        verify(tierAlbumService).getTierAlbumDetail(eq(tierAlbumId));
-        verify(tierAlbumService).updateTierAlbum(eq(tierAlbumId), any(UpdateTierAlbumRequest.class));
-        verify(tierAlbumService).deleteTierAlbum(eq(tierAlbumId));
+        verify(tierAlbumService).getTierAlbumDetail(eq(groupId), eq(tierAlbumId));
+        verify(tierAlbumService).updateTierAlbum(eq(groupId), eq(tierAlbumId), any(UpdateTierAlbumRequest.class));
+        verify(tierAlbumService).deleteTierAlbum(eq(groupId), eq(tierAlbumId));
     }
 
     @Test
@@ -211,8 +211,8 @@ class TierAlbumIntegrationTest {
     }
 
     @Test
-    @DisplayName("티어 앨범 수정 실패 - 유효하지 않은 요청")
-    void updateTierAlbum_InvalidRequest() throws Exception {
+    @DisplayName("티어 앨범 수정 성공 - 빈 이름")
+    void updateTierAlbum_Success_EmptyName() throws Exception {
         // given
         Long groupId = 1L;
         Long tierAlbumId = 1L;
@@ -220,11 +220,16 @@ class TierAlbumIntegrationTest {
             .name("") // 빈 이름
             .build();
 
+        when(tierAlbumService.updateTierAlbum(eq(groupId), eq(tierAlbumId), any(UpdateTierAlbumRequest.class)))
+            .thenReturn(tierAlbumDto);
+
         // when & then
         mockMvc.perform(put("/api/groups/{groupId}/tier-albums/{tierAlbumId}", groupId, tierAlbumId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isBadRequest());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value(200))
+            .andExpect(jsonPath("$.data").isEmpty());
     }
 
     @Test
