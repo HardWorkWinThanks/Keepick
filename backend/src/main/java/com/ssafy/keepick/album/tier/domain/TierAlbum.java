@@ -58,6 +58,10 @@ public class TierAlbum extends BaseTimeEntity {
         return new TierAlbum(name, description, thumbnailUrl, originalUrl, groupId);
     }
 
+    public static TierAlbum createTierAlbum(Long groupId) {
+        return new TierAlbum(null, null, null, null, groupId);
+    }
+
     public void update(String name, String description, String thumbnailUrl, String originalUrl) {
         this.name = name;
         this.description = description;

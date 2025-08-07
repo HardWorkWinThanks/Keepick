@@ -48,7 +48,7 @@ public class TierAlbumService {
         }
         
         // 빈 티어 앨범 생성
-        TierAlbum tierAlbum = TierAlbum.createTierAlbum(null, null, null, null, groupId);
+        TierAlbum tierAlbum = TierAlbum.createTierAlbum(groupId);
         TierAlbum savedTierAlbum = tierAlbumRepository.save(tierAlbum);
         
         // 각 사진에 대해 TierAlbumPhoto 관계 생성
