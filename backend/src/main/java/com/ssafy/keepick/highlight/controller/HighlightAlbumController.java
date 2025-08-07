@@ -5,8 +5,9 @@ import com.ssafy.keepick.highlight.application.HighlightAlbumService;
 import com.ssafy.keepick.highlight.application.dto.HighlightAlbumDto;
 import com.ssafy.keepick.highlight.application.dto.HighlightAlbumPhotoDto;
 import com.ssafy.keepick.highlight.controller.request.HighlightAlbumCreateRequest;
+import com.ssafy.keepick.highlight.controller.request.HighlightAlbumUpdateRequest;
 import com.ssafy.keepick.highlight.controller.request.HighlightScreenshotSaveRequest;
-import com.ssafy.keepick.highlight.controller.response.HighlightAlbumCreateResponse;
+import com.ssafy.keepick.highlight.controller.response.HighlightAlbumResponse;
 import com.ssafy.keepick.highlight.controller.response.HighlightScreenshotSaveResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,10 +34,10 @@ public class HighlightAlbumController {
             화상채팅 종료 후 감정이 감지된 참여자들의 스크린샷을 기반으로 하이라이트 앨범을 생성합니다.
             감정이 감지되지 않은 참여자는 앨범에 포함되지 않습니다.
             """)
-    public ApiResponse<HighlightAlbumCreateResponse> createHighlightAlbum(@PathVariable Long groupId,
-                                                                          @RequestBody HighlightAlbumCreateRequest request) {
+    public ApiResponse<HighlightAlbumResponse> createHighlightAlbum(@PathVariable Long groupId,
+                                                                    @RequestBody HighlightAlbumCreateRequest request) {
         HighlightAlbumDto result = highlightAlbumService.createHighlightAlbum(groupId, request);
-        return ApiResponse.created(HighlightAlbumCreateResponse.from(result));
+        return ApiResponse.created(HighlightAlbumResponse.from(result));
     }
 
     @PutMapping("{albumId}")
@@ -44,8 +45,11 @@ public class HighlightAlbumController {
             특정 하이라이트 앨범의 제목, 설명을 수정하고, 지정된 사진들을 삭제합니다.
             새로운 사진 추가는 불가능합니다
             """)
-    public ApiResponse<?> modifyHighlightAlbum(@PathVariable Long groupId, @PathVariable Long albumId) {
-        return ApiResponse.created(null);
+    public ApiResponse<HighlightAlbumResponse> modifyHighlightAlbum(@PathVariable Long groupId,
+                                                                    @PathVariable Long albumId,
+                                                                    @RequestBody HighlightAlbumUpdateRequest request) {
+        HighlightAlbumDto result = highlightAlbumService.updateHighlightAlbum(albumId, request);
+        return ApiResponse.ok(HighlightAlbumResponse.from(result));
     }
 
     @DeleteMapping("{albumId}")
@@ -53,7 +57,8 @@ public class HighlightAlbumController {
             지정된 하이라이트 앨범을 삭제합니다. 삭제된 앨범은 해당 그룹의 모든 참여자에게 더 이상 표시되지 않으며,
             앨범에 포함된 사진도 함께 삭제됩니다.
             """)
-    public ApiResponse<?> deleteHighlightAlbum(@PathVariable Long groupId, @PathVariable Long albumId) {
-        return ApiResponse.created(null);
+    public ApiResponse<HighlightAlbumResponse> deleteHighlightAlbum(@PathVariable Long groupId, @PathVariable Long albumId) {
+        HighlightAlbumDto result = highlightAlbumService.deleteHighlightAlbum(groupId, albumId);
+        return ApiResponse.ok(HighlightAlbumResponse.from(result));
     }
 }

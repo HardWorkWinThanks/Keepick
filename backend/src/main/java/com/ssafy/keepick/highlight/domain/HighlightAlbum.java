@@ -52,4 +52,13 @@ public class HighlightAlbum extends BaseTimeEntity {
             this.photos.add(photo);
         }
     }
+
+    public void updateNameAndDesc(String name, String description) {
+        this.name = name;
+        this.description = description;
+    }
+
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
 }

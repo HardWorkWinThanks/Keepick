@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 @Getter
 @Builder
 @AllArgsConstructor
-public class HighlightAlbumCreateResponse {
+public class HighlightAlbumResponse {
 
     private Long albumId;
     private Long groupId;
@@ -23,8 +23,8 @@ public class HighlightAlbumCreateResponse {
     private int photoCount;
     private Map<HighlightType, List<HighlightScreenshotSaveResponse>> photos;
 
-    public static HighlightAlbumCreateResponse from(HighlightAlbumDto album) {
-        return HighlightAlbumCreateResponse.builder()
+    public static HighlightAlbumResponse from(HighlightAlbumDto album) {
+        return HighlightAlbumResponse.builder()
                 .albumId(album.getAlbumId())
                 .groupId(album.getGroupId())
                 .name(album.getName())

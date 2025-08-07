@@ -8,6 +8,7 @@ import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.highlight.application.dto.HighlightAlbumDto;
 import com.ssafy.keepick.highlight.application.dto.HighlightAlbumPhotoDto;
 import com.ssafy.keepick.highlight.controller.request.HighlightAlbumCreateRequest;
+import com.ssafy.keepick.highlight.controller.request.HighlightAlbumUpdateRequest;
 import com.ssafy.keepick.highlight.controller.request.HighlightScreenshotSaveRequest;
 import com.ssafy.keepick.highlight.domain.HighlightAlbum;
 import com.ssafy.keepick.highlight.domain.HighlightAlbumPhoto;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -77,4 +79,33 @@ public class HighlightAlbumService {
 
         return HighlightAlbumDto.from(album);
     }
+
+    @Transactional
+    public HighlightAlbumDto updateHighlightAlbum(Long albumId, HighlightAlbumUpdateRequest request) {
+        HighlightAlbum album = highlightAlbumRepository.findById(albumId)
+                .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
+
+        album.updateNameAndDesc(request.getName(), request.getDescription());
+
+        List<Long> deletePhotoIds = request.getDeletePhotoIds();
+        if (deletePhotoIds != null && !deletePhotoIds.isEmpty()) {
+            deletePhotosInAlbum(deletePhotoIds, albumId);
+        }
+
+        return HighlightAlbumDto.from(album);
+    }
+
+    /**
+     * 앨범 수정시 삭제 요청된 사진이 해당 앨범에 속하는 사진이 맞는지 확인하기 위한 메서드
+     */
+    private void deletePhotosInAlbum(List<Long> photoIds, Long albumId) {
+        List<HighlightAlbumPhoto> photosToDelete = highlightAlbumPhotoRepository.findAllById(photoIds)
+                .stream()
+                .filter(photo -> photo.getAlbum() != null && albumId.equals(photo.getAlbum().getId()))
+                .peek(HighlightAlbumPhoto::delete)
+                .collect(Collectors.toList());
+
+        highlightAlbumPhotoRepository.saveAll(photosToDelete);
+    }
+
 }
