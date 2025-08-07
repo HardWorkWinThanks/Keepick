@@ -1,6 +1,6 @@
 package com.ssafy.keepick.timeline.domain;
 
-import com.ssafy.keepick.image.domain.Photo;
+import com.ssafy.keepick.photo.domain.Photo;
 import jakarta.persistence.*;
 import lombok.*;
 

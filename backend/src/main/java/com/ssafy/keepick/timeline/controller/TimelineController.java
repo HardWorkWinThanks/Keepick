@@ -3,8 +3,6 @@ package com.ssafy.keepick.timeline.controller;
 import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.global.response.PagingResponse;
 import com.ssafy.keepick.global.response.ResponseCode;
-import com.ssafy.keepick.image.application.dto.GroupPhotoDto;
-import com.ssafy.keepick.image.controller.response.GroupPhotoDetailResponse;
 import com.ssafy.keepick.timeline.application.TimelineInteractionService;
 import com.ssafy.keepick.timeline.application.TimelineService;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
@@ -13,13 +11,10 @@ import com.ssafy.keepick.timeline.controller.request.TimelineUpdateRequest;
 import com.ssafy.keepick.timeline.controller.response.TimelineCreateResponse;
 import com.ssafy.keepick.timeline.controller.response.TimelineDetailResponse;
 import com.ssafy.keepick.timeline.controller.response.TimelineInfoResponse;
-import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
