@@ -6,6 +6,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -108,6 +110,19 @@ class TierAlbumServiceTest {
 
         tierAlbumPhoto1 = TierAlbumPhoto.createTierAlbumPhoto(tierAlbum, photo1, Tier.S, 0);
         tierAlbumPhoto2 = TierAlbumPhoto.createTierAlbumPhoto(tierAlbum, photo2, Tier.A, 1);
+        
+        // Photo에 ID 설정
+        try {
+            java.lang.reflect.Field photo1IdField = Photo.class.getDeclaredField("id");
+            photo1IdField.setAccessible(true);
+            photo1IdField.set(photo1, 1L);
+            
+            java.lang.reflect.Field photo2IdField = Photo.class.getDeclaredField("id");
+            photo2IdField.setAccessible(true);
+            photo2IdField.set(photo2, 2L);
+        } catch (Exception e) {
+            // 테스트 환경에서는 무시
+        }
 
         Map<String, List<Long>> photos = new HashMap<>();
         photos.put("S", Arrays.asList(1L));
@@ -410,28 +425,51 @@ class TierAlbumServiceTest {
     @DisplayName("티어 앨범 수정 성공")
     void updateTierAlbum_Success() {
         // given
+        Long groupId = 1L;
         Long tierAlbumId = 1L;
         Long currentUserId = 1L;
 
         try (var mockedAuth = mockStatic(AuthenticationUtil.class)) {
             mockedAuth.when(AuthenticationUtil::getCurrentUserId).thenReturn(currentUserId);
             
+            when(groupRepository.findById(groupId)).thenReturn(Optional.of(Group.createGroup("테스트 그룹", null)));
+            when(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED))
+                .thenReturn(true);
             when(tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId))
                 .thenReturn(Optional.of(tierAlbum))
                 .thenReturn(Optional.of(tierAlbum)); // 두 번째 호출을 위한 모킹
-            when(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(tierAlbum.getGroupId(), currentUserId, GroupMemberStatus.ACCEPTED))
-                .thenReturn(true);
+            
+            // TierAlbum을 Mock으로 생성하여 getAllPhotos() 메서드를 모킹
+            TierAlbum mockTierAlbum = mock(TierAlbum.class);
+            when(mockTierAlbum.getId()).thenReturn(tierAlbumId);
+            when(mockTierAlbum.getGroupId()).thenReturn(groupId);
+            when(mockTierAlbum.getName()).thenReturn("테스트 앨범");
+            when(mockTierAlbum.getDescription()).thenReturn("테스트 설명");
+            when(mockTierAlbum.getThumbnailUrl()).thenReturn("https://test.com/thumb.jpg");
+            when(mockTierAlbum.getOriginalUrl()).thenReturn("https://test.com/original.jpg");
+            when(mockTierAlbum.getPhotoCount()).thenReturn(2);
+            when(mockTierAlbum.getAllPhotos()).thenReturn(Arrays.asList(tierAlbumPhoto1, tierAlbumPhoto2));
+            
+            when(tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId))
+                .thenReturn(Optional.of(mockTierAlbum))
+                .thenReturn(Optional.of(mockTierAlbum)); // 두 번째 호출을 위한 모킹
             when(photoRepository.findById(1L)).thenReturn(Optional.of(photo1));
+            doNothing().when(tierAlbumPhotoRepository).resetAllTiersByAlbumId(eq(tierAlbumId));
+            doNothing().when(tierAlbumPhotoRepository).updateTierAndSequenceByPhotoId(eq(tierAlbumId), eq(1L), eq(Tier.S), eq(0));
+            doNothing().when(tierAlbumPhotoRepository).updateTierAndSequenceByPhotoId(eq(tierAlbumId), eq(2L), eq(Tier.A), eq(0));
 
             // when
-            TierAlbumDto result = tierAlbumService.updateTierAlbum(tierAlbumId, updateRequest);
+            TierAlbumDto result = tierAlbumService.updateTierAlbum(groupId, tierAlbumId, updateRequest);
 
             // then
             assertThat(result).isNotNull();
-            verify(tierAlbumRepository, times(2)).findAlbumWithPhotosById(tierAlbumId);
+            verify(groupRepository).findById(groupId);
+            verify(groupMemberRepository).existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED);
+            verify(tierAlbumRepository).findAlbumWithPhotosById(tierAlbumId);
             verify(photoRepository).findById(1L);
-            verify(tierAlbumPhotoRepository).excludePhotosNotInList(eq(tierAlbumId), anyList());
-            verify(tierAlbumPhotoRepository, times(2)).updateTiersByPhotoIds(eq(tierAlbumId), any(Tier.class), anyList());
+            verify(tierAlbumPhotoRepository).resetAllTiersByAlbumId(tierAlbumId);
+            verify(tierAlbumPhotoRepository).updateTierAndSequenceByPhotoId(eq(tierAlbumId), eq(1L), eq(Tier.S), eq(0));
+            verify(tierAlbumPhotoRepository).updateTierAndSequenceByPhotoId(eq(tierAlbumId), eq(2L), eq(Tier.A), eq(0));
         }
     }
 
@@ -439,36 +477,49 @@ class TierAlbumServiceTest {
     @DisplayName("티어 앨범 수정 실패 - 존재하지 않는 앨범")
     void updateTierAlbum_Fail_AlbumNotFound() {
         // given
-        Long tierAlbumId = 1L;
-
-        when(tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId))
-            .thenReturn(Optional.empty());
-
-        // when & then
-        assertThatThrownBy(() -> tierAlbumService.updateTierAlbum(tierAlbumId, updateRequest))
-            .isInstanceOf(BaseException.class)
-            .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALBUM_NOT_FOUND);
-    }
-
-    @Test
-    @DisplayName("티어 앨범 삭제 성공")
-    void deleteTierAlbum_Success() {
-        // given
+        Long groupId = 1L;
         Long tierAlbumId = 1L;
         Long currentUserId = 1L;
 
         try (var mockedAuth = mockStatic(AuthenticationUtil.class)) {
             mockedAuth.when(AuthenticationUtil::getCurrentUserId).thenReturn(currentUserId);
             
+            when(groupRepository.findById(groupId)).thenReturn(Optional.of(Group.createGroup("테스트 그룹", null)));
+            when(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED))
+                .thenReturn(true);
+            when(tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId))
+                .thenReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> tierAlbumService.updateTierAlbum(groupId, tierAlbumId, updateRequest))
+                .isInstanceOf(BaseException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALBUM_NOT_FOUND);
+        }
+    }
+
+    @Test
+    @DisplayName("티어 앨범 삭제 성공")
+    void deleteTierAlbum_Success() {
+        // given
+        Long groupId = 1L;
+        Long tierAlbumId = 1L;
+        Long currentUserId = 1L;
+
+        try (var mockedAuth = mockStatic(AuthenticationUtil.class)) {
+            mockedAuth.when(AuthenticationUtil::getCurrentUserId).thenReturn(currentUserId);
+            
+            when(groupRepository.findById(groupId)).thenReturn(Optional.of(Group.createGroup("테스트 그룹", null)));
+            when(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED))
+                .thenReturn(true);
             when(tierAlbumRepository.findAlbumById(tierAlbumId))
                 .thenReturn(Optional.of(tierAlbum));
-            when(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(tierAlbum.getGroupId(), currentUserId, GroupMemberStatus.ACCEPTED))
-                .thenReturn(true);
 
             // when
-            tierAlbumService.deleteTierAlbum(tierAlbumId);
+            tierAlbumService.deleteTierAlbum(groupId, tierAlbumId);
 
             // then
+            verify(groupRepository).findById(groupId);
+            verify(groupMemberRepository).existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED);
             verify(tierAlbumRepository).findAlbumById(tierAlbumId);
             assertThat(tierAlbum.isDeleted()).isTrue();
         }
@@ -478,14 +529,23 @@ class TierAlbumServiceTest {
     @DisplayName("티어 앨범 삭제 실패 - 존재하지 않는 앨범")
     void deleteTierAlbum_Fail_AlbumNotFound() {
         // given
+        Long groupId = 1L;
         Long tierAlbumId = 1L;
+        Long currentUserId = 1L;
 
-        when(tierAlbumRepository.findAlbumById(tierAlbumId))
-            .thenReturn(Optional.empty());
+        try (var mockedAuth = mockStatic(AuthenticationUtil.class)) {
+            mockedAuth.when(AuthenticationUtil::getCurrentUserId).thenReturn(currentUserId);
+            
+            when(groupRepository.findById(groupId)).thenReturn(Optional.of(Group.createGroup("테스트 그룹", null)));
+            when(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED))
+                .thenReturn(true);
+            when(tierAlbumRepository.findAlbumById(tierAlbumId))
+                .thenReturn(Optional.empty());
 
-        // when & then
-        assertThatThrownBy(() -> tierAlbumService.deleteTierAlbum(tierAlbumId))
-            .isInstanceOf(BaseException.class)
-            .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALBUM_NOT_FOUND);
+            // when & then
+            assertThatThrownBy(() -> tierAlbumService.deleteTierAlbum(groupId, tierAlbumId))
+                .isInstanceOf(BaseException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALBUM_NOT_FOUND);
+        }
     }
 }
