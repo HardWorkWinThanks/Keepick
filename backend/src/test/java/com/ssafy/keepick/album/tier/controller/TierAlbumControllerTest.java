@@ -115,8 +115,7 @@ class TierAlbumControllerTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value(200))
-            .andExpect(jsonPath("$.data.id").value(1))
-            .andExpect(jsonPath("$.data.name").value("테스트 앨범"));
+            .andExpect(jsonPath("$.data").value(1));
     }
 
     @Test

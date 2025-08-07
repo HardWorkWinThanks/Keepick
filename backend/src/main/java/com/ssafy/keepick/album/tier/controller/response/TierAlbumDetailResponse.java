@@ -44,6 +44,18 @@ public class TierAlbumDetailResponse {
             .build();
     }
 
+    // 생성 시 사용하는 메서드 (티어가 아직 설정되지 않은 상태)
+    public static TierAlbumDetailResponse fromForCreation(TierAlbum tierAlbum) {
+        return TierAlbumDetailResponse.builder()
+            .title(tierAlbum.getName())
+            .description(tierAlbum.getDescription())
+            .thumbnailUrl(tierAlbum.getThumbnailUrl())
+            .originalUrl(tierAlbum.getOriginalUrl())
+            .photoCount(tierAlbum.getPhotoCount())
+            .photos(Map.of()) // 빈 맵 (아직 티어가 설정되지 않음)
+            .build();
+    }
+
     @Getter
     @Builder
     public static class TierAlbumPhotoDto {
