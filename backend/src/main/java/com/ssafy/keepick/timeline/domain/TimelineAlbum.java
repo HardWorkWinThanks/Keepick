@@ -71,9 +71,10 @@ public class TimelineAlbum extends BaseTimeEntity {
         return section;
     }
 
-    public void addPhoto(Photo photo) {
+    public TimelineAlbumPhoto addPhoto(Photo photo) {
         TimelineAlbumPhoto albumPhoto = TimelineAlbumPhoto.createTimelineAlbumPhoto(this, photo);
         this.photos.add(albumPhoto);
+        return albumPhoto;
     }
 
     public void loadSections(List<TimelineAlbumSection> sections) {

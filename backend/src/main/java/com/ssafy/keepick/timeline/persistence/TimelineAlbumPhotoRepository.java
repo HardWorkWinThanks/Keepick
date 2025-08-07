@@ -34,8 +34,9 @@ public interface TimelineAlbumPhotoRepository extends JpaRepository<TimelineAlbu
     @Query("""
         SELECT tap
         FROM TimelineAlbumPhoto tap
-        WHERE tap.photo.id IN :photoIds
+        WHERE tap.album.id = :albumId
+        AND tap.photo.id IN :photoIds
         AND tap.deletedAt IS NULL
     """)
-    List<TimelineAlbumPhoto> findAllByPhotoIdIn(List<Long> photoIds);
+    List<TimelineAlbumPhoto> findAllByPhotoIdIn(Long albumId, List<Long> photoIds);
 }

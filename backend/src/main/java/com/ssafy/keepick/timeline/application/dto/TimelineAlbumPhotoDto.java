@@ -31,12 +31,4 @@ public class TimelineAlbumPhotoDto {
                 .build();
     }
 
-    public static TimelineAlbumPhotoDto of(TimelineAlbum album, Photo photo) {
-        return TimelineAlbumPhotoDto
-                .builder()
-                .albumId(album.getId())
-                .photoId(photo.getId())
-                .build();
-    }
-
 }

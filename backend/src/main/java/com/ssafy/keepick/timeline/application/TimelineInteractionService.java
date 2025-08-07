@@ -103,7 +103,7 @@ public class TimelineInteractionService {
 
     private void deleteRemovedPhotos(TimelineAlbum album, List<Long> photoIds) {
         // 타임라앤 앨범에서 사진 조회
-        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findAllByPhotoIdIn(photoIds);
+        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findAllByPhotoIdIn(album.getId(), photoIds);
         photos.forEach(photo -> {
             // 섹션에서 사진 삭제
             Optional.ofNullable(photo.getSection())
@@ -188,9 +188,9 @@ public class TimelineInteractionService {
         photos.forEach(p -> System.out.println("p.getId() = " + p.getId()));
         
         // 타임라인 앨범에 사진 추가
-        photos.forEach(album::addPhoto);
+        List<TimelineAlbumPhoto> timelineAlbumPhotos = photos.stream().map(album::addPhoto).toList();
 
-        List<TimelineAlbumPhotoDto> timelineAlbumPhotoDtos = photos.stream().map(photo -> TimelineAlbumPhotoDto.of(album, photo)).toList();
+        List<TimelineAlbumPhotoDto> timelineAlbumPhotoDtos = timelineAlbumPhotos.stream().map(TimelineAlbumPhotoDto::from).toList();
         return timelineAlbumPhotoDtos;
     }
 }
