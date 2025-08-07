@@ -72,6 +72,7 @@ public class HighlightAlbumService {
                 .group(group)
                 .name(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
                 .photoCount(photoList.size())
+                .thumbnailUrl(photoList.getFirst().getPhotoUrl())  // 첫번째 사진을 대표사진으로 저장
                 .build();
         // 6. 스크린샷을 앨범에 포함해서 저장
         album.addPhotos(photoList);

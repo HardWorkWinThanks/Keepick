@@ -31,6 +31,9 @@ public class HighlightAlbum extends BaseTimeEntity {
 
     private LocalDateTime deletedAt;
 
+    @Column(length = 500)
+    private String thumbnailUrl;
+
     @ManyToOne(fetch = FetchType.LAZY)
     private Group group;
 
@@ -38,11 +41,12 @@ public class HighlightAlbum extends BaseTimeEntity {
     private List<HighlightAlbumPhoto>  photos = new ArrayList<>();
 
     @Builder
-    private HighlightAlbum(String name, String chatSessionId, int photoCount, Group group) {
+    private HighlightAlbum(String name, String chatSessionId, int photoCount, Group group, String thumbnailUrl) {
         this.name = name;
         this.chatSessionId = chatSessionId;
         this.photoCount = photoCount;
         this.group = group;
+        this.thumbnailUrl = thumbnailUrl;
     }
 
 
