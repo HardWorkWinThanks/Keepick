@@ -229,13 +229,22 @@ public class TierAlbumService {
 
     // 티어 앨범 삭제
     @Transactional
-    public void deleteTierAlbum(Long tierAlbumId) {
+    public void deleteTierAlbum(Long groupId, Long tierAlbumId) {
+        // 그룹 존재 여부 검증
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
+        
+        // 권한 검증 - 현재 사용자가 그룹 멤버인지 확인
+        Long currentUserId = AuthenticationUtil.getCurrentUserId();
+        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED)) {
+            throw new BaseException(ErrorCode.FORBIDDEN);
+        }
+        
         TierAlbum tierAlbum = tierAlbumRepository.findAlbumById(tierAlbumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
         
-        // 권한 검증 - 현재 사용자가 앨범이 속한 그룹의 멤버인지 확인
-        Long currentUserId = AuthenticationUtil.getCurrentUserId();
-        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(tierAlbum.getGroupId(), currentUserId, GroupMemberStatus.ACCEPTED)) {
+        // 앨범이 요청된 그룹에 속하는지 검증
+        if (!tierAlbum.getGroupId().equals(groupId)) {
             throw new BaseException(ErrorCode.FORBIDDEN);
         }
         

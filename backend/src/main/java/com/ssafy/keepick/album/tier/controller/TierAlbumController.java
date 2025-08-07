@@ -287,14 +287,6 @@ public class TierAlbumController {
                         "data": null
                     }
                     """))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 (빈 이름, 잘못된 사진 ID 등)", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class), examples = @ExampleObject(name = "빈 이름 예시", value = """
-                    {
-                        "status": 400,
-                        "message": "앨범 이름은 필수입니다.",
-                        "errorCode": "B004",
-                        "timeStamp": "2025-08-07T13:46:08.346331600"
-                    }
-                    """))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "티어 앨범을 찾을 수 없음", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class), examples = @ExampleObject(name = "티어 앨범 없음 예시", value = """
                     {
                         "status": 404,
@@ -313,7 +305,8 @@ public class TierAlbumController {
     }
 
     @DeleteMapping("/{tierAlbumId}")
-    @Operation(summary = "티어 앨범 삭제", description = "특정 티어 앨범을 삭제합니다. 삭제 시 해당 앨범의 모든 사진과 티어 정보가 함께 삭제됩니다.")
+    @Operation(summary = "티어 앨범 삭제", description = "특정 티어 앨범을 삭제합니다. 삭제 시 해당 앨범의 모든 사진과 티어 정보가 함께 삭제됩니다. " +
+            "Soft Delete가 적용되어 데이터베이스에서 실제로 삭제되지 않고 삭제 표시만 됩니다.")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "티어 앨범 삭제 성공", content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "성공 응답 예시", value = """
                     {
@@ -342,7 +335,7 @@ public class TierAlbumController {
     public ApiResponse<Void> deleteTierAlbum(
             @Parameter(description = "그룹 ID", example = "1", required = true) @PathVariable Long groupId,
             @Parameter(description = "티어 앨범 ID", example = "1", required = true) @PathVariable Long tierAlbumId) {
-        tierAlbumService.deleteTierAlbum(tierAlbumId);
+        tierAlbumService.deleteTierAlbum(groupId, tierAlbumId);
         return ApiResponse.ok(null);
     }
 }
