@@ -20,6 +20,7 @@ public class HighlightAlbumDto {
     private String name;
     private String description;
     private int photoCount;
+    private String thumbnailUrl;
     private Map<HighlightType, List<HighlightAlbumPhotoDto>> photos;
 
     public static HighlightAlbumDto from(HighlightAlbum album) {
@@ -29,6 +30,7 @@ public class HighlightAlbumDto {
                 .name(album.getName())
                 .description(album.getDescription())
                 .photoCount(album.getPhotoCount())
+                .thumbnailUrl(album.getThumbnailUrl())
                 .photos(groupingByType(album.getPhotos()))
                 .build();
     }

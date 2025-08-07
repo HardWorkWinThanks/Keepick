@@ -8,11 +8,14 @@ import com.ssafy.keepick.highlight.controller.request.HighlightAlbumCreateReques
 import com.ssafy.keepick.highlight.controller.request.HighlightAlbumUpdateRequest;
 import com.ssafy.keepick.highlight.controller.request.HighlightScreenshotSaveRequest;
 import com.ssafy.keepick.highlight.controller.response.HighlightAlbumResponse;
+import com.ssafy.keepick.highlight.controller.response.HighlightAlbumSummaryResponse;
 import com.ssafy.keepick.highlight.controller.response.HighlightScreenshotSaveResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/groups/{groupId}/highlight-albums")
@@ -42,7 +45,7 @@ public class HighlightAlbumController {
 
     @PutMapping("{albumId}")
     @Operation(summary = "하이라이트 앨범 수정", description = """
-            특정 하이라이트 앨범의 제목, 설명을 수정하고, 지정된 사진들을 삭제합니다.
+            특정 하이라이트 앨범의 제목, 설명, 대표사진을 수정하고, 지정된 사진들을 삭제합니다.
             새로운 사진 추가는 불가능합니다
             """)
     public ApiResponse<HighlightAlbumResponse> modifyHighlightAlbum(@PathVariable Long groupId,
@@ -64,8 +67,9 @@ public class HighlightAlbumController {
 
     @GetMapping()
     @Operation(summary = "하이라이트 앨범 목록 조회")
-    public ApiResponse<HighlightAlbumResponse> getHighlightAlbums(@PathVariable Long groupId) {
-        return ApiResponse.ok(null);
+    public ApiResponse<HighlightAlbumSummaryResponse> getHighlightAlbums(@PathVariable Long groupId) {
+        List<HighlightAlbumDto>  result = highlightAlbumService.getHighlightAlbumList(groupId);
+        return ApiResponse.ok(HighlightAlbumSummaryResponse.from(result));
     }
 
     @GetMapping("{albumId}")
