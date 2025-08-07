@@ -19,7 +19,10 @@ import com.ssafy.keepick.album.tier.persistence.TierAlbumPhotoRepository;
 import com.ssafy.keepick.album.tier.controller.request.UpdateTierAlbumRequest;
 import com.ssafy.keepick.image.persistence.PhotoRepository;
 import com.ssafy.keepick.album.tier.domain.Tier;
-
+import com.ssafy.keepick.group.persistence.GroupRepository;
+import com.ssafy.keepick.group.persistence.GroupMemberRepository;
+import com.ssafy.keepick.group.domain.GroupMemberStatus;
+import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 
 import lombok.RequiredArgsConstructor;
 
@@ -29,9 +32,21 @@ public class TierAlbumService {
     private final TierAlbumRepository tierAlbumRepository;
     private final TierAlbumPhotoRepository tierAlbumPhotoRepository;
     private final PhotoRepository photoRepository;
+    private final GroupRepository groupRepository;
+    private final GroupMemberRepository groupMemberRepository;
     // 티어 앨범 생성
     @Transactional
     public TierAlbumDto createTierAlbum(Long groupId, List<Long> photoIds) {
+        // 그룹 존재 여부 검증
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
+        
+        // 권한 검증 - 현재 사용자가 그룹 멤버인지 확인
+        Long currentUserId = AuthenticationUtil.getCurrentUserId();
+        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED)) {
+            throw new BaseException(ErrorCode.FORBIDDEN);
+        }
+        
         // 빈 티어 앨범 생성
         TierAlbum tierAlbum = TierAlbum.createTierAlbum(null, null, null, null, groupId);
         TierAlbum savedTierAlbum = tierAlbumRepository.save(tierAlbum);
@@ -58,6 +73,16 @@ public class TierAlbumService {
     // 티어 앨범 목록 조회 (페이징)
     @Transactional(readOnly = true)
     public TierAlbumListDto getTierAlbumListWithPaging(Long groupId, int page, int size) {
+        // 그룹 존재 여부 검증
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
+        
+        // 권한 검증 - 현재 사용자가 그룹 멤버인지 확인
+        Long currentUserId = AuthenticationUtil.getCurrentUserId();
+        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED)) {
+            throw new BaseException(ErrorCode.FORBIDDEN);
+        }
+        
         // 페이징 계산
         int offset = (page - 1) * size;
         
@@ -68,7 +93,7 @@ public class TierAlbumService {
         List<TierAlbum> tierAlbums = tierAlbumRepository.findByGroupIdWithPaging(groupId, offset, size);
         List<TierAlbumDto> tierAlbumDtos = tierAlbums.stream().map(TierAlbumDto::from).toList();
         
-        return TierAlbumListDto.from(tierAlbumDtos, page, size, totalElements);
+        return TierAlbumListDto.of(tierAlbumDtos, page, size, totalElements);
     }
 
     // 티어 앨범 상세 조회 (사진 목록 포함)
@@ -76,6 +101,13 @@ public class TierAlbumService {
     public TierAlbumDetailDto getTierAlbumDetail(Long tierAlbumId) {
         TierAlbum tierAlbum = tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
+        
+        // 권한 검증 - 현재 사용자가 앨범이 속한 그룹의 멤버인지 확인
+        Long currentUserId = AuthenticationUtil.getCurrentUserId();
+        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(tierAlbum.getGroupId(), currentUserId, GroupMemberStatus.ACCEPTED)) {
+            throw new BaseException(ErrorCode.FORBIDDEN);
+        }
+        
         return TierAlbumDetailDto.from(tierAlbum);
     }
 
@@ -84,6 +116,12 @@ public class TierAlbumService {
     public TierAlbumDto updateTierAlbum(Long tierAlbumId, UpdateTierAlbumRequest request) {
         TierAlbum tierAlbum = tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
+        
+        // 권한 검증 - 현재 사용자가 앨범이 속한 그룹의 멤버인지 확인
+        Long currentUserId = AuthenticationUtil.getCurrentUserId();
+        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(tierAlbum.getGroupId(), currentUserId, GroupMemberStatus.ACCEPTED)) {
+            throw new BaseException(ErrorCode.FORBIDDEN);
+        }
         
         // thumbnailId로 Photo 조회하여 URL 정보 가져오기
         String thumbnailUrl = null;
@@ -135,6 +173,12 @@ public class TierAlbumService {
     public void deleteTierAlbum(Long tierAlbumId) {
         TierAlbum tierAlbum = tierAlbumRepository.findAlbumById(tierAlbumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
+        
+        // 권한 검증 - 현재 사용자가 앨범이 속한 그룹의 멤버인지 확인
+        Long currentUserId = AuthenticationUtil.getCurrentUserId();
+        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(tierAlbum.getGroupId(), currentUserId, GroupMemberStatus.ACCEPTED)) {
+            throw new BaseException(ErrorCode.FORBIDDEN);
+        }
         
         tierAlbum.delete();
     }
