@@ -34,18 +34,13 @@ public class TierAlbumService {
     private final PhotoRepository photoRepository;
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
+
+    
     // 티어 앨범 생성
     @Transactional
     public TierAlbumDto createTierAlbum(Long groupId, List<Long> photoIds) {
-        // 그룹 존재 여부 검증
-        groupRepository.findById(groupId)
-                .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
-        
-        // 권한 검증 - 현재 사용자가 그룹 멤버인지 확인
-        Long currentUserId = AuthenticationUtil.getCurrentUserId();
-        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED)) {
-            throw new BaseException(ErrorCode.FORBIDDEN);
-        }
+        // 권한 검증
+        validateGroupMemberPermission(groupId);
         
         // 빈 티어 앨범 생성
         TierAlbum tierAlbum = TierAlbum.createTierAlbum(groupId);
@@ -73,15 +68,8 @@ public class TierAlbumService {
     // 티어 앨범 목록 조회 (페이징)
     @Transactional(readOnly = true)
     public TierAlbumListDto getTierAlbumListWithPaging(Long groupId, int page, int size) {
-        // 그룹 존재 여부 검증
-        groupRepository.findById(groupId)
-                .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
-        
-        // 권한 검증 - 현재 사용자가 그룹 멤버인지 확인
-        Long currentUserId = AuthenticationUtil.getCurrentUserId();
-        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED)) {
-            throw new BaseException(ErrorCode.FORBIDDEN);
-        }
+        // 권한 검증
+        validateGroupMemberPermission(groupId);
         
         // 페이징 계산
         int offset = (page - 1) * size;
@@ -99,23 +87,14 @@ public class TierAlbumService {
     // 티어 앨범 상세 조회 (사진 목록 포함)
     @Transactional(readOnly = true)
     public TierAlbumDetailDto getTierAlbumDetail(Long groupId, Long tierAlbumId) {
-        // 그룹 존재 여부 검증
-        groupRepository.findById(groupId)
-                .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
-        
-        // 권한 검증 - 현재 사용자가 그룹 멤버인지 확인
-        Long currentUserId = AuthenticationUtil.getCurrentUserId();
-        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED)) {
-            throw new BaseException(ErrorCode.FORBIDDEN);
-        }
+        // 권한 검증
+        validateGroupMemberPermission(groupId);
         
         TierAlbum tierAlbum = tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
         
-        // 앨범이 요청된 그룹에 속하는지 검증
-        if (!tierAlbum.getGroupId().equals(groupId)) {
-            throw new BaseException(ErrorCode.FORBIDDEN);
-        }
+        // 앨범이 해당 그룹에 속하는지 검증
+        validateAlbumBelongsToGroup(tierAlbum, groupId);
         
         return TierAlbumDetailDto.from(tierAlbum);
     }
@@ -123,23 +102,14 @@ public class TierAlbumService {
     // 티어 앨범 수정
     @Transactional
     public TierAlbumDto updateTierAlbum(Long groupId, Long tierAlbumId, UpdateTierAlbumRequest request) {
-        // 그룹 존재 여부 검증
-        groupRepository.findById(groupId)
-                .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
-        
-        // 권한 검증 - 현재 사용자가 그룹 멤버인지 확인
-        Long currentUserId = AuthenticationUtil.getCurrentUserId();
-        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED)) {
-            throw new BaseException(ErrorCode.FORBIDDEN);
-        }
+        // 권한 검증
+        validateGroupMemberPermission(groupId);
         
         TierAlbum tierAlbum = tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
         
-        // 앨범이 요청된 그룹에 속하는지 검증
-        if (!tierAlbum.getGroupId().equals(groupId)) {
-            throw new BaseException(ErrorCode.FORBIDDEN);
-        }
+        // 앨범이 해당 그룹에 속하는지 검증
+        validateAlbumBelongsToGroup(tierAlbum, groupId);
         
         // thumbnailId로 Photo 조회하여 URL 정보 가져오기
         String thumbnailUrl = null;
@@ -230,24 +200,47 @@ public class TierAlbumService {
     // 티어 앨범 삭제
     @Transactional
     public void deleteTierAlbum(Long groupId, Long tierAlbumId) {
-        // 그룹 존재 여부 검증
-        groupRepository.findById(groupId)
-                .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
-        
-        // 권한 검증 - 현재 사용자가 그룹 멤버인지 확인
-        Long currentUserId = AuthenticationUtil.getCurrentUserId();
-        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED)) {
-            throw new BaseException(ErrorCode.FORBIDDEN);
-        }
+        // 권한 검증
+        validateGroupMemberPermission(groupId);
         
         TierAlbum tierAlbum = tierAlbumRepository.findAlbumById(tierAlbumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
         
-        // 앨범이 요청된 그룹에 속하는지 검증
+        // 앨범이 해당 그룹에 속하는지 검증
+        validateAlbumBelongsToGroup(tierAlbum, groupId);
+        
+        tierAlbum.delete();
+    }
+    
+    /**
+     * 그룹 멤버 권한 검증
+     * 
+     * @param groupId 그룹 ID
+     * @throws BaseException 그룹이 존재하지 않거나 권한이 없는 경우
+     */
+    private void validateGroupMemberPermission(Long groupId) {
+        // 그룹 존재 여부 검증
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
+
+        // 권한 검증 - 현재 사용자가 그룹 멤버인지 확인
+        Long currentUserId = AuthenticationUtil.getCurrentUserId();
+        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId,
+                GroupMemberStatus.ACCEPTED)) {
+            throw new BaseException(ErrorCode.FORBIDDEN);
+        }
+    }
+
+    /**
+     * 앨범이 해당 그룹에 속하는지 검증
+     * 
+     * @param tierAlbum 앨범 엔티티
+     * @param groupId   그룹 ID
+     * @throws BaseException 앨범이 다른 그룹에 속한 경우
+     */
+    private void validateAlbumBelongsToGroup(TierAlbum tierAlbum, Long groupId) {
         if (!tierAlbum.getGroupId().equals(groupId)) {
             throw new BaseException(ErrorCode.FORBIDDEN);
         }
-        
-        tierAlbum.delete();
     }
 }
