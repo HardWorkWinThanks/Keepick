@@ -3,6 +3,7 @@ package com.ssafy.keepick.highlight.domain;
 import com.ssafy.keepick.member.domain.Member;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -35,5 +36,18 @@ public class HighlightAlbumPhoto {
 
     // TODO: 인덱스 설정
     private String chatSessionId;
+
+    @Builder
+    private HighlightAlbumPhoto(Member member, LocalDateTime takenAt, String photoUrl, HighlightType type, String chatSessionId) {
+        this.member = member;
+        this.takenAt = takenAt;
+        this.photoUrl = photoUrl;
+        this.type = type;
+        this.chatSessionId = chatSessionId;
+    }
+
+    public void addScreenshotToAlbum(HighlightAlbum album) {
+        this.album = album;
+    }
 
 }
