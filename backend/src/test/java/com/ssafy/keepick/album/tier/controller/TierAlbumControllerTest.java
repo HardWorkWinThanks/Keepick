@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.ssafy.keepick.album.tier.application.TierAlbumService;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDetailDto;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDto;
@@ -63,6 +65,8 @@ class TierAlbumControllerTest {
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
         objectMapper = new ObjectMapper();
+        // Spring 설정과 동일하게 설정
+        objectMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, false);
         
         // 테스트 데이터 설정
         tierAlbumDto = TierAlbumDto.builder()
@@ -76,13 +80,35 @@ class TierAlbumControllerTest {
             .updatedAt(LocalDateTime.of(2024, 1, 15, 14, 45))
             .build();
 
+        // UNASSIGNED 사진들을 포함한 테스트 데이터 생성
+        Map<String, List<TierAlbumDetailDto.TierAlbumPhotoDto>> testPhotos = new LinkedHashMap<>();
+        testPhotos.put("S", Arrays.asList());
+        testPhotos.put("A", Arrays.asList());
+        testPhotos.put("B", Arrays.asList());
+        testPhotos.put("C", Arrays.asList());
+        testPhotos.put("D", Arrays.asList());
+        testPhotos.put("UNASSIGNED", Arrays.asList(
+            TierAlbumDetailDto.TierAlbumPhotoDto.builder()
+                .photoId(1L)
+                .thumbnailUrl("https://test.com/thumb1.jpg")
+                .originalUrl("https://test.com/original1.jpg")
+                .sequence(0)
+                .build(),
+            TierAlbumDetailDto.TierAlbumPhotoDto.builder()
+                .photoId(2L)
+                .thumbnailUrl("https://test.com/thumb2.jpg")
+                .originalUrl("https://test.com/original2.jpg")
+                .sequence(1)
+                .build()
+        ));
+
         tierAlbumDetailDto = TierAlbumDetailDto.builder()
             .title("테스트 앨범")
             .description("테스트 설명")
             .thumbnailUrl("https://test.com/thumb.jpg")
             .originalUrl("https://test.com/original.jpg")
             .photoCount(2)
-            .photos(new HashMap<>())
+            .photos(testPhotos)
             .build();
 
         List<TierAlbumDto> albums = Arrays.asList(tierAlbumDto);
@@ -228,11 +254,27 @@ class TierAlbumControllerTest {
             .thenReturn(tierAlbumDetailDto);
 
         // when & then
-        mockMvc.perform(get("/api/groups/{groupId}/tier-albums/{tierAlbumId}", groupId, tierAlbumId))
+        String response = mockMvc.perform(get("/api/groups/{groupId}/tier-albums/{tierAlbumId}", groupId, tierAlbumId))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value(200))
             .andExpect(jsonPath("$.data.title").value("테스트 앨범"))
-            .andExpect(jsonPath("$.data.photoCount").value(2));
+            .andExpect(jsonPath("$.data.photoCount").value(2))
+            .andExpect(jsonPath("$.data.photos.S").isArray())
+            .andExpect(jsonPath("$.data.photos.A").isArray())
+            .andExpect(jsonPath("$.data.photos.B").isArray())
+            .andExpect(jsonPath("$.data.photos.C").isArray())
+            .andExpect(jsonPath("$.data.photos.D").isArray())
+            .andExpect(jsonPath("$.data.photos.UNASSIGNED").isArray())
+            .andExpect(jsonPath("$.data.photos.UNASSIGNED").isNotEmpty())
+            .andExpect(jsonPath("$.data.photos.UNASSIGNED[0].photoId").value(1))
+            .andExpect(jsonPath("$.data.photos.UNASSIGNED[1].photoId").value(2))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        
+        System.out.println("=== 실제 JSON 응답 ===");
+        System.out.println(response);
+        System.out.println("=====================");
     }
 
     @Test
@@ -261,7 +303,7 @@ class TierAlbumControllerTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value(200))
-            .andExpect(jsonPath("$.data.id").value(1));
+            .andExpect(jsonPath("$.data.title").value("테스트 앨범"));
     }
 
     @Test
