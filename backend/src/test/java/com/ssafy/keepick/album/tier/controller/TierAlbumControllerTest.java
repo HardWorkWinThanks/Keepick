@@ -294,7 +294,7 @@ class TierAlbumControllerTest {
             .photos(photos)
             .build();
 
-        when(tierAlbumService.updateTierAlbum(eq(tierAlbumId), any(UpdateTierAlbumRequest.class)))
+        when(tierAlbumService.updateTierAlbum(eq(groupId), eq(tierAlbumId), any(UpdateTierAlbumRequest.class)))
             .thenReturn(tierAlbumDto);
 
         // when & then
@@ -303,12 +303,12 @@ class TierAlbumControllerTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value(200))
-            .andExpect(jsonPath("$.data.title").value("테스트 앨범"));
+            .andExpect(jsonPath("$.data").isEmpty());
     }
 
     @Test
-    @DisplayName("티어 앨범 수정 API 실패 - 빈 이름")
-    void updateTierAlbum_Fail_EmptyName() throws Exception {
+    @DisplayName("티어 앨범 수정 API 성공 - 빈 이름")
+    void updateTierAlbum_Success_EmptyName() throws Exception {
         // given
         Long groupId = 1L;
         Long tierAlbumId = 1L;
@@ -316,11 +316,16 @@ class TierAlbumControllerTest {
             .name("")
             .build();
 
+        when(tierAlbumService.updateTierAlbum(eq(groupId), eq(tierAlbumId), any(UpdateTierAlbumRequest.class)))
+            .thenReturn(tierAlbumDto);
+
         // when & then
         mockMvc.perform(put("/api/groups/{groupId}/tier-albums/{tierAlbumId}", groupId, tierAlbumId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isBadRequest());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value(200))
+            .andExpect(jsonPath("$.data").isEmpty());
     }
 
     @Test
@@ -330,13 +335,13 @@ class TierAlbumControllerTest {
         Long groupId = 1L;
         Long tierAlbumId = 1L;
 
-        doNothing().when(tierAlbumService).deleteTierAlbum(eq(tierAlbumId));
+        doNothing().when(tierAlbumService).deleteTierAlbum(eq(groupId), eq(tierAlbumId));
 
         // when & then
         mockMvc.perform(delete("/api/groups/{groupId}/tier-albums/{tierAlbumId}", groupId, tierAlbumId))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value(200));
 
-        verify(tierAlbumService).deleteTierAlbum(tierAlbumId);
+        verify(tierAlbumService).deleteTierAlbum(groupId, tierAlbumId);
     }
 }
