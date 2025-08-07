@@ -38,6 +38,7 @@ import com.ssafy.keepick.album.tier.application.dto.TierAlbumListDto;
 import com.ssafy.keepick.album.tier.controller.request.CreateTierAlbumRequest;
 import com.ssafy.keepick.album.tier.controller.request.UpdateTierAlbumRequest;
 import com.ssafy.keepick.global.response.PagingResponse;
+import com.ssafy.keepick.global.exception.GlobalExceptionHandler;
 
 @ExtendWith(MockitoExtension.class)
 class TierAlbumControllerTest {
@@ -58,7 +59,9 @@ class TierAlbumControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(tierAlbumController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(tierAlbumController)
+            .setControllerAdvice(new GlobalExceptionHandler())
+            .build();
         objectMapper = new ObjectMapper();
         
         // 테스트 데이터 설정

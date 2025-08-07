@@ -4,6 +4,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -23,6 +25,27 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(errorCode.getStatus())
                 .body(ErrorResponse.of(errorCode));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e, HttpServletRequest request) {
+        FieldError fieldError = e.getFieldError();
+        String errorMessage = fieldError != null ? fieldError.getDefaultMessage() : "잘못된 요청 파라미터입니다.";
+        
+        log.error("[Validation Error] path: {}, field: {}, message: {}",
+                request.getRequestURI(),
+                fieldError != null ? fieldError.getField() : "unknown",
+                errorMessage
+        );
+        
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.builder()
+                        .status(HttpStatus.BAD_REQUEST.value())
+                        .message(errorMessage)
+                        .errorCode(ErrorCode.INVALID_PARAMETER.getCode())
+                        .timeStamp(java.time.LocalDateTime.now().toString())
+                        .build());
     }
 
     @ExceptionHandler(Exception.class)
