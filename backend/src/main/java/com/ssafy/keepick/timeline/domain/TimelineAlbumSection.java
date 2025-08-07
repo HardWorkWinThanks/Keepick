@@ -86,6 +86,9 @@ public class TimelineAlbumSection {
     }
 
     public void delete() {
+        for (var photo : new ArrayList<>(this.photos)) {
+            this.removePhoto(photo);
+        }
         this.deletedAt = LocalDateTime.now();
     }
 

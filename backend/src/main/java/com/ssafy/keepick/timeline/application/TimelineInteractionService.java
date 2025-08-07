@@ -155,7 +155,7 @@ public class TimelineInteractionService {
         // 요청에 포함되지 않은 섹션
         List<TimelineAlbumSection> removedSections = album.getSections().stream()
                 .filter(section -> !requestedIds.contains(section.getId()))
-                .toList();
+                .collect(Collectors.toList());
 
         removedSections.forEach(album::removeSection);
     }
