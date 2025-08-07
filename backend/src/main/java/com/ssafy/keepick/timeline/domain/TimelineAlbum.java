@@ -95,7 +95,7 @@ public class TimelineAlbum extends BaseTimeEntity {
         if (!Objects.equals(this.description, description)) {
             this.description = description;
         }
-        if (!Objects.equals(this.originalUrl, thumbnail.getOriginalUrl())) {
+        if (thumbnail != null && !Objects.equals(this.originalUrl, thumbnail.getOriginalUrl())) {
             this.originalUrl = thumbnail.getOriginalUrl();
             this.thumbnailUrl = thumbnail.getThumbnailUrl();
         }
@@ -105,6 +105,11 @@ public class TimelineAlbum extends BaseTimeEntity {
         if (!Objects.equals(this.endDate, endDate)) {
             this.endDate = endDate;
         }
+    }
+
+    public void deletePhoto(TimelineAlbumPhoto photo) {
+        this.photos.remove(photo);
+        photo.delete();
     }
 
     public void deleteSection(TimelineAlbumSection section) {

@@ -16,7 +16,7 @@ public class TimelineUpdateRequest {
     private String name;
     @NotBlank
     private String description;
-    @NotNull
+
     private Long thumbnailId;
     @NotNull
     private LocalDate startDate;
@@ -28,6 +28,9 @@ public class TimelineUpdateRequest {
 
     @NotNull
     private List<Long> photoIds; // 섹션에 사용하지 않는 사진 ID
+
+    @NotNull
+    private List<Long> deletedPhotoIds; // 앨범에서 삭제할 사진 ID
 
     @Getter
     @Builder
@@ -49,6 +52,5 @@ public class TimelineUpdateRequest {
         @NotNull
         private List<Long> photoIds;
     }
-
 
 }

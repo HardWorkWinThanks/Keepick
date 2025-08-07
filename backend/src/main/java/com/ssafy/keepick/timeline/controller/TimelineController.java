@@ -6,15 +6,20 @@ import com.ssafy.keepick.global.response.ResponseCode;
 import com.ssafy.keepick.timeline.application.TimelineInteractionService;
 import com.ssafy.keepick.timeline.application.TimelineService;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
+import com.ssafy.keepick.timeline.application.dto.TimelineAlbumPhotoDto;
 import com.ssafy.keepick.timeline.controller.request.TimelineCreateRequest;
 import com.ssafy.keepick.timeline.controller.request.TimelineUpdateRequest;
+import com.ssafy.keepick.timeline.controller.request.TimelineUploadRequest;
 import com.ssafy.keepick.timeline.controller.response.TimelineCreateResponse;
 import com.ssafy.keepick.timeline.controller.response.TimelineDetailResponse;
 import com.ssafy.keepick.timeline.controller.response.TimelineInfoResponse;
+import com.ssafy.keepick.timeline.controller.response.TimelineUploadResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -59,6 +64,13 @@ public class TimelineController {
     public ApiResponse<TimelineInfoResponse> updateTimelineAlbum(@PathVariable Long albumId, @Valid @RequestBody TimelineUpdateRequest request) {
         TimelineAlbumDto timelineAlbumDto = timelineInteractionService.updateTimelineAlbum(albumId, request);
         TimelineInfoResponse response = TimelineInfoResponse.toResponse(timelineAlbumDto);
+        return ApiResponse.ok(response);
+    }
+
+    @PostMapping("/{albumId}/photo")
+    public ApiResponse<?> uploadPhotoToTimelineAlbum(@PathVariable Long albumId, @Valid @RequestBody TimelineUploadRequest request) {
+        List<TimelineAlbumPhotoDto> timelineAlbumPhotoDtos = timelineInteractionService.addPhotoToTimelineAlbum(albumId, request);
+        TimelineUploadResponse response = TimelineUploadResponse.toResponse(albumId, timelineAlbumPhotoDtos);
         return ApiResponse.ok(response);
     }
 

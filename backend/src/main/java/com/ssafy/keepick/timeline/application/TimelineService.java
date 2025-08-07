@@ -50,7 +50,7 @@ public class TimelineService {
         album.loadSections(sections);
 
         // 섹션에 포함되지 않은 사진
-        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findUnusedPhotosByAlbumIdAndSectionIsNull(albumId);
+        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findUnusedPhotosByAlbumIdAndSectionIsNullAndDeletedAtIsNull(albumId);
         album.loadPhotos(photos);
         return album;
     }
