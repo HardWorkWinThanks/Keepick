@@ -1,11 +1,14 @@
 package com.ssafy.keepick.highlight.application.dto;
 
 import com.ssafy.keepick.highlight.domain.HighlightAlbum;
+import com.ssafy.keepick.highlight.domain.HighlightAlbumPhoto;
+import com.ssafy.keepick.highlight.domain.HighlightType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Getter
@@ -17,7 +20,7 @@ public class HighlightAlbumDto {
     private String name;
     private String description;
     private int photoCount;
-    private List<HighlightAlbumPhotoDto> photos;
+    private Map<HighlightType, List<HighlightAlbumPhotoDto>> photos;
 
     public static HighlightAlbumDto from(HighlightAlbum album) {
         return HighlightAlbumDto.builder()
@@ -26,10 +29,16 @@ public class HighlightAlbumDto {
                 .name(album.getName())
                 .description(album.getDescription())
                 .photoCount(album.getPhotoCount())
-                .photos(album.getPhotos().stream()
-                        .map(HighlightAlbumPhotoDto::from)
-                        .collect(Collectors.toList()))
+                .photos(groupingByType(album.getPhotos()))
                 .build();
     }
+
+    private static Map<HighlightType, List<HighlightAlbumPhotoDto>> groupingByType(List<HighlightAlbumPhoto> photoList) {
+        return photoList.stream()
+                .collect(Collectors.groupingBy(
+                    HighlightAlbumPhoto::getType,
+                    Collectors.mapping(HighlightAlbumPhotoDto::from, Collectors.toList())
+                ));
+        }
 
 }

@@ -1,11 +1,14 @@
 package com.ssafy.keepick.highlight.controller.response;
 
 import com.ssafy.keepick.highlight.application.dto.HighlightAlbumDto;
+import com.ssafy.keepick.highlight.application.dto.HighlightAlbumPhotoDto;
+import com.ssafy.keepick.highlight.domain.HighlightType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Getter
@@ -18,7 +21,7 @@ public class HighlightAlbumCreateResponse {
     private String name;
     private String description;
     private int photoCount;
-    private List<HighlightScreenshotSaveResponse> photos;
+    private Map<HighlightType, List<HighlightScreenshotSaveResponse>> photos;
 
     public static HighlightAlbumCreateResponse from(HighlightAlbumDto album) {
         return HighlightAlbumCreateResponse.builder()
@@ -27,9 +30,17 @@ public class HighlightAlbumCreateResponse {
                 .name(album.getName())
                 .description(album.getDescription())
                 .photoCount(album.getPhotoCount())
-                .photos(album.getPhotos().stream()
-                        .map(HighlightScreenshotSaveResponse::from)
-                        .collect(Collectors.toList()))
+                .photos(groupingByType(album.getPhotos()))
                 .build();
+    }
+
+    private static Map<HighlightType, List<HighlightScreenshotSaveResponse>> groupingByType(Map<HighlightType, List<HighlightAlbumPhotoDto>> photoList) {
+        return photoList.entrySet().stream()
+                .collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    entry -> entry.getValue().stream()
+                            .map(HighlightScreenshotSaveResponse::from)
+                            .collect(Collectors.toList())
+                ));
     }
 }
