@@ -26,4 +26,6 @@ public interface HighlightAlbumRepository extends JpaRepository<HighlightAlbum, 
             "AND (p.deletedAt IS NULL OR p IS NULL)")
     Optional<HighlightAlbum> findWithPhotosByIdAndDeletedAtIsNull(Long albumId);
 
+    List<HighlightAlbum> findAllByGroupIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long groupId);
+
 }

@@ -48,8 +48,8 @@ import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.domain.GroupMemberStatus;
 import com.ssafy.keepick.group.persistence.GroupMemberRepository;
 import com.ssafy.keepick.group.persistence.GroupRepository;
-import com.ssafy.keepick.image.domain.Photo;
-import com.ssafy.keepick.image.persistence.PhotoRepository;
+import com.ssafy.keepick.photo.domain.Photo;
+import com.ssafy.keepick.photo.persistence.PhotoRepository;
 
 @ExtendWith(MockitoExtension.class)
 class TierAlbumServiceTest {
