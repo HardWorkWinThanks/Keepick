@@ -1,0 +1,41 @@
+{
+    "APIs": {
+        "1. 흐린 사진 감지": {
+            "endpoint": "/api/blur_detection",
+            "method": "POST",
+            "description": "이미지의 흐림 정도를 감지합니다",
+            "request_format": {
+                "images": [
+                    {"url": "http://example.com/image1.jpg", "name": "image1"}
+                ],
+                "blur_threshold": 100
+            }
+        },
+        "2. 유사 사진 분류": {
+            "endpoint": "/api/similar_grouping", 
+            "method": "POST",
+            "description": "유사한 이미지들을 그룹으로 분류합니다",
+            "request_format": {
+                "images": [
+                    {"url": "http://example.com/image1.jpg", "name": "image1"}
+                ],
+                "similarity_threshold": 0.9
+            }
+        },
+        "3. 얼굴 인식 및 태깅": {
+            "endpoint": "/api/face_tagging",
+            "method": "POST", 
+            "description": "기준 인물과 매칭되는 얼굴을 찾아 태깅합니다",
+            "request_format": {
+                "target_faces": [
+                    {"url": "http://example.com/person1.jpg", "name": "김철수"}
+                ],
+                "source_images": [
+                    {"url": "http://example.com/image1.jpg", "name": "image1"}
+                ],
+                "distance_threshold": 0.6,
+                "return_tagged_images": true
+            }
+        }
+    }
+}
