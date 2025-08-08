@@ -44,8 +44,8 @@ import com.ssafy.keepick.album.tier.controller.request.UpdateTierAlbumRequest;
 import com.ssafy.keepick.album.tier.persistence.TierAlbumPhotoRepository;
 import com.ssafy.keepick.album.tier.persistence.TierAlbumRepository;
 import com.ssafy.keepick.global.response.PagingResponse;
-import com.ssafy.keepick.image.domain.Photo;
-import com.ssafy.keepick.image.persistence.PhotoRepository;
+import com.ssafy.keepick.photo.domain.Photo;
+import com.ssafy.keepick.photo.persistence.PhotoRepository;
 
 @ExtendWith(MockitoExtension.class)
 class TierAlbumIntegrationTest {
