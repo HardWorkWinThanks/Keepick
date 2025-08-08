@@ -32,6 +32,9 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class TierAlbumService {
+    
+    // 썸네일 정보를 담는 record
+    private record ThumbnailInfo(String thumbnailUrl, String originalUrl) {}
     private final TierAlbumRepository tierAlbumRepository;
     private final TierAlbumPhotoRepository tierAlbumPhotoRepository;
     private final PhotoRepository photoRepository;
@@ -111,91 +114,20 @@ public class TierAlbumService {
         // 앨범이 해당 그룹에 속하는지 검증
         validateAlbumBelongsToGroup(tierAlbum, groupId);
         
-        // thumbnailId로 Photo 조회하여 URL 정보 가져오기
-        String thumbnailUrl = null;
-        String originalUrl = null;
-        if (request.getThumbnailId() != null) {
-            Photo thumbnailPhoto = photoRepository.findById(request.getThumbnailId())
-                .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND));
-            
-            // 썸네일로 지정할 사진이 해당 앨범에 포함되어 있는지 검증
-            boolean isPhotoInAlbum = tierAlbum.getAllPhotos().stream()
-                .anyMatch(albumPhoto -> albumPhoto.getPhoto().getId().equals(request.getThumbnailId()));
-            
-            if (!isPhotoInAlbum) {
-                throw new BaseException(ErrorCode.INVALID_PARAMETER);
-            }
-            
-            thumbnailUrl = thumbnailPhoto.getThumbnailUrl();
-            originalUrl = thumbnailPhoto.getOriginalUrl();
-        }
+        // 썸네일 URL 정보 가져오기
+        ThumbnailInfo thumbnailInfo = getThumbnailInfo(request.getThumbnailId(), tierAlbum);
         
         // 앨범 기본 정보 업데이트
-        tierAlbum.update(request.getName(), request.getDescription(), thumbnailUrl, originalUrl);
+        tierAlbum.update(request.getName(), request.getDescription(), 
+            thumbnailInfo.thumbnailUrl(), thumbnailInfo.originalUrl());
         
         // 티어별 사진 등급 업데이트가 없는 경우 바로 반환
         if (request.getPhotos() == null) {
             return TierAlbumDto.from(tierAlbum);
         }
         
-        Long albumId = tierAlbum.getId();
-        
-        // 1. 앨범에 포함된 모든 사진 ID 수집
-        List<Long> allAlbumPhotoIds = tierAlbum.getAllPhotos().stream()
-            .map(albumPhoto -> albumPhoto.getPhoto().getId())
-            .toList();
-        
-        // 2. 요청에서 모든 사진 ID들 수집
-        List<Long> allRequestedPhotoIds = request.getPhotos().values().stream()
-            .flatMap(List::stream)
-            .toList();
-        
-        // 3. 요청에 포함되지 않은 사진이 있는지 검증
-        List<Long> missingPhotoIds = allAlbumPhotoIds.stream()
-            .filter(photoId -> !allRequestedPhotoIds.contains(photoId))
-            .toList();
-        
-        if (!missingPhotoIds.isEmpty()) {
-            throw new BaseException(ErrorCode.INVALID_PARAMETER);
-        }
-        
-        // 4. 요청에 앨범에 없는 사진이 있는지 검증
-        List<Long> invalidPhotoIds = allRequestedPhotoIds.stream()
-            .filter(photoId -> !allAlbumPhotoIds.contains(photoId))
-            .toList();
-        
-        if (!invalidPhotoIds.isEmpty()) {
-            throw new BaseException(ErrorCode.INVALID_PARAMETER);
-        }
-        
-        // 5. 모든 사진을 먼저 null로 초기화
-        tierAlbumPhotoRepository.resetAllTiersByAlbumId(albumId);
-        
-        // 6. 각 티어별로 sequence 업데이트 및 티어 설정
-        for (Map.Entry<String, List<Long>> entry : request.getPhotos().entrySet()) {
-            String tierName = entry.getKey();
-            List<Long> photoIds = entry.getValue();
-            
-            if (photoIds != null && !photoIds.isEmpty()) {
-                // 각 티어 내에서 sequence 순서대로 업데이트
-                for (int i = 0; i < photoIds.size(); i++) {
-                    Long photoId = photoIds.get(i);
-                    if ("UNASSIGNED".equals(tierName)) {
-                        tierAlbumPhotoRepository.updateTierAndSequenceByPhotoId(albumId, photoId, null, i);
-                    } else {
-                        Tier tier = Tier.valueOf(tierName);
-                        tierAlbumPhotoRepository.updateTierAndSequenceByPhotoId(albumId, photoId, tier, i);
-                    }
-                }
-            }
-        }
-        
-        // 7. photoCount 업데이트 - 티어가 할당된 사진들만 카운트 (UNASSIGNED 제외)
-        int assignedPhotoCount = request.getPhotos().entrySet().stream()
-            .filter(entry -> !"UNASSIGNED".equals(entry.getKey())) // UNASSIGNED 제외
-            .mapToInt(entry -> entry.getValue().size()) // 각 티어의 사진 개수
-            .sum(); // 모든 티어의 사진 개수 합계
-        tierAlbum.updatePhotoCount(assignedPhotoCount);
+        // 사진 ID 검증 및 티어별 사진 업데이트
+        validateAndUpdateTierPhotos(tierAlbum, request.getPhotos());
         
         return TierAlbumDto.from(tierAlbum);
     }
@@ -245,5 +177,100 @@ public class TierAlbumService {
         if (!tierAlbum.getGroupId().equals(groupId)) {
             throw new BaseException(ErrorCode.FORBIDDEN);
         }
+    }
+    
+    /**
+     * 썸네일 정보를 가져오는 메서드
+     * 
+     * @param thumbnailId 썸네일로 지정할 사진 ID
+     * @param tierAlbum 앨범 엔티티
+     * @return ThumbnailInfo 썸네일 정보
+     * @throws BaseException 썸네일 사진이 존재하지 않거나 앨범에 포함되지 않은 경우
+     */
+    private ThumbnailInfo getThumbnailInfo(Long thumbnailId, TierAlbum tierAlbum) {
+        if (thumbnailId == null) {
+            return new ThumbnailInfo(null, null);
+        }
+        
+        Photo thumbnailPhoto = photoRepository.findById(thumbnailId)
+            .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND));
+        
+        // 썸네일로 지정할 사진이 해당 앨범에 포함되어 있는지 검증
+        boolean isPhotoInAlbum = tierAlbum.getAllPhotos().stream()
+            .anyMatch(albumPhoto -> albumPhoto.getPhoto().getId().equals(thumbnailId));
+        
+        if (!isPhotoInAlbum) {
+            throw new BaseException(ErrorCode.INVALID_PARAMETER);
+        }
+        
+        return new ThumbnailInfo(thumbnailPhoto.getThumbnailUrl(), thumbnailPhoto.getOriginalUrl());
+    }
+    
+    /**
+     * 사진 ID 검증 및 티어별 사진 업데이트
+     * 
+     * @param tierAlbum 앨범 엔티티
+     * @param photosMap 티어별 사진 ID 맵
+     * @throws BaseException 사진 ID 검증에 실패한 경우
+     */
+    private void validateAndUpdateTierPhotos(TierAlbum tierAlbum, Map<String, List<Long>> photosMap) {
+        Long albumId = tierAlbum.getId();
+        
+        // 1. 앨범에 포함된 모든 사진 ID 수집
+        List<Long> allAlbumPhotoIds = tierAlbum.getAllPhotos().stream()
+            .map(albumPhoto -> albumPhoto.getPhoto().getId())
+            .toList();
+        
+        // 2. 요청에서 모든 사진 ID들 수집
+        List<Long> allRequestedPhotoIds = photosMap.values().stream()
+            .flatMap(List::stream)
+            .toList();
+        
+        // 3. 요청에 포함되지 않은 사진이 있는지 검증
+        List<Long> missingPhotoIds = allAlbumPhotoIds.stream()
+            .filter(photoId -> !allRequestedPhotoIds.contains(photoId))
+            .toList();
+        
+        if (!missingPhotoIds.isEmpty()) {
+            throw new BaseException(ErrorCode.INVALID_PARAMETER);
+        }
+        
+        // 4. 요청에 앨범에 없는 사진이 있는지 검증
+        List<Long> invalidPhotoIds = allRequestedPhotoIds.stream()
+            .filter(photoId -> !allAlbumPhotoIds.contains(photoId))
+            .toList();
+        
+        if (!invalidPhotoIds.isEmpty()) {
+            throw new BaseException(ErrorCode.INVALID_PARAMETER);
+        }
+        
+        // 5. 모든 사진을 먼저 null로 초기화
+        tierAlbumPhotoRepository.resetAllTiersByAlbumId(albumId);
+        
+        // 6. 각 티어별로 sequence 업데이트 및 티어 설정
+        for (Map.Entry<String, List<Long>> entry : photosMap.entrySet()) {
+            String tierName = entry.getKey();
+            List<Long> photoIds = entry.getValue();
+            
+            if (photoIds != null && !photoIds.isEmpty()) {
+                // 각 티어 내에서 sequence 순서대로 업데이트
+                for (int i = 0; i < photoIds.size(); i++) {
+                    Long photoId = photoIds.get(i);
+                    if ("UNASSIGNED".equals(tierName)) {
+                        tierAlbumPhotoRepository.updateTierAndSequenceByPhotoId(albumId, photoId, null, i);
+                    } else {
+                        Tier tier = Tier.valueOf(tierName);
+                        tierAlbumPhotoRepository.updateTierAndSequenceByPhotoId(albumId, photoId, tier, i);
+                    }
+                }
+            }
+        }
+        
+        // 7. photoCount 업데이트 - 티어가 할당된 사진들만 카운트 (UNASSIGNED 제외)
+        int assignedPhotoCount = photosMap.entrySet().stream()
+            .filter(entry -> !"UNASSIGNED".equals(entry.getKey())) // UNASSIGNED 제외
+            .mapToInt(entry -> entry.getValue().size()) // 각 티어의 사진 개수
+            .sum(); // 모든 티어의 사진 개수 합계
+        tierAlbum.updatePhotoCount(assignedPhotoCount);
     }
 }
