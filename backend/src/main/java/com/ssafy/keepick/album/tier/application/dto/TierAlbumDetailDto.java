@@ -67,11 +67,11 @@ public class TierAlbumDetailDto {
      */
     public TierAlbumDetailResponse toResponse() {
         // photos 맵을 Response용으로 변환
-        Map<String, List<TierAlbumDetailResponse.TierAlbumPhotoDto>> photosResponse = this.photos.entrySet().stream()
+        Map<String, List<TierAlbumDetailResponse.Photo>> photosResponse = this.photos.entrySet().stream()
             .collect(Collectors.toMap(
                 Map.Entry::getKey,
                 entry -> entry.getValue().stream()
-                    .map(dto -> TierAlbumDetailResponse.TierAlbumPhotoDto.builder()
+                    .map(dto -> TierAlbumDetailResponse.Photo.builder()
                         .photoId(dto.getPhotoId())
                         .thumbnailUrl(dto.getThumbnailUrl())
                         .originalUrl(dto.getOriginalUrl())
