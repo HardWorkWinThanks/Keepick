@@ -8,6 +8,7 @@ import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.highlight.application.dto.HighlightAlbumDto;
 import com.ssafy.keepick.highlight.application.dto.HighlightAlbumPhotoDto;
 import com.ssafy.keepick.highlight.controller.request.HighlightAlbumCreateRequest;
+import com.ssafy.keepick.highlight.controller.request.HighlightAlbumUpdateDeleteRequest;
 import com.ssafy.keepick.highlight.controller.request.HighlightAlbumUpdateRequest;
 import com.ssafy.keepick.highlight.controller.request.HighlightScreenshotSaveRequest;
 import com.ssafy.keepick.highlight.domain.HighlightAlbum;
@@ -83,7 +84,7 @@ public class HighlightAlbumService {
 
     @Transactional
     public HighlightAlbumDto updateHighlightAlbum(Long albumId, HighlightAlbumUpdateRequest request) {
-        HighlightAlbum album = highlightAlbumRepository.findById(albumId)
+        HighlightAlbum album = highlightAlbumRepository.findWithPhotosByIdAndDeletedAtIsNull(albumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
 
         album.updateNameAndDesc(request.getName(), request.getDescription());
@@ -91,6 +92,14 @@ public class HighlightAlbumService {
         HighlightAlbumPhoto photo = highlightAlbumPhotoRepository.findById(request.getThumbnailId())
                 .orElseThrow(() -> new BaseException(ErrorCode.PHOTO_NOT_FOUND));
         album.changeThumbnail(photo.getPhotoUrl());
+
+        return HighlightAlbumDto.from(album);
+    }
+
+    @Transactional
+    public HighlightAlbumDto deleteHighlightAlbumPhoto(Long albumId, HighlightAlbumUpdateDeleteRequest request) {
+        HighlightAlbum album = highlightAlbumRepository.findWithPhotosByIdAndDeletedAtIsNull(albumId)
+                .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
 
         List<Long> deletePhotoIds = request.getDeletePhotoIds();
         if (deletePhotoIds != null && !deletePhotoIds.isEmpty()) {
@@ -117,7 +126,7 @@ public class HighlightAlbumService {
     @Transactional
     public HighlightAlbumDto deleteHighlightAlbum(Long groupId, Long albumId) {
         // 1. 앨범 그룹의 소유자가 맞는지 확인
-        HighlightAlbum album = highlightAlbumRepository.findById(albumId)
+        HighlightAlbum album = highlightAlbumRepository.findWithPhotosByIdAndDeletedAtIsNull(albumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
         if (album.getGroup() == null || !album.getGroup().getId().equals(groupId)) {
             throw new BaseException(ErrorCode.ALBUM_FORBIDDEN);

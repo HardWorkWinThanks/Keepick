@@ -5,6 +5,7 @@ import com.ssafy.keepick.highlight.application.HighlightAlbumService;
 import com.ssafy.keepick.highlight.application.dto.HighlightAlbumDto;
 import com.ssafy.keepick.highlight.application.dto.HighlightAlbumPhotoDto;
 import com.ssafy.keepick.highlight.controller.request.HighlightAlbumCreateRequest;
+import com.ssafy.keepick.highlight.controller.request.HighlightAlbumUpdateDeleteRequest;
 import com.ssafy.keepick.highlight.controller.request.HighlightAlbumUpdateRequest;
 import com.ssafy.keepick.highlight.controller.request.HighlightScreenshotSaveRequest;
 import com.ssafy.keepick.highlight.controller.response.HighlightAlbumResponse;
@@ -45,13 +46,24 @@ public class HighlightAlbumController {
 
     @PutMapping("{albumId}")
     @Operation(summary = "하이라이트 앨범 수정", description = """
-            특정 하이라이트 앨범의 제목, 설명, 대표사진을 수정하고, 지정된 사진들을 삭제합니다.
-            새로운 사진 추가는 불가능합니다
+            특정 하이라이트 앨범의 제목, 설명, 대표사진을 수정합니다.
             """)
     public ApiResponse<HighlightAlbumResponse> modifyHighlightAlbum(@PathVariable Long groupId,
                                                                     @PathVariable Long albumId,
                                                                     @RequestBody HighlightAlbumUpdateRequest request) {
         HighlightAlbumDto result = highlightAlbumService.updateHighlightAlbum(albumId, request);
+        return ApiResponse.ok(HighlightAlbumResponse.from(result));
+    }
+
+    @DeleteMapping("{albumId}/photos")
+    @Operation(summary = "하이라이트 앨범 수정 (사진 삭제)", description = """
+            특정 하이라이트 앨범의 지정된 사진들을 삭제합니다.
+            새로운 사진 추가는 불가능합니다
+            """)
+    public ApiResponse<HighlightAlbumResponse> deleteHighlightAlbum(@PathVariable Long groupId,
+                                                                    @PathVariable Long albumId,
+                                                                    @RequestBody HighlightAlbumUpdateDeleteRequest request) {
+        HighlightAlbumDto result = highlightAlbumService.deleteHighlightAlbumPhoto(albumId, request);
         return ApiResponse.ok(HighlightAlbumResponse.from(result));
     }
 

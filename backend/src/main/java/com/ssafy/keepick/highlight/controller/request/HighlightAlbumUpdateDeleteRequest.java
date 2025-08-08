@@ -9,8 +9,6 @@ import java.util.List;
 @Getter
 @Builder
 @AllArgsConstructor
-public class HighlightAlbumUpdateRequest {
-    private String name;
-    private String description;
-    private Long thumbnailId;
+public class HighlightAlbumUpdateDeleteRequest {
+    private List<Long> deletePhotoIds;
 }
