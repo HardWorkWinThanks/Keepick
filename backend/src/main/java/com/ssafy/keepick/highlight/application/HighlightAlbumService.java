@@ -132,7 +132,7 @@ public class HighlightAlbumService {
 
     @Transactional(readOnly = true)
     public HighlightAlbumDto getHighlightAlbum(Long groupId, Long albumId) {
-        HighlightAlbum album = highlightAlbumRepository.findById(albumId)
+        HighlightAlbum album = highlightAlbumRepository.findWithPhotosByIdAndDeletedAtIsNull(albumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
         if (album.getGroup() == null || !album.getGroup().getId().equals(groupId)) {
             throw new BaseException(ErrorCode.ALBUM_FORBIDDEN);
