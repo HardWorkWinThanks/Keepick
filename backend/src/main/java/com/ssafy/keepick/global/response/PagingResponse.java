@@ -1,6 +1,7 @@
 package com.ssafy.keepick.global.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,15 +20,25 @@ public class PagingResponse<T> {
     @Getter
     @Builder
     @AllArgsConstructor
+    @Schema(description = "페이징 정보")
     public static class PageInfo {
+        @Schema(description = "다음 페이지 존재 여부", example = "false")
         private final boolean hasNext;
+        
         @JsonInclude(JsonInclude.Include.NON_NULL)
+        @Schema(description = "현재 페이지 번호 (0부터 시작)", example = "0")
         private final Integer page;
+        
         @JsonInclude(JsonInclude.Include.NON_NULL)
+        @Schema(description = "페이지당 항목 수", example = "10")
         private final Integer size;
+        
         @JsonInclude(JsonInclude.Include.NON_NULL)
+        @Schema(description = "전체 페이지 수", example = "1")
         private final Integer totalPage;
+        
         @JsonInclude(JsonInclude.Include.NON_NULL)
+        @Schema(description = "전체 항목 수", example = "1")
         private final Long totalElement;
     }
 

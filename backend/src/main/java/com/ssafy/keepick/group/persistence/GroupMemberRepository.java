@@ -1,12 +1,13 @@
 package com.ssafy.keepick.group.persistence;
 
-import com.ssafy.keepick.group.domain.GroupMember;
-import com.ssafy.keepick.group.domain.GroupMemberStatus;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-import java.util.List;
-import java.util.Optional;
+import com.ssafy.keepick.group.domain.GroupMember;
+import com.ssafy.keepick.group.domain.GroupMemberStatus;
 
 public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> {
 
@@ -36,6 +37,7 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             "WHERE gm.group.id = :groupId " +
             "AND gm.status = GroupMemberStatus.ACCEPTED")
     List<GroupMember> findJoinedMembersById(Long groupId);
-
+    
+    // 사용자가 특정 그룹의 멤버인지 확인 (ACCEPTED 상태만)
     boolean existsByGroupIdAndMemberIdAndStatus(Long groupId, Long memberId, GroupMemberStatus status);
 }
