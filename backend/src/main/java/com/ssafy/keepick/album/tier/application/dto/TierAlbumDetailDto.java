@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import com.ssafy.keepick.album.tier.controller.response.TierAlbumDetailResponse;
 import com.ssafy.keepick.album.tier.domain.TierAlbum;
 import com.ssafy.keepick.album.tier.domain.TierAlbumPhoto;
 
@@ -55,6 +57,35 @@ public class TierAlbumDetailDto {
             .originalUrl(tierAlbum.getOriginalUrl())
             .photoCount(tierAlbum.getPhotoCount()) // 저장된 photoCount 사용
             .photos(completePhotosByTier)
+            .build();
+    }
+
+    /**
+     * DTO를 Response로 변환하는 메서드
+     * 
+     * @return TierAlbumDetailResponse
+     */
+    public TierAlbumDetailResponse toResponse() {
+        // photos 맵을 Response용으로 변환
+        Map<String, List<TierAlbumDetailResponse.TierAlbumPhotoDto>> photosResponse = this.photos.entrySet().stream()
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                entry -> entry.getValue().stream()
+                    .map(dto -> TierAlbumDetailResponse.TierAlbumPhotoDto.builder()
+                        .photoId(dto.getPhotoId())
+                        .thumbnailUrl(dto.getThumbnailUrl())
+                        .originalUrl(dto.getOriginalUrl())
+                        .sequence(dto.getSequence())
+                        .build())
+                    .toList()));
+
+        return TierAlbumDetailResponse.builder()
+            .title(this.title)
+            .description(this.description)
+            .thumbnailUrl(this.thumbnailUrl)
+            .originalUrl(this.originalUrl)
+            .photoCount(this.photoCount)
+            .photos(photosResponse)
             .build();
     }
 

@@ -2,7 +2,6 @@ package com.ssafy.keepick.album.tier.controller;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -180,27 +179,7 @@ public class TierAlbumController {
         TierAlbumDetailDto tierAlbumDetailDto = tierAlbumService.getTierAlbumDetail(groupId, tierAlbumId);
 
         // DTO를 Response로 변환
-        Map<String, List<TierAlbumDetailResponse.TierAlbumPhotoDto>> photosResponse = tierAlbumDetailDto.getPhotos()
-                .entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().stream()
-                                .map(dto -> TierAlbumDetailResponse.TierAlbumPhotoDto.builder()
-                                        .photoId(dto.getPhotoId())
-                                        .thumbnailUrl(dto.getThumbnailUrl())
-                                        .originalUrl(dto.getOriginalUrl())
-                                        .sequence(dto.getSequence())
-                                        .build())
-                                .toList()));
-
-        TierAlbumDetailResponse response = TierAlbumDetailResponse.builder()
-                .title(tierAlbumDetailDto.getTitle())
-                .description(tierAlbumDetailDto.getDescription())
-                .thumbnailUrl(tierAlbumDetailDto.getThumbnailUrl())
-                .originalUrl(tierAlbumDetailDto.getOriginalUrl())
-                .photoCount(tierAlbumDetailDto.getPhotoCount())
-                .photos(photosResponse)
-                .build();
+        TierAlbumDetailResponse response = tierAlbumDetailDto.toResponse();
 
         return ApiResponse.ok(response);
     }
