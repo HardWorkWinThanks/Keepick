@@ -1,8 +1,5 @@
-package com.ssafy.keepick.service;
+package com.ssafy.keepick.friend.application;
 
-import com.ssafy.keepick.friend.application.FriendService;
-import com.ssafy.keepick.friend.application.FriendStatus;
-import com.ssafy.keepick.friend.application.FriendInteractionService;
 import com.ssafy.keepick.friend.application.dto.FriendshipDto;
 import com.ssafy.keepick.friend.controller.request.FriendCreateRequest;
 import com.ssafy.keepick.friend.domain.Friendship;

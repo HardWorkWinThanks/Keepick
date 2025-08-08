@@ -1,4 +1,4 @@
-package com.ssafy.keepick.service.group;
+package com.ssafy.keepick.group.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keepick.external.redis.RedisService;
@@ -8,7 +8,6 @@ import com.ssafy.keepick.group.controller.request.GroupInviteRequest;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.domain.GroupMember;
 import com.ssafy.keepick.group.domain.GroupMemberStatus;
-import com.ssafy.keepick.group.application.GroupInvitationService;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.group.persistence.GroupMemberRepository;
 import com.ssafy.keepick.group.persistence.GroupRepository;

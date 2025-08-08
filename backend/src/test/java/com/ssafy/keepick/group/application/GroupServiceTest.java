@@ -1,11 +1,10 @@
-package com.ssafy.keepick.service.group;
+package com.ssafy.keepick.group.application;
 
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.group.controller.request.GroupCreateRequest;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.domain.GroupMember;
 import com.ssafy.keepick.group.domain.GroupMemberStatus;
-import com.ssafy.keepick.group.application.GroupService;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.group.persistence.GroupMemberRepository;
 import com.ssafy.keepick.group.persistence.GroupRepository;

@@ -1,17 +1,14 @@
-package com.ssafy.keepick.repository;
+package com.ssafy.keepick.group.persistence;
 
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.domain.GroupMember;
 import com.ssafy.keepick.group.domain.GroupMemberStatus;
-import com.ssafy.keepick.group.persistence.GroupMemberRepository;
-import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;

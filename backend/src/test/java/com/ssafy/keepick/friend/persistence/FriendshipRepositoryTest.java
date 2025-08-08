@@ -1,8 +1,7 @@
-package com.ssafy.keepick.persistence;
+package com.ssafy.keepick.friend.persistence;
 
 import com.ssafy.keepick.friend.domain.Friendship;
 import com.ssafy.keepick.friend.domain.FriendshipStatus;
-import com.ssafy.keepick.friend.persistence.FriendshipRepository;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
 import jakarta.persistence.EntityManager;

@@ -1,4 +1,4 @@
-package com.ssafy.keepick.persistence;
+package com.ssafy.keepick.member.persistence;
 
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
