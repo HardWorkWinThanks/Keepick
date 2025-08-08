@@ -16,6 +16,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import com.ssafy.keepick.album.tier.domain.TierAlbum;
 import com.ssafy.keepick.album.tier.domain.TierAlbumPhoto;
@@ -144,16 +148,18 @@ class TierAlbumRepositoryTest {
     void findByGroupIdWithPaging_Success() {
         // given
         List<TierAlbum> albums = Arrays.asList(tierAlbum1, tierAlbum2);
-        when(tierAlbumRepository.findByGroupIdWithPaging(1L, 0, 10)).thenReturn(albums);
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<TierAlbum> albumPage = new PageImpl<>(albums, pageable, 2L);
+        when(tierAlbumRepository.findByGroupIdWithPaging(1L, pageable)).thenReturn(albumPage);
 
         // when
-        List<TierAlbum> result = tierAlbumRepository.findByGroupIdWithPaging(1L, 0, 10);
+        Page<TierAlbum> result = tierAlbumRepository.findByGroupIdWithPaging(1L, pageable);
 
         // then
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getName()).isEqualTo("테스트 앨범 1");
-        assertThat(result.get(1).getName()).isEqualTo("테스트 앨범 2");
-        verify(tierAlbumRepository).findByGroupIdWithPaging(1L, 0, 10);
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent().get(0).getName()).isEqualTo("테스트 앨범 1");
+        assertThat(result.getContent().get(1).getName()).isEqualTo("테스트 앨범 2");
+        verify(tierAlbumRepository).findByGroupIdWithPaging(1L, pageable);
     }
 
     @Test
@@ -161,14 +167,16 @@ class TierAlbumRepositoryTest {
     void findByGroupIdWithPaging_WithSizeLimit() {
         // given
         List<TierAlbum> albums = Arrays.asList(tierAlbum1);
-        when(tierAlbumRepository.findByGroupIdWithPaging(1L, 0, 1)).thenReturn(albums);
+        Pageable pageable = PageRequest.of(0, 1);
+        Page<TierAlbum> albumPage = new PageImpl<>(albums, pageable, 1L);
+        when(tierAlbumRepository.findByGroupIdWithPaging(1L, pageable)).thenReturn(albumPage);
 
         // when
-        List<TierAlbum> result = tierAlbumRepository.findByGroupIdWithPaging(1L, 0, 1);
+        Page<TierAlbum> result = tierAlbumRepository.findByGroupIdWithPaging(1L, pageable);
 
         // then
-        assertThat(result).hasSize(1);
-        verify(tierAlbumRepository).findByGroupIdWithPaging(1L, 0, 1);
+        assertThat(result.getContent()).hasSize(1);
+        verify(tierAlbumRepository).findByGroupIdWithPaging(1L, pageable);
     }
 
     @Test
@@ -205,15 +213,19 @@ class TierAlbumRepositoryTest {
     }
 
     @Test
-    @DisplayName("TierAlbumPhoto 업데이트 성공")
-    void updateTierAlbumPhoto_Success() {
+    @DisplayName("앨범 ID로 사진 목록 조회 성공")
+    void findByAlbumId_Success() {
         // given
-        doNothing().when(tierAlbumPhotoRepository).updateTiersByPhotoIds(eq(1L), eq(Tier.S), anyList());
+        List<TierAlbumPhoto> photos = Arrays.asList(tierAlbumPhoto1, tierAlbumPhoto2);
+        when(tierAlbumPhotoRepository.findByAlbumId(1L)).thenReturn(photos);
 
         // when
-        tierAlbumPhotoRepository.updateTiersByPhotoIds(1L, Tier.S, Arrays.asList(1L));
+        List<TierAlbumPhoto> result = tierAlbumPhotoRepository.findByAlbumId(1L);
 
         // then
-        verify(tierAlbumPhotoRepository).updateTiersByPhotoIds(1L, Tier.S, Arrays.asList(1L));
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getTier()).isEqualTo(Tier.S);
+        assertThat(result.get(1).getTier()).isEqualTo(Tier.A);
+        verify(tierAlbumPhotoRepository).findByAlbumId(1L);
     }
 }

@@ -194,14 +194,14 @@ class TierAlbumControllerTest {
         // given
         Long groupId = 1L;
 
-        when(tierAlbumService.getTierAlbumListWithPaging(eq(groupId), eq(0), eq(10)))
+        when(tierAlbumService.getTierAlbumListWithPaging(eq(groupId), eq(1), eq(10)))
             .thenReturn(tierAlbumListDto);
 
         // when & then (파라미터 없이 호출)
         mockMvc.perform(get("/api/groups/{groupId}/tier-albums", groupId))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value(200))
-            .andExpect(jsonPath("$.data.content").isArray());
+            .andExpect(jsonPath("$.data.list").isArray());
     }
 
     @Test

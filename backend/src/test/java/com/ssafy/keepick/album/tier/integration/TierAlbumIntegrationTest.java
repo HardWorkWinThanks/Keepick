@@ -150,7 +150,7 @@ class TierAlbumIntegrationTest {
                 .param("size", "10"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value(200))
-            .andExpect(jsonPath("$.data.content").isArray());
+            .andExpect(jsonPath("$.data.list").isArray());
 
         // 3. 티어 앨범 상세 조회
         Long tierAlbumId = 1L;
