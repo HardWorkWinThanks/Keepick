@@ -20,7 +20,11 @@ public interface TierAlbumPhotoRepository extends JpaRepository<TierAlbumPhoto, 
     """)
     List<TierAlbumPhoto> findByAlbumId(@Param("albumId") Long albumId);
 
+    // ===== 더 이상 사용하지 않는 메서드들 (JPA 영속성 컨텍스트 기반으로 변경됨) =====
+    
     // 배치 업데이트: 앨범의 모든 사진을 제외 상태로 초기화
+    // @Deprecated - JPA 영속성 컨텍스트를 활용한 방식으로 변경됨
+    /*
     @Modifying
     @Query("""
         UPDATE TierAlbumPhoto tp 
@@ -28,8 +32,11 @@ public interface TierAlbumPhotoRepository extends JpaRepository<TierAlbumPhoto, 
         WHERE tp.album.id = :albumId
     """)
     void resetAllTiersByAlbumId(@Param("albumId") Long albumId);
+    */
 
     // 배치 업데이트: 요청되지 않은 사진들을 제외 상태로 설정
+    // @Deprecated - JPA 영속성 컨텍스트를 활용한 방식으로 변경됨
+    /*
     @Modifying
     @Query("""
         UPDATE TierAlbumPhoto tp 
@@ -37,8 +44,11 @@ public interface TierAlbumPhotoRepository extends JpaRepository<TierAlbumPhoto, 
         WHERE tp.album.id = :albumId AND tp.photo.id NOT IN :photoIds
     """)
     void excludePhotosNotInList(@Param("albumId") Long albumId, @Param("photoIds") List<Long> photoIds);
+    */
 
     // 배치 업데이트: 특정 사진들의 티어 설정
+    // @Deprecated - JPA 영속성 컨텍스트를 활용한 방식으로 변경됨
+    /*
     @Modifying
     @Query("""
         UPDATE TierAlbumPhoto tp 
@@ -46,8 +56,11 @@ public interface TierAlbumPhotoRepository extends JpaRepository<TierAlbumPhoto, 
         WHERE tp.album.id = :albumId AND tp.photo.id IN :photoIds
     """)
     void updateTiersByPhotoIds(@Param("albumId") Long albumId, @Param("tier") Tier tier, @Param("photoIds") List<Long> photoIds);
+    */
 
     // 개별 사진의 티어와 sequence 업데이트
+    // @Deprecated - JPA 영속성 컨텍스트를 활용한 방식으로 변경됨
+    /*
     @Modifying
     @Query("""
         UPDATE TierAlbumPhoto tp 
@@ -55,4 +68,5 @@ public interface TierAlbumPhotoRepository extends JpaRepository<TierAlbumPhoto, 
         WHERE tp.album.id = :albumId AND tp.photo.id = :photoId
     """)
     void updateTierAndSequenceByPhotoId(@Param("albumId") Long albumId, @Param("photoId") Long photoId, @Param("tier") Tier tier, @Param("sequence") int sequence);
+    */
 }

@@ -2,6 +2,7 @@ package com.ssafy.keepick.album.tier.application;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -244,10 +245,20 @@ public class TierAlbumService {
             throw new BaseException(ErrorCode.INVALID_PARAMETER);
         }
         
-        // 5. 모든 사진을 먼저 null로 초기화
-        tierAlbumPhotoRepository.resetAllTiersByAlbumId(albumId);
+        // 5. 앨범의 모든 사진을 조회하여 영속성 컨텍스트에서 관리
+        List<TierAlbumPhoto> allTierAlbumPhotos = tierAlbumPhotoRepository.findByAlbumId(albumId);
         
-        // 6. 각 티어별로 sequence 업데이트 및 티어 설정
+        // 성능 개선을 위해 Map으로 변환 (photoId -> TierAlbumPhoto)
+        Map<Long, TierAlbumPhoto> photoIdToAlbumPhotoMap = allTierAlbumPhotos.stream()
+            .collect(Collectors.toMap(
+                albumPhoto -> albumPhoto.getPhoto().getId(),
+                albumPhoto -> albumPhoto
+            ));
+        
+        // 6. 모든 사진의 티어를 null로 초기화 (영속성 컨텍스트 활용)
+        allTierAlbumPhotos.forEach(TierAlbumPhoto::resetTier);
+        
+        // 7. 각 티어별로 sequence 업데이트 및 티어 설정 (영속성 컨텍스트 활용)
         for (Map.Entry<String, List<Long>> entry : photosMap.entrySet()) {
             String tierName = entry.getKey();
             List<Long> photoIds = entry.getValue();
@@ -256,17 +267,21 @@ public class TierAlbumService {
                 // 각 티어 내에서 sequence 순서대로 업데이트
                 for (int i = 0; i < photoIds.size(); i++) {
                     Long photoId = photoIds.get(i);
-                    if ("UNASSIGNED".equals(tierName)) {
-                        tierAlbumPhotoRepository.updateTierAndSequenceByPhotoId(albumId, photoId, null, i);
-                    } else {
-                        Tier tier = Tier.valueOf(tierName);
-                        tierAlbumPhotoRepository.updateTierAndSequenceByPhotoId(albumId, photoId, tier, i);
+                    
+                    // Map에서 해당 사진을 찾아서 업데이트 (O(1) 조회)
+                    TierAlbumPhoto targetAlbumPhoto = photoIdToAlbumPhotoMap.get(photoId);
+                    if (targetAlbumPhoto == null) {
+                        throw new BaseException(ErrorCode.NOT_FOUND);
                     }
+                    
+                    // 티어와 시퀀스를 한 번에 업데이트
+                    Tier tier = "UNASSIGNED".equals(tierName) ? null : Tier.valueOf(tierName);
+                    targetAlbumPhoto.updateTierAndSequence(tier, i);
                 }
             }
         }
         
-        // 7. photoCount 업데이트 - 티어가 할당된 사진들만 카운트 (UNASSIGNED 제외)
+        // 8. photoCount 업데이트 - 티어가 할당된 사진들만 카운트 (UNASSIGNED 제외)
         int assignedPhotoCount = photosMap.entrySet().stream()
             .filter(entry -> !"UNASSIGNED".equals(entry.getKey())) // UNASSIGNED 제외
             .mapToInt(entry -> entry.getValue().size()) // 각 티어의 사진 개수

@@ -50,4 +50,22 @@ public class TierAlbumPhoto {
     public void updateSequence(Integer sequence) {
         this.sequence = sequence;
     }
+    
+    /**
+     * 티어와 시퀀스를 한 번에 업데이트하는 메서드
+     * 
+     * @param tier 새로운 티어 (null 가능)
+     * @param sequence 새로운 시퀀스
+     */
+    public void updateTierAndSequence(Tier tier, Integer sequence) {
+        this.tier = tier;
+        this.sequence = sequence;
+    }
+    
+    /**
+     * 티어를 초기화하는 메서드 (null로 설정)
+     */
+    public void resetTier() {
+        this.tier = null;
+    }
 }
