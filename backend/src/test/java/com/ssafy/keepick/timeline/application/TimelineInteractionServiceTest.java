@@ -17,24 +17,34 @@ import com.ssafy.keepick.timeline.persistence.TimelineAlbumPhotoRepository;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumRepository;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumSectionRepository;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.BDDMockito.willDoNothing;
 
+@ExtendWith(MockitoExtension.class)
 @Import({
         TimelineInteractionService.class,
+        TimelineValidationService.class,
         QueryDslConfig.class
 })
 @DataJpaTest
 class TimelineInteractionServiceTest {
+
+    @MockitoBean
+    TimelineValidationService timelineValidationService;
 
     @Autowired
     EntityManager entityManager;
@@ -56,6 +66,13 @@ class TimelineInteractionServiceTest {
 
     @Autowired
     PhotoRepository photoRepository;
+
+    @BeforeEach
+    void beforeEach() {
+        willDoNothing().given(timelineValidationService).validateAlbumPermission(anyLong(), anyLong());
+        willDoNothing().given(timelineValidationService).validateAlbumBelongsToGroup(anyLong(), anyLong());
+        willDoNothing().given(timelineValidationService).validateGroupMemberPermission(anyLong());
+    }
 
     @DisplayName("타임라인 앨범을 생성합니다. 생성 시 그룹과 사진 목록이 반드시 필요합니다.")
     @Test
@@ -109,10 +126,10 @@ class TimelineInteractionServiceTest {
 
         // 수정 정보 - 섹션 1개 생성 (사진 1,2)
         TimelineUpdateRequest.SectionUpdateRequest sectionUpdateRequest = createSectionUpdateRequest(null, List.of(photo1, photo2));
-        TimelineUpdateRequest request = createUpdateRequest(photo1, List.of(sectionUpdateRequest), List.of(photo1));
+        TimelineUpdateRequest request = createUpdateRequest(photo1, List.of(sectionUpdateRequest));
 
         // when
-        TimelineAlbumDto dto = timelineInteractionService.updateTimelineAlbum(album.getId(), request);
+        TimelineAlbumDto dto = timelineInteractionService.updateTimelineAlbum(group.getId(), album.getId(), request);
         List<TimelineAlbumSection> sections = timelineAlbumSectionRepository.findAllByAlbumId(album.getId());
 
         // then
@@ -141,10 +158,13 @@ class TimelineInteractionServiceTest {
 
         // 수정 정보 - 사진 2,3 변경
         TimelineUpdateRequest.SectionUpdateRequest sectionUpdateRequest = createSectionUpdateRequest(section.getId(), List.of(photo2, photo3));
-        TimelineUpdateRequest request = createUpdateRequest(photo1, List.of(sectionUpdateRequest), List.of(photo1));
+        TimelineUpdateRequest request = createUpdateRequest(photo1, List.of(sectionUpdateRequest));
+
+        entityManager.flush();
+        entityManager.clear();
 
         // when
-        TimelineAlbumDto dto = timelineInteractionService.updateTimelineAlbum(album.getId(), request);
+        TimelineAlbumDto dto = timelineInteractionService.updateTimelineAlbum(group.getId(), album.getId(), request);
         List<TimelineAlbumSection> sections = timelineAlbumSectionRepository.findAllByAlbumId(album.getId());
 
         // then
@@ -177,10 +197,10 @@ class TimelineInteractionServiceTest {
         entityManager.clear();
 
         // 수정 정보 - 섹션 삭제
-        TimelineUpdateRequest request = createUpdateRequest(photo1, List.of(), List.of(photo1, photo2, photo3));
+        TimelineUpdateRequest request = createUpdateRequest(photo1, List.of());
 
         // when
-        TimelineAlbumDto dto = timelineInteractionService.updateTimelineAlbum(album.getId(), request);
+        TimelineAlbumDto dto = timelineInteractionService.updateTimelineAlbum(group.getId(), album.getId(), request);
 
         List<TimelineAlbumSection> sections = timelineAlbumSectionRepository.findAllByAlbumId(album.getId());
 
@@ -206,7 +226,7 @@ class TimelineInteractionServiceTest {
         TimelinePhotoRequest request = TimelinePhotoRequest.builder().photoIds(List.of(photo.getId(), photo1.getId(), photo2.getId())).build();
 
         // when
-        List<TimelineAlbumPhotoDto> dtoList = timelineInteractionService.addPhotoToTimelineAlbum(album.getId(), request);
+        List<TimelineAlbumPhotoDto> dtoList = timelineInteractionService.addPhotoToTimelineAlbum(group.getId(), album.getId(), request);
 
         // then
         assertThat(dtoList.size()).isEqualTo(2);
@@ -227,8 +247,8 @@ class TimelineInteractionServiceTest {
         TimelinePhotoRequest request = TimelinePhotoRequest.builder().photoIds(List.of(photo.getId())).build();
 
         // when
-        timelineInteractionService.deletePhotoFromTimelineAlbum(album.getId(), request);
-        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findAllByPhotoIdIn(album.getId(), List.of(photo.getId()));
+        timelineInteractionService.deletePhotoFromTimelineAlbum(group.getId(), album.getId(), request);
+        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findAllByAlbumIdAndDeletedAtIsNull(album.getId());
 
         // then
         assertThat(photos).extracting("id").doesNotContain(photo.getId());
@@ -250,7 +270,7 @@ class TimelineInteractionServiceTest {
         return section;
     }
 
-    private TimelineUpdateRequest createUpdateRequest(Photo thumbnail, List<TimelineUpdateRequest.SectionUpdateRequest> sectionRequests, List<Photo> unused) {
+    private TimelineUpdateRequest createUpdateRequest(Photo thumbnail, List<TimelineUpdateRequest.SectionUpdateRequest> sectionRequests) {
         return TimelineUpdateRequest
                 .builder()
                 .name("NAME")
@@ -259,7 +279,6 @@ class TimelineInteractionServiceTest {
                 .endDate(LocalDate.of(2020, 1, 2))
                 .thumbnailId(thumbnail.getId())
                 .sections(sectionRequests)
-                .unusedPhotoIds(unused.stream().map(Photo::getId).toList())
                 .build();
     }
 

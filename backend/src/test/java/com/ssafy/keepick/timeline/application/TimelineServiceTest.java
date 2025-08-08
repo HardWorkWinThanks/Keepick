@@ -12,28 +12,35 @@ import com.ssafy.keepick.timeline.domain.TimelineAlbumPhoto;
 import com.ssafy.keepick.timeline.domain.TimelineAlbumSection;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumRepository;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumSectionRepository;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import static org.mockito.BDDMockito.*;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.BDDMockito.given;
 
+@ExtendWith(MockitoExtension.class)
 @Import({
         TimelineService.class,
+        TimelineValidationService.class,
         QueryDslConfig.class
 })
 @DataJpaTest
 class TimelineServiceTest {
+
+    @MockitoBean
+    TimelineValidationService timelineValidationService;
 
     @Autowired TimelineService timelineService;
 
@@ -48,6 +55,13 @@ class TimelineServiceTest {
 
     @Autowired
     PhotoRepository photoRepository;
+
+    @BeforeEach
+    void beforeEach() {
+        willDoNothing().given(timelineValidationService).validateAlbumPermission(anyLong(), anyLong());
+        willDoNothing().given(timelineValidationService).validateAlbumBelongsToGroup(anyLong(), anyLong());
+        willDoNothing().given(timelineValidationService).validateGroupMemberPermission(anyLong());
+    }
 
     @DisplayName("타임라인 앨범 목록을 조회합니다.")
     @Test
@@ -101,7 +115,7 @@ class TimelineServiceTest {
         TimelineAlbumSection section3 = timelineAlbumSectionRepository.save(createSection(album));
 
         // when
-        TimelineAlbumDto albumDto = timelineService.getTimelineAlbum(album.getId());
+        TimelineAlbumDto albumDto = timelineService.getTimelineAlbum(group.getId(), album.getId());
 
         // then
         assertThat(albumDto.getSections().size()).isEqualTo(3);
