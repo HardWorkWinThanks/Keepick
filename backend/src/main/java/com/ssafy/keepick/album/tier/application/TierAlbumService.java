@@ -211,7 +211,7 @@ public class TierAlbumService {
      * 사진 ID 검증 및 티어별 사진 업데이트
      * 
      * @param tierAlbum 앨범 엔티티
-     * @param photosMap 티어별 사진 ID 맵
+     * @param photosMap 명시적으로 할당된 티어별 사진 ID 맵 (UNASSIGNED 제외)
      * @throws BaseException 사진 ID 검증에 실패한 경우
      */
     private void validateAndUpdateTierPhotos(TierAlbum tierAlbum, Map<String, List<Long>> photosMap) {
@@ -222,22 +222,13 @@ public class TierAlbumService {
             .map(albumPhoto -> albumPhoto.getPhoto().getId())
             .toList();
         
-        // 2. 요청에서 모든 사진 ID들 수집
-        List<Long> allRequestedPhotoIds = photosMap.values().stream()
+        // 2. 요청에서 명시적으로 할당된 모든 사진 ID들 수집
+        List<Long> allAssignedPhotoIds = photosMap.values().stream()
             .flatMap(List::stream)
             .toList();
         
-        // 3. 요청에 포함되지 않은 사진이 있는지 검증
-        List<Long> missingPhotoIds = allAlbumPhotoIds.stream()
-            .filter(photoId -> !allRequestedPhotoIds.contains(photoId))
-            .toList();
-        
-        if (!missingPhotoIds.isEmpty()) {
-            throw new BaseException(ErrorCode.INVALID_PARAMETER);
-        }
-        
-        // 4. 요청에 앨범에 없는 사진이 있는지 검증
-        List<Long> invalidPhotoIds = allRequestedPhotoIds.stream()
+        // 3. 요청에 앨범에 없는 사진이 있는지 검증
+        List<Long> invalidPhotoIds = allAssignedPhotoIds.stream()
             .filter(photoId -> !allAlbumPhotoIds.contains(photoId))
             .toList();
         
@@ -245,7 +236,7 @@ public class TierAlbumService {
             throw new BaseException(ErrorCode.INVALID_PARAMETER);
         }
         
-        // 5. 앨범의 모든 사진을 조회하여 영속성 컨텍스트에서 관리
+        // 4. 앨범의 모든 사진을 조회하여 영속성 컨텍스트에서 관리
         List<TierAlbumPhoto> allTierAlbumPhotos = tierAlbumPhotoRepository.findByAlbumId(albumId);
         
         // 성능 개선을 위해 Map으로 변환 (photoId -> TierAlbumPhoto)
@@ -255,10 +246,10 @@ public class TierAlbumService {
                 albumPhoto -> albumPhoto
             ));
         
-        // 6. 모든 사진의 티어를 null로 초기화 (영속성 컨텍스트 활용)
+        // 5. 모든 사진의 티어를 null로 초기화 (영속성 컨텍스트 활용)
         allTierAlbumPhotos.forEach(TierAlbumPhoto::resetTier);
         
-        // 7. 각 티어별로 sequence 업데이트 및 티어 설정 (영속성 컨텍스트 활용)
+        // 6. 각 티어별로 sequence 업데이트 및 티어 설정 (영속성 컨텍스트 활용)
         for (Map.Entry<String, List<Long>> entry : photosMap.entrySet()) {
             String tierName = entry.getKey();
             List<Long> photoIds = entry.getValue();
@@ -275,16 +266,15 @@ public class TierAlbumService {
                     }
                     
                     // 티어와 시퀀스를 한 번에 업데이트
-                    Tier tier = "UNASSIGNED".equals(tierName) ? null : Tier.valueOf(tierName);
+                    Tier tier = Tier.valueOf(tierName);
                     targetAlbumPhoto.updateTierAndSequence(tier, i);
                 }
             }
         }
         
-        // 8. photoCount 업데이트 - 티어가 할당된 사진들만 카운트 (UNASSIGNED 제외)
-        int assignedPhotoCount = photosMap.entrySet().stream()
-            .filter(entry -> !"UNASSIGNED".equals(entry.getKey())) // UNASSIGNED 제외
-            .mapToInt(entry -> entry.getValue().size()) // 각 티어의 사진 개수
+        // 7. photoCount 업데이트 - 명시적으로 할당된 사진들만 카운트
+        int assignedPhotoCount = photosMap.values().stream()
+            .mapToInt(List::size) // 각 티어의 사진 개수
             .sum(); // 모든 티어의 사진 개수 합계
         tierAlbum.updatePhotoCount(assignedPhotoCount);
     }

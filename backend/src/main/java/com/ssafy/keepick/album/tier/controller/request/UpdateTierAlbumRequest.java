@@ -31,17 +31,16 @@ public class UpdateTierAlbumRequest {
     private Long thumbnailId;
     
     @Schema(
-        description = "티어별 사진 ID 리스트 (S, A, B, C, D, UNASSIGNED)",
+        description = "티어별 사진 ID 리스트 (S, A, B, C, D만 포함, 할당되지 않은 사진은 자동으로 UNASSIGNED로 처리)",
         example = """
         {
             "S": [1, 2],
             "A": [3, 4, 5],
             "B": [6],
             "C": [],
-            "D": [],
-            "UNASSIGNED": [7, 8]
+            "D": []
         }
         """
     )
-    private Map<String, List<Long>> photos; // 티어별 사진 ID 리스트
+    private Map<String, List<Long>> photos; // 명시적으로 할당된 티어별 사진 ID 리스트
 }
