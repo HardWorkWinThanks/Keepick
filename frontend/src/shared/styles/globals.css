@@ -48,6 +48,11 @@ body {
 }
 
 /* keepick-nextjs 스타일들 추가 */
+
+/* Main Records 랜딩페이지 전용 스타일 */
+.bg-gradient-radial {
+  background: radial-gradient(var(--tw-gradient-stops));
+}
 .font-montserrat {
   font-family: var(--font-montserrat), sans-serif;
 }
