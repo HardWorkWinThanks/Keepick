@@ -17,7 +17,7 @@ public class AlbumResponse {
     private List<Album> tierAlbumList;
     private List<Album> highlightAlbumList;
 
-    public static AlbumResponse toResponse(AlbumDto dto) {
+    public static AlbumResponse from(AlbumDto dto) {
         return AlbumResponse.builder()
                 .timelineAlbumList(dto.getTimelineAlbumDtoList().stream().map(Album::from).toList())
                 .tierAlbumList(dto.getTierAlbumDtoList().stream().map(Album::from).toList())
