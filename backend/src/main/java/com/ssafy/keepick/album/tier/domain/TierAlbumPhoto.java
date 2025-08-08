@@ -1,7 +1,7 @@
 package com.ssafy.keepick.album.tier.domain;
 
-import com.ssafy.keepick.image.domain.Photo;
 
+import com.ssafy.keepick.photo.domain.Photo;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;

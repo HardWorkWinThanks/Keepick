@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.ssafy.keepick.photo.domain.Photo;
+import com.ssafy.keepick.photo.persistence.PhotoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
@@ -24,8 +26,6 @@ import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.group.domain.GroupMemberStatus;
 import com.ssafy.keepick.group.persistence.GroupMemberRepository;
 import com.ssafy.keepick.group.persistence.GroupRepository;
-import com.ssafy.keepick.image.domain.Photo;
-import com.ssafy.keepick.image.persistence.PhotoRepository;
 import com.ssafy.keepick.global.response.PagingResponse;
 
 import lombok.RequiredArgsConstructor;
