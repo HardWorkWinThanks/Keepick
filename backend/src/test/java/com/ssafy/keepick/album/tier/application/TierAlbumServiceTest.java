@@ -459,9 +459,7 @@ class TierAlbumServiceTest {
                 .thenReturn(Optional.of(mockTierAlbum))
                 .thenReturn(Optional.of(mockTierAlbum)); // 두 번째 호출을 위한 모킹
             when(photoRepository.findById(1L)).thenReturn(Optional.of(photo1));
-            doNothing().when(tierAlbumPhotoRepository).resetAllTiersByAlbumId(eq(tierAlbumId));
-            doNothing().when(tierAlbumPhotoRepository).updateTierAndSequenceByPhotoId(eq(tierAlbumId), eq(1L), eq(Tier.S), eq(0));
-            doNothing().when(tierAlbumPhotoRepository).updateTierAndSequenceByPhotoId(eq(tierAlbumId), eq(2L), eq(Tier.A), eq(0));
+            when(tierAlbumPhotoRepository.findByAlbumId(tierAlbumId)).thenReturn(Arrays.asList(tierAlbumPhoto1, tierAlbumPhoto2));
 
             // when
             TierAlbumDto result = tierAlbumService.updateTierAlbum(groupId, tierAlbumId, updateRequest);
@@ -472,9 +470,7 @@ class TierAlbumServiceTest {
             verify(groupMemberRepository).existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED);
             verify(tierAlbumRepository).findAlbumWithPhotosById(tierAlbumId);
             verify(photoRepository).findById(1L);
-            verify(tierAlbumPhotoRepository).resetAllTiersByAlbumId(tierAlbumId);
-            verify(tierAlbumPhotoRepository).updateTierAndSequenceByPhotoId(eq(tierAlbumId), eq(1L), eq(Tier.S), eq(0));
-            verify(tierAlbumPhotoRepository).updateTierAndSequenceByPhotoId(eq(tierAlbumId), eq(2L), eq(Tier.A), eq(0));
+            verify(tierAlbumPhotoRepository).findByAlbumId(tierAlbumId);
         }
     }
 
