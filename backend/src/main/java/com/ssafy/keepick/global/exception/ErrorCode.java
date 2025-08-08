@@ -46,6 +46,10 @@ public enum ErrorCode {
     ALBUM_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 앨범입니다.", "AB001"),
     ALBUM_PHOTO_NOT_FOUND(HttpStatus.NOT_FOUND, "앨범에 존재하지 않는 사진입니다.", "AB002"),
     ALBUM_FORBIDDEN(HttpStatus.NOT_FOUND, "앨범을 처리할 권한이 없습니다.", "AB003"),
+    ALBUM_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 앨범이 생성되었습니다.", "AB004"),
+
+    //HIGHLIGHT ALBUM
+    NO_SCREENSHOTS_FOUND(HttpStatus.BAD_REQUEST, "저장된 스크린샷이 없습니다.", "HAB001"),
 
     // 시스템 에러
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다.", "S001"),

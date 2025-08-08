@@ -30,7 +30,7 @@ public class Member {
     @Column(nullable = false)
     private String nickname;
 
-    @Column(name = "profile_url")
+    @Column(name = "profile_url", length = 500)
     private String profileUrl;
 
     @Column(nullable = false)
