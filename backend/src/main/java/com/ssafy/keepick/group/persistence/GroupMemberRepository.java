@@ -36,4 +36,6 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             "WHERE gm.group.id = :groupId " +
             "AND gm.status = GroupMemberStatus.ACCEPTED")
     List<GroupMember> findJoinedMembersById(Long groupId);
+
+    boolean existsByGroupIdAndMemberIdAndStatus(Long groupId, Long memberId, GroupMemberStatus status);
 }

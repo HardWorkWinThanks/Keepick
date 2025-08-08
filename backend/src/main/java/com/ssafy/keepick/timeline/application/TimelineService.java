@@ -23,25 +23,22 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class TimelineService {
 
+    private final TimelineValidationService timelineValidationService;
     private final TimelineAlbumRepository timelineAlbumRepository;
     private final TimelineAlbumSectionRepository timelineAlbumSectionRepository;
     private final TimelineAlbumPhotoRepository timelineAlbumPhotoRepository;
 
     public Page<TimelineAlbumDto> getTimelineAlbumList(Long groupId, Integer page, Integer size) {
+        timelineValidationService.validateGroupMemberPermission(groupId);
+
         Page<TimelineAlbum> albumPage = timelineAlbumRepository.findAllByGroupIdAndDeletedAtIsNull(groupId, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         Page<TimelineAlbumDto> albumDtoPage = albumPage.map(TimelineAlbumDto::from);
         return albumDtoPage;
     }
 
-    public TimelineAlbumDto getTimelineAlbum(Long albumId) {
-        TimelineAlbum timelineAlbum = getTimelineAlbumDetail(albumId);
+    public TimelineAlbumDto getTimelineAlbum(Long groupId, Long albumId) {
+        timelineValidationService.validateAlbumPermission(groupId, albumId);
 
-        // DTO 변환
-        TimelineAlbumDto albumDto = TimelineAlbumDto.fromDetail(timelineAlbum);
-        return albumDto;
-    }
-
-    private TimelineAlbum getTimelineAlbumDetail(Long albumId) {
         // 앨범 조회
         TimelineAlbum album = timelineAlbumRepository.findAlbumByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
 
@@ -50,9 +47,12 @@ public class TimelineService {
         album.loadSections(sections);
 
         // 섹션에 포함되지 않은 사진
-        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findUnusedPhotosByAlbumIdAndSectionIsNull(albumId);
+        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findUnusedPhotosByAlbumIdAndSectionIsNullAndDeletedAtIsNull(albumId);
         album.loadPhotos(photos);
-        return album;
+
+        // DTO 변환
+        TimelineAlbumDto albumDto = TimelineAlbumDto.fromDetail(album);
+        return albumDto;
     }
 
 }

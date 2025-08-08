@@ -71,9 +71,18 @@ public class TimelineAlbum extends BaseTimeEntity {
         return section;
     }
 
-    public void addPhoto(Photo photo) {
+    public void removeSection(TimelineAlbumSection section) {
+        if (!this.sections.contains(section)) {
+            throw new IllegalStateException("해당 섹션은 앨범에 존재하지 않아 삭제할 수 없습니다. sectionId=" + section.getId());
+        }
+        this.sections.remove(section);
+        section.delete();
+    }
+
+    public TimelineAlbumPhoto addPhoto(Photo photo) {
         TimelineAlbumPhoto albumPhoto = TimelineAlbumPhoto.createTimelineAlbumPhoto(this, photo);
         this.photos.add(albumPhoto);
+        return albumPhoto;
     }
 
     public void loadSections(List<TimelineAlbumSection> sections) {
@@ -95,7 +104,7 @@ public class TimelineAlbum extends BaseTimeEntity {
         if (!Objects.equals(this.description, description)) {
             this.description = description;
         }
-        if (!Objects.equals(this.originalUrl, thumbnail.getOriginalUrl())) {
+        if (thumbnail != null && !Objects.equals(this.originalUrl, thumbnail.getOriginalUrl())) {
             this.originalUrl = thumbnail.getOriginalUrl();
             this.thumbnailUrl = thumbnail.getThumbnailUrl();
         }
@@ -107,18 +116,13 @@ public class TimelineAlbum extends BaseTimeEntity {
         }
     }
 
-    public void deleteSection(TimelineAlbumSection section) {
-        this.sections.remove(section);
-        section.delete();
-    }
-
     public void increasePhotoCount() {
         this.photoCount++;
     }
 
     public void decreasePhotoCount() {
         if (this.photoCount == 0) {
-            throw new IllegalStateException();
+            throw new IllegalStateException("앨범의 사진 수가 이미 0이므로 감소시킬 수 없습니다. albumId=" + this.id);
         }
         this.photoCount--;
     }

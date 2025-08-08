@@ -68,14 +68,20 @@ public class TimelineAlbumSection {
     }
 
     public void addPhoto(TimelineAlbumPhoto photo) {
+        if(this.photos.contains(photo)) {
+            throw new IllegalStateException("해당 사진은 이미 섹션에 포함되어 있습니다. photoId=" + photo.getId());
+        }
         this.photos.add(photo);
         photo.updateSection(this);
         this.album.increasePhotoCount();
     }
 
-    public void deletePhoto(TimelineAlbumPhoto photo) {
+    public void removePhoto(TimelineAlbumPhoto photo) {
+        if(!this.photos.contains(photo)) {
+            throw new IllegalStateException("해당 사진은 섹션에 존재하지 않아 삭제할 수 없습니다. photoId=" + photo.getId());
+        }
         this.photos.remove(photo);
-        photo.deleteFromSection();
+        photo.removeFromSection();
         this.album.decreasePhotoCount();
     }
 

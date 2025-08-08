@@ -1,5 +1,6 @@
 package com.ssafy.keepick.timeline.controller.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
@@ -14,20 +15,22 @@ public class TimelineUpdateRequest {
 
     @NotBlank
     private String name;
+
     @NotBlank
     private String description;
-    @NotNull
+
+    @Schema(description = "앨범 대표 사진 ID", example = "101")
     private Long thumbnailId;
+
     @NotNull
     private LocalDate startDate;
+
     @NotNull
     private LocalDate endDate;
 
+    @Schema(description = "앨범의 섹션 목록 (전달된 섹션 순서대로 저장)")
     @NotNull
     private List<SectionUpdateRequest> sections;
-
-    @NotNull
-    private List<Long> photoIds; // 섹션에 사용하지 않는 사진 ID
 
     @Getter
     @Builder
@@ -46,9 +49,9 @@ public class TimelineUpdateRequest {
         @NotNull
         private LocalDate endDate;
 
+        @Schema(description = "섹션 내 사진 목록 (전달된 사진 순서대로 저장)")
         @NotNull
         private List<Long> photoIds;
     }
-
 
 }
