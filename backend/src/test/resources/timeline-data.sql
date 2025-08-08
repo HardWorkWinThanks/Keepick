@@ -13,7 +13,7 @@ INSERT INTO timeline_album (
     '2025-04-14 10:00:00', '2025-04-14 11:00:00', NULL
 );
 
-INSERT INTO timeline_section (
+INSERT INTO timeline_album_section (
     id, album_id, name, description, start_date, end_date, sequence
 ) VALUES
     (1, 1, '1일차 - 도착', '공항 도착 후 해변 산책', '2025-04-10', '2025-04-10', 1),
@@ -25,12 +25,16 @@ INSERT INTO "photo" (
     (1, 1920, 1080, 'https://example.com/photo1.jpg', 'https://example.com/thumb1_1.jpg', 100),
     (2, 1920, 1080, 'https://example.com/photo2.jpg', 'https://example.com/thumb1_2.jpg', 100),
     (3, 1920, 1080, 'https://example.com/photo3.jpg', 'https://example.com/thumb2_1.jpg', 100),
-    (4, 1920, 1080, 'https://example.com/photo4.jpg', 'https://example.com/thumb2_2.jpg', 100);
+    (4, 1920, 1080, 'https://example.com/photo4.jpg', 'https://example.com/thumb2_2.jpg', 100),
+    (5, 1920, 1080, 'https://example.com/photo5.jpg', 'https://example.com/thumb0_1.jpg', 100),
+    (6, 1920, 1080, 'https://example.com/photo6.jpg', 'https://example.com/thumb0_2.jpg', 100);
 
-INSERT INTO timeline_photo (
-    id, section_id, "photo_id", sequence
+INSERT INTO timeline_album_photo (
+    id, album_id, section_id, "photo_id", sequence
 ) VALUES
-    (1, 1, 1, 1),
-    (2, 1, 2, 2),
-    (3, 2, 3, 1),
-    (4, 2, 4, 2);
+    (1, 1, 1, 1, 1),
+    (2, 1, 1, 2, 2),
+    (3, 1, 2, 3, 1),
+    (4, 1, 2, 4, 2),
+    (5, 1, null, 5, null),
+    (6, 1, null, 6, null);
