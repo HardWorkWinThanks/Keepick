@@ -5,6 +5,8 @@ import java.util.Optional;
 
 import com.ssafy.keepick.album.tier.domain.TierAlbum;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -55,12 +57,12 @@ public interface TierAlbumRepository extends JpaRepository<TierAlbum, Long> {
     """)
     long countByGroupId(@Param("groupId") Long groupId);
 
-    // 그룹별 앨범 목록 조회 (페이징)
+    // 그룹별 앨범 목록 조회 (페이징) - Spring Pageable 사용
     @Query("""
         SELECT t FROM TierAlbum t 
         WHERE t.groupId = :groupId 
         AND t.deletedAt IS NULL 
         ORDER BY t.createdAt DESC
     """)
-    List<TierAlbum> findByGroupIdWithPaging(@Param("groupId") Long groupId, @Param("offset") int offset, @Param("size") int size);
+    Page<TierAlbum> findByGroupIdWithPaging(@Param("groupId") Long groupId, Pageable pageable);
 }

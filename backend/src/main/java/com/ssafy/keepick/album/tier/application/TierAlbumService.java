@@ -5,10 +5,12 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDetailDto;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDto;
-import com.ssafy.keepick.album.tier.application.dto.TierAlbumListDto;
 import com.ssafy.keepick.album.tier.controller.request.UpdateTierAlbumRequest;
 import com.ssafy.keepick.album.tier.domain.Tier;
 import com.ssafy.keepick.album.tier.domain.TierAlbum;
@@ -23,6 +25,7 @@ import com.ssafy.keepick.group.persistence.GroupMemberRepository;
 import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.image.domain.Photo;
 import com.ssafy.keepick.image.persistence.PhotoRepository;
+import com.ssafy.keepick.global.response.PagingResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -67,21 +70,18 @@ public class TierAlbumService {
 
     // 티어 앨범 목록 조회 (페이징)
     @Transactional(readOnly = true)
-    public TierAlbumListDto getTierAlbumListWithPaging(Long groupId, int page, int size) {
+    public PagingResponse<TierAlbumDto> getTierAlbumListWithPaging(Long groupId, int page, int size) {
         // 권한 검증
         validateGroupMemberPermission(groupId);
         
-        // 페이징 계산
-        int offset = (page - 1) * size;
-        
-        // 전체 개수 조회
-        long totalElements = tierAlbumRepository.countByGroupId(groupId);
+        // Pageable 객체 생성 (page는 0부터 시작하므로 -1)
+        Pageable pageable = PageRequest.of(page - 1, size);
         
         // 페이징된 데이터 조회
-        List<TierAlbum> tierAlbums = tierAlbumRepository.findByGroupIdWithPaging(groupId, offset, size);
-        List<TierAlbumDto> tierAlbumDtos = tierAlbums.stream().map(TierAlbumDto::from).toList();
+        Page<TierAlbum> tierAlbumPage = tierAlbumRepository.findByGroupIdWithPaging(groupId, pageable);
         
-        return TierAlbumListDto.of(tierAlbumDtos, page, size, totalElements);
+        // PagingResponse.from() 메서드를 사용하여 자동으로 페이징 정보 생성
+        return PagingResponse.from(tierAlbumPage, TierAlbumDto::from);
     }
 
     // 티어 앨범 상세 조회 (사진 목록 포함)

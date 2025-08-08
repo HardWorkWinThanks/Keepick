@@ -33,14 +33,17 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import com.ssafy.keepick.global.response.PagingResponse;
+import com.ssafy.keepick.global.exception.GlobalExceptionHandler;
 import com.ssafy.keepick.album.tier.application.TierAlbumService;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDetailDto;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDto;
-import com.ssafy.keepick.album.tier.application.dto.TierAlbumListDto;
 import com.ssafy.keepick.album.tier.controller.request.CreateTierAlbumRequest;
 import com.ssafy.keepick.album.tier.controller.request.UpdateTierAlbumRequest;
-import com.ssafy.keepick.global.response.PagingResponse;
-import com.ssafy.keepick.global.exception.GlobalExceptionHandler;
 
 @ExtendWith(MockitoExtension.class)
 class TierAlbumControllerTest {
@@ -57,7 +60,7 @@ class TierAlbumControllerTest {
 
     private TierAlbumDto tierAlbumDto;
     private TierAlbumDetailDto tierAlbumDetailDto;
-    private TierAlbumListDto tierAlbumListDto;
+    private PagingResponse<TierAlbumDto> tierAlbumListDto;
 
     @BeforeEach
     void setUp() {
@@ -68,17 +71,23 @@ class TierAlbumControllerTest {
         // Spring 설정과 동일하게 설정
         objectMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, false);
         
-        // 테스트 데이터 설정
+        // TierAlbumDto 설정
         tierAlbumDto = TierAlbumDto.builder()
             .id(1L)
             .name("테스트 앨범")
             .description("테스트 설명")
-            .thumbnailUrl("https://test.com/thumb.jpg")
-            .originalUrl("https://test.com/original.jpg")
+            .thumbnailUrl("https://example.com/thumb.jpg")
+            .originalUrl("https://example.com/original.jpg")
             .photoCount(2)
-            .createdAt(LocalDateTime.of(2024, 1, 15, 10, 30))
-            .updatedAt(LocalDateTime.of(2024, 1, 15, 14, 45))
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
             .build();
+
+        // PagingResponse<TierAlbumDto> 설정
+        List<TierAlbumDto> albums = Arrays.asList(tierAlbumDto);
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<TierAlbumDto> albumPage = new PageImpl<>(albums, pageable, 1L);
+        tierAlbumListDto = PagingResponse.from(albumPage, album -> album);
 
         // UNASSIGNED 사진들을 포함한 테스트 데이터 생성
         Map<String, List<TierAlbumDetailDto.TierAlbumPhotoDto>> testPhotos = new LinkedHashMap<>();
@@ -109,20 +118,6 @@ class TierAlbumControllerTest {
             .originalUrl("https://test.com/original.jpg")
             .photoCount(2)
             .photos(testPhotos)
-            .build();
-
-        List<TierAlbumDto> albums = Arrays.asList(tierAlbumDto);
-        PagingResponse.PageInfo pageInfo = PagingResponse.PageInfo.builder()
-            .page(0)
-            .size(10)
-            .totalElement(1L)
-            .totalPage(1)
-            .hasNext(false)
-            .build();
-
-        tierAlbumListDto = TierAlbumListDto.builder()
-            .albums(albums)
-            .pageInfo(pageInfo)
             .build();
     }
 
@@ -180,12 +175,12 @@ class TierAlbumControllerTest {
                 .param("size", String.valueOf(size)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value(200))
-            .andExpect(jsonPath("$.data.content").isArray())
-            .andExpect(jsonPath("$.data.content[0].id").value(1))
-            .andExpect(jsonPath("$.data.content[0].name").value("테스트 앨범"))
-            .andExpect(jsonPath("$.data.content[0].photoCount").value(2))
-            .andExpect(jsonPath("$.data.content[0].createdAt").exists())
-            .andExpect(jsonPath("$.data.content[0].updatedAt").exists())
+            .andExpect(jsonPath("$.data.list").isArray())
+            .andExpect(jsonPath("$.data.list[0].id").value(1))
+            .andExpect(jsonPath("$.data.list[0].name").value("테스트 앨범"))
+            .andExpect(jsonPath("$.data.list[0].photoCount").value(2))
+            .andExpect(jsonPath("$.data.list[0].createdAt").exists())
+            .andExpect(jsonPath("$.data.list[0].updatedAt").exists())
             .andExpect(jsonPath("$.data.pageInfo.page").value(0))
             .andExpect(jsonPath("$.data.pageInfo.size").value(10))
             .andExpect(jsonPath("$.data.pageInfo.totalElement").value(1))
@@ -218,16 +213,9 @@ class TierAlbumControllerTest {
         int size = 10;
 
         // 빈 결과를 위한 DTO 생성
-        TierAlbumListDto emptyListDto = TierAlbumListDto.builder()
-            .albums(Arrays.asList())
-            .pageInfo(PagingResponse.PageInfo.builder()
-                .page(0)
-                .size(10)
-                .totalElement(0L)
-                .totalPage(0)
-                .hasNext(false)
-                .build())
-            .build();
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<TierAlbumDto> emptyPage = new PageImpl<>(Arrays.asList(), pageable, 0L);
+        PagingResponse<TierAlbumDto> emptyListDto = PagingResponse.from(emptyPage, album -> album);
 
         when(tierAlbumService.getTierAlbumListWithPaging(eq(groupId), eq(page), eq(size)))
             .thenReturn(emptyListDto);
@@ -238,8 +226,8 @@ class TierAlbumControllerTest {
                 .param("size", String.valueOf(size)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value(200))
-            .andExpect(jsonPath("$.data.content").isArray())
-            .andExpect(jsonPath("$.data.content").isEmpty())
+            .andExpect(jsonPath("$.data.list").isArray())
+            .andExpect(jsonPath("$.data.list").isEmpty())
             .andExpect(jsonPath("$.data.pageInfo.totalElement").value(0));
     }
 

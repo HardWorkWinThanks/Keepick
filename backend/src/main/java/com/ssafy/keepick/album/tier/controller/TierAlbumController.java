@@ -17,12 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ssafy.keepick.album.tier.application.TierAlbumService;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDetailDto;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDto;
-import com.ssafy.keepick.album.tier.application.dto.TierAlbumListDto;
 import com.ssafy.keepick.album.tier.controller.request.CreateTierAlbumRequest;
 import com.ssafy.keepick.album.tier.controller.request.UpdateTierAlbumRequest;
 import com.ssafy.keepick.album.tier.controller.response.TierAlbumDetailResponse;
-import com.ssafy.keepick.album.tier.controller.response.TierAlbumListResponse;
 import com.ssafy.keepick.global.response.ApiResponse;
+import com.ssafy.keepick.global.response.PagingResponse;
 import com.ssafy.keepick.global.exception.ErrorResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,12 +45,12 @@ public class TierAlbumController {
     @Operation(summary = "티어 앨범 목록 조회", description = "특정 그룹의 티어 앨범 목록을 페이징하여 조회합니다. " +
             "각 앨범의 기본 정보(이름, 설명, 썸네일, 사진 개수)를 포함합니다.")
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "티어 앨범 목록 조회 성공", content = @Content(mediaType = "application/json", schema = @Schema(implementation = TierAlbumListResponse.class), examples = @ExampleObject(name = "성공 응답 예시", value = """
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "티어 앨범 목록 조회 성공", content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "성공 응답 예시", value = """
                     {
                         "status": 200,
                         "message": "success",
                         "data": {
-                            "content": [
+                            "list": [
                                 {
                                     "id": 1,
                                     "name": "여름 휴가 앨범",
@@ -90,31 +89,11 @@ public class TierAlbumController {
                     }
                     """)))
     })
-    public ApiResponse<TierAlbumListResponse> getTierAlbumList(
+    public ApiResponse<PagingResponse<TierAlbumDto>> getTierAlbumList(
             @Parameter(description = "그룹 ID", example = "1", required = true) @PathVariable Long groupId,
-            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0", schema = @Schema(defaultValue = "0", minimum = "0")) @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "페이지 번호 (1부터 시작)", example = "1", schema = @Schema(defaultValue = "1", minimum = "1")) @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "페이지당 항목 수", example = "10", schema = @Schema(defaultValue = "10", minimum = "1", maximum = "100")) @RequestParam(defaultValue = "10") int size) {
-        TierAlbumListDto tierAlbumListDto = tierAlbumService.getTierAlbumListWithPaging(groupId, page, size);
-
-        // DTO를 TierAlbumListResponse로 변환
-        List<TierAlbumListResponse.TierAlbumContent> content = tierAlbumListDto.getAlbums().stream()
-                .map(album -> TierAlbumListResponse.TierAlbumContent.builder()
-                        .id(album.getId())
-                        .name(album.getName())
-                        .description(album.getDescription())
-                        .thumbnailUrl(album.getThumbnailUrl())
-                        .originalUrl(album.getOriginalUrl())
-                        .photoCount(album.getPhotoCount())
-                        .createdAt(album.getCreatedAt())
-                        .updatedAt(album.getUpdatedAt())
-                        .build())
-                .toList();
-
-        TierAlbumListResponse response = TierAlbumListResponse.builder()
-                .content(content)
-                .pageInfo(tierAlbumListDto.getPageInfo())
-                .build();
-
+        PagingResponse<TierAlbumDto> response = tierAlbumService.getTierAlbumListWithPaging(groupId, page, size);
         return ApiResponse.ok(response);
     }
 

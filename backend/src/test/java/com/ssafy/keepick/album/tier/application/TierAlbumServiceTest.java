@@ -26,10 +26,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import com.ssafy.keepick.global.response.PagingResponse;
 
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDetailDto;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDto;
-import com.ssafy.keepick.album.tier.application.dto.TierAlbumListDto;
 import com.ssafy.keepick.album.tier.controller.request.UpdateTierAlbumRequest;
 import com.ssafy.keepick.album.tier.domain.Tier;
 import com.ssafy.keepick.album.tier.domain.TierAlbum;
@@ -199,6 +203,8 @@ class TierAlbumServiceTest {
         int page = 1;
         int size = 10;
         List<TierAlbum> albums = Arrays.asList(tierAlbum);
+        Pageable pageable = PageRequest.of(0, size);
+        Page<TierAlbum> albumPage = new PageImpl<>(albums, pageable, 1L);
 
         try (var mockedAuth = mockStatic(AuthenticationUtil.class)) {
             mockedAuth.when(AuthenticationUtil::getCurrentUserId).thenReturn(currentUserId);
@@ -206,25 +212,23 @@ class TierAlbumServiceTest {
             when(groupRepository.findById(groupId)).thenReturn(Optional.of(Group.createGroup("테스트 그룹", null)));
             when(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED))
                 .thenReturn(true);
-            when(tierAlbumRepository.countByGroupId(groupId)).thenReturn(1L);
-            when(tierAlbumRepository.findByGroupIdWithPaging(groupId, 0, size)).thenReturn(albums);
+            when(tierAlbumRepository.findByGroupIdWithPaging(groupId, pageable)).thenReturn(albumPage);
 
             // when
-            TierAlbumListDto result = tierAlbumService.getTierAlbumListWithPaging(groupId, page, size);
+            PagingResponse<TierAlbumDto> result = tierAlbumService.getTierAlbumListWithPaging(groupId, page, size);
 
             // then
             assertThat(result).isNotNull();
-            assertThat(result.getAlbums()).hasSize(1);
-            assertThat(result.getAlbums().get(0).getName()).isEqualTo("테스트 앨범");
-            assertThat(result.getAlbums().get(0).getCreatedAt()).isNotNull();
-            assertThat(result.getAlbums().get(0).getUpdatedAt()).isNotNull();
+            assertThat(result.getList()).hasSize(1);
+            assertThat(result.getList().get(0).getName()).isEqualTo("테스트 앨범");
+            assertThat(result.getList().get(0).getCreatedAt()).isNotNull();
+            assertThat(result.getList().get(0).getUpdatedAt()).isNotNull();
             assertThat(result.getPageInfo().getTotalElement()).isEqualTo(1L);
-            assertThat(result.getPageInfo().getPage()).isEqualTo(1);
+            assertThat(result.getPageInfo().getPage()).isEqualTo(0);
             assertThat(result.getPageInfo().getSize()).isEqualTo(10);
             assertThat(result.getPageInfo().getTotalPage()).isEqualTo(1);
             assertThat(result.getPageInfo().isHasNext()).isFalse();
-            verify(tierAlbumRepository).countByGroupId(groupId);
-            verify(tierAlbumRepository).findByGroupIdWithPaging(groupId, 0, size);
+            verify(tierAlbumRepository).findByGroupIdWithPaging(groupId, pageable);
         }
     }
 
@@ -236,6 +240,8 @@ class TierAlbumServiceTest {
         Long currentUserId = 1L;
         int page = 1;
         int size = 10;
+        Pageable pageable = PageRequest.of(0, size);
+        Page<TierAlbum> albumPage = new PageImpl<>(Arrays.asList(), pageable, 0L);
 
         try (var mockedAuth = mockStatic(AuthenticationUtil.class)) {
             mockedAuth.when(AuthenticationUtil::getCurrentUserId).thenReturn(currentUserId);
@@ -243,15 +249,14 @@ class TierAlbumServiceTest {
             when(groupRepository.findById(groupId)).thenReturn(Optional.of(Group.createGroup("테스트 그룹", null)));
             when(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED))
                 .thenReturn(true);
-            when(tierAlbumRepository.countByGroupId(groupId)).thenReturn(0L);
-            when(tierAlbumRepository.findByGroupIdWithPaging(groupId, 0, size)).thenReturn(Arrays.asList());
+            when(tierAlbumRepository.findByGroupIdWithPaging(groupId, pageable)).thenReturn(albumPage);
 
             // when
-            TierAlbumListDto result = tierAlbumService.getTierAlbumListWithPaging(groupId, page, size);
+            PagingResponse<TierAlbumDto> result = tierAlbumService.getTierAlbumListWithPaging(groupId, page, size);
 
             // then
             assertThat(result).isNotNull();
-            assertThat(result.getAlbums()).isEmpty();
+            assertThat(result.getList()).isEmpty();
             assertThat(result.getPageInfo().getTotalElement()).isEqualTo(0L);
             assertThat(result.getPageInfo().getTotalPage()).isEqualTo(0);
             assertThat(result.getPageInfo().isHasNext()).isFalse();
@@ -267,6 +272,8 @@ class TierAlbumServiceTest {
         int page = 3;
         int size = 5;
         List<TierAlbum> albums = Arrays.asList(tierAlbum);
+        Pageable pageable = PageRequest.of(2, size); // page 3은 0-based로 2
+        Page<TierAlbum> albumPage = new PageImpl<>(albums, pageable, 15L);
 
         try (var mockedAuth = mockStatic(AuthenticationUtil.class)) {
             mockedAuth.when(AuthenticationUtil::getCurrentUserId).thenReturn(currentUserId);
@@ -274,20 +281,19 @@ class TierAlbumServiceTest {
             when(groupRepository.findById(groupId)).thenReturn(Optional.of(Group.createGroup("테스트 그룹", null)));
             when(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED))
                 .thenReturn(true);
-            when(tierAlbumRepository.countByGroupId(groupId)).thenReturn(15L);
-            when(tierAlbumRepository.findByGroupIdWithPaging(groupId, 10, size)).thenReturn(albums);
+            when(tierAlbumRepository.findByGroupIdWithPaging(groupId, pageable)).thenReturn(albumPage);
 
             // when
-            TierAlbumListDto result = tierAlbumService.getTierAlbumListWithPaging(groupId, page, size);
+            PagingResponse<TierAlbumDto> result = tierAlbumService.getTierAlbumListWithPaging(groupId, page, size);
 
             // then
             assertThat(result).isNotNull();
-            assertThat(result.getPageInfo().getPage()).isEqualTo(3);
+            assertThat(result.getPageInfo().getPage()).isEqualTo(2);
             assertThat(result.getPageInfo().getSize()).isEqualTo(5);
             assertThat(result.getPageInfo().getTotalElement()).isEqualTo(15L);
             assertThat(result.getPageInfo().getTotalPage()).isEqualTo(3);
             assertThat(result.getPageInfo().isHasNext()).isFalse(); // 마지막 페이지
-            verify(tierAlbumRepository).findByGroupIdWithPaging(groupId, 10, size); // offset = (3-1) * 5 = 10
+            verify(tierAlbumRepository).findByGroupIdWithPaging(groupId, pageable);
         }
     }
 

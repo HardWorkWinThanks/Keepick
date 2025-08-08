@@ -1,9 +1,17 @@
 package com.ssafy.keepick.album.tier.integration;
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -18,6 +26,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -26,12 +38,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keepick.album.tier.application.TierAlbumService;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDetailDto;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDto;
-import com.ssafy.keepick.album.tier.application.dto.TierAlbumListDto;
 import com.ssafy.keepick.album.tier.controller.TierAlbumController;
 import com.ssafy.keepick.album.tier.controller.request.CreateTierAlbumRequest;
 import com.ssafy.keepick.album.tier.controller.request.UpdateTierAlbumRequest;
-import com.ssafy.keepick.album.tier.controller.response.TierAlbumDetailResponse;
-import com.ssafy.keepick.album.tier.controller.response.TierAlbumListResponse;
 import com.ssafy.keepick.album.tier.persistence.TierAlbumPhotoRepository;
 import com.ssafy.keepick.album.tier.persistence.TierAlbumRepository;
 import com.ssafy.keepick.global.response.PagingResponse;
@@ -63,7 +72,7 @@ class TierAlbumIntegrationTest {
     private Photo photo1, photo2;
     private TierAlbumDto tierAlbumDto;
     private TierAlbumDetailDto tierAlbumDetailDto;
-    private TierAlbumListDto tierAlbumListDto;
+    private PagingResponse<TierAlbumDto> tierAlbumListDto;
 
     @BeforeEach
     void setUp() {
@@ -85,14 +94,23 @@ class TierAlbumIntegrationTest {
             .height(1080)
             .build();
 
+        // TierAlbumDto 설정
         tierAlbumDto = TierAlbumDto.builder()
             .id(1L)
             .name("테스트 앨범")
             .description("테스트 설명")
-            .thumbnailUrl("https://test.com/thumb.jpg")
-            .originalUrl("https://test.com/original.jpg")
+            .thumbnailUrl("https://example.com/thumb.jpg")
+            .originalUrl("https://example.com/original.jpg")
             .photoCount(2)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
             .build();
+
+        // PagingResponse<TierAlbumDto> 설정
+        List<TierAlbumDto> albums = Arrays.asList(tierAlbumDto);
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<TierAlbumDto> albumPage = new PageImpl<>(albums, pageable, 1L);
+        tierAlbumListDto = PagingResponse.from(albumPage, album -> album);
 
         tierAlbumDetailDto = TierAlbumDetailDto.builder()
             .title("테스트 앨범")
@@ -101,20 +119,6 @@ class TierAlbumIntegrationTest {
             .originalUrl("https://test.com/original.jpg")
             .photoCount(2)
             .photos(new HashMap<>())
-            .build();
-
-        List<TierAlbumDto> albums = Arrays.asList(tierAlbumDto);
-        PagingResponse.PageInfo pageInfo = PagingResponse.PageInfo.builder()
-            .page(0)
-            .size(10)
-            .totalElement(1L)
-            .totalPage(1)
-            .hasNext(false)
-            .build();
-
-        tierAlbumListDto = TierAlbumListDto.builder()
-            .albums(albums)
-            .pageInfo(pageInfo)
             .build();
     }
 
