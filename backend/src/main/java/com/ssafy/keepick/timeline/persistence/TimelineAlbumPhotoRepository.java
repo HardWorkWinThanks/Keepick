@@ -15,8 +15,6 @@ public interface TimelineAlbumPhotoRepository extends JpaRepository<TimelineAlbu
     @EntityGraph(attributePaths = "photo")
     List<TimelineAlbumPhoto> findUnusedPhotosByAlbumIdAndSectionIsNullAndDeletedAtIsNull(Long albumId);
 
-    Optional<TimelineAlbumPhoto> findByAlbumIdAndPhotoIdAndDeletedAtIsNull(Long albumId, Long photoId);
-
     // 주어진 사진 목록 중 타임라인 앨범에 없는 사진 조회
     @Query("""
         SELECT p
@@ -38,5 +36,8 @@ public interface TimelineAlbumPhotoRepository extends JpaRepository<TimelineAlbu
         AND tap.photo.id IN :photoIds
         AND tap.deletedAt IS NULL
     """)
-    List<TimelineAlbumPhoto> findAllByPhotoIdIn(@Param("albumId") Long albumId, @Param("photoIds") List<Long> photoIds);
+    List<TimelineAlbumPhoto> findAllByAlbumIdAndPhotoIdIn(@Param("albumId") Long albumId, @Param("photoIds") List<Long> photoIds);
+
+    @EntityGraph(attributePaths = {"section", "photo"})
+    List<TimelineAlbumPhoto> findAllByAlbumIdAndDeletedAtIsNull(Long albumId);
 }

@@ -15,10 +15,11 @@ public class TimelineUpdateRequest {
 
     @NotBlank
     private String name;
+
     @NotBlank
     private String description;
 
-    @Schema(description = "앨범 대표 사진 ID (선택 사항, 대표 사진을 수정할 경우 사진의 ID)", example = "101")
+    @Schema(description = "앨범 대표 사진 ID", example = "101")
     private Long thumbnailId;
 
     @NotNull
@@ -31,10 +32,6 @@ public class TimelineUpdateRequest {
     @NotNull
     private List<SectionUpdateRequest> sections;
 
-    @Schema(description = "섹션에 사용하지 않는 사진 ID 목록")
-    @NotNull
-    private List<Long> unusedPhotoIds;
-    
     @Getter
     @Builder
     public static class SectionUpdateRequest {

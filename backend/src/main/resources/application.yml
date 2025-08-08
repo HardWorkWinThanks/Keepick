@@ -90,7 +90,7 @@ app:
       bucket-name: ${S3_BUCKET_NAME}
       originals-prefix: "originals/"
       thumbnails-prefix: "thumbnails/"
-      presigned-url-expiration: 900  # 15분 (초)
+      presigned-url-expiration: 604800  # 7일 (초)
     sqs:
       queue-name: ${SQS_QUEUE_NAME}
       max-receive-count: 3

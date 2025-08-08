@@ -25,4 +25,5 @@ public interface TimelineAlbumRepository extends JpaRepository<TimelineAlbum, Lo
 
     Page<TimelineAlbum> findAllByGroupIdAndDeletedAtIsNull(Long groupId, Pageable pageable);
 
+    boolean existsByIdAndGroupIdAndDeletedAtIsNull(Long id, Long groupId);
 }
