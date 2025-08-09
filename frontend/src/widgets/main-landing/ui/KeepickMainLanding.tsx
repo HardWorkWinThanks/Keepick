@@ -15,9 +15,9 @@ export default function KeepickMainLanding() {
   const [sidebarPinned, setSidebarPinned] = useState(false)
 
   // 타이머 참조들
-  const animationTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const logoTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const resetTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const animationTimerRef = useRef<number | null>(null)
+  const logoTimerRef = useRef<number | null>(null)
+  const resetTimerRef = useRef<number | null>(null)
 
   // 햄버거 버튼 토글
   const toggleSidebarPin = () => {
