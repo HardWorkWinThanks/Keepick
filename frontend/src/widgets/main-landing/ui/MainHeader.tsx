@@ -20,7 +20,7 @@ export default function MainHeader({ sidebarPinned, onSpillPhotos }: MainHeaderP
 
   return (
     <header 
-      className={`fixed top-0 right-0 z-50 flex items-center px-4 py-3 sm:px-6 sm:py-4 lg:px-12 h-20 transition-all duration-300 ${
+      className={`fixed top-0 right-0 z-50 flex items-center px-4 py-2 sm:px-6 sm:py-2 lg:px-12 h-14 transition-all duration-300 ${
         sidebarPinned ? 'left-[240px]' : 'left-0'
       }`} 
       style={{ backgroundColor: '#111111' }}
@@ -80,7 +80,7 @@ export default function MainHeader({ sidebarPinned, onSpillPhotos }: MainHeaderP
                 ? 'max-h-36 opacity-100' 
                 : 'max-h-0 opacity-0 overflow-hidden'
             }`}>
-              <div className="space-y-1 min-w-[140px]">
+              <div className="space-y-1 min-w-[140px] rounded-lg" style={{ backgroundColor: '#222222' }}>
                 {/* 닉네임 섹션 */}
                 <div className="px-3 py-3 border-b border-gray-700 mb-1">
                   <p className="text-base font-semibold text-white">

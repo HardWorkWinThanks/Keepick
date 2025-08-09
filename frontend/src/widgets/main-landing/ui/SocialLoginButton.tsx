@@ -107,10 +107,10 @@ export default function SocialLoginButton({
         style={{ 
           backgroundColor: '#111111',
         }}
-        onMouseEnter={(e) => {
+        onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
           e.currentTarget.style.backgroundColor = '#333333'
         }}
-        onMouseLeave={(e) => {
+        onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
           e.currentTarget.style.backgroundColor = '#111111'  
         }}
         animate={{

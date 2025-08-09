@@ -110,7 +110,7 @@ export default function KeepickMainLanding() {
     // 노트북 크기 감지 - 실제 뷰포트 기준 (1440x731 등)
     if (width <= 1600 || height <= 800) {
       // 헤더 높이를 제외한 사용 가능한 높이
-      const availableHeight = height - 80
+      const availableHeight = height - 56
       
       // 실제 필요한 공간
       const requiredWidth = 1600
@@ -191,7 +191,7 @@ export default function KeepickMainLanding() {
   }
 
   // 배열 셔플 함수
-  const shuffleArray = (array: any[]) => {
+  const shuffleArray = <T>(array: T[]): T[] => {
     const shuffled = [...array]
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -324,7 +324,7 @@ export default function KeepickMainLanding() {
         }`}
         style={{ 
           height: '100vh',
-          paddingTop: '80px' // 헤더 높이만큼 패딩
+          paddingTop: '56px' // 헤더 높이만큼 패딩
         }}
       >
         {/* 스케일링 컨테이너 - 메인 콘텐츠만 */}
