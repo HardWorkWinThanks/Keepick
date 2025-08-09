@@ -1,6 +1,7 @@
 package com.ssafy.keepick.external.visionai;
 
 import com.ssafy.keepick.external.visionai.request.BlurDetectionRequest;
+import com.ssafy.keepick.external.visionai.request.SimilarGroupingRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +21,14 @@ public class VisionAIService {
     public Mono<String> postBlurRequest(String jobId, BlurDetectionRequest request) {
         return webClient.post()
                 .uri(url + "/api/blur_detection")
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(String.class);
+    }
+
+    public Mono<String> postSimilarityRequest(String jobId, SimilarGroupingRequest request) {
+        return webClient.post()
+                .uri(url + "/api/similar_grouping")
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(String.class);
