@@ -1,5 +1,6 @@
 package com.ssafy.keepick.external.visionai.request;
 
+import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.photo.domain.Photo;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,6 +17,13 @@ public class ImageRequest {
         return ImageRequest.builder()
                 .name(photo.getId().toString())
                 .url(photo.getOriginalUrl())
+                .build();
+    }
+
+    public static ImageRequest from(Member member) {
+        return ImageRequest.builder()
+                .name(member.getId().toString())
+                .url(member.getIdentificationUrl())
                 .build();
     }
 }
