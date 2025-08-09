@@ -1,27 +1,23 @@
 package com.ssafy.keepick.timeline.persistence;
 
-import com.ssafy.keepick.global.config.QueryDslConfig;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.photo.domain.Photo;
 import com.ssafy.keepick.photo.persistence.PhotoRepository;
+import com.ssafy.keepick.support.BaseRepositoryTest;
 import com.ssafy.keepick.timeline.domain.TimelineAlbum;
 import com.ssafy.keepick.timeline.domain.TimelineAlbumSection;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
 
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@Import(QueryDslConfig.class)
-@DataJpaTest
-class TimelineAlbumRepositoryTest {
+class TimelineAlbumRepositoryTest extends BaseRepositoryTest {
 
     @Autowired
     EntityManager entityManager;

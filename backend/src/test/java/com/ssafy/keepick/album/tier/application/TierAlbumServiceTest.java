@@ -4,8 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
@@ -19,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.ssafy.keepick.support.BaseTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -52,7 +51,7 @@ import com.ssafy.keepick.photo.domain.Photo;
 import com.ssafy.keepick.photo.persistence.PhotoRepository;
 
 @ExtendWith(MockitoExtension.class)
-class TierAlbumServiceTest {
+class TierAlbumServiceTest extends BaseTest {
 
     @Mock
     private TierAlbumRepository tierAlbumRepository;

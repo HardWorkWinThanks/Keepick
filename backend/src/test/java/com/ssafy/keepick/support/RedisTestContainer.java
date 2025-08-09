@@ -1,6 +1,5 @@
-package com.ssafy.keepick.testconfig;
+package com.ssafy.keepick.support;
 
-import org.junit.jupiter.api.Test;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
@@ -8,7 +7,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-public class RedisTestContainer {
+public abstract class RedisTestContainer extends BaseTest {
 
     static final String REDIS_IMAGE = "redis:6-alpine";
 
@@ -23,8 +22,8 @@ public class RedisTestContainer {
 
     @DynamicPropertySource
     public static void overrideProps(DynamicPropertyRegistry registry) {
-        registry.add("spring.redis.host", redisContainer::getHost);
-        registry.add("spring.redis.port", () -> redisContainer.getMappedPort(6379));
+        registry.add("spring.data.redis.host", redisContainer::getHost);
+        registry.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
     }
 
     public static String getHost() {

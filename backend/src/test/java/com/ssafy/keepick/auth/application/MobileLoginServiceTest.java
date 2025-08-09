@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import com.ssafy.keepick.support.BaseTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,7 @@ import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
 
 @ExtendWith(MockitoExtension.class)
-class MobileLoginServiceTest {
+class MobileLoginServiceTest extends BaseTest {
 
     @Mock
     private MemberRepository memberRepository;

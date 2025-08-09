@@ -1,10 +1,10 @@
 package com.ssafy.keepick.timeline.application;
 
-import com.ssafy.keepick.global.config.QueryDslConfig;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.photo.domain.Photo;
 import com.ssafy.keepick.photo.persistence.PhotoRepository;
+import com.ssafy.keepick.support.BaseRepositoryTest;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumPhotoDto;
 import com.ssafy.keepick.timeline.controller.request.TimelineCreateRequest;
@@ -23,14 +23,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDate;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.willDoNothing;
 
@@ -38,10 +37,8 @@ import static org.mockito.BDDMockito.willDoNothing;
 @Import({
         TimelineInteractionService.class,
         TimelineValidationService.class,
-        QueryDslConfig.class
 })
-@DataJpaTest
-class TimelineInteractionServiceTest {
+class TimelineInteractionServiceTest extends BaseRepositoryTest {
 
     @MockitoBean
     TimelineValidationService timelineValidationService;

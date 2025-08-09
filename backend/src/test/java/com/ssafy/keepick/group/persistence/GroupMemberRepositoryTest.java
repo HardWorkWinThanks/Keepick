@@ -5,18 +5,17 @@ import com.ssafy.keepick.group.domain.GroupMember;
 import com.ssafy.keepick.group.domain.GroupMemberStatus;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
+import com.ssafy.keepick.support.BaseRepositoryTest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-class GroupMemberRepositoryTest {
+class GroupMemberRepositoryTest extends BaseRepositoryTest {
 
     @Autowired EntityManager em;
     @Autowired

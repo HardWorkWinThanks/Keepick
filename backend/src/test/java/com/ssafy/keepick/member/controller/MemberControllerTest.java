@@ -3,6 +3,7 @@ package com.ssafy.keepick.member.controller;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
+import com.ssafy.keepick.support.BaseTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,7 @@ import com.ssafy.keepick.member.controller.response.MemberInfoResponse;
 import com.ssafy.keepick.member.controller.response.MemberSearchResponse;
 
 @ExtendWith(MockitoExtension.class)
-class MemberControllerTest {
+class MemberControllerTest extends BaseTest {
 
     @Mock
     private MemberService memberService;

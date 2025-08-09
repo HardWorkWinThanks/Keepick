@@ -1,33 +1,32 @@
 package com.ssafy.keepick.group.application;
 
 import com.ssafy.keepick.global.exception.BaseException;
+import com.ssafy.keepick.group.application.dto.GroupDto;
+import com.ssafy.keepick.group.application.dto.GroupMemberDto;
+import com.ssafy.keepick.group.application.dto.MemberDto;
 import com.ssafy.keepick.group.controller.request.GroupCreateRequest;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.domain.GroupMember;
 import com.ssafy.keepick.group.domain.GroupMemberStatus;
-import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.group.persistence.GroupMemberRepository;
 import com.ssafy.keepick.group.persistence.GroupRepository;
-import com.ssafy.keepick.group.application.dto.GroupDto;
-import com.ssafy.keepick.group.application.dto.GroupMemberDto;
-import com.ssafy.keepick.group.application.dto.MemberDto;
+import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
+import com.ssafy.keepick.support.BaseRepositoryTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Import({
         GroupService.class
 })
-@DataJpaTest
-class GroupServiceTest {
+class GroupServiceTest extends BaseRepositoryTest {
 
     @Autowired
     GroupRepository groupRepository;

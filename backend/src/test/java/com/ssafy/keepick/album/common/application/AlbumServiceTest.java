@@ -12,6 +12,7 @@ import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.highlight.domain.HighlightAlbum;
 import com.ssafy.keepick.highlight.presistence.HighlightAlbumRepository;
 import com.ssafy.keepick.photo.domain.Photo;
+import com.ssafy.keepick.support.BaseTest;
 import com.ssafy.keepick.timeline.domain.TimelineAlbum;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -31,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class AlbumServiceTest {
+class AlbumServiceTest extends BaseTest {
 
     @InjectMocks
     AlbumService albumService;
@@ -62,32 +63,31 @@ class AlbumServiceTest {
         given(groupRepository.findById(groupId)).willReturn(Optional.of(group));
         given(groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(eq(groupId), eq(currentUserId), eq(GroupMemberStatus.ACCEPTED))).willReturn(true);
 
-        MockedStatic<AuthenticationUtil> mockedStatic = Mockito.mockStatic(AuthenticationUtil.class);
-        mockedStatic.when(AuthenticationUtil::getCurrentUserId).thenReturn(currentUserId);
-        given(AuthenticationUtil.getCurrentUserId()).willReturn(currentUserId);
+        try (MockedStatic<AuthenticationUtil> mockedStatic = Mockito.mockStatic(AuthenticationUtil.class)) {
+            mockedStatic.when(AuthenticationUtil::getCurrentUserId).thenReturn(currentUserId);
+            given(AuthenticationUtil.getCurrentUserId()).willReturn(currentUserId);
 
-        TimelineAlbum timelineAlbum = TimelineAlbum.createTimelineAlbum(group, List.of(createPhoto()));
-        TierAlbum tierAlbum = TierAlbum.createTierAlbum(groupId);
-        HighlightAlbum highlightAlbum = HighlightAlbum.builder().group(group).build();
+            TimelineAlbum timelineAlbum = TimelineAlbum.createTimelineAlbum(group, List.of(createPhoto()));
+            TierAlbum tierAlbum = TierAlbum.createTierAlbum(groupId);
+            HighlightAlbum highlightAlbum = HighlightAlbum.builder().group(group).build();
 
-        given(timelineAlbumRepository.findAllByGroupIdAndDeletedAtIsNullOrderByCreatedAtDesc(groupId)).willReturn(List.of(timelineAlbum));
-        given(tierAlbumRepository.findByGroupId(groupId)).willReturn(List.of(tierAlbum));
-        given(highlightAlbumRepository.findAllByGroupIdAndDeletedAtIsNullOrderByCreatedAtDesc(groupId)).willReturn(List.of(highlightAlbum));
+            given(timelineAlbumRepository.findAllByGroupIdAndDeletedAtIsNullOrderByCreatedAtDesc(groupId)).willReturn(List.of(timelineAlbum));
+            given(tierAlbumRepository.findByGroupId(groupId)).willReturn(List.of(tierAlbum));
+            given(highlightAlbumRepository.findAllByGroupIdAndDeletedAtIsNullOrderByCreatedAtDesc(groupId)).willReturn(List.of(highlightAlbum));
 
-        // when
-        AlbumDto albumDto = albumService.getAllAlbumList(groupId);
+            // when
+            AlbumDto albumDto = albumService.getAllAlbumList(groupId);
 
-        // then
-        assertThat(albumDto.getTimelineAlbumDtoList()).hasSize(1);
-        assertThat(albumDto.getTierAlbumDtoList()).hasSize(1);
-        assertThat(albumDto.getHighlightAlbumDtoList()).hasSize(1);
+            // then
+            assertThat(albumDto.getTimelineAlbumDtoList()).hasSize(1);
+            assertThat(albumDto.getTierAlbumDtoList()).hasSize(1);
+            assertThat(albumDto.getHighlightAlbumDtoList()).hasSize(1);
 
-        verify(groupRepository).findById(groupId);
-        verify(groupMemberRepository).existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED);
-        verify(timelineAlbumRepository).findAllByGroupIdAndDeletedAtIsNullOrderByCreatedAtDesc(groupId);
-        verify(tierAlbumRepository).findByGroupId(groupId);
-        verify(highlightAlbumRepository).findAllByGroupIdAndDeletedAtIsNullOrderByCreatedAtDesc(groupId);
-
+            verify(groupRepository).findById(groupId);
+            verify(groupMemberRepository).existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED);
+            verify(timelineAlbumRepository).findAllByGroupIdAndDeletedAtIsNullOrderByCreatedAtDesc(groupId);
+            verify(tierAlbumRepository).findByGroupId(groupId);
+            verify(highlightAlbumRepository).findAllByGroupIdAndDeletedAtIsNullOrderByCreatedAtDesc(groupId);        }
     }
     
     @DisplayName("그룹이 존재하지 않으면 예외가 발생한다.")

@@ -3,6 +3,7 @@ package com.ssafy.keepick.auth.controller;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
+import com.ssafy.keepick.support.BaseTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -19,7 +20,7 @@ import com.ssafy.keepick.global.exception.ErrorCode;
 import static org.assertj.core.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
-class MobileAuthControllerTest {
+class MobileAuthControllerTest extends BaseTest {
 
     @Mock
     private MobileLoginService mobileLoginService;
