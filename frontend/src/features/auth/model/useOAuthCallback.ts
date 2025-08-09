@@ -30,14 +30,17 @@ export const useOAuthCallback = () => {
 
       if (error) {
         console.error("OAuth2 Error:", error);
-        router.replace("/login?error=" + encodeURIComponent(error));
+        router.replace("/?error=" + encodeURIComponent(error));
         return;
       }
 
       if (accessToken) {
         // console.log("✅ 토큰 발견, 저장 시작");
 
-        // 1. 토큰 저장 먼저
+        // 1. 먼저 URL 정리하여 무한 루프 방지
+        router.replace("/");
+
+        // 2. 토큰 저장
         dispatch(
           setTokens({
             accessToken,
@@ -45,15 +48,15 @@ export const useOAuthCallback = () => {
           })
         );
 
-        // 2. 사용자 정보 가져오기
-        await fetchUserInfo(); // await 추가
-
-        // 3. URL 정리 (마지막에)
-        router.replace("/");
+        // 3. 사용자 정보 가져오기
+        await fetchUserInfo();
       }
     };
 
-    run();
+    // searchParams가 있을 때만 실행 (무한 루프 방지)
+    if (searchParams?.has("token") || searchParams?.has("accessToken") || searchParams?.has("error")) {
+      run();
+    }
   }, [searchParams, router, dispatch]);
 
   // 사용자 정보를 API에서 가져와서 Redux에 저장
@@ -70,7 +73,7 @@ export const useOAuthCallback = () => {
     } catch (error) {
       console.error("User info fetch error:", error);
       // 사용자 정보 가져오기 실패 시 에러 페이지로
-      router.replace("/login?error=fetch_failed");
+      router.replace("/?error=fetch_failed");
     } finally {
       // 로딩 상태 종료
       dispatch(setUserLoading(false));

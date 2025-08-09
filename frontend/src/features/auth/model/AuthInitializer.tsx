@@ -91,7 +91,7 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
   // useEffect 내에서만 redirect 처리
   useEffect(() => {
     if (isInitialized && isProtectedPath && !hasToken) {
-      redirect("/login");
+      redirect("/");
     }
   }, [isInitialized, isProtectedPath, hasToken]);
 

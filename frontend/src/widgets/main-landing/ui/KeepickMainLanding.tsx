@@ -1,19 +1,18 @@
 'use client'
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react"
 import Image from "next/image"
-import { AppHeader, AppSidebar } from "@/widgets/layout"
-import { useSidebar } from "@/widgets/layout/model/useSidebar"
 
-export default function KeepickMainLanding() {
+interface KeepickMainLandingRef {
+  spillPhotos: () => void
+}
+
+const KeepickMainLanding = forwardRef<KeepickMainLandingRef>((props, ref) => {
   const [mounted, setMounted] = useState(false)
   const [logoVisible, setLogoVisible] = useState(false)
   const [animationKey, setAnimationKey] = useState(0)
   const [isClient, setIsClient] = useState(false)
   const [scale, setScale] = useState(1)
-  
-  // useSidebar 훅 사용
-  const sidebarProps = useSidebar()
 
   // 타이머 참조들
   const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -234,6 +233,11 @@ export default function KeepickMainLanding() {
     }, 2000) // 조금 더 빠른 로고 등장
   }
 
+  // ref를 통해 spillPhotos 함수 노출
+  useImperativeHandle(ref, () => ({
+    spillPhotos
+  }))
+
   // 반응형 크기 계산 함수 (V35 원본 그대로)
   const getResponsiveSize = (baseSize: number) => {
     if (!isClient) return baseSize // SSR에서는 기본 크기 반환
@@ -296,27 +300,13 @@ export default function KeepickMainLanding() {
   }, [])
 
   return (
-    <div className="min-h-screen text-white overflow-hidden select-none" style={{ backgroundColor: '#111111' }}>
-      {/* Sidebar */}
-      <AppSidebar {...sidebarProps} />
-
-      {/* Header */}
-      <AppHeader 
-        sidebarPinned={sidebarProps.sidebarPinned}
-        onSpillPhotos={spillPhotos}
-        showCenterButton={true}
-      />
-
-      {/* Main Content Container - 헤더 아래 중앙 정렬 */}
-      <div 
-        className={`flex items-center justify-center transition-all duration-300 ${
-          sidebarProps.sidebarPinned ? 'ml-[240px]' : 'ml-0'
-        }`}
-        style={{ 
-          height: '100vh',
-          paddingTop: '56px' // 헤더 높이만큼 패딩
-        }}
-      >
+    <div 
+      className="flex items-center justify-center text-white overflow-hidden select-none"
+      style={{ 
+        height: 'calc(100vh - 56px)', // 헤더 높이 제외
+        width: '100%'
+      }}
+    >
         {/* 스케일링 컨테이너 - 메인 콘텐츠만 */}
         <div 
           className="transition-transform duration-300"
@@ -420,15 +410,17 @@ export default function KeepickMainLanding() {
             </div>
           </main>
         </div>
-      </div>
 
-      {/* 디버그 정보 (개발용) */}
-      {isClient && (
-        <div className="fixed bottom-4 right-4 text-xs text-gray-500 bg-black/50 px-2 py-1 rounded">
-          Scale: {Math.round(scale * 100)}% | {window.innerWidth}×{window.innerHeight}
-        </div>
-      )}
+        {/* 디버그 정보 (개발용) */}
+        {isClient && (
+          <div className="fixed bottom-4 right-4 text-xs text-gray-500 bg-black/50 px-2 py-1 rounded">
+            Scale: {Math.round(scale * 100)}% | {window.innerWidth}×{window.innerHeight}
+          </div>
+        )}
     </div> 
-    
   )
-}
+})
+
+KeepickMainLanding.displayName = 'KeepickMainLanding'
+
+export default KeepickMainLanding

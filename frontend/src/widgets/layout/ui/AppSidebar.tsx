@@ -4,6 +4,7 @@ import { useState } from "react"
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { FriendsTabWidget } from "@/widgets/friends"
 import { useMainGroups } from "@/features/main-integration/model/useMainGroups"
+import { useMainAuth } from "@/features/main-integration/model/useMainAuth"
 import { ScrollArea } from "@/shared/ui/shadcn/scroll-area"
 
 interface AppSidebarProps {
@@ -27,6 +28,7 @@ export default function AppSidebar({
 }: AppSidebarProps) {
   const [expandedGroups, setExpandedGroups] = useState<number[]>([])
   const { groups, navigateToGroup } = useMainGroups()
+  const { isLoggedIn } = useMainAuth()
 
   const toggleGroup = (groupId: number) => {
     setExpandedGroups(prev => 
@@ -37,6 +39,11 @@ export default function AppSidebar({
   }
 
   const shouldShowSidebar = sidebarHovered || sidebarPinned
+
+  // 로그인하지 않은 경우 사이드바 숨김
+  if (!isLoggedIn) {
+    return null
+  }
 
   return (
     <>

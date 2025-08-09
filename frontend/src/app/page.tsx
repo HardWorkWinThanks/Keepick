@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAppSelector } from "@/shared/config/hooks";
 import { useRouter } from "next/navigation";
 import KeepickMainLanding from "@/widgets/main-landing/ui/KeepickMainLanding";
+import { AppLayout } from "@/widgets/layout";
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
 
@@ -20,10 +21,17 @@ export default function HomePage() {
   const { isAuthenticated, isLoading: authLoading } = useAppSelector((state) => state.auth);
   const { currentUser, isLoading: userLoading } = useAppSelector((state) => state.user);
   const [mounted, setMounted] = useState(false);
+  const keepickMainRef = useRef<{ spillPhotos: () => void } | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleSpillPhotos = () => {
+    if (keepickMainRef.current?.spillPhotos) {
+      keepickMainRef.current.spillPhotos();
+    }
+  };
 
   // 로딩 중이거나 클라이언트 마운트 전에는 로딩 화면
   if (!mounted || authLoading || userLoading) {
@@ -45,8 +53,15 @@ export default function HomePage() {
         <OAuthHandler />
       </Suspense>
 
-      {/* Keepick 메인 랜딩 페이지 */}
-      <KeepickMainLanding />
+      {/* AppLayout으로 일관성 있는 구조 */}
+      <AppLayout
+        backgroundColor="#111111"
+        showCenterButton={true}
+        onSpillPhotos={handleSpillPhotos}
+      >
+        {/* Keepick 메인 랜딩 컨텐츠 */}
+        <KeepickMainLanding ref={keepickMainRef} />
+      </AppLayout>
     </>
   );
 }

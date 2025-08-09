@@ -20,8 +20,8 @@ export const useLogout = () => {
     dispatch(clearAuth());
     // 2. Redux 스토어에서 사용자 정보를 제거합니다.
     dispatch(clearUser());
-    // 3. 사용자를 로그인 페이지로 리디렉션합니다.
-    router.push("/login");
+    // 3. 사용자를 메인 페이지로 리디렉션합니다.
+    router.push("/");
   };
 
   return logout;

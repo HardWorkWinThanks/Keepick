@@ -105,7 +105,7 @@ export default function SocialLoginButton({
       <motion.div
         className="flex overflow-hidden rounded-lg transition-colors"
         style={{
-          backgroundColor: isHovered ? '#333333' : '#111111',
+          backgroundColor:'#111111',
         }}
         animate={{
           width: containerWidth,

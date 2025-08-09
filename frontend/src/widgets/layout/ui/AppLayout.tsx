@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { useSidebar } from '../model/useSidebar'
+import { useMainAuth } from "@/features/main-integration/model/useMainAuth"
 import AppHeader from './AppHeader'
 import AppSidebar from './AppSidebar'
 
@@ -44,13 +45,14 @@ export default function AppLayout({
   className = ""
 }: AppLayoutProps) {
   const sidebarProps = useSidebar()
+  const { isLoggedIn } = useMainAuth()
 
   return (
     <div className={`min-h-screen ${className}`} style={{ backgroundColor }}>
       <AppSidebar {...sidebarProps} {...sidebarConfig} />
       
       <div className={`transition-all duration-200 ease-out ${
-        sidebarProps.sidebarPinned ? "ml-[240px]" : "ml-0"
+        isLoggedIn && sidebarProps.sidebarPinned ? "ml-[240px]" : "ml-0"
       }`}>
         <AppHeader 
           sidebarPinned={sidebarProps.sidebarPinned}

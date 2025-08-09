@@ -72,7 +72,7 @@ class ApiClient {
           localStorage.removeItem("accessToken");
           localStorage.removeItem("refreshToken");
           if (typeof window !== "undefined") {
-            window.location.href = "/login";
+            window.location.href = "/";
           }
         }
         return Promise.reject(error);
