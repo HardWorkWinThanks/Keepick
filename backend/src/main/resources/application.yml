@@ -85,6 +85,8 @@ cookie:
 app:
   frontend:
     url: ${FRONTEND_URL:http://localhost:3000}
+  vision-ai:
+    url: ${VISION_AI_URL:http://127.0.0.1:5000}
   aws:
     s3:
       bucket-name: ${S3_BUCKET_NAME}
