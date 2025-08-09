@@ -38,32 +38,34 @@ export default function AppHeader({
     >
       {/* Left side - 로고 */}
       {showLogo && (
-        <div className="flex items-center">
-          <h1 className="text-sm sm:text-lg font-semibold tracking-wider">
+        <Link href="/" className="flex items-center hover:scale-105 transition-transform duration-200">
+          <h1 className="text-sm sm:text-lg font-semibold tracking-wider cursor-pointer">
             {logoText}
           </h1>
-        </div>
+        </Link>
       )}
 
       {/* Center Button - 조건부 표시 */}
       {showCenterButton && onSpillPhotos && (
-        <button
-          onClick={onSpillPhotos}
-          className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl sm:text-3xl font-bold transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer select-none"
-          style={{
-            color: "#FE7A25",
-            filter: "brightness(1)",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.filter = "brightness(1.1)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.filter = "brightness(1)";
-          }}
-          title={centerButtonTitle}
-        >
-          {centerButtonText}
-        </button>
+        <div className="absolute left-1/2 transform -translate-x-1/2">
+          <button
+            onClick={onSpillPhotos}
+            className="text-2xl sm:text-3xl font-bold transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer select-none"
+            style={{
+              color: "#FE7A25",
+              filter: "brightness(1)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.filter = "brightness(1.1)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.filter = "brightness(1)";
+            }}
+            title={centerButtonTitle}
+          >
+            {centerButtonText}
+          </button>
+        </div>
       )}
 
       {/* Right Navigation - 로그인 상태에 따라 다른 UI */}

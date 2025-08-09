@@ -26,7 +26,20 @@ export default function GroupPage({ params }: GroupPageProps) {
   }
 
   return (
-    <AppLayout>
+    <AppLayout
+      sidebarConfig={{
+        showCreateGroupButton: true,
+        showGroupsSection: false,
+        showFriendsSection: true,
+        currentGroup: {
+          id: groupData.id,
+          name: groupData.name,
+          description: groupData.description,
+          thumbnailImage: "/dummy/jeju-dummy1.webp"
+        },
+        forceInitialPinned: true
+      }}
+    >
       <GroupSpaceWidget 
         group={groupData} 
         showSidebar={true}

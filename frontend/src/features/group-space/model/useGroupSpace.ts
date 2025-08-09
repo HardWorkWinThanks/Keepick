@@ -75,9 +75,9 @@ export function useGroupSpace() {
 
   const navigatePhotos = (direction: "left" | "right") => {
     if (direction === "left" && currentPhotoIndex > 0) {
-      setCurrentPhotoIndex((prev) => prev - 1)
+      setCurrentPhotoIndex((prev) => Math.max(0, prev - 4))
     } else if (direction === "right" && currentPhotoIndex < currentPhotos.length - 4) {
-      setCurrentPhotoIndex((prev) => prev + 1)
+      setCurrentPhotoIndex((prev) => Math.min(currentPhotos.length - 4, prev + 4))
     }
   }
 

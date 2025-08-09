@@ -19,6 +19,13 @@ interface AppLayoutProps {
     showCreateGroupButton?: boolean
     showGroupsSection?: boolean  
     showFriendsSection?: boolean
+    currentGroup?: {
+      id: string
+      name: string
+      description: string
+      thumbnailImage?: string
+    }
+    forceInitialPinned?: boolean
   }
   headerConfig?: {
     showLogo?: boolean
@@ -44,7 +51,7 @@ export default function AppLayout({
   headerConfig = {},
   className = ""
 }: AppLayoutProps) {
-  const sidebarProps = useSidebar()
+  const sidebarProps = useSidebar(sidebarConfig?.forceInitialPinned)
   const { isLoggedIn } = useMainAuth()
 
   return (

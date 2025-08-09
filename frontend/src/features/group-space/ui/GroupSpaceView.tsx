@@ -85,12 +85,14 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                       className="group cursor-pointer w-full"
                     >
                       <div className="relative aspect-[4/5] overflow-hidden bg-[#222222]/50 rounded-sm w-full border border-white/10">
-                        <img
+                        <Image
                           src={photo.image || "/placeholder.svg"}
                           alt={photo.title}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          fill
+                          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          priority={index < 4}
                         />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-[#FE7A25]/20 transition-colors duration-300" />
                       </div>
 
                       <div className="mt-6 space-y-2">
