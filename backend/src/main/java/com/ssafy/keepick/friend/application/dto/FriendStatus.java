@@ -1,4 +1,4 @@
-package com.ssafy.keepick.friend.application;
+package com.ssafy.keepick.friend.application.dto;
 
 public enum FriendStatus {
     FRIEND, SENT, RECEIVED
