@@ -3,7 +3,7 @@ package com.ssafy.keepick.external.s3;
 import com.ssafy.keepick.external.s3.dto.S3ImagePathDto;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
-import com.ssafy.keepick.global.utils.file.FileUtils;
+import com.ssafy.keepick.global.utils.FileUtils;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoCommandDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,7 +57,7 @@ public class S3PresignedUrlService {
 
             PresignedPutObjectRequest presignedRequest = s3Presigner.presignPutObject(presignRequest);
             String presignedUrl = presignedRequest.url().toString();
-            String publicUrl = generatePublicUrl(objectKey);
+            String publicUrl = FileUtils.generatePublicUrl(bucketName, region, objectKey);
             log.info("Presigned URL 생성: {} -> {}", fileName, objectKey);
             log.info("Public url 생성 : {}", publicUrl);
             return S3ImagePathDto.of(presignedUrl, publicUrl);
@@ -75,9 +75,5 @@ public class S3PresignedUrlService {
         return photoCommandDtoList.stream()
                 .map(info -> generatePresignedUrl(info.getFileName(), info.getContentType()))
                 .toList();
-    }
-
-    public String generatePublicUrl(String objectKey) {
-        return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, objectKey);
     }
 }
