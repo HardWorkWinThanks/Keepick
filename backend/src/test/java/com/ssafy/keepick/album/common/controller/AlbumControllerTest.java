@@ -20,12 +20,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
 import java.util.List;
 
 import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
 class AlbumControllerTest extends BaseTest  {
@@ -39,11 +39,6 @@ class AlbumControllerTest extends BaseTest  {
     private AlbumController albumController;
 
     private ObjectMapper objectMapper;
-
-    private TimelineAlbumDto timelineAlbumDto;
-    private TierAlbumDto tierAlbumDto;
-    private HighlightAlbumDto highlightAlbumDto;
-
 
     @BeforeEach
     void setUp() {

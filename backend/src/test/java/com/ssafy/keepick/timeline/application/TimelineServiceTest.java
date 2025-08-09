@@ -11,7 +11,6 @@ import com.ssafy.keepick.timeline.domain.TimelineAlbumPhoto;
 import com.ssafy.keepick.timeline.domain.TimelineAlbumSection;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumRepository;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumSectionRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,24 +18,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.BDDMockito.anyLong;
-import static org.mockito.BDDMockito.willDoNothing;
 
 @ExtendWith(MockitoExtension.class)
 @Import({
-        TimelineService.class,
-        TimelineValidationService.class,
+        TimelineService.class
 })
 class TimelineServiceTest extends BaseRepositoryTest {
-
-    @MockitoBean
-    TimelineValidationService timelineValidationService;
 
     @Autowired TimelineService timelineService;
 
@@ -51,13 +43,6 @@ class TimelineServiceTest extends BaseRepositoryTest {
 
     @Autowired
     PhotoRepository photoRepository;
-
-    @BeforeEach
-    void beforeEach() {
-        willDoNothing().given(timelineValidationService).validateAlbumPermission(anyLong(), anyLong());
-        willDoNothing().given(timelineValidationService).validateAlbumBelongsToGroup(anyLong(), anyLong());
-        willDoNothing().given(timelineValidationService).validateGroupMemberPermission(anyLong());
-    }
 
     @DisplayName("타임라인 앨범 목록을 조회합니다.")
     @Test
