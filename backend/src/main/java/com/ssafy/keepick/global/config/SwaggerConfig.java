@@ -13,7 +13,7 @@ import java.util.List;
 
 @Configuration
 public class SwaggerConfig {
-    @Value("${app.frontend.url}")
+    @Value("${app.dev.url}")
     String devServer;
     @Bean
     public OpenAPI openAPI() {

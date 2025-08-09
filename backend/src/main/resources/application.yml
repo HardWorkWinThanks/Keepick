@@ -85,6 +85,8 @@ cookie:
 app:
   frontend:
     url: ${FRONTEND_URL:http://localhost:3000}
+  dev:
+    url: ${DEV_URL:http://localhost:8080}
   aws:
     s3:
       bucket-name: ${S3_BUCKET_NAME}
