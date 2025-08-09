@@ -27,9 +27,9 @@ public class PhotoAnalysisController {
 
     @PostMapping("/similarity")
     @Operation(summary = "유사 사진 분류 API", description = "비동기 작업으로 처리되며 작업 id만 우선으로 반환합니다.")
-    public ApiResponse<?> invokeSimilarGrouping() {
-
-        return ApiResponse.ok(null);
+    public CompletableFuture<ApiResponse<PhotoAnalysisJobResponse>> invokeSimilarGrouping(@PathVariable Long groupId) {
+        CompletableFuture<PhotoAnalysisDto> result = photoAnalysisService.groupingSimilarPhotos(groupId);
+        return CompletableFuture.completedFuture(ApiResponse.ok(PhotoAnalysisJobResponse.from(result)));
     }
 
     @PostMapping("/face")
