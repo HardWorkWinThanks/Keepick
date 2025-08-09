@@ -60,14 +60,21 @@ public class GroupInvitationService {
     public String createInvitationLink(Long groupId) {
         Group group = groupRepository.findById(groupId).orElseThrow(() -> new BaseException(GROUP_NOT_FOUND));
 
-        // 초대 토큰 생성
-        String inviteToken = UUID.randomUUID().toString();
+        // 기존에 저장된 초대 토큰이 있는지 확인
+        String key = "invite:" + groupId.toString();
+        String inviteToken = redisService.getValue(key);
+
+        if (inviteToken == null) {
+            // 토큰이 없으면 생성 & 저장
+            inviteToken = UUID.randomUUID().toString();
+            redisService.setValue(key, inviteToken, Duration.ofDays(7));
+        } else {
+            // 토큰이 이미 있으면 TTL만 연장
+            redisService.expire(key, Duration.ofDays(7));
+        }
 
         // 그룹 정보와 초대 토큰으로 JSON -> Base64 인코등
         String encodedInviteToken = encodeInviteToken(group, inviteToken);
-
-        // 초대 토큰의 유효기간을 1일로 저장
-        redisService.setValue("invite:" + inviteToken, group.getId().toString(), Duration.ofDays(1));
 
         // 초대 링크 반환
         String link = frontendUrl + "/invite/" + encodedInviteToken;
@@ -101,8 +108,8 @@ public class GroupInvitationService {
     }
 
     private void validateToken(Long groupId, String inviteToken) {
-        String value = redisService.getValue("invite:" + inviteToken);
-        if (!groupId.toString().equals(value)) throw new BaseException(INVITATION_TOKEN_NOT_FOUND);
+        String value = redisService.getValue("invite:" + groupId.toString());
+        if (!inviteToken.equals(value)) throw new BaseException(INVITATION_TOKEN_NOT_FOUND);
     }
 
     private GroupMember processInvitationToGroup(Group group, Long memberId) {

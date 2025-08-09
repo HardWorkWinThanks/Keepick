@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
 
+import java.util.Objects;
+
 @Getter
 @Entity
 @Table(name = "`group`")
@@ -45,9 +47,15 @@ public class Group extends BaseTimeEntity {
     }
 
     public void update(String name, String description, String groupThumbnailUrl) {
-        this.name = name;
-        this.description = description;
-        this.groupThumbnailUrl = groupThumbnailUrl;
+        if (!Objects.equals(this.name, name)) {
+            this.name = name;
+        }
+        if (!Objects.equals(this.description, description)) {
+            this.description = description;
+        }
+        if (!Objects.equals(this.groupThumbnailUrl, groupThumbnailUrl)) {
+            this.groupThumbnailUrl = groupThumbnailUrl;
+        }
     }
 
 }
