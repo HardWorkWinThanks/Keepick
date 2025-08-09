@@ -8,14 +8,12 @@ import com.ssafy.keepick.timeline.persistence.TimelineAlbumRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class GroupAlbumInterceptor implements HandlerInterceptor {
@@ -38,8 +36,6 @@ public class GroupAlbumInterceptor implements HandlerInterceptor {
         String albumType = matcher.group(2);
         Long albumId = Long.parseLong(matcher.group(3));
 
-        log.info("groupId={}, albumType={}, albumId={}", groupId, albumType, albumId);
-
         boolean isGroupAlbum = switch (albumType) {
             case "timeline" -> validateTimelineAlbumBelongsToGroup(albumId, groupId);
             case "tier" -> validateTierAlbumBelongsToGroup(albumId, groupId);
@@ -49,7 +45,7 @@ public class GroupAlbumInterceptor implements HandlerInterceptor {
 
         // 그룹에 앨범이 없는 경우 예외 발생
         if (!isGroupAlbum) {
-            throw new BaseException(ErrorCode.ALBUM_NOT_FOUND);
+            throw new BaseException(ErrorCode.FORBIDDEN);
         }
         return true;
     }

@@ -5,17 +5,16 @@ import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.group.domain.GroupMemberStatus;
 import com.ssafy.keepick.group.persistence.GroupMemberRepository;
+import com.ssafy.keepick.group.persistence.GroupRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class GroupMemberInterceptor implements HandlerInterceptor {
@@ -27,8 +26,6 @@ public class GroupMemberInterceptor implements HandlerInterceptor {
         // 로그인 유저와 그룹 ID 조회
         Long currentUserId = AuthenticationUtil.getCurrentUserId();
         Long groupId = extractGroupIdFromPath(request.getRequestURI());
-
-        log.info("currentUserId={}, groupId={}", currentUserId, groupId);
 
         // 유저가 그룹에 가입한 회원인지 확인
         boolean isGroupMember = groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId, GroupMemberStatus.ACCEPTED);
