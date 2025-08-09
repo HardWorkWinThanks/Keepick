@@ -1,6 +1,7 @@
 package com.ssafy.keepick.photo.application;
 import com.ssafy.keepick.external.s3.S3FileOperationService;
 import com.ssafy.keepick.external.s3.S3PresignedUrlService;
+import com.ssafy.keepick.external.s3.dto.S3ImagePathDto;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoCommandDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,11 +16,11 @@ public class ImageService {
     private final S3FileOperationService fileOperationService;
 
     // Presigned URL 관련 메서드들
-    public String generatePresignedUrl(String fileName, String contentType) {
+    public S3ImagePathDto generatePresignedUrl(String fileName, String contentType) {
         return presignedUrlService.generatePresignedUrl(fileName, contentType);
     }
 
-    public List<String> generatePresignedUrls(List<GroupPhotoCommandDto> groupPhotoCommandDtoList) {
+    public List<S3ImagePathDto> generatePresignedUrls(List<GroupPhotoCommandDto> groupPhotoCommandDtoList) {
         groupPhotoCommandDtoList.forEach(GroupPhotoCommandDto::validate);
         return presignedUrlService.generatePresignedUrls(groupPhotoCommandDtoList);
     }
