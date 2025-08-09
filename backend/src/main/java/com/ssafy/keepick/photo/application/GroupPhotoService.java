@@ -1,5 +1,6 @@
 package com.ssafy.keepick.photo.application;
 
+import com.ssafy.keepick.external.s3.dto.S3ImagePathDto;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.group.domain.Group;
@@ -52,14 +53,14 @@ public class GroupPhotoService {
                 .collect(Collectors.toList());
 
         // 4. presigned URL 발급
-        List<String> originalUrls = imageService.generatePresignedUrls(commandDtos);
+        List<S3ImagePathDto> imagePathList = imageService.generatePresignedUrls(commandDtos);
 
         // 5. originalUrl 세팅 및 상태 변경 (status: UPLOAD)
         IntStream.range(0, photos.size())
-                .forEach(i -> photos.get(i).upload(originalUrls.get(i)));
+                .forEach(i -> photos.get(i).upload(imagePathList.get(i).getPublicUrl()));
         photoRepository.saveAll(photos); // 변경사항 저장
 
-        return originalUrls;
+        return imagePathList.stream().map(S3ImagePathDto::getPresignedUrl).toList();
     }
 
     @Transactional
