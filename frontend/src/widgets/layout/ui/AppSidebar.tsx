@@ -67,16 +67,16 @@ export default function AppSidebar({
         onMouseEnter={() => setSidebarHovered(true)}
       />
 
-      {/* Sidebar Toggle Button - 로고 아래 위치 */}
+      {/* Sidebar Toggle Button - 헤더 바로 아래 좌측 위치, 사이드바 고정시 우측 이동 */}
       <div 
         onClick={toggleSidebarPin}
-        className={`fixed top-24 z-50 cursor-pointer transition-all duration-300 hover:scale-110 ${
-          sidebarPinned ? 'left-[254px]' : 'left-6'
+        className={`fixed top-16 z-50 cursor-pointer transition-all duration-300 hover:scale-110 ${
+          sidebarPinned ? 'left-[254px]' : 'left-4'
         }`}
         style={{ zIndex: 60 }}
         title="사이드바 고정/해제"
       >
-        <span className="text-2xl">☰</span>
+        <span className="text-2xl text-white">☰</span>
       </div>
 
       {/* Sidebar */}

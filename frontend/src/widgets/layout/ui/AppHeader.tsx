@@ -33,9 +33,7 @@ export default function AppHeader({
 
   return (
     <header
-      className={`fixed top-0 right-0 z-50 flex items-center px-4 py-2 sm:px-6 sm:py-2 lg:px-12 h-14 transition-all duration-300 ${
-        sidebarPinned ? "left-[240px]" : "left-0"
-      }`}
+      className={`flex items-center px-4 py-2 sm:px-6 sm:py-2 lg:px-12 h-14 transition-all duration-300`}
       style={{ backgroundColor: "#111111" }}
     >
       {/* Left side - 로고 */}

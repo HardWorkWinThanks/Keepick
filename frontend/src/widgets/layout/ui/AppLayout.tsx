@@ -65,8 +65,8 @@ export default function AppLayout({
           {...headerConfig}
         />
         
-        {/* 헤더 아래부터 시작하는 메인 영역 */}
-        <div className="pt-14">
+        {/* 메인 영역 */}
+        <div>
           {children}
         </div>
       </div>

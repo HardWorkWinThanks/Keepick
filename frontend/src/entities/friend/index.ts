@@ -1,0 +1,1 @@
+export type { Friend, FriendRequest } from './model/types';
