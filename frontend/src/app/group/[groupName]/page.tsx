@@ -4,9 +4,12 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Header from "@/widgets/layout/ui/HeaderWidget";
-import GroupSidebar from "@/widgets/layout/ui/GroupSidebar";
-import { TierAlbumWidget, TimelineAlbumWidget, HighlightAlbumWidget } from "@/widgets/album-views";
+import { AppLayout } from "@/widgets/layout";
+import {
+  TierAlbumWidget,
+  TimelineAlbumWidget,
+  HighlightAlbumWidget,
+} from "@/widgets/album-views";
 import { PlusIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import GroupChatFloatingButton from "@/widgets/group-chat/ui/GroupChatFloatingButton";
@@ -22,7 +25,6 @@ export default function GroupPage({ params }: PageProps) {
   const searchParams = useSearchParams();
   const [groupName, setGroupName] = useState<string>("");
   const [encodedGroupName, setEncodedGroupName] = useState<string>("");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<AlbumType>("tier");
   const [selectedAlbum, setSelectedAlbum] = useState<{
     id: string;
@@ -83,14 +85,6 @@ export default function GroupPage({ params }: PageProps) {
       setSelectedAlbum(null);
     }
   }, [searchParams]);
-
-  useEffect(() => {
-    if (selectedAlbum) {
-      setSidebarOpen(false);
-    } else {
-      setSidebarOpen(true);
-    }
-  }, [selectedAlbum]);
 
   const handleSelectAlbum = (id: string, title: string, type: AlbumType) => {
     if (!encodedGroupName) return;
@@ -323,22 +317,15 @@ export default function GroupPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <GroupSidebar
-        groupName={groupName}
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-        onSelectAlbum={handleSelectAlbum}
-      />
-      <div
-        className={`flex-1 transition-all duration-300 ${
-          sidebarOpen ? "lg:ml-64" : "ml-0"
-        }`}
+    <>
+      <AppLayout 
+        backgroundColor="#ffffffff"
+        sidebarConfig={{ 
+          showCreateGroupButton: false,
+          showGroupsSection: true,
+          showFriendsSection: true
+        }}
       >
-        <Header
-          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-          onBackToDashboard={() => (window.location.href = "/")}
-        />
         <main className="p-6 sm:p-8">
           {selectedAlbum ? (
             renderActiveAlbumView()
@@ -391,12 +378,12 @@ export default function GroupPage({ params }: PageProps) {
             </>
           )}
         </main>
-      </div>
+      </AppLayout>
 
       <GroupChatFloatingButton
         groupName={encodedGroupName}
         isChatActive={isChatActive}
       />
-    </div>
+    </>
   );
 }

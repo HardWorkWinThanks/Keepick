@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
-import MainHeader from "./MainHeader"
-import MainSidebar from "./MainSidebar"
+import { AppHeader, AppSidebar } from "@/widgets/layout"
+import { useSidebar } from "@/widgets/layout/model/useSidebar"
 
 export default function KeepickMainLanding() {
   const [mounted, setMounted] = useState(false)
@@ -11,21 +11,15 @@ export default function KeepickMainLanding() {
   const [animationKey, setAnimationKey] = useState(0)
   const [isClient, setIsClient] = useState(false)
   const [scale, setScale] = useState(1)
-  const [sidebarHovered, setSidebarHovered] = useState(false)
-  const [sidebarPinned, setSidebarPinned] = useState(false)
+  
+  // useSidebar 훅 사용
+  const sidebarProps = useSidebar()
 
   // 타이머 참조들
   const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const logoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // 햄버거 버튼 토글
-  const toggleSidebarPin = () => {
-    setSidebarPinned(!sidebarPinned)
-    if (sidebarPinned) {
-      setSidebarHovered(false) // 고정 해제 시 즉시 호버 상태 해제
-    }
-  }
 
   // 기본 앨범 데이터 (V35 원본 그대로)
   const baseAlbumData = [
@@ -304,23 +298,19 @@ export default function KeepickMainLanding() {
   return (
     <div className="min-h-screen text-white overflow-hidden select-none" style={{ backgroundColor: '#111111' }}>
       {/* Sidebar */}
-      <MainSidebar 
-        sidebarHovered={sidebarHovered}
-        sidebarPinned={sidebarPinned}
-        setSidebarHovered={setSidebarHovered}
-        toggleSidebarPin={toggleSidebarPin}
-      />
+      <AppSidebar {...sidebarProps} />
 
       {/* Header */}
-      <MainHeader 
-        sidebarPinned={sidebarPinned}
+      <AppHeader 
+        sidebarPinned={sidebarProps.sidebarPinned}
         onSpillPhotos={spillPhotos}
+        showCenterButton={true}
       />
 
       {/* Main Content Container - 헤더 아래 중앙 정렬 */}
       <div 
         className={`flex items-center justify-center transition-all duration-300 ${
-          sidebarPinned ? 'ml-[240px]' : 'ml-0'
+          sidebarProps.sidebarPinned ? 'ml-[240px]' : 'ml-0'
         }`}
         style={{ 
           height: '100vh',

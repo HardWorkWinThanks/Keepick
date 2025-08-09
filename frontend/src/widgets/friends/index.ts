@@ -1,0 +1,1 @@
+export { default as FriendsTabWidget } from './ui/FriendsTabWidget'

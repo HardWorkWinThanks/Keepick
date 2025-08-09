@@ -13,5 +13,5 @@ export type { SocialProvider } from "./types";
 // 기존 exports
 export { authApi } from "./api/authApi";
 export { default as authReducer } from "./model/authSlice";
-export { SocialLoginButton } from "./ui/SocialLoginButton";
+export { default as SocialLoginButton } from "./ui/SocialLoginButton";
 export { useLogout } from './model/useLogout'
