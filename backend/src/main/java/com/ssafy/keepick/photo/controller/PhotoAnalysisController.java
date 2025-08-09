@@ -1,6 +1,7 @@
 package com.ssafy.keepick.photo.controller;
 
 import com.ssafy.keepick.global.response.ApiResponse;
+import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.photo.application.PhotoAnalysisService;
 import com.ssafy.keepick.photo.application.dto.PhotoAnalysisDto;
 import com.ssafy.keepick.photo.controller.response.PhotoAnalysisJobResponse;
@@ -21,21 +22,24 @@ public class PhotoAnalysisController {
     @PostMapping("/blur")
     @Operation(summary = "흐린 사진 분류 API", description = "비동기 작업으로 처리되며 작업 id만 우선으로 반환합니다.")
     public CompletableFuture<ApiResponse<PhotoAnalysisJobResponse>> invokeBlurDetection(@PathVariable Long groupId) {
-        CompletableFuture<PhotoAnalysisDto> result = photoAnalysisService.detectBlurPhotos(groupId);
+        Long currentMemberId = AuthenticationUtil.getCurrentUserId();
+        CompletableFuture<PhotoAnalysisDto> result = photoAnalysisService.detectBlurPhotos(groupId, currentMemberId);
         return CompletableFuture.completedFuture(ApiResponse.ok(PhotoAnalysisJobResponse.from(result)));
     }
 
     @PostMapping("/similarity")
     @Operation(summary = "유사 사진 분류 API", description = "비동기 작업으로 처리되며 작업 id만 우선으로 반환합니다.")
     public CompletableFuture<ApiResponse<PhotoAnalysisJobResponse>> invokeSimilarGrouping(@PathVariable Long groupId) {
-        CompletableFuture<PhotoAnalysisDto> result = photoAnalysisService.groupingSimilarPhotos(groupId);
+        Long currentMemberId = AuthenticationUtil.getCurrentUserId();
+        CompletableFuture<PhotoAnalysisDto> result = photoAnalysisService.groupingSimilarPhotos(groupId, currentMemberId);
         return CompletableFuture.completedFuture(ApiResponse.ok(PhotoAnalysisJobResponse.from(result)));
     }
 
     @PostMapping("/face")
     @Operation(summary = "사용자 얼굴 식별 API", description = "비동기 작업으로 처리되며 작업 id만 우선으로 반환합니다.")
     public CompletableFuture<ApiResponse<PhotoAnalysisJobResponse>> invokeFaceTagging(@PathVariable Long groupId) {
-        CompletableFuture<PhotoAnalysisDto> result = photoAnalysisService.taggingFaceToPhotos(groupId);
+        Long currentMemberId = AuthenticationUtil.getCurrentUserId();
+        CompletableFuture<PhotoAnalysisDto> result = photoAnalysisService.taggingFaceToPhotos(groupId, currentMemberId);
         return CompletableFuture.completedFuture(ApiResponse.ok(PhotoAnalysisJobResponse.from(result)));
     }
 
