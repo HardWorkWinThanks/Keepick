@@ -2,6 +2,7 @@ package com.ssafy.keepick.timeline.domain;
 
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.photo.domain.Photo;
+import com.ssafy.keepick.support.BaseTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +11,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class TimelineAlbumTest {
+class TimelineAlbumTest extends BaseTest {
 
     @DisplayName("타임라인 앨범 생성 시 그룹과 사진 목록이 필요하다.")
     @Test

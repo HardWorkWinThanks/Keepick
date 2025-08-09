@@ -8,6 +8,7 @@ import com.ssafy.keepick.photo.application.dto.GroupPhotoCommandDto;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
 import com.ssafy.keepick.photo.domain.Photo;
 import com.ssafy.keepick.photo.persistence.PhotoRepository;
+import com.ssafy.keepick.support.BaseTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 
 @ExtendWith(MockitoExtension.class)
-class PhotoUploadServiceTest {
+class PhotoUploadServiceTest extends BaseTest {
 
     @Mock
     private GroupRepository groupRepository;

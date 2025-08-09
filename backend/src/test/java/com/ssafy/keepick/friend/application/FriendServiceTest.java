@@ -1,8 +1,5 @@
-package com.ssafy.keepick.service;
+package com.ssafy.keepick.friend.application;
 
-import com.ssafy.keepick.friend.application.FriendService;
-import com.ssafy.keepick.friend.application.FriendStatus;
-import com.ssafy.keepick.friend.application.FriendInteractionService;
 import com.ssafy.keepick.friend.application.dto.FriendshipDto;
 import com.ssafy.keepick.friend.controller.request.FriendCreateRequest;
 import com.ssafy.keepick.friend.domain.Friendship;
@@ -12,22 +9,22 @@ import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
+import com.ssafy.keepick.support.BaseRepositoryTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Import({
         FriendService.class,
         FriendInteractionService.class
 })
-@DataJpaTest
-class FriendServiceTest {
+class FriendServiceTest extends BaseRepositoryTest {
 
     @Autowired
     MemberRepository memberRepository;

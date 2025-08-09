@@ -4,12 +4,13 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.time.LocalDateTime;
 
+import com.ssafy.keepick.support.BaseTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.ssafy.keepick.album.tier.domain.TierAlbum;
 
-class TierAlbumDtoTest {
+class TierAlbumDtoTest extends BaseTest {
 
     @Test
     @DisplayName("TierAlbum 엔티티로부터 DTO 생성 성공")

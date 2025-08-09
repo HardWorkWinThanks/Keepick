@@ -1,5 +1,6 @@
 package com.ssafy.keepick.auth.application.dto;
 
+import com.ssafy.keepick.support.BaseTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -8,7 +9,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.*;
 
-class KakaoProviderTest {
+class KakaoProviderTest extends BaseTest {
 
     @Test
     @DisplayName("카카오 사용자 정보가 정상적으로 파싱된다")

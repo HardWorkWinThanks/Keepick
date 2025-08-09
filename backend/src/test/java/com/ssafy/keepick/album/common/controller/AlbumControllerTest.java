@@ -7,6 +7,7 @@ import com.ssafy.keepick.album.common.application.dto.AlbumDto;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDto;
 import com.ssafy.keepick.global.exception.GlobalExceptionHandler;
 import com.ssafy.keepick.highlight.application.dto.HighlightAlbumDto;
+import com.ssafy.keepick.support.BaseTest;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,7 +28,7 @@ import java.util.List;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
-class AlbumControllerTest {
+class AlbumControllerTest extends BaseTest  {
 
     private MockMvc mockMvc;
 

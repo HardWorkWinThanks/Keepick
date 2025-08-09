@@ -1,6 +1,21 @@
 package com.ssafy.keepick.photo.persistence;
 
-import static org.assertj.core.api.Assertions.*;
+import com.ssafy.keepick.group.domain.Group;
+import com.ssafy.keepick.group.domain.GroupMember;
+import com.ssafy.keepick.member.domain.Member;
+import com.ssafy.keepick.photo.domain.Photo;
+import com.ssafy.keepick.photo.domain.PhotoMember;
+import com.ssafy.keepick.photo.domain.PhotoTag;
+import com.ssafy.keepick.support.BaseRepositoryTest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -8,32 +23,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import com.ssafy.keepick.global.config.QueryDslConfig;
-import com.ssafy.keepick.group.domain.Group;
-import com.ssafy.keepick.group.domain.GroupMember;
-import com.ssafy.keepick.photo.domain.Photo;
-import com.ssafy.keepick.photo.domain.PhotoMember;
-import com.ssafy.keepick.photo.domain.PhotoTag;
-import com.ssafy.keepick.member.domain.Member;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.test.context.ActiveProfiles;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
-
-@DataJpaTest
-@ActiveProfiles("test")
-@Import({QueryDslConfig.class})
 @DisplayName("PhotoRepository 테스트")
-class PhotoRepositoryTest {
+class PhotoRepositoryTest extends BaseRepositoryTest {
 
     @Autowired
     private PhotoRepository photoRepository;

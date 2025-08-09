@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.ssafy.keepick.support.BaseTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -46,7 +47,7 @@ import com.ssafy.keepick.album.tier.controller.request.CreateTierAlbumRequest;
 import com.ssafy.keepick.album.tier.controller.request.UpdateTierAlbumRequest;
 
 @ExtendWith(MockitoExtension.class)
-class TierAlbumControllerTest {
+class TierAlbumControllerTest extends BaseTest {
 
     private MockMvc mockMvc;
 

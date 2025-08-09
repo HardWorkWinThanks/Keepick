@@ -1,23 +1,21 @@
-package com.ssafy.keepick.persistence;
+package com.ssafy.keepick.friend.persistence;
 
 import com.ssafy.keepick.friend.domain.Friendship;
 import com.ssafy.keepick.friend.domain.FriendshipStatus;
-import com.ssafy.keepick.friend.persistence.FriendshipRepository;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
+import com.ssafy.keepick.support.BaseRepositoryTest;
 import jakarta.persistence.EntityManager;
 import org.hibernate.Hibernate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-public class FriendshipRepositoryTest {
+public class FriendshipRepositoryTest extends BaseRepositoryTest {
 
     @Autowired
     EntityManager em;

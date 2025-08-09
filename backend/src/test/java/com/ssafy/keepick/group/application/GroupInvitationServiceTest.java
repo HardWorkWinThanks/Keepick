@@ -1,28 +1,27 @@
-package com.ssafy.keepick.service.group;
+package com.ssafy.keepick.group.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keepick.external.redis.RedisService;
+import com.ssafy.keepick.global.config.QueryDslConfig;
+import com.ssafy.keepick.global.config.RedisConfig;
 import com.ssafy.keepick.global.exception.BaseException;
 
 import com.ssafy.keepick.group.controller.request.GroupInviteRequest;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.domain.GroupMember;
 import com.ssafy.keepick.group.domain.GroupMemberStatus;
-import com.ssafy.keepick.group.application.GroupInvitationService;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.group.persistence.GroupMemberRepository;
 import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.member.persistence.MemberRepository;
 import com.ssafy.keepick.group.application.dto.GroupMemberDto;
-import com.ssafy.keepick.testconfig.RedisTestContainer;
-import com.ssafy.keepick.testconfig.TestRedisConfig;
+import com.ssafy.keepick.support.RedisTestContainer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.TestPropertySource;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -33,14 +32,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Import({
+        QueryDslConfig.class,
+        RedisConfig.class,
         RedisService.class,
-        TestRedisConfig.class,
         GroupInvitationService.class,
 })
 @DataJpaTest
-@TestPropertySource(properties = {
-        "app.frontend.url=http://localhost:3000"
-})
 public class GroupInvitationServiceTest extends RedisTestContainer {
 
     @Autowired
