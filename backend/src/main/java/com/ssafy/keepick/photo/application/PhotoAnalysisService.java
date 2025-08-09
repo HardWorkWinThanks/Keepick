@@ -1,5 +1,7 @@
 package com.ssafy.keepick.photo.application;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.keepick.external.redis.RedisService;
 import com.ssafy.keepick.external.visionai.VisionAIService;
 import com.ssafy.keepick.external.visionai.request.BlurDetectionRequest;
@@ -7,7 +9,6 @@ import com.ssafy.keepick.external.visionai.request.FaceTaggingRequest;
 import com.ssafy.keepick.external.visionai.request.SimilarGroupingRequest;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
-import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.group.domain.GroupMember;
 import com.ssafy.keepick.group.persistence.GroupMemberRepository;
 import com.ssafy.keepick.member.domain.Member;
@@ -35,11 +36,11 @@ public class PhotoAnalysisService {
     private final GroupMemberRepository groupRepository;
     private final VisionAIService  visionAIService;
     private final RedisService redisService;
+    private final ObjectMapper objectMapper;
 
-    @Async
-    public CompletableFuture<PhotoAnalysisDto> detectBlurPhotos(Long groupId) {
+    @Async("asyncExecutor")
+    public CompletableFuture<PhotoAnalysisDto> detectBlurPhotos(Long groupId, Long currentMemberId) {
         // 1. 사용자가 그룹에 속한 사용자가 맞는지 확인
-        Long currentMemberId = AuthenticationUtil.getCurrentUserId();
         groupRepository.findByGroupIdAndMemberId(groupId, currentMemberId)
                 .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND));
 
@@ -47,10 +48,10 @@ public class PhotoAnalysisService {
         List<Photo> photos = photoRepository.findByGroupIdAndDeletedAtIsNull(groupId);
 
         // 3. 분석 요청 request 변환
-        BlurDetectionRequest request = BlurDetectionRequest.from(photos);
+        String jobId = UUID.randomUUID().toString();
+        BlurDetectionRequest request = BlurDetectionRequest.from(jobId, photos);
 
         // 4. 작업 상태 저장
-        String jobId = UUID.randomUUID().toString();
         PhotoAnalysisJob job = PhotoAnalysisJob.builder()
                 .jobId(jobId)
                 .groupId(groupId)
@@ -61,7 +62,12 @@ public class PhotoAnalysisService {
                 .processedImages(0)
                 .memberId(currentMemberId)
                 .build();
-        redisService.setValue(jobId, job.toString(), Duration.ofHours(1));
+        try {
+            String jobJson = objectMapper.writeValueAsString(job);
+            redisService.setValue(jobId, jobJson, Duration.ofHours(1));
+        } catch (JsonProcessingException e) {
+            throw new BaseException(ErrorCode.INTERNAL_VISION_PARSE_ERROR);
+        }
 
         // 5. vision ai 에 분석 요청
         visionAIService.postBlurRequest(jobId, request)
@@ -73,10 +79,9 @@ public class PhotoAnalysisService {
         return CompletableFuture.completedFuture(PhotoAnalysisDto.of(jobId, JobStatus.PENDING));
     }
 
-    @Async
-    public CompletableFuture<PhotoAnalysisDto> groupingSimilarPhotos(Long groupId) {
+    @Async("asyncExecutor")
+    public CompletableFuture<PhotoAnalysisDto> groupingSimilarPhotos(Long groupId, Long currentMemberId) {
         // 1. 사용자가 그룹에 속한 사용자가 맞는지 확인
-        Long currentMemberId = AuthenticationUtil.getCurrentUserId();
         groupRepository.findByGroupIdAndMemberId(groupId, currentMemberId)
                 .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND));
 
@@ -84,10 +89,10 @@ public class PhotoAnalysisService {
         List<Photo> photos = photoRepository.findByGroupIdAndDeletedAtIsNull(groupId);
 
         // 3. 분석 요청 request 변환
-        SimilarGroupingRequest request = SimilarGroupingRequest.from(photos);
+        String jobId = UUID.randomUUID().toString();
+        SimilarGroupingRequest request = SimilarGroupingRequest.from(jobId, photos);
 
         // 4. 작업 상태 저장
-        String jobId = UUID.randomUUID().toString();
         PhotoAnalysisJob job = PhotoAnalysisJob.builder()
                 .jobId(jobId)
                 .groupId(groupId)
@@ -98,7 +103,12 @@ public class PhotoAnalysisService {
                 .processedImages(0)
                 .memberId(currentMemberId)
                 .build();
-        redisService.setValue(jobId, job.toString(), Duration.ofHours(1));
+        try {
+            String jobJson = objectMapper.writeValueAsString(job);
+            redisService.setValue(jobId, jobJson, Duration.ofHours(1));
+        } catch (JsonProcessingException e) {
+            throw new BaseException(ErrorCode.INTERNAL_VISION_PARSE_ERROR);
+        }
 
         // 5. vision ai 에 분석 요청
         visionAIService.postSimilarityRequest(jobId, request)
@@ -110,10 +120,9 @@ public class PhotoAnalysisService {
         return CompletableFuture.completedFuture(PhotoAnalysisDto.of(jobId, JobStatus.PENDING));
     }
 
-    @Async
-    public CompletableFuture<PhotoAnalysisDto> taggingFaceToPhotos(Long groupId) {
+    @Async("asyncExecutor")
+    public CompletableFuture<PhotoAnalysisDto> taggingFaceToPhotos(Long groupId, Long currentMemberId) {
         // 1. 사용자가 그룹에 속한 사용자가 맞는지 확인
-        Long currentMemberId = AuthenticationUtil.getCurrentUserId();
         groupRepository.findByGroupIdAndMemberId(groupId, currentMemberId)
                 .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND));
 
@@ -125,10 +134,10 @@ public class PhotoAnalysisService {
                 .toList();
 
         // 3. 분석 요청 request 변환
-        FaceTaggingRequest request = FaceTaggingRequest.from(members, photos);
+        String jobId = UUID.randomUUID().toString();
+        FaceTaggingRequest request = FaceTaggingRequest.from(jobId, members, photos);
 
         // 4. 작업 상태 저장
-        String jobId = UUID.randomUUID().toString();
         PhotoAnalysisJob job = PhotoAnalysisJob.builder()
                 .jobId(jobId)
                 .groupId(groupId)
@@ -139,7 +148,12 @@ public class PhotoAnalysisService {
                 .processedImages(0)
                 .memberId(currentMemberId)
                 .build();
-        redisService.setValue(jobId, job.toString(), Duration.ofHours(1));
+        try {
+            String jobJson = objectMapper.writeValueAsString(job);
+            redisService.setValue(jobId, jobJson, Duration.ofHours(1));
+        } catch (JsonProcessingException e) {
+            throw new BaseException(ErrorCode.INTERNAL_VISION_PARSE_ERROR);
+        }
 
         // 5. vision ai 에 분석 요청
         visionAIService.postFaceTaggingRequest(jobId, request)

@@ -17,9 +17,11 @@ import java.util.stream.Collectors;
 public class BlurDetectionRequest {
     private List<ImageRequest> images;
     private Float blurThreshold;
+    private String jobId;
 
-    public static BlurDetectionRequest from(List<Photo> photos) {
+    public static BlurDetectionRequest from(String jobId, List<Photo> photos) {
         return BlurDetectionRequest.builder()
+                .jobId(jobId)
                 .images(photos.stream().map(ImageRequest::from).collect(Collectors.toList()))
                 .blurThreshold(50F)
                 .build();

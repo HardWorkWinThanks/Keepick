@@ -15,11 +15,13 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class SimilarGroupingRequest {
-    List<ImageRequest> images;
+    private String jobId;
+    private List<ImageRequest> images;
     private Float similarityThreshold;
 
-    public static SimilarGroupingRequest from(List<Photo> photos) {
+    public static SimilarGroupingRequest from(String jobId, List<Photo> photos) {
         return SimilarGroupingRequest.builder()
+                .jobId(jobId)
                 .images(photos.stream().map(ImageRequest::from).collect(Collectors.toList()))
                 .similarityThreshold(0.9F)
                 .build();

@@ -20,9 +20,11 @@ public class FaceTaggingRequest {
     List<ImageRequest> sourceImages;
     private Float distanceThreshold;
     private boolean returnTaggedImages;
+    private String jobId;
 
-    public static FaceTaggingRequest from(List<Member> members, List<Photo> photos) {
+    public static FaceTaggingRequest from(String jobId, List<Member> members, List<Photo> photos) {
         return FaceTaggingRequest.builder()
+                .jobId(jobId)
                 .targetFaces(members.stream().map(ImageRequest::from).collect(Collectors.toList()))
                 .sourceImages(photos.stream().map(ImageRequest::from).collect(Collectors.toList()))
                 .distanceThreshold(0.6F)

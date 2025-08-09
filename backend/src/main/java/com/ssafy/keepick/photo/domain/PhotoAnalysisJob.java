@@ -1,13 +1,13 @@
 package com.ssafy.keepick.photo.domain;
 
 import com.ssafy.keepick.photo.application.dto.JobStatus;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
+@ToString
 @Getter
+@Setter
 @Builder
 @AllArgsConstructor
 // request data 포함할지 고민
