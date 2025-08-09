@@ -34,9 +34,9 @@ public class PhotoAnalysisController {
 
     @PostMapping("/face")
     @Operation(summary = "사용자 얼굴 식별 API", description = "비동기 작업으로 처리되며 작업 id만 우선으로 반환합니다.")
-    public ApiResponse<?> invokeFaceTagging() {
-
-        return ApiResponse.ok(null);
+    public CompletableFuture<ApiResponse<PhotoAnalysisJobResponse>> invokeFaceTagging(@PathVariable Long groupId) {
+        CompletableFuture<PhotoAnalysisDto> result = photoAnalysisService.taggingFaceToPhotos(groupId);
+        return CompletableFuture.completedFuture(ApiResponse.ok(PhotoAnalysisJobResponse.from(result)));
     }
 
     @GetMapping("/status/{jobId}")
