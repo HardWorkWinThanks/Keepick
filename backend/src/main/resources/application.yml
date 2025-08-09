@@ -72,6 +72,13 @@ spring:
         secret-key: ${AWS_SECRET_ACCESS_KEY}
       sqs:
         region: ${AWS_REGION:ap-northeast-2}
+
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+
 # JWT 설정
 jwt:
   secret: ${JWT_SECRET}

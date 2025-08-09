@@ -30,4 +30,13 @@ public class ErrorResponse {
                 .timeStamp(LocalDateTime.now().toString())
                 .build();
     }
+
+    public static ErrorResponse of(ErrorCode errorCode, String message) {
+        return ErrorResponse.builder()
+                .status(errorCode.getStatus().value())
+                .message(message)
+                .errorCode(errorCode.getCode())
+                .timeStamp(LocalDateTime.now().toString())
+                .build();
+    }
 }
