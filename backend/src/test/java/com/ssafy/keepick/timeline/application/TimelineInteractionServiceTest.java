@@ -17,31 +17,23 @@ import com.ssafy.keepick.timeline.persistence.TimelineAlbumPhotoRepository;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumRepository;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumSectionRepository;
 import jakarta.persistence.EntityManager;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.BDDMockito.willDoNothing;
 
 @ExtendWith(MockitoExtension.class)
 @Import({
-        TimelineInteractionService.class,
-        TimelineValidationService.class,
+        TimelineInteractionService.class
 })
 class TimelineInteractionServiceTest extends BaseRepositoryTest {
-
-    @MockitoBean
-    TimelineValidationService timelineValidationService;
 
     @Autowired
     EntityManager entityManager;
@@ -63,13 +55,6 @@ class TimelineInteractionServiceTest extends BaseRepositoryTest {
 
     @Autowired
     PhotoRepository photoRepository;
-
-    @BeforeEach
-    void beforeEach() {
-        willDoNothing().given(timelineValidationService).validateAlbumPermission(anyLong(), anyLong());
-        willDoNothing().given(timelineValidationService).validateAlbumBelongsToGroup(anyLong(), anyLong());
-        willDoNothing().given(timelineValidationService).validateGroupMemberPermission(anyLong());
-    }
 
     @DisplayName("타임라인 앨범을 생성합니다. 생성 시 그룹과 사진 목록이 반드시 필요합니다.")
     @Test

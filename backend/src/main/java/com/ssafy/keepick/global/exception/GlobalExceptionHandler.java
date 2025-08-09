@@ -8,6 +8,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 @RestControllerAdvice
 @Slf4j
@@ -40,12 +41,19 @@ public class GlobalExceptionHandler {
         
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponse.builder()
-                        .status(HttpStatus.BAD_REQUEST.value())
-                        .message(errorMessage)
-                        .errorCode(ErrorCode.INVALID_PARAMETER.getCode())
-                        .timeStamp(java.time.LocalDateTime.now().toString())
-                        .build());
+                .body(ErrorResponse.of(ErrorCode.INVALID_PARAMETER, errorMessage));
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ErrorResponse> handleException(NoHandlerFoundException  e, HttpServletRequest request) {
+        log.error("[NoHandlerFound 오류] error: {} path: {}, message: {}",
+                e.getClass().getSimpleName(),
+                request.getRequestURI(),
+                e.getMessage()
+        );
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of(ErrorCode.NOT_FOUND, "잘못된 요청 경로입니다."));
     }
 
     @ExceptionHandler(Exception.class)

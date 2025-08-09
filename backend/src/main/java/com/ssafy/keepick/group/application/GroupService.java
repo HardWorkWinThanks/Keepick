@@ -78,6 +78,7 @@ public class GroupService {
     private void joinCreatorToGroup(Group group, Member creator) {
         GroupMember groupMember = GroupMember.createGroupMember(group, creator);
         groupMember.accept();
-        groupMemberRepository.save(groupMember);    }
+        groupMemberRepository.save(groupMember);
+    }
 
 }

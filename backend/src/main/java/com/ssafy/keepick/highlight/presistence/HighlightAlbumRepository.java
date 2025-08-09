@@ -28,4 +28,5 @@ public interface HighlightAlbumRepository extends JpaRepository<HighlightAlbum, 
 
     List<HighlightAlbum> findAllByGroupIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long groupId);
 
+    boolean existsByIdAndGroupIdAndDeletedAtIsNull(Long albumId, Long groupId);
 }

@@ -9,8 +9,8 @@ import com.ssafy.keepick.photo.persistence.PhotoRepository;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumDto;
 import com.ssafy.keepick.timeline.application.dto.TimelineAlbumPhotoDto;
 import com.ssafy.keepick.timeline.controller.request.TimelineCreateRequest;
-import com.ssafy.keepick.timeline.controller.request.TimelineUpdateRequest;
 import com.ssafy.keepick.timeline.controller.request.TimelinePhotoRequest;
+import com.ssafy.keepick.timeline.controller.request.TimelineUpdateRequest;
 import com.ssafy.keepick.timeline.domain.TimelineAlbum;
 import com.ssafy.keepick.timeline.domain.TimelineAlbumPhoto;
 import com.ssafy.keepick.timeline.domain.TimelineAlbumSection;
@@ -34,7 +34,6 @@ import java.util.stream.IntStream;
 @Transactional(readOnly = true)
 public class TimelineInteractionService {
 
-    private final TimelineValidationService timelineValidationService;
     private final TimelineAlbumRepository timelineAlbumRepository;
     private final TimelineAlbumPhotoRepository timelineAlbumPhotoRepository;
     private final GroupRepository groupRepository;
@@ -42,8 +41,6 @@ public class TimelineInteractionService {
 
     @Transactional
     public TimelineAlbumDto createTimelineAlbum(Long groupId, TimelineCreateRequest request) {
-        timelineValidationService.validateGroupMemberPermission(groupId);
-
         // 그룹 & 사진 조회
         Group group = groupRepository.findById(groupId).orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
         List<Photo> photos = photoRepository.findAllById(request.getPhotoIds());
@@ -58,8 +55,6 @@ public class TimelineInteractionService {
 
     @Transactional
     public void deleteTimelineAlbum(Long groupId, Long albumId) {
-        timelineValidationService.validateAlbumPermission(groupId, albumId);
-
         TimelineAlbum album = timelineAlbumRepository.findAlbumByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
         if (!Objects.equals(groupId, album.getGroup().getId())) {
             throw new BaseException(ErrorCode.ALBUM_FORBIDDEN);
@@ -69,8 +64,6 @@ public class TimelineInteractionService {
 
     @Transactional
     public TimelineAlbumDto updateTimelineAlbum(Long groupId, Long albumId, TimelineUpdateRequest request) {
-        timelineValidationService.validateAlbumPermission(groupId, albumId);
-
         // 수정할 앨범 조회
         TimelineAlbum album = timelineAlbumRepository.findAlbumWithSectionsByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
 
@@ -188,8 +181,6 @@ public class TimelineInteractionService {
 
     @Transactional
     public List<TimelineAlbumPhotoDto> addPhotoToTimelineAlbum(Long groupId, Long albumId, TimelinePhotoRequest request) {
-        timelineValidationService.validateAlbumPermission(groupId, albumId);
-
         TimelineAlbum album = timelineAlbumRepository.findAlbumByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
 
         // 앨범에 포함되지 않은 사진만 앨범에 추가 <- 중복 제거 맞아?
@@ -204,8 +195,6 @@ public class TimelineInteractionService {
 
     @Transactional
     public void deletePhotoFromTimelineAlbum(Long groupId, Long albumId, @Valid TimelinePhotoRequest request) {
-        timelineValidationService.validateAlbumPermission(groupId, albumId);
-
         TimelineAlbum album = timelineAlbumRepository.findAlbumByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
 
         // 삭제할 사진을 조회하고 삭제
