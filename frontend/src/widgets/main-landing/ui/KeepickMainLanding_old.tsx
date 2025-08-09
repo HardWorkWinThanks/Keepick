@@ -317,6 +317,183 @@ export default function KeepickMainLanding() {
         onSpillPhotos={spillPhotos}
       />
 
+      {/* Main Content Container - 기존 위치부터 */}
+      <div 
+        className="fixed left-0 top-0 z-30"
+        style={{
+          width: '20px', // 얇은 감지 영역
+          height: '100vh', // 전체 높이
+        }}
+        onMouseEnter={() => setSidebarHovered(true)}
+      />
+
+      {/* Hamburger Button Area Hover Zone */}
+      <div 
+        className="fixed left-0 top-20 z-30"
+        style={{
+          width: '80px',
+          height: '80px',
+        }}
+        onMouseEnter={() => setSidebarHovered(true)}
+      />
+
+      {/* Sidebar */}
+      <div 
+        className={`fixed left-0 z-40 transition-transform duration-300 ease-in-out ${
+          shouldShowSidebar ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        style={{ 
+          backgroundColor: '#111111',
+          width: '240px',
+          borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+          top: sidebarPinned ? '0' : '140px',
+          height: sidebarPinned ? '100vh' : 'calc(100vh - 140px)',
+        }}
+        onMouseEnter={() => setSidebarHovered(true)}
+        onMouseLeave={() => setSidebarHovered(false)}
+      >
+        {/* Sidebar Header - pinned 상태일 때만 표시 */}
+        {sidebarPinned && (
+          <div className="p-4 border-b border-gray-800">
+            <button className="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors text-sm font-medium">
+              + 새 그룹 만들기
+            </button>
+          </div>
+        )}
+
+        {/* Groups List */}
+        <div className="p-4 border-b border-gray-800">
+          <h3 className="text-sm font-medium text-gray-400 mb-3">그룹</h3>
+          <div className="space-y-1">
+            {groups.map((group) => (
+              <div key={group.id} className="space-y-1">
+                {/* Group Item */}
+                <div className="flex items-center justify-between group">
+                  <button 
+                    className="flex-1 text-left px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm"
+                    onClick={() => navigateToGroup(group.name)}
+                  >
+                    {group.name}
+                  </button>
+                  <button
+                    onClick={() => toggleGroup(group.id)}
+                    className="p-1 rounded hover:bg-gray-800 transition-all duration-200 opacity-0 group-hover:opacity-100"
+                  >
+                    {expandedGroups.includes(group.id) ? (
+                      <ChevronDown size={16} className="text-gray-400 transition-transform duration-200" />
+                    ) : (
+                      <ChevronRight size={16} className="text-gray-400 transition-transform duration-200" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Dropdown Content */}
+                <div className={`ml-4 pl-3 border-l border-gray-700 transition-all duration-200 ease-in-out ${
+                  expandedGroups.includes(group.id) 
+                    ? 'max-h-24 opacity-100' 
+                    : 'max-h-0 opacity-0 overflow-hidden'
+                }`}>
+                  <div className="space-y-1">
+                    <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm text-gray-300">
+                      그룹 초대
+                    </button>
+                    <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-red-900/50 transition-colors text-sm text-red-400 hover:text-red-300">
+                      그룹 탈퇴
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Friends Section - 새로운 탭 컴포넌트 */}
+        <div className="flex-1 p-4">
+          <h3 className="text-sm font-medium text-gray-400 mb-3">친구</h3>
+          <div className="h-[calc(100%-2rem)]">
+            <FriendsTabWidget />
+          </div>
+        </div>
+      </div>
+
+      {/* Header - 항상 고정 위치, 원본 크기 */}
+      <header 
+        className={`fixed top-0 right-0 z-50 flex justify-between items-center px-4 py-3 sm:px-6 sm:py-4 lg:px-12 h-20 transition-all duration-300 ${
+          sidebarPinned ? 'left-[240px]' : 'left-0'
+        }`} 
+        style={{ backgroundColor: '#111111' }}
+      >
+        {/* Left side - 로고만 */}
+        <div className="flex items-center">
+          <h1 className="text-sm sm:text-lg font-semibold tracking-wider">Keepick</h1>
+        </div>
+        
+        {/* Center Spill Button */}
+        <button 
+          onClick={spillPhotos}
+          className="text-2xl sm:text-3xl font-bold transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer select-none"
+          style={{ 
+            color: '#FE7A25',
+            filter: 'brightness(1)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.filter = 'brightness(1.1)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.filter = 'brightness(1)'
+          }}
+          title="사진 쏟기"
+        >
+          !!!
+        </button>
+        
+        {/* Right Navigation - 로그인 상태에 따라 다른 UI */}
+        <nav className="flex gap-3 sm:gap-6 items-center text-xs sm:text-sm text-gray-300">
+          {!isLoggedIn ? (
+            // 비로그인 상태
+            <button 
+              onClick={handleLogin}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
+              Login
+            </button>
+          ) : (
+            // 로그인 상태
+            <>
+              <button 
+                className="hover:text-white transition-colors text-lg sm:text-xl"
+                title="친구 관리"
+              >
+                👥
+              </button>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div 
+                  className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white text-xs sm:text-sm font-semibold cursor-pointer hover:scale-105 transition-transform"
+                  title="프로필"
+                >
+                  {user?.name?.charAt(0) || 'K'}
+                </div>
+                <span className="text-xs sm:text-sm hover:text-white transition-colors cursor-pointer">
+                  {user?.name || 'Keepick User'}
+                </span>
+              </div>
+            </>
+          )}
+        </nav>
+      </header>
+
+      {/* Sidebar Toggle Button - 로고 아래 위치 */}
+      <div 
+        onClick={toggleSidebarPin}
+        className={`fixed top-24 z-50 cursor-pointer transition-all duration-300 hover:scale-110 ${
+          sidebarPinned ? 'left-[254px]' : 'left-6'
+        }`}
+        style={{ zIndex: 60 }}
+        title="사이드바 고정/해제"
+      >
+        <span className="text-2xl">☰</span>
+      </div>
+
       {/* Main Content Container - 헤더 아래 중앙 정렬 */}
       <div 
         className={`flex items-center justify-center transition-all duration-300 ${
