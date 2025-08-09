@@ -23,6 +23,9 @@ public class S3PresignedUrlService {
 
     private final S3Presigner s3Presigner;
 
+    @Value("${spring.cloud.aws.region.static}")
+    private String region;
+
     @Value("${app.aws.s3.bucket-name}")
     private String bucketName;
 
@@ -53,8 +56,9 @@ public class S3PresignedUrlService {
 
             PresignedPutObjectRequest presignedRequest = s3Presigner.presignPutObject(presignRequest);
             String presignedUrl = presignedRequest.url().toString();
-
+            String publicUrl = generatePublicUrl(objectKey);
             log.debug("Presigned URL 생성: {} -> {}", fileName, objectKey);
+            log.info("Public url 생성 : {}", publicUrl);
             return presignedUrl;
 
         } catch (Exception e) {
@@ -70,5 +74,9 @@ public class S3PresignedUrlService {
         return photoCommandDtoList.stream()
                 .map(info -> generatePresignedUrl(info.getFileName(), info.getContentType()))
                 .toList();
+    }
+
+    public String generatePublicUrl(String objectKey) {
+        return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, objectKey);
     }
 }
