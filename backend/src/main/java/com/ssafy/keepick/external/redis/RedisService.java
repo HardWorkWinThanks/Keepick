@@ -5,6 +5,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -20,4 +21,7 @@ public class RedisService {
         return stringRedisTemplate.opsForValue().get(key);
     }
 
+    public void expire(String key, Duration duration) {
+        stringRedisTemplate.expire(key, duration.getSeconds(), TimeUnit.SECONDS);
+    }
 }

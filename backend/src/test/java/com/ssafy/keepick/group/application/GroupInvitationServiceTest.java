@@ -182,13 +182,8 @@ public class GroupInvitationServiceTest extends RedisTestContainer {
 
         // then
         String inviteToken = decodeInviteToken(encodedToken);
-        String value = redisService.getValue("invite:" + inviteToken);
-        assertThat(value).isEqualTo(group.getId().toString());
-
-
-//        Thread.sleep(5000);
-//        String timeoutValue = redisService.getValue("invite:"+result.getToken());
-//        assertThat(timeoutValue).isNull();
+        String value = redisService.getValue("invite:" + group.getId());
+        assertThat(value).isEqualTo(inviteToken);
     }
 
     @DisplayName("그룹 초대 링크로 그룹에 가입한다")

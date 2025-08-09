@@ -1,6 +1,5 @@
 package com.ssafy.keepick.friend.application.dto;
 
-import com.ssafy.keepick.friend.application.FriendStatus;
 import com.ssafy.keepick.friend.domain.Friendship;
 import com.ssafy.keepick.friend.domain.FriendshipStatus;
 import com.ssafy.keepick.member.domain.Member;

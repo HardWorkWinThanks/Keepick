@@ -17,7 +17,7 @@ public class AlbumController {
 
     private final AlbumService albumService;
 
-    @Operation(summary = "전체 앨범 목록 조회", description = "특정 그룹의 타임라인, 티어, 하이라이트 앨범 목록을 조회합니다.")
+    @Operation(summary = "전체 앨범 목록 조회", description = "특정 그룹의 타임라인, 티어, 하이라이트 앨범 목록을 조회합니다. 페이징 없이 모든 앨범 목록을 조회합니다.")
     @GetMapping("")
     public ApiResponse<AlbumResponse> getAllAlbums(@PathVariable Long groupId) {
         AlbumDto albumDto = albumService.getAllAlbumList(groupId);

@@ -16,6 +16,7 @@ import com.ssafy.keepick.group.application.dto.GroupMemberDto;
 import com.ssafy.keepick.group.application.dto.MemberDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +26,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/groups")
 @RequiredArgsConstructor
+@Tag(name="Group", description = "그룹 관련 API")
 public class GroupController {
 
     private final GroupService groupService;
@@ -40,7 +42,9 @@ public class GroupController {
 
     @Operation(summary = "그룹 목록 조회", description = "로그인한 사용자가 가입한/초대받은/거절한 그룹 목록을 조회합니다.")
     @GetMapping("")
-    public ApiResponse<List<GroupStatusResponse>> getGroupList(@Parameter(description = "조회할 그룹의 가입 상태") @RequestParam(defaultValue = "ACCEPTED") GroupMemberStatus status) {
+    public ApiResponse<List<GroupStatusResponse>> getGroupList(
+            @Parameter(description = "조회할 그룹의 가입 상태 : PENDING(초대받음) ACCEPTED(가입함) REJECTED(거절함)") 
+            @RequestParam(defaultValue = "ACCEPTED") GroupMemberStatus status) {
         Long loginMemberId = AuthenticationUtil.getCurrentUserId();
         List<GroupMemberDto> dto = groupService.getGroupList(loginMemberId, status);
         List<GroupStatusResponse> response = dto.stream().map(GroupStatusResponse::toResponse).toList();
