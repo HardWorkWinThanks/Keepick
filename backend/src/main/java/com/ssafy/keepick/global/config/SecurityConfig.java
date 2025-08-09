@@ -6,6 +6,7 @@ import com.ssafy.keepick.global.security.handler.CustomAuthenticationEntryPoint;
 import com.ssafy.keepick.global.security.handler.CustomSuccessHandler;
 import com.ssafy.keepick.global.security.util.JWTUtil;
 
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -59,6 +60,7 @@ public class SecurityConfig {
 
         // 경로별 권한 설정
         http.authorizeHttpRequests(auth -> auth
+                .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                 .requestMatchers(
                         // OAuth2 관련 경로
                         "/api/oauth2/**",
