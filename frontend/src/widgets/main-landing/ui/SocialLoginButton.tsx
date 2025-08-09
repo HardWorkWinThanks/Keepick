@@ -104,14 +104,8 @@ export default function SocialLoginButton({
     <div className={cn("relative", className)}>
       <motion.div
         className="flex overflow-hidden rounded-lg transition-colors"
-        style={{ 
-          backgroundColor: '#111111',
-        }}
-        onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
-          e.currentTarget.style.backgroundColor = '#333333'
-        }}
-        onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
-          e.currentTarget.style.backgroundColor = '#111111'  
+        style={{
+          backgroundColor: isHovered ? '#333333' : '#111111',
         }}
         animate={{
           width: containerWidth,

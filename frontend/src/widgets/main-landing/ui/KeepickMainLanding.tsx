@@ -15,9 +15,9 @@ export default function KeepickMainLanding() {
   const [sidebarPinned, setSidebarPinned] = useState(false)
 
   // 타이머 참조들
-  const animationTimerRef = useRef<number | null>(null)
-  const logoTimerRef = useRef<number | null>(null)
-  const resetTimerRef = useRef<number | null>(null)
+  const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const logoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // 햄버거 버튼 토글
   const toggleSidebarPin = () => {
@@ -191,7 +191,7 @@ export default function KeepickMainLanding() {
   }
 
   // 배열 셔플 함수
-  const shuffleArray = <T>(array: T[]): T[] => {
+  const shuffleArray = <T,>(array: T[]): T[] => {
     const shuffled = [...array]
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -387,10 +387,6 @@ export default function KeepickMainLanding() {
                           className="w-full h-full object-cover rounded-sm shadow-lg select-none"
                           style={{
                             filter: `brightness(0.9) contrast(1.1)`,
-                            userSelect: 'none',
-                            WebkitUserSelect: 'none',
-                            MozUserSelect: 'none',
-                            msUserSelect: 'none'
                           }}
                           draggable={false}
                         />
@@ -424,10 +420,6 @@ export default function KeepickMainLanding() {
                     height={600}
                     className="w-full h-auto max-w-[400px] sm:max-w-[500px] md:max-w-[600px] lg:max-w-[700px] xl:max-w-[800px] 2xl:max-w-[900px] drop-shadow-2xl select-none"
                     style={{
-                      userSelect: 'none',
-                      WebkitUserSelect: 'none',
-                      MozUserSelect: 'none',
-                      msUserSelect: 'none',
                       pointerEvents: 'none'
                     }}
                     draggable={false}
