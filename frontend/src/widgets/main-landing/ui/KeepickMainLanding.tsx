@@ -438,6 +438,7 @@ export default function KeepickMainLanding() {
           Scale: {Math.round(scale * 100)}% | {window.innerWidth}×{window.innerHeight}
         </div>
       )}
-    </div>
+    </div> 
+    
   )
 }
