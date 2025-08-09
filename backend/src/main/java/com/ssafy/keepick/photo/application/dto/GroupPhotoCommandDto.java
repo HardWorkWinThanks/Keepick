@@ -1,6 +1,6 @@
 package com.ssafy.keepick.photo.application.dto;
 
-import com.ssafy.keepick.global.utils.file.FileUtils;
+import com.ssafy.keepick.global.utils.FileUtils;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

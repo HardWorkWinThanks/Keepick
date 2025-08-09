@@ -2,7 +2,7 @@ package com.ssafy.keepick.external.s3;
 
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
-import com.ssafy.keepick.global.utils.file.FileUtils;
+import com.ssafy.keepick.global.utils.FileUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

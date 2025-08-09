@@ -2,7 +2,7 @@ package com.ssafy.keepick.external.s3;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ssafy.keepick.external.redis.RedisService;
-import com.ssafy.keepick.global.utils.file.FileUtils;
+import com.ssafy.keepick.global.utils.FileUtils;
 import com.ssafy.keepick.photo.application.ThumbnailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
