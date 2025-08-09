@@ -44,7 +44,7 @@ public class TimelineController {
         return ApiResponse.ok(response);
     }
 
-    @Operation(summary = "타임라인 앨범 생성", description = "앨범에 쓸 사진 목록을 받아서 빈 타임라인 앨범을 생성합니다.")
+    @Operation(summary = "타임라인 앨범 생성", description = "앨범에 사용할 사진 목록을 받아서 빈 타임라인 앨범을 생성합니다.")
     @PostMapping("")
     public ApiResponse<TimelineCreateResponse> createTimelineAlbum(@PathVariable Long groupId, @Valid @RequestBody TimelineCreateRequest request) {
         TimelineAlbumDto albumDto = timelineInteractionService.createTimelineAlbum(groupId, request);
