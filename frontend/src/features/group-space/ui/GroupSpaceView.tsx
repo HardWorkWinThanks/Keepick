@@ -4,6 +4,7 @@ import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useGroupSpace } from "../model/useGroupSpace"
 import type { Group } from "@/entities/group"
+import Image from "next/image"
 
 interface GroupSpaceViewProps {
   group: Group
