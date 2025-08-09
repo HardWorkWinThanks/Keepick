@@ -3,12 +3,14 @@ package com.ssafy.keepick.photo.controller;
 import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.photo.application.PhotoAnalysisService;
+import com.ssafy.keepick.photo.application.PhotoJobProgressService;
 import com.ssafy.keepick.photo.application.dto.PhotoAnalysisDto;
 import com.ssafy.keepick.photo.controller.response.PhotoAnalysisJobResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -18,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 @Tag(name="Photo Analysis", description = "사진 태깅 및 분류 API")
 public class PhotoAnalysisController {
     private final PhotoAnalysisService  photoAnalysisService;
+    private final PhotoJobProgressService  photoJobProgressService;
 
     @PostMapping("/blur")
     @Operation(summary = "흐린 사진 분류 API", description = "비동기 작업으로 처리되며 작업 id만 우선으로 반환합니다.")
@@ -48,8 +51,8 @@ public class PhotoAnalysisController {
             비동기적으로 진행되는 이미지 분석 작업의 상태를 조회합니다.
             주기적으로 polling 요청을 하며, 작업이 완료되었을 경우 결과 조회 API를 요청합니다.
             """)
-    public ApiResponse<?> getJobStatus(@PathVariable("jobId") String jobId) {
-        return ApiResponse.ok(null);
+    public SseEmitter getJobStatus(@PathVariable("jobId") String jobId) {
+        return photoJobProgressService.subscribeToJobStatus(jobId);
     }
 
     @GetMapping("/blur/{jobId}")
