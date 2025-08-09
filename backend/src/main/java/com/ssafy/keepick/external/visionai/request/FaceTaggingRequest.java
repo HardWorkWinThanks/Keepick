@@ -1,5 +1,7 @@
 package com.ssafy.keepick.external.visionai.request;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.photo.domain.Photo;
 import lombok.AllArgsConstructor;
@@ -12,18 +14,19 @@ import java.util.stream.Collectors;
 @Getter
 @Builder
 @AllArgsConstructor
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class FaceTaggingRequest {
     List<ImageRequest> targetFaces;
-    List<ImageRequest> sourceFaces;
+    List<ImageRequest> sourceImages;
     private Float distanceThreshold;
     private boolean returnTaggedImages;
 
     public static FaceTaggingRequest from(List<Member> members, List<Photo> photos) {
         return FaceTaggingRequest.builder()
                 .targetFaces(members.stream().map(ImageRequest::from).collect(Collectors.toList()))
-                .sourceFaces(photos.stream().map(ImageRequest::from).collect(Collectors.toList()))
+                .sourceImages(photos.stream().map(ImageRequest::from).collect(Collectors.toList()))
                 .distanceThreshold(0.6F)
-                .returnTaggedImages(true)
+                .returnTaggedImages(false)
                 .build();
     }
 }
