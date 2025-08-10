@@ -18,7 +18,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         // 그룹 멤버 검사
         registry.addInterceptor(groupMemberInterceptor)
-                .addPathPatterns("/api/groups/**");
+                .addPathPatterns("/api/groups/**")
+                .excludePathPatterns("/api/groups");
 
         // 그룹 앨범 검사 (그룹 멤버 검사 이후에 실행)
         registry.addInterceptor(groupAlbumInterceptor)
