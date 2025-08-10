@@ -359,4 +359,92 @@ class TierAlbumServiceTest extends BaseTest {
             .isInstanceOf(BaseException.class)
             .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALBUM_NOT_FOUND);
     }
+
+    @Test
+    @DisplayName("티어 앨범에 사진 추가 성공")
+    void addPhotoToTierAlbum_Success() {
+        // given
+        Long groupId = 1L;
+        Long tierAlbumId = 1L;
+        List<Long> photoIds = Arrays.asList(3L, 4L);
+        Photo newPhoto1 = Photo.builder().originalUrl("https://test.com/photo3.jpg").build();
+        Photo newPhoto2 = Photo.builder().originalUrl("https://test.com/photo4.jpg").build();
+        newPhoto1.uploadThumbnail("https://test.com/thumb3.jpg");
+        newPhoto2.uploadThumbnail("https://test.com/thumb4.jpg");
+
+        when(tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId)).thenReturn(Optional.of(tierAlbum));
+        when(photoRepository.findById(3L)).thenReturn(Optional.of(newPhoto1));
+        when(photoRepository.findById(4L)).thenReturn(Optional.of(newPhoto2));
+        when(tierAlbumPhotoRepository.save(any(TierAlbumPhoto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        var result = tierAlbumService.uploadPhotoToTierAlbum(groupId, tierAlbumId, photoIds);
+
+        // then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getOriginalUrl()).isEqualTo("https://test.com/photo3.jpg");
+        assertThat(result.get(1).getOriginalUrl()).isEqualTo("https://test.com/photo4.jpg");
+        verify(tierAlbumPhotoRepository, times(2)).save(any(TierAlbumPhoto.class));
+    }
+
+    @Test
+    @DisplayName("티어 앨범에 사진 추가 실패 - 이미 앨범에 포함된 사진")
+    void addPhotoToTierAlbum_Fail_PhotoAlreadyInAlbum() {
+        // given
+        Long groupId = 1L;
+        Long tierAlbumId = 1L;
+        List<Long> photoIds = Arrays.asList(1L); // 이미 앨범에 있는 사진
+
+        // Mock TierAlbum 생성
+        TierAlbum mockTierAlbum = mock(TierAlbum.class);
+        when(mockTierAlbum.getAllPhotos()).thenReturn(Arrays.asList(tierAlbumPhoto1, tierAlbumPhoto2));
+        
+        when(tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId)).thenReturn(Optional.of(mockTierAlbum));
+        when(photoRepository.findById(1L)).thenReturn(Optional.of(photo1));
+
+        // when & then
+        assertThatThrownBy(() -> tierAlbumService.uploadPhotoToTierAlbum(groupId, tierAlbumId, photoIds))
+            .isInstanceOf(BaseException.class)
+            .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_PARAMETER);
+    }
+
+    @Test
+    @DisplayName("티어 앨범에서 사진 삭제 성공")
+    void deletePhotoFromTierAlbum_Success() {
+        // given
+        Long groupId = 1L;
+        Long tierAlbumId = 1L;
+        List<Long> photoIds = Arrays.asList(1L);
+        List<TierAlbumPhoto> remainingPhotos = Arrays.asList(tierAlbumPhoto2);
+
+        // Mock TierAlbum 생성
+        TierAlbum mockTierAlbum = mock(TierAlbum.class);
+        when(mockTierAlbum.getAllPhotos()).thenReturn(Arrays.asList(tierAlbumPhoto1, tierAlbumPhoto2));
+        
+        when(tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId)).thenReturn(Optional.of(mockTierAlbum));
+        when(tierAlbumPhotoRepository.findByAlbumId(tierAlbumId)).thenReturn(remainingPhotos);
+
+        // when
+        tierAlbumService.deletePhotoFromTierAlbum(groupId, tierAlbumId, photoIds);
+
+        // then
+        verify(tierAlbumPhotoRepository).delete(tierAlbumPhoto1);
+        verify(tierAlbumPhotoRepository).findByAlbumId(tierAlbumId);
+    }
+
+    @Test
+    @DisplayName("티어 앨범에서 사진 삭제 실패 - 앨범에 포함되지 않은 사진")
+    void deletePhotoFromTierAlbum_Fail_PhotoNotInAlbum() {
+        // given
+        Long groupId = 1L;
+        Long tierAlbumId = 1L;
+        List<Long> photoIds = Arrays.asList(999L); // 앨범에 없는 사진
+
+        when(tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId)).thenReturn(Optional.of(tierAlbum));
+
+        // when & then
+        assertThatThrownBy(() -> tierAlbumService.deletePhotoFromTierAlbum(groupId, tierAlbumId, photoIds))
+            .isInstanceOf(BaseException.class)
+            .hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOT_FOUND);
+    }
 }

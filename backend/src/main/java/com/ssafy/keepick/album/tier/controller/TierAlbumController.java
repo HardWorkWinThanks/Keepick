@@ -13,11 +13,18 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ssafy.keepick.album.tier.application.TierAlbumService;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDetailDto;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDto;
+import com.ssafy.keepick.album.tier.application.dto.TierAlbumPhotoDto;
 import com.ssafy.keepick.album.tier.controller.request.CreateTierAlbumRequest;
+import com.ssafy.keepick.album.tier.controller.request.TierPhotoDeleteRequest;
+import com.ssafy.keepick.album.tier.controller.request.TierPhotoUploadRequest;
 import com.ssafy.keepick.album.tier.controller.request.UpdateTierAlbumRequest;
 import com.ssafy.keepick.album.tier.controller.response.TierAlbumDetailResponse;
+import com.ssafy.keepick.album.tier.controller.response.TierPhotoUploadResponse;
 import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.global.response.PagingResponse;
+import com.ssafy.keepick.global.response.ResponseCode;
+
+import java.util.List;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -77,5 +84,26 @@ public class TierAlbumController implements TierAlbumApi {
             @PathVariable Long tierAlbumId) {
         tierAlbumService.deleteTierAlbum(groupId, tierAlbumId);
         return ApiResponse.ok(null);
+    }
+
+    @Override
+    @PostMapping("/{tierAlbumId}/photos")
+    public ApiResponse<TierPhotoUploadResponse> uploadPhotoToTierAlbum(
+            @PathVariable Long groupId,
+            @PathVariable Long tierAlbumId,
+            @Valid @RequestBody TierPhotoUploadRequest request) {
+        List<TierAlbumPhotoDto> tierAlbumPhotoDtos = tierAlbumService.uploadPhotoToTierAlbum(groupId, tierAlbumId, request.getPhotoIds());
+        TierPhotoUploadResponse response = TierAlbumPhotoDto.toResponse(tierAlbumPhotoDtos);
+        return ApiResponse.ok(response);
+    }
+
+    @Override
+    @DeleteMapping("/{tierAlbumId}/photos")
+    public ApiResponse<Void> deletePhotoFromTierAlbum(
+            @PathVariable Long groupId,
+            @PathVariable Long tierAlbumId,
+            @Valid @RequestBody TierPhotoDeleteRequest request) {
+        tierAlbumService.deletePhotoFromTierAlbum(groupId, tierAlbumId, request.getPhotoIds());
+        return ApiResponse.of(ResponseCode.DELETED);
     }
 }
