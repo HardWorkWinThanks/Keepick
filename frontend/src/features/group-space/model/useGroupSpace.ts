@@ -7,8 +7,18 @@ export const albumTypes: AlbumType[] = [
   { id: "timeline", name: "TIMELINE ALBUM", subtitle: "타임라인 앨범" },
   { id: "tier", name: "TIER ALBUM", subtitle: "티어 앨범" },
   { id: "highlight", name: "HIGHLIGHT ALBUM", subtitle: "하이라이트 앨범" },
-  { id: "gallery", name: "GALLERY", subtitle: "갤러리" },
 ]
+
+// 갤러리는 순환에서 제외하되, 데이터는 유지 (필요시 사용 가능)
+export const galleryAlbum: AlbumType = { id: "gallery", name: "GALLERY", subtitle: "갤러리" }
+
+// Album/Gallery 메인 모드 정의
+export const mainModes = [
+  { id: "album", name: "Album" },
+  { id: "gallery", name: "Gallery" }
+] as const
+
+export type MainMode = typeof mainModes[number]["id"]
 
 export const samplePhotos = {
   timeline: [
@@ -49,16 +59,35 @@ export const samplePhotos = {
 }
 
 export function useGroupSpace() {
+  const [currentModeIndex, setCurrentModeIndex] = useState(0) // Album/Gallery 모드
   const [currentAlbumIndex, setCurrentAlbumIndex] = useState(0)
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
 
+  const currentMode = mainModes[currentModeIndex]
   const currentAlbum = albumTypes[currentAlbumIndex]
   const currentPhotos = samplePhotos[currentAlbum.id as keyof typeof samplePhotos]
   const visiblePhotos = currentPhotos.slice(currentPhotoIndex, currentPhotoIndex + 4)
 
-  const changeAlbumType = (direction: "up" | "down") => {
+  const changeMainMode = (direction: "up" | "down") => {
     if (isAnimating) return
+
+    setIsAnimating(true)
+
+    if (direction === "up") {
+      setCurrentModeIndex((prev) => (prev === 0 ? mainModes.length - 1 : prev - 1))
+    } else {
+      setCurrentModeIndex((prev) => (prev === mainModes.length - 1 ? 0 : prev + 1))
+    }
+
+    setCurrentPhotoIndex(0)
+
+    setTimeout(() => setIsAnimating(false), 500)
+  }
+
+  const changeAlbumType = (direction: "up" | "down") => {
+    // Album 모드일 때만 앨범 순환 가능
+    if (currentMode.id !== "album" || isAnimating) return
 
     setIsAnimating(true)
 
@@ -82,11 +111,13 @@ export function useGroupSpace() {
   }
 
   return {
+    currentMode,
     currentAlbum,
     currentPhotos,
     visiblePhotos,
     currentPhotoIndex,
     isAnimating,
+    changeMainMode,
     changeAlbumType,
     navigatePhotos,
   }

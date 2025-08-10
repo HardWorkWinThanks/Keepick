@@ -12,11 +12,13 @@ interface GroupSpaceViewProps {
 
 export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
   const {
+    currentMode,
     currentAlbum,
     currentPhotos,
     visiblePhotos,
     currentPhotoIndex,
     isAnimating,
+    changeMainMode,
     changeAlbumType,
     navigatePhotos,
   } = useGroupSpace()
@@ -24,16 +26,66 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
   return (
     <div className="min-h-screen bg-[#222222] text-white pb-8">
       {/* Group Name Section */}
-      <div className="px-8 pt-6 pb-4 pl-18">
+      <div className="px-8 pt-6 pb-3 pl-20">
         <h1 className="text-6xl md:text-7xl lg:text-8xl font-keepick-primary font-bold tracking-wider text-white">
           {group.name}
         </h1>
       </div>
 
+      {/* Album/Gallery Mode Section */}
+      <div className="px-8 pt-6 pb-2 pl-20">
+        <div className="relative">
+          <AnimatePresence mode="wait">
+            <motion.h2
+              key={currentMode.id}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+              className="text-2xl md:text-3xl lg:text-4xl font-keepick-heavy tracking-wider text-[#FE7A25]"
+            >
+              {currentMode.name}
+            </motion.h2>
+          </AnimatePresence>
+          
+          {/* Mode Navigation Arrows - Gallery 기준으로 고정 위치 */}
+          <div className="absolute top-0 flex flex-col gap-1" style={{ left: '160px' }}>
+            <button
+              onClick={() => changeMainMode("up")}
+              disabled={isAnimating}
+              className="w-6 h-6 flex items-center justify-center hover:bg-white/10 transition-all duration-300 disabled:opacity-50 text-[#FE7A25]"
+            >
+              <ChevronUp size={14} />
+            </button>
+            <button
+              onClick={() => changeMainMode("down")}
+              disabled={isAnimating}
+              className="w-6 h-6 flex items-center justify-center hover:bg-white/10 transition-all duration-300 disabled:opacity-50 text-[#FE7A25]"
+            >
+              <ChevronDown size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Main Content */}
       <div className="relative flex flex-col">
-        {/* Photo Gallery Section */}
-        <div className="flex-1 flex items-center justify-center px-4 py-8">
+        <AnimatePresence mode="wait">
+          {currentMode.id === "album" ? (
+            <motion.div
+              key="album"
+              initial={{ y: 50, opacity: 0, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -50, opacity: 0, scale: 0.95 }}
+              transition={{ 
+                duration: 0.4, 
+                ease: [0.32, 0.72, 0, 1],
+                opacity: { duration: 0.3 },
+                scale: { duration: 0.4 }
+              }}
+            >
+              {/* Album Mode - Photo Gallery Section */}
+              <div className="flex-1 flex items-center justify-center px-4 py-8">
           <div className="relative w-full">
             {/* Left Navigation Button */}
             <button
@@ -140,11 +192,11 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
               </div>
 
               {/* Navigation Arrows */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 mt-4">
                 <button
                   onClick={() => changeAlbumType("up")}
                   disabled={isAnimating}
-                  className="w-8 h-8 flex items-center justify-center hover:bg-white/10 transition-all duration-300 disabled:opacity-50 text-[#FE7A25]"
+                  className="mb-6 w-8 h-8 flex items-center justify-center hover:bg-white/10 transition-all duration-300 disabled:opacity-50 text-[#FE7A25]"
                 >
                   <ChevronUp size={16} />
                 </button>
@@ -160,14 +212,60 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
           </div>
 
           {/* Progress Indicator */}
-          <div className="absolute bottom-0 right-8 flex items-center gap-2 text-xs text-white/40">
+          {/* <div className="absolute bottom-0 right-8 flex items-center gap-2 text-xs text-white/40">
             <span>
               {currentPhotoIndex + 1}-{Math.min(currentPhotoIndex + 4, currentPhotos.length)}
             </span>
             <span>/</span>
             <span>{currentPhotos.length}</span>
-          </div>
+          </div> */}
         </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="gallery"
+              initial={{ y: 50, opacity: 0, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -50, opacity: 0, scale: 0.95 }}
+              transition={{ 
+                duration: 0.4, 
+                ease: [0.32, 0.72, 0, 1],
+                opacity: { duration: 0.3 },
+                scale: { duration: 0.4 }
+              }}
+            >
+              {/* Gallery Mode - 빈 컴포넌트 (추후 구현) */}
+              <div className="flex-1 flex items-center justify-center px-4 py-8">
+                <div className="text-center text-gray-400">
+                  <motion.p 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, duration: 0.3 }}
+                    className="text-2xl mb-4"
+                  >
+                    🖼️
+                  </motion.p>
+                  <motion.p 
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3, duration: 0.3 }}
+                    className="text-lg"
+                  >
+                    Gallery 모드
+                  </motion.p>
+                  <motion.p 
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.4, duration: 0.3 }}
+                    className="text-sm mt-2"
+                  >
+                    추후 구현 예정입니다
+                  </motion.p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )

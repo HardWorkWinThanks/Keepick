@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { ChevronRight, ChevronDown, Settings, Check } from 'lucide-react'
+import { ChevronRight, ChevronDown, Settings, Check, Menu, X } from 'lucide-react'
 import { AnimatePresence, motion } from "framer-motion"
 import { FriendsTabWidget } from "@/widgets/friends"
 import { useMainGroups } from "@/features/main-integration/model/useMainGroups"
 import { useMainAuth } from "@/features/main-integration/model/useMainAuth"
 import { ScrollArea } from "@/shared/ui/shadcn/scroll-area"
+import { Button } from "@/shared/ui/shadcn/button"
 import { useGroupManagement, CreateGroupModal, LeaveGroupModal, GroupManagementApi, groupQueryKeys } from "@/features/group-management"
 import { useQuery } from "@tanstack/react-query"
 import { groupListSelectors, groupFormatters } from "@/entities/group"
@@ -163,16 +164,27 @@ export default function AppSidebar({
       />
 
       {/* Sidebar Toggle Button - 헤더 바로 아래 좌측 위치, 사이드바 고정시 우측 이동 */}
-      <div 
+      <Button
         onClick={toggleSidebarPin}
-        className={`fixed top-16 z-50 cursor-pointer transition-all duration-300 hover:scale-110 ${
+        variant="ghost" 
+        size="icon"
+        className={`fixed top-16 z-50 transition-all duration-300 hover:bg-white/10 border-0 text-white hover:text-white ${
           sidebarPinned ? 'left-[254px]' : 'left-4'
         }`}
         style={{ zIndex: 60 }}
-        title="사이드바 고정/해제"
+        title={sidebarPinned ? "사이드바 숨기기" : "사이드바 고정"}
       >
-        <span className="text-2xl text-white">☰</span>
-      </div>
+        <motion.div
+          animate={{ rotate: sidebarPinned ? 180 : 0 }}
+          transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+        >
+          {sidebarPinned ? (
+            <X size={20} />
+          ) : (
+            <Menu size={20} />
+          )}
+        </motion.div>
+      </Button>
 
       {/* Sidebar */}
       <div 
