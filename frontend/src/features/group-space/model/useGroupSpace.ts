@@ -14,8 +14,8 @@ export const galleryAlbum: AlbumType = { id: "gallery", name: "GALLERY", subtitl
 
 // Album/Gallery 메인 모드 정의
 export const mainModes = [
-  { id: "album", name: "Album" },
-  { id: "gallery", name: "Gallery" }
+  { id: "album", name: "ALBUM" },
+  { id: "gallery", name: "GALLERY" }
 ] as const
 
 export type MainMode = typeof mainModes[number]["id"]

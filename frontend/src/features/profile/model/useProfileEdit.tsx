@@ -116,7 +116,7 @@ export function useProfileEdit() {
           const { width, height } = await getImageDimensions(file);
 
           // 1단계: PreSignedUrl 요청
-          const { presignedUrl } = await profileApi.getPresignedUrl({
+          const { presignedUrl, publicUrl } = await profileApi.getPresignedUrl({
             fileName: file.name,
             contentType: file.type,
             fileSize: file.size,
@@ -125,7 +125,9 @@ export function useProfileEdit() {
             takenAt: new Date().toISOString(),
           });
 
-          console.log("presignedUrl:", presignedUrl);
+         
+
+          // console.log("presignedUrl:", presignedUrl);
 
           console.log("1단계 완료");
 
@@ -136,8 +138,8 @@ export function useProfileEdit() {
           // 3단계: 사용자 정보 업데이트 (타입에 따라 필드 결정)
           const updateData =
             imageType === "profile"
-              ? { profileUrl: presignedUrl }
-              : { identificationUrl: presignedUrl };
+              ? { profileUrl: publicUrl }
+              : { identificationUrl: publicUrl };
 
           const updatedUser = await profileApi.updateUserInfo(updateData);
 

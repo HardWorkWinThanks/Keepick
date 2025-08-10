@@ -24,45 +24,38 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
   } = useGroupSpace()
 
   return (
-    <div className="min-h-screen bg-[#222222] text-white pb-8">
-      {/* Group Name Section */}
-      <div className="px-8 pt-6 pb-3 pl-20">
-        <h1 className="text-6xl md:text-7xl lg:text-8xl font-keepick-primary font-bold tracking-wider text-white">
-          {group.name}
-        </h1>
-      </div>
-
-      {/* Album/Gallery Mode Section */}
-      <div className="px-8 pt-6 pb-2 pl-20">
+    <div className="min-h-screen bg-[#111111] text-white pb-8">
+      {/* Album/Gallery Mode Section - 메인 섹션으로 이동, 크기와 색상 조정 */}
+      <div className="px-8 pt-6 pb-4 pl-20">
         <div className="relative">
           <AnimatePresence mode="wait">
-            <motion.h2
+            <motion.h1
               key={currentMode.id}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -20, opacity: 0 }}
               transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-              className="text-2xl md:text-3xl lg:text-4xl font-keepick-heavy tracking-wider text-[#FE7A25]"
+              className="text-6xl md:text-7xl lg:text-8xl font-keepick-primary font-bold tracking-wider text-white"
             >
               {currentMode.name}
-            </motion.h2>
+            </motion.h1>
           </AnimatePresence>
           
-          {/* Mode Navigation Arrows - Gallery 기준으로 고정 위치 */}
-          <div className="absolute top-0 flex flex-col gap-1" style={{ left: '160px' }}>
+          {/* Mode Navigation Arrows - GALLERY 기준으로 고정 위치, 크기 조정 */}
+          <div className="mt-3 absolute top-2 flex flex-col gap-2" style={{ left: '470px' }}>
             <button
               onClick={() => changeMainMode("up")}
               disabled={isAnimating}
-              className="w-6 h-6 flex items-center justify-center hover:bg-white/10 transition-all duration-300 disabled:opacity-50 text-[#FE7A25]"
+              className="w-8 h-8 flex items-center justify-center hover:bg-white/10 transition-all duration-300 disabled:opacity-50 text-white"
             >
-              <ChevronUp size={14} />
+              <ChevronUp size={18} />
             </button>
             <button
               onClick={() => changeMainMode("down")}
               disabled={isAnimating}
-              className="w-6 h-6 flex items-center justify-center hover:bg-white/10 transition-all duration-300 disabled:opacity-50 text-[#FE7A25]"
+              className="w-8 h-8 flex items-center justify-center hover:bg-white/10 transition-all duration-300 disabled:opacity-50 text-white"
             >
-              <ChevronDown size={14} />
+              <ChevronDown size={18} />
             </button>
           </div>
         </div>
@@ -184,7 +177,7 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                       {currentAlbum.name}
                     </h2>
                     {/* 한글 부제목 */}
-                    <p className="text-lg md:text-xl lg:text-2xl font-keepick-primary font-medium text-[#F5E7C6] mt-2 tracking-wide">
+                    <p className="mr-2 text-lg md:text-xl lg:text-2xl font-keepick-primary font-medium text-[#F5E7C6] mt-2 tracking-wide">
                       {currentAlbum.subtitle}
                     </p>
                   </motion.div>

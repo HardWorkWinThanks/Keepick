@@ -9,14 +9,21 @@ interface PresignedUrlRequest {
   fileName: string;
   contentType: string;
   fileSize: number;
-  width?: number;
-  height?: number;
-  takenAt?: string;
+  width: number;
+  height: number;
+  takenAt: string;
 }
 
 // PreSignedUrl 응답 타입
 interface PresignedUrlResponse {
+  status: number;
+  message: string;
+  data: PresignedUrlResponseData;
+}
+
+interface PresignedUrlResponseData {
   presignedUrl: string;
+  publicUrl: string;
 }
 
 // API 응답 타입
@@ -29,8 +36,8 @@ interface UserUpdateResponse {
 export const profileApi = {
   // 닉네임 중복 확인 구현 필요
   checkNicknameAvailability: () => {
-    console.log('닉네임 중복 확인 기능 필요')
-    return undefined
+    console.log("닉네임 중복 확인 기능 필요");
+    return undefined;
   },
 
   // 사용자 정보 업데이트 (모든 필드 지원)
@@ -46,11 +53,11 @@ export const profileApi = {
     return response.data.data;
   },
 
-  // PreSignedUrl 요청
+  // PreSignedUrl 요청 (+PublicUrl)
   getPresignedUrl: async (
     fileInfo: PresignedUrlRequest
-  ): Promise<PresignedUrlResponse> => {
-    const response = await apiClient.post<ApiResponse<PresignedUrlResponse>>(
+  ): Promise<PresignedUrlResponseData> => {
+    const response = await apiClient.post<ApiResponse<PresignedUrlResponseData>>(
       "/api/photos/presigned-url",
       fileInfo
     );
@@ -67,6 +74,6 @@ export const profileApi = {
       maxContentLength: Infinity,
     });
 
-    return presignedUrl.split("?")[0]
+    return presignedUrl.split("?")[0];
   },
 };
