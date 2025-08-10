@@ -24,7 +24,7 @@ import org.springframework.data.domain.Pageable;
 import com.ssafy.keepick.album.tier.domain.TierAlbum;
 import com.ssafy.keepick.album.tier.domain.TierAlbumPhoto;
 import com.ssafy.keepick.album.tier.domain.Tier;
-import com.ssafy.keepick.image.domain.Photo;
+import com.ssafy.keepick.photo.domain.Photo;
 
 @ExtendWith(MockitoExtension.class)
 class TierAlbumRepositoryTest {

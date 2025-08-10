@@ -15,11 +15,13 @@ import com.ssafy.keepick.member.controller.response.MemberInfoResponse;
 import com.ssafy.keepick.member.controller.response.MemberSearchResponse;
 
 import lombok.RequiredArgsConstructor;
+import com.ssafy.keepick.global.exception.BaseException;
+import com.ssafy.keepick.global.exception.ErrorCode;
 
 @RestController
 @RequestMapping("/api/members")
 @RequiredArgsConstructor
-public class MemberController {
+public class MemberController implements MemberApiSpec {
 
     private final MemberService memberService;
 
@@ -29,6 +31,7 @@ public class MemberController {
      * @return 사용자 정보 응답
      */
     @GetMapping("/me")
+    @Override
     public ApiResponse<MemberInfoResponse> getCurrentMemberInfo() {
         MemberDto memberDto = memberService.getCurrentMemberInfo();
         MemberInfoResponse response = MemberInfoResponse.from(memberDto);
@@ -42,6 +45,7 @@ public class MemberController {
      * @return 수정된 사용자 정보 응답
      */
     @PatchMapping("/me")
+    @Override
     public ApiResponse<MemberInfoResponse> updateCurrentMemberInfo(@RequestBody MemberUpdateRequest request) {
         MemberDto memberDto = memberService.updateCurrentMemberInfo(request);
         MemberInfoResponse response = MemberInfoResponse.from(memberDto);
@@ -51,11 +55,18 @@ public class MemberController {
     /**
      * 닉네임으로 사용자를 검색합니다.
      * 
-     * @param nickname 검색할 닉네임 (쿼리 파라미터)
+     * @param nickname 검색할 닉네임 (쿼리 파라미터, 선택사항)
      * @return 검색된 사용자 정보
      */
     @GetMapping
-    public ApiResponse<MemberSearchResponse> searchMemberByNickname(@RequestParam String nickname) {
+    @Override
+    public ApiResponse<MemberSearchResponse> searchMemberByNickname(
+        @RequestParam(required = false, defaultValue = "") String nickname
+    ) {
+        if (nickname == null || nickname.trim().isEmpty()) {
+            throw new BaseException(ErrorCode.INVALID_PARAMETER, "닉네임은 필수입니다.");
+        }
+        
         MemberDto memberDto = memberService.searchMemberByNickname(nickname);
         MemberSearchResponse response = MemberSearchResponse.from(memberDto);
         return ApiResponse.ok(response);

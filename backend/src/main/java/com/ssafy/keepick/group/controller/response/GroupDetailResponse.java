@@ -1,6 +1,7 @@
 package com.ssafy.keepick.group.controller.response;
 
 import com.ssafy.keepick.group.application.dto.GroupDto;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -9,14 +10,32 @@ import java.time.LocalDateTime;
 @Getter
 @Builder
 public class GroupDetailResponse {
+
+    @Schema(description = "그룹 ID", example = "101")
     private Long groupId;
+
+    @Schema(description = "그룹 이름", example = "대학교 친구들")
     private String name;
+
+    @Schema(description = "그룹 설명")
     private String description;
+
+    @Schema(description = "그룹 썸네일 이미지 URL", example = "https://example.com/image.png")
     private String thumbnailUrl;
+
+    @Schema(description = "그룹 회원 수", example = "10")
     private Integer memberCount;
+
+    @Schema(description = "그룹 생성 회원 ID", example = "202")
     private Long creatorId;
+
+    @Schema(description = "그룹 생성 회원 이름", example = "홍길동")
     private String creatorName;
+
+    @Schema(description = "그룹 생성일시", example = "2025-08-09T12:00:00")
     private LocalDateTime createdAt;
+
+    @Schema(description = "그룹 수정일시", example = "2025-08-10T15:30:00")
     private LocalDateTime updatedAt;
 
     public static GroupDetailResponse toResponse(GroupDto dto) {

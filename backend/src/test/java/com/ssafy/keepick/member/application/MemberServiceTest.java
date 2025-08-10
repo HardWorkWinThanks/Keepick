@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.*;
 
 import java.util.Optional;
 
+import com.ssafy.keepick.support.BaseTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,7 @@ import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
 
 @ExtendWith(MockitoExtension.class)
-class MemberServiceTest {
+class MemberServiceTest extends BaseTest {
 
     @Mock
     private MemberRepository memberRepository;

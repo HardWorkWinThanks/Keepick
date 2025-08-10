@@ -1,12 +1,13 @@
 package com.ssafy.keepick.member.domain;
 
+import com.ssafy.keepick.support.BaseTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.*;
 
-class MemberTest {
+class MemberTest extends BaseTest {
 
     private Member member;
 

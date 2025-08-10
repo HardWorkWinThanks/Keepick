@@ -1,14 +1,10 @@
 package com.ssafy.keepick.photo.controller.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@Data
+@Getter
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
 public class GroupPhotoUploadResponse {
     private String presignedUrl;

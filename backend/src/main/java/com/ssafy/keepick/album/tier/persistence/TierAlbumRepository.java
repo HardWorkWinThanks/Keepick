@@ -65,4 +65,7 @@ public interface TierAlbumRepository extends JpaRepository<TierAlbum, Long> {
         ORDER BY t.createdAt DESC
     """)
     Page<TierAlbum> findByGroupIdWithPaging(@Param("groupId") Long groupId, Pageable pageable);
+
+    boolean existsByIdAndGroupIdAndDeletedAtIsNull(Long id, Long groupId);
+
 }

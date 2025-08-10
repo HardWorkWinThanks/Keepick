@@ -1,6 +1,7 @@
 package com.ssafy.keepick.global.security.handler;
 
 import com.ssafy.keepick.global.exception.ErrorCode;
+import com.ssafy.keepick.support.BaseTest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,7 +21,7 @@ import static org.mockito.BDDMockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CustomAuthenticationEntryPoint 테스트")
-class CustomAuthenticationEntryPointTest {
+class CustomAuthenticationEntryPointTest extends BaseTest {
 
     @Mock
     private HttpServletRequest request;

@@ -1,17 +1,5 @@
 package com.ssafy.keepick.album.tier.application;
 
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import com.ssafy.keepick.photo.domain.Photo;
-import com.ssafy.keepick.photo.persistence.PhotoRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDetailDto;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDto;
 import com.ssafy.keepick.album.tier.controller.request.UpdateTierAlbumRequest;
@@ -22,13 +10,19 @@ import com.ssafy.keepick.album.tier.persistence.TierAlbumPhotoRepository;
 import com.ssafy.keepick.album.tier.persistence.TierAlbumRepository;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
-import com.ssafy.keepick.global.security.util.AuthenticationUtil;
-import com.ssafy.keepick.group.domain.GroupMemberStatus;
-import com.ssafy.keepick.group.persistence.GroupMemberRepository;
-import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.global.response.PagingResponse;
-
+import com.ssafy.keepick.photo.domain.Photo;
+import com.ssafy.keepick.photo.persistence.PhotoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -39,16 +33,11 @@ public class TierAlbumService {
     private final TierAlbumRepository tierAlbumRepository;
     private final TierAlbumPhotoRepository tierAlbumPhotoRepository;
     private final PhotoRepository photoRepository;
-    private final GroupRepository groupRepository;
-    private final GroupMemberRepository groupMemberRepository;
 
     
     // 티어 앨범 생성
     @Transactional
     public TierAlbumDto createTierAlbum(Long groupId, List<Long> photoIds) {
-        // 권한 검증
-        validateGroupMemberPermission(groupId);
-        
         // 빈 티어 앨범 생성
         TierAlbum tierAlbum = TierAlbum.createTierAlbum(groupId);
         TierAlbum savedTierAlbum = tierAlbumRepository.save(tierAlbum);
@@ -70,14 +59,9 @@ public class TierAlbumService {
         return TierAlbumDto.from(savedTierAlbum);
     }
 
-
-
     // 티어 앨범 목록 조회 (페이징)
     @Transactional(readOnly = true)
     public PagingResponse<TierAlbumDto> getTierAlbumListWithPaging(Long groupId, int page, int size) {
-        // 권한 검증
-        validateGroupMemberPermission(groupId);
-        
         // Pageable 객체 생성 (page는 0부터 시작하므로 -1)
         Pageable pageable = PageRequest.of(page - 1, size);
         
@@ -91,30 +75,18 @@ public class TierAlbumService {
     // 티어 앨범 상세 조회 (사진 목록 포함)
     @Transactional(readOnly = true)
     public TierAlbumDetailDto getTierAlbumDetail(Long groupId, Long tierAlbumId) {
-        // 권한 검증
-        validateGroupMemberPermission(groupId);
-        
         TierAlbum tierAlbum = tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
-        
-        // 앨범이 해당 그룹에 속하는지 검증
-        validateAlbumBelongsToGroup(tierAlbum, groupId);
-        
+
         return TierAlbumDetailDto.from(tierAlbum);
     }
 
     // 티어 앨범 수정
     @Transactional
     public TierAlbumDto updateTierAlbum(Long groupId, Long tierAlbumId, UpdateTierAlbumRequest request) {
-        // 권한 검증
-        validateGroupMemberPermission(groupId);
-        
         TierAlbum tierAlbum = tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
-        
-        // 앨범이 해당 그룹에 속하는지 검증
-        validateAlbumBelongsToGroup(tierAlbum, groupId);
-        
+
         // 썸네일 URL 정보 가져오기
         ThumbnailInfo thumbnailInfo = getThumbnailInfo(request.getThumbnailId(), tierAlbum);
         
@@ -136,48 +108,10 @@ public class TierAlbumService {
     // 티어 앨범 삭제
     @Transactional
     public void deleteTierAlbum(Long groupId, Long tierAlbumId) {
-        // 권한 검증
-        validateGroupMemberPermission(groupId);
-        
         TierAlbum tierAlbum = tierAlbumRepository.findAlbumById(tierAlbumId)
                 .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
-        
-        // 앨범이 해당 그룹에 속하는지 검증
-        validateAlbumBelongsToGroup(tierAlbum, groupId);
-        
+
         tierAlbum.delete();
-    }
-    
-    /**
-     * 그룹 멤버 권한 검증
-     * 
-     * @param groupId 그룹 ID
-     * @throws BaseException 그룹이 존재하지 않거나 권한이 없는 경우
-     */
-    private void validateGroupMemberPermission(Long groupId) {
-        // 그룹 존재 여부 검증
-        groupRepository.findById(groupId)
-                .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
-
-        // 권한 검증 - 현재 사용자가 그룹 멤버인지 확인
-        Long currentUserId = AuthenticationUtil.getCurrentUserId();
-        if (!groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(groupId, currentUserId,
-                GroupMemberStatus.ACCEPTED)) {
-            throw new BaseException(ErrorCode.FORBIDDEN);
-        }
-    }
-
-    /**
-     * 앨범이 해당 그룹에 속하는지 검증
-     * 
-     * @param tierAlbum 앨범 엔티티
-     * @param groupId   그룹 ID
-     * @throws BaseException 앨범이 다른 그룹에 속한 경우
-     */
-    private void validateAlbumBelongsToGroup(TierAlbum tierAlbum, Long groupId) {
-        if (!tierAlbum.getGroupId().equals(groupId)) {
-            throw new BaseException(ErrorCode.FORBIDDEN);
-        }
     }
     
     /**
