@@ -51,21 +51,43 @@ public class PhotoController {
         return ApiResponse.ok(response);
     }
 
-
     @Operation(summary = "그룹 갤러리 사진 필터링 조회 API", description = "그룹 갤러리의 사진 중 여러 필터링 조건을 적용해서 결과를 페이징하여 반환합니다.")
     @GetMapping("/groups/{groupId}/photos")
-    public ApiResponse<PagingResponse<GroupPhotoDetailResponse>>  getGroupPhotos(
+    public ApiResponse<PagingResponse<GroupPhotoDetailResponse>> getGroupPhotos(
             @PathVariable Long groupId,
             @ModelAttribute GroupPhotoSearchRequest request) {
         Page<GroupPhotoDto> result = groupPhotoService.getGroupPhotos(groupId, request);
         return ApiResponse.ok(PagingResponse.from(result, GroupPhotoDetailResponse::from));
     }
 
+    @Operation(summary = "흐린 사진 조회 API", description = "그룹 갤러리의 사진 중 흐린 사진만 조회한 결과를 페이징하여 반환합니다.")
+    @GetMapping("/groups/{groupId}/blurry-photos")
+    public ApiResponse<?> getBlurryPhotos(
+            @PathVariable Long groupId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<GroupPhotoDto> result = groupPhotoService.getBlurryPhotos(groupId, page, size);
+        return ApiResponse.ok(PagingResponse.from(result, GroupPhotoDetailResponse::from));
+    }
+
+    @Operation(summary = "유사 사진 그룹 조회 API", description = "그룹 갤러리의 사진 중 유사 사진 그룹을 조회한 결과를 페이징하여 반환합니다.")
+    @GetMapping("/groups/{groupId}/similar-photos")
+    public ApiResponse<?> getSimilarPhotos(
+            @PathVariable Long groupId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
+    ) {
+        return null;
+    }
+
+    @Operation(summary = "그룹 전체 사진, 흐린 사진, 유사 사진 조회 API", description = "그룹 갤러리 초기 화면 로딩을 위한 전체 사진, 흐린 사진, 유사 사진 일부를 조회한 결과를 페이징하여 반환합니다.")
+    @GetMapping("/groups/{groupId}/photos/overview")
+    public ApiResponse<?> getGroupPhotosOverview(
+            @PathVariable Long groupId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
+    ) {
+        return null;
+    }
 
     @Operation(summary = "그룹 사진 삭제 API", description = "아직 구현 중 / 앨범에 포함된 사진은 삭제되지 않습니다.")
     @DeleteMapping("/groups/{groupId}/photos")
-    public ApiResponse<List<GroupPhotoIdResponse>> deleteGroupPhotos(@PathVariable Long groupId,
-                                            @RequestBody GroupPhotoDeleteRequest request) {
+    public ApiResponse<List<GroupPhotoIdResponse>> deleteGroupPhotos(@PathVariable Long groupId, @RequestBody GroupPhotoDeleteRequest request) {
         List<GroupPhotoDto> result = groupPhotoService.deleteGroupPhoto(groupId, request);
         return ApiResponse.created(GroupPhotoIdResponse.from(result));
     }

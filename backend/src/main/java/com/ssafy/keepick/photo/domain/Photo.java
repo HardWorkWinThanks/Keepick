@@ -37,6 +37,10 @@ public class Photo extends BaseTimeEntity {
 
     private PhotoStatus status;
 
+    private boolean blurred;
+
+    private Integer similarKey;
+
     @ManyToOne(fetch = FetchType.LAZY)
     private Group group;
 

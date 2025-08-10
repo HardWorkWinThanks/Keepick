@@ -3,6 +3,8 @@ package com.ssafy.keepick.photo.persistence;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.photo.domain.Photo;
 import io.lettuce.core.dynamic.annotation.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -36,4 +38,12 @@ public interface PhotoRepository extends JpaRepository<Photo,Long>, PhotoQueryFa
     Integer countByMemberId(@Param("memberId") Long memberId);
 
     List<Photo> findByGroupIdAndDeletedAtIsNull(Long groupId);
+
+    @Query("SELECT p " +
+            "FROM Photo p " +
+            "WHERE p.groupId = :groupId " +
+            "AND p.blurred = true " +
+            "AND p.deletedAt IS NULL")
+    Page<Photo> findBlurryPhotosByGroupId(@Param("groupId") Long groupId, Pageable pageable);
+
 }

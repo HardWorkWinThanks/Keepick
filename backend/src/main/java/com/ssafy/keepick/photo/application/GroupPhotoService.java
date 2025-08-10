@@ -94,4 +94,8 @@ public class GroupPhotoService {
         return photoList.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
     }
 
+    public Page<GroupPhotoDto> getBlurryPhotos(Long groupId, int page, int size) {
+        Page<Photo> photoPage = photoRepository.findBlurryPhotosByGroupId(groupId, PageRequest.of(page, size));
+        return photoPage.map(GroupPhotoDto::from);
+    }
 }
