@@ -2,7 +2,7 @@ package com.ssafy.keepick.photo.controller.response;
 
 import com.ssafy.keepick.global.response.PagingResponse;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
-import com.ssafy.keepick.photo.application.dto.SimilarPhotoDto;
+import com.ssafy.keepick.photo.application.dto.PhotoClusterDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,7 +17,7 @@ public class GroupPhotoOverviewResponse {
     private PagingResponse<GroupPhotoDetailResponse> blurryPhotos;
     private PagingResponse<GroupPhotoSimilarClusterResponse> similarPhotos;
 
-    public static GroupPhotoOverviewResponse from(Page<GroupPhotoDto> allPhotoDtos, Page<GroupPhotoDto> blurryPhotoDtos, Page<SimilarPhotoDto> similarPhotoDtos) {
+    public static GroupPhotoOverviewResponse from(Page<GroupPhotoDto> allPhotoDtos, Page<GroupPhotoDto> blurryPhotoDtos, Page<PhotoClusterDto> similarPhotoDtos) {
         return GroupPhotoOverviewResponse.builder()
                 .allPhotos(PagingResponse.from(allPhotoDtos, GroupPhotoDetailResponse::from))
                 .blurryPhotos(PagingResponse.from(blurryPhotoDtos, GroupPhotoDetailResponse::from))

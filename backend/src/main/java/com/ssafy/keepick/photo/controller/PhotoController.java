@@ -5,7 +5,7 @@ import com.ssafy.keepick.global.response.PagingResponse;
 import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.photo.application.GroupPhotoService;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
-import com.ssafy.keepick.photo.application.dto.SimilarPhotoDto;
+import com.ssafy.keepick.photo.application.dto.PhotoClusterDto;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoSearchRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
@@ -73,7 +73,7 @@ public class PhotoController {
     public ApiResponse<PagingResponse<GroupPhotoSimilarClusterResponse>> getSimilarClusters(
             @PathVariable Long groupId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
     ) {
-        Page<SimilarPhotoDto> result = groupPhotoService.getSimilarClusters(groupId, page, size);
+        Page<PhotoClusterDto> result = groupPhotoService.getSimilarClusters(groupId, page, size);
         return ApiResponse.ok(PagingResponse.from(result, GroupPhotoSimilarClusterResponse::from));
     }
 

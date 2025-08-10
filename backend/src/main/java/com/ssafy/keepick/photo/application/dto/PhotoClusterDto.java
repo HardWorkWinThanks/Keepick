@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 @Getter
 @Builder
 @AllArgsConstructor
-public class SimilarPhotoDto {
+public class PhotoClusterDto {
 
     private Long clusterId;
     private Long thumbnailPhotoId;
@@ -19,7 +19,7 @@ public class SimilarPhotoDto {
     private Long photoCount;
     private List<GroupPhotoDto> photos;
 
-    public SimilarPhotoDto(Long clusterId, Long thumbnailPhotoId, String thumbnailUrl, Long photoCount) {
+    public PhotoClusterDto(Long clusterId, Long thumbnailPhotoId, String thumbnailUrl, Long photoCount) {
         this.clusterId = clusterId;
         this.thumbnailPhotoId = thumbnailPhotoId;
         this.thumbnailUrl = thumbnailUrl;

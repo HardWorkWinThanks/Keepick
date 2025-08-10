@@ -1,6 +1,6 @@
 package com.ssafy.keepick.photo.persistence;
 
-import com.ssafy.keepick.photo.application.dto.SimilarPhotoDto;
+import com.ssafy.keepick.photo.application.dto.PhotoClusterDto;
 import com.ssafy.keepick.photo.domain.Photo;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +16,6 @@ public interface PhotoQueryFactory {
                                                 LocalDate startDate,
                                                 LocalDate endDate);
 
-    Page<SimilarPhotoDto> findSimilarClusters(Long groupId, Pageable pageable);
+    Page<PhotoClusterDto> findSimilarClusters(Long groupId, Pageable pageable);
 
 }

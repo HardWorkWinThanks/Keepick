@@ -5,7 +5,7 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import com.ssafy.keepick.photo.application.dto.SimilarPhotoDto;
+import com.ssafy.keepick.photo.application.dto.PhotoClusterDto;
 import com.ssafy.keepick.photo.domain.Photo;
 
 import static com.ssafy.keepick.photo.domain.QPhoto.*;
@@ -60,7 +60,7 @@ public class PhotoQueryFactoryImpl implements PhotoQueryFactory {
         return new PageImpl<>(photos, pageable, total != null ? total : 0);
     }
     @Override
-    public Page<SimilarPhotoDto> findSimilarClusters(Long groupId, Pageable pageable) {
+    public Page<PhotoClusterDto> findSimilarClusters(Long groupId, Pageable pageable) {
         QPhoto photo = QPhoto.photo;
         QPhoto photoSub = new QPhoto("photoSub");
 
@@ -77,9 +77,9 @@ public class PhotoQueryFactoryImpl implements PhotoQueryFactory {
                 .where(photoSub.id.eq(thumbnailPhotoIdSubquery));
 
         // 유사한 사진 클러스터 조회
-        List<SimilarPhotoDto> photos = jpaQueryFactory
+        List<PhotoClusterDto> photos = jpaQueryFactory
                 .select(Projections.constructor(
-                        SimilarPhotoDto.class,
+                        PhotoClusterDto.class,
                         photo.clusterId,
                         thumbnailPhotoIdSubquery,
                         thumbnailPhotoUrlSubquery,

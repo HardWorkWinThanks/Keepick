@@ -1,6 +1,6 @@
 package com.ssafy.keepick.photo.controller.response;
 
-import com.ssafy.keepick.photo.application.dto.SimilarPhotoDto;
+import com.ssafy.keepick.photo.application.dto.PhotoClusterDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,7 +18,7 @@ public class GroupPhotoSimilarClusterResponse {
     private Long photoCount;
     private List<GroupPhotoDetailResponse> photos;
 
-    public static GroupPhotoSimilarClusterResponse from(SimilarPhotoDto dto) {
+    public static GroupPhotoSimilarClusterResponse from(PhotoClusterDto dto) {
         return GroupPhotoSimilarClusterResponse.builder()
                 .clusterId(dto.getClusterId())
                 .thumbnailPhotoId(dto.getThumbnailPhotoId())

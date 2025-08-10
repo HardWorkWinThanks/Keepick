@@ -7,7 +7,7 @@ import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoCommandDto;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
-import com.ssafy.keepick.photo.application.dto.SimilarPhotoDto;
+import com.ssafy.keepick.photo.application.dto.PhotoClusterDto;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoSearchRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
@@ -104,13 +104,13 @@ public class GroupPhotoService {
     }
 
     @Transactional(readOnly = true)
-    public Page<SimilarPhotoDto> getSimilarClusters(Long groupId, int page, int size) {
+    public Page<PhotoClusterDto> getSimilarClusters(Long groupId, int page, int size) {
         // 1. 유사 사진 클러스터 기본 정보(대표 사진ID, 썸네일, 개수) 페이징 조회
-        Page<SimilarPhotoDto> clusterPage = photoRepository.findSimilarClusters(groupId, PageRequest.of(page, size));
+        Page<PhotoClusterDto> clusterPage = photoRepository.findSimilarClusters(groupId, PageRequest.of(page, size));
 
         // 2. 모든 유사 클러스터 clusterId 리스트 추출
         List<Long> clusterIds = clusterPage.stream()
-                .map(SimilarPhotoDto::getClusterId)
+                .map(PhotoClusterDto::getClusterId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
