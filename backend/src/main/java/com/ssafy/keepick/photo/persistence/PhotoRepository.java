@@ -1,5 +1,6 @@
 package com.ssafy.keepick.photo.persistence;
 
+import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.photo.domain.Photo;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -33,4 +34,6 @@ public interface PhotoRepository extends JpaRepository<Photo,Long>, PhotoQueryFa
             "WHERE gm.member.id = :memberId " +
             "  AND p.deletedAt IS NULL")
     Integer countByMemberId(@Param("memberId") Long memberId);
+
+    List<Photo> findByGroupIdAndDeletedAtIsNull(Long groupId);
 }

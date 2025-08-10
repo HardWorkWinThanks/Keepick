@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이미지 분석 API 테스트</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #555; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea, button {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .url-input {
+            margin-bottom: 10px;
+        }
+        .add-btn {
+            width: auto;
+            padding: 5px 10px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        .flex-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .small-input {
+            width: 150px;
+        }
+        .person-input {
+            margin-bottom: 10px;
+        }
+        .person-name {
+            width: 150px;
+        }
+        .person-url {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <h1>🖼️ 이미지 분석 API 테스트</h1>
+
+    <!-- 1. 흐린 사진 감지 API -->
+    <div class="container">
+        <h2>1. 흐린 사진 감지 API</h2>
+        <div class="form-group">
+            <label>이미지 URL들 (한 줄에 하나씩):</label>
+            <textarea id="blurUrls" rows="4" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"></textarea>
+        </div>
+        <div class="form-group">
+            <div class="flex-row">
+                <label>흐림 임계값:</label>
+                <input type="number" id="blurThreshold" value="100" class="small-input">
+            </div>
+        </div>
+        <button onclick="testBlurDetection()">흐린 사진 감지 실행</button>
+        <div id="blurResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- 2. 유사 사진 분류 API -->
+    <div class="container">
+        <h2>2. 유사 사진 분류 API</h2>
+        <div class="form-group">
+            <label>이미지 URL들 (한 줄에 하나씩):</label>
+            <textarea id="similarUrls" rows="4" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg&#10;https://example.com/image3.jpg"></textarea>
+        </div>
+        <div class="form-group">
+            <div class="flex-row">
+                <label>유사도 임계값:</label>
+                <input type="number" id="similarThreshold" value="0.9" step="0.1" min="0" max="1" class="small-input">
+            </div>
+        </div>
+        <button onclick="testSimilarGrouping()">유사 사진 분류 실행</button>
+        <div id="similarResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- 3. 얼굴 인식 및 태깅 API -->
+    <div class="container">
+        <h2>3. 얼굴 인식 및 태깅 API</h2>
+        
+        <!-- 기준 인물 섹션 -->
+        <div class="form-group">
+            <label>기준 인물들:</label>
+            <div id="targetPersons">
+                <div class="person-input">
+                    <div class="flex-row">
+                        <input type="text" placeholder="이름" class="person-name small-input">
+                        <input type="url" placeholder="https://example.com/person.jpg" class="person-url">
+                        <button type="button" class="add-btn" onclick="removePerson(this)">삭제</button>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="add-btn" onclick="addPerson()">+ 기준 인물 추가</button>
+        </div>
+        
+        <div class="form-group">
+            <label>분석할 이미지 URL들 (한 줄에 하나씩):</label>
+            <textarea id="sourceImages" rows="4" placeholder="https://example.com/group1.jpg&#10;https://example.com/group2.jpg"></textarea>
+        </div>
+        <div class="form-group">
+            <div class="flex-row">
+                <label>거리 임계값:</label>
+                <input type="number" id="faceThreshold" value="0.6" step="0.1" min="0" max="1" class="small-input">
+                <label style="margin-left: 20px;">
+                    <input type="checkbox" id="returnImages" checked> 태깅된 이미지 반환
+                </label>
+            </div>
+        </div>
+        <button onclick="testFaceTagging()">얼굴 태깅 실행</button>
+        <div id="faceResult" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        // 공통 함수
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = isError ? 'result error' : 'result success';
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+
+        function parseUrls(urlString) {
+            return urlString.split('\n')
+                .map(url => url.trim())
+                .filter(url => url.length > 0)
+                .map((url, index) => ({
+                    url: url,
+                    name: `image_${index + 1}`
+                }));
+        }
+
+        // 1. 흐린 사진 감지 API 테스트
+        async function testBlurDetection() {
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = '처리 중...';
+
+            try {
+                const urls = document.getElementById('blurUrls').value;
+                const threshold = parseInt(document.getElementById('blurThreshold').value);
+
+                if (!urls.trim()) {
+                    throw new Error('이미지 URL을 입력해주세요');
+                }
+
+                const images = parseUrls(urls);
+                
+                const response = await fetch(`${API_BASE}/api/blur_detection`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        images: images,
+                        blur_threshold: threshold
+                    })
+                });
+
+                const data = await response.json();
+                showResult('blurResult', data, !response.ok);
+
+            } catch (error) {
+                showResult('blurResult', { error: error.message }, true);
+            } finally {
+                button.disabled = false;
+                button.textContent = '흐린 사진 감지 실행';
+            }
+        }
+
+        // 2. 유사 사진 분류 API 테스트
+        async function testSimilarGrouping() {
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = '처리 중...';
+
+            try {
+                const urls = document.getElementById('similarUrls').value;
+                const threshold = parseFloat(document.getElementById('similarThreshold').value);
+
+                if (!urls.trim()) {
+                    throw new Error('이미지 URL을 입력해주세요');
+                }
+
+                const images = parseUrls(urls);
+                
+                const response = await fetch(`${API_BASE}/api/similar_grouping`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        images: images,
+                        similarity_threshold: threshold
+                    })
+                });
+
+                const data = await response.json();
+                showResult('similarResult', data, !response.ok);
+
+            } catch (error) {
+                showResult('similarResult', { error: error.message }, true);
+            } finally {
+                button.disabled = false;
+                button.textContent = '유사 사진 분류 실행';
+            }
+        }
+
+        // 기준 인물 추가/삭제 함수들
+        function addPerson() {
+            const container = document.getElementById('targetPersons');
+            const personDiv = document.createElement('div');
+            personDiv.className = 'person-input';
+            personDiv.innerHTML = `
+                <div class="flex-row">
+                    <input type="text" placeholder="이름" class="person-name small-input">
+                    <input type="url" placeholder="https://example.com/person.jpg" class="person-url">
+                    <button type="button" class="add-btn" onclick="removePerson(this)">삭제</button>
+                </div>
+            `;
+            container.appendChild(personDiv);
+        }
+
+        function removePerson(button) {
+            const personInputs = document.querySelectorAll('.person-input');
+            if (personInputs.length > 1) {
+                button.closest('.person-input').remove();
+            } else {
+                alert('최소 1개의 기준 인물은 필요합니다.');
+            }
+        }
+
+        // 3. 얼굴 인식 및 태깅 API 테스트
+        async function testFaceTagging() {
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = '처리 중...';
+
+            try {
+                const sourceImagesText = document.getElementById('sourceImages').value;
+                const threshold = parseFloat(document.getElementById('faceThreshold').value);
+                const returnImages = document.getElementById('returnImages').checked;
+
+                // 기준 인물 데이터 수집
+                const targetFaces = [];
+                const personInputs = document.querySelectorAll('.person-input');
+                
+                for (let personInput of personInputs) {
+                    const nameInput = personInput.querySelector('.person-name');
+                    const urlInput = personInput.querySelector('.person-url');
+                    
+                    const name = nameInput.value.trim();
+                    const url = urlInput.value.trim();
+                    
+                    if (name && url) {
+                        targetFaces.push({ name: name, url: url });
+                    }
+                }
+
+                if (targetFaces.length === 0) {
+                    throw new Error('기준 인물의 이름과 URL을 입력해주세요');
+                }
+
+                if (!sourceImagesText.trim()) {
+                    throw new Error('분석할 이미지 URL을 입력해주세요');
+                }
+
+                // 소스 이미지 파싱
+                const sourceImages = parseUrls(sourceImagesText);
+                
+                const response = await fetch(`${API_BASE}/api/face_tagging`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        target_faces: targetFaces,
+                        source_images: sourceImages,
+                        distance_threshold: threshold,
+                        return_tagged_images: returnImages
+                    })
+                });
+
+                const data = await response.json();
+                showResult('faceResult', data, !response.ok);
+
+            } catch (error) {
+                showResult('faceResult', { error: error.message }, true);
+            } finally {
+                button.disabled = false;
+                button.textContent = '얼굴 태깅 실행';
+            }
+        }
+
+        // 페이지 로드 시 샘플 데이터 입력
+        window.onload = function() {
+            // 샘플 데이터 (실제 사용 시 유효한 이미지 URL로 변경 필요)
+            document.getElementById('blurUrls').value = 
+                'https://picsum.photos/800/600?random=1\nhttps://picsum.photos/800/600?random=2';
+            
+            document.getElementById('similarUrls').value = 
+                'https://picsum.photos/800/600?random=3\nhttps://picsum.photos/800/600?random=4\nhttps://picsum.photos/800/600?random=5';
+            
+            // 기준 인물 샘플 데이터
+            const firstPersonName = document.querySelector('.person-name');
+            const firstPersonUrl = document.querySelector('.person-url');
+            if (firstPersonName) firstPersonName.value = '테스트인물';
+            if (firstPersonUrl) firstPersonUrl.value = 'https://picsum.photos/400/400?random=6';
+            
+            document.getElementById('sourceImages').value = 
+                'https://picsum.photos/800/600?random=7\nhttps://picsum.photos/800/600?random=8';
+        };
+    </script>
+</body>
+</html>

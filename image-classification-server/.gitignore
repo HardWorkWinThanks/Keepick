@@ -1,0 +1,14 @@
+# Python 바이트코드 캐시 파일 (컴파일된 .pyc 파일 등)
+__pycache__/
+
+# VSCode 편집기 설정 폴더
+.vscode/
+
+# 정적 파일 디렉토리 
+static/
+
+# 업로드된 사용자 파일 
+uploads/
+
+# 가상 환경 폴더 
+venv/
