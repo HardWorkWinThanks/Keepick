@@ -30,7 +30,7 @@ public class MemberInfoResponse {
     )
     private String provider;
     
-    @Schema(description = "신분증 이미지 URL (선택사항)", example = "https://example.com/id.jpg")
+    @Schema(description = "AI 식별용 이미지 URL (선택사항)", example = "https://example.com/identification.jpg")
     private String identificationUrl;
     
     public static MemberInfoResponse from(MemberDto memberDto) {

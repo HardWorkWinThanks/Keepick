@@ -23,8 +23,8 @@ public class MemberUpdateRequest {
     private String profileUrl;
     
     @Schema(
-        description = "수정할 신분증 이미지 URL (선택사항)", 
-        example = "https://example.com/new-id.jpg"
+        description = "수정할 AI 식별용 이미지 URL (선택사항)", 
+        example = "https://example.com/new-identification.jpg"
     )
     private String identificationUrl;
     

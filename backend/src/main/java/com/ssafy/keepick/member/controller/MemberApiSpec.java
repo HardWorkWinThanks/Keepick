@@ -37,7 +37,7 @@ public interface MemberApiSpec {
             - profileUrl: 프로필 이미지 URL
             - email: 이메일 주소
             - provider: 소셜 로그인 제공자 (kakao, google, naver)
-            - identificationUrl: 신분증 이미지 URL (선택사항)
+            - identificationUrl: AI 식별용 이미지 URL (선택사항)
             """
     )
     @ApiResponses(value = {
@@ -59,7 +59,7 @@ public interface MemberApiSpec {
                             "profileUrl": "https://example.com/profile.jpg",
                             "email": "user@example.com",
                             "provider": "kakao",
-                            "identificationUrl": "https://example.com/id.jpg"
+                            "identificationUrl": "https://example.com/identification.jpg"
                         }
                     }
                     """
@@ -99,7 +99,7 @@ public interface MemberApiSpec {
             📝 수정 가능한 필드:
             - nickname: 닉네임 (선택사항)
             - profileUrl: 프로필 이미지 URL (선택사항)
-            - identificationUrl: 신분증 이미지 URL (선택사항)
+            - identificationUrl: AI 식별용 이미지 URL (선택사항)
             
             ⚠️ 주의사항:
             - 최소 하나 이상의 필드를 수정해야 합니다
@@ -126,7 +126,7 @@ public interface MemberApiSpec {
                             "profileUrl": "https://example.com/new-profile.jpg",
                             "email": "user@example.com",
                             "provider": "kakao",
-                            "identificationUrl": "https://example.com/new-id.jpg"
+                            "identificationUrl": "https://example.com/new-identification.jpg"
                         }
                     }
                     """
