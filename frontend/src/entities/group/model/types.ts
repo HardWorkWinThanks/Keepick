@@ -1,18 +1,35 @@
 export interface Group {
-  id: string;
+  groupId: number;
   name: string;
-  description?: string;
+  description: string;
+  thumbnailUrl: string;
+  memberCount: number;
+  createdId: number;
+  creatorName: string;
   createdAt: string;
   updatedAt: string;
-  memberCount: number;
 }
 
 export interface GroupMember {
-  id: string;
-  userId: string;
-  groupId: string;
-  role: 'owner' | 'admin' | 'member';
+  invitationId?: number;
+  memberId: number;
+  name: string;
+  nickname?: string;
+  email?: string;
+  profileUrl?: string;
+  profileImageUrl?: string | null;
   joinedAt: string;
+  role: "OWNER" | "MEMBER";
+}
+
+export interface GroupListItem {
+  groupId: number;
+  name: string;
+  memberCount?: number;
+  invitationId?: number;
+  invitationStatus: "PENDING" | "ACCEPTED" | "REJECTED";
+  thumbnailUrl?: string;
+  createdAt: string;
 }
 
 export interface AlbumType {

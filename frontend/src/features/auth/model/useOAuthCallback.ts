@@ -1,6 +1,6 @@
 // features/auth/hooks/useOAuthCallback.ts
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAppDispatch } from "@/shared/config/hooks";
 import { setTokens, setAuthLoading } from "./authSlice";
 import { setUser, setUserLoading } from "@/entities/user";
@@ -11,49 +11,68 @@ export const useOAuthCallback = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const isProcessing = useRef(false); // 중복 실행 방지
 
   useEffect(() => {
     const run = async () => {
+      // 이미 처리 중인 경우 중복 실행 방지
+      if (isProcessing.current) {
+        return;
+      }
+
       // URL에서 토큰들과 에러 추출
       const accessToken =
         searchParams?.get("token") || searchParams?.get("accessToken");
       const refreshToken = searchParams?.get("refreshToken");
       const error = searchParams?.get("error");
 
-      // 🔍 디버깅 로그 추가
-      // console.log("🔍 OAuth Callback 상태:", {
-      //   accessToken: !!accessToken,
-      //   refreshToken: !!refreshToken,
-      //   error,
-      //   searchParams: searchParams?.toString(),
-      // });
-
-      if (error) {
-        console.error("OAuth2 Error:", error);
-        router.replace("/?error=" + encodeURIComponent(error));
+      // OAuth 관련 파라미터가 없으면 처리하지 않음
+      if (!accessToken && !error) {
         return;
       }
 
-      if (accessToken) {
-        // console.log("✅ 토큰 발견, 저장 시작");
+      isProcessing.current = true; // 처리 시작
 
-        // 1. 먼저 URL 정리하여 무한 루프 방지
-        router.replace("/");
+      try {
+        if (error) {
+          console.error("OAuth2 Error:", error);
+          router.replace("/?error=" + encodeURIComponent(error));
+          return;
+        }
 
-        // 2. 토큰 저장
-        dispatch(
-          setTokens({
-            accessToken,
-            refreshToken: refreshToken || undefined,
-          })
-        );
+        if (accessToken) {
+          console.log("✅ OAuth 로그인 성공, 토큰 처리 시작");
+          
+          // 1. 토큰을 localStorage에 저장 (동기적으로)
+          localStorage.setItem("accessToken", accessToken);
+          if (refreshToken) {
+            localStorage.setItem("refreshToken", refreshToken);
+          }
 
-        // 3. 사용자 정보 가져오기
-        await fetchUserInfo();
+          // 2. Redux 상태 업데이트
+          dispatch(
+            setTokens({
+              accessToken,
+              refreshToken: refreshToken || undefined,
+            })
+          );
+
+          // 3. 사용자 정보 가져오기
+          await fetchUserInfo();
+
+          // 4. 성공 후 홈으로 이동
+          console.log("✅ OAuth 로그인 완료, 홈으로 이동");
+          router.replace("/");
+        }
+      } catch (error) {
+        console.error("OAuth 처리 중 오류:", error);
+        router.replace("/?error=login_failed");
+      } finally {
+        isProcessing.current = false; // 처리 완료
       }
     };
 
-    // searchParams가 있을 때만 실행 (무한 루프 방지)
+    // OAuth 관련 파라미터가 있을 때만 실행
     if (searchParams?.has("token") || searchParams?.has("accessToken") || searchParams?.has("error")) {
       run();
     }

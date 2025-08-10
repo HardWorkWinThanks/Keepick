@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSidebar } from '../model/useSidebar'
 import { useMainAuth } from "@/features/main-integration/model/useMainAuth"
 import AppHeader from './AppHeader'
@@ -53,13 +53,19 @@ export default function AppLayout({
 }: AppLayoutProps) {
   const sidebarProps = useSidebar(sidebarConfig?.forceInitialPinned)
   const { isLoggedIn } = useMainAuth()
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Hydration 완료 후에만 인증 상태 기반 렌더링 적용
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   return (
     <div className={`min-h-screen ${className}`} style={{ backgroundColor }}>
       <AppSidebar {...sidebarProps} {...sidebarConfig} />
       
       <div className={`transition-all duration-200 ease-out ${
-        isLoggedIn && sidebarProps.sidebarPinned ? "ml-[240px]" : "ml-0"
+        isMounted && isLoggedIn && sidebarProps.sidebarPinned ? "ml-[240px]" : "ml-0"
       }`}>
         <AppHeader 
           sidebarPinned={sidebarProps.sidebarPinned}

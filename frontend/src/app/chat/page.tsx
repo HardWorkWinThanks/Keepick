@@ -3,9 +3,18 @@
 import type React from "react"
 
 import { useRouter } from "next/navigation"
+import { useAuthGuard } from "@/features/auth/model/useAuthGuard"
 
 export default function ChatPage() {
   const router = useRouter()
+  
+  // 인증 가드 - 로그인하지 않은 사용자는 메인페이지로 리다이렉트
+  const { isAuthenticated } = useAuthGuard()
+
+  // 인증되지 않은 경우 아무것도 렌더링하지 않음 (리다이렉트 중)
+  if (!isAuthenticated) {
+    return null
+  }
 
   const handleBackClick = () => {
     router.push("/")

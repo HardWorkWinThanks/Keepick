@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@/shared/ui/modal/Modal'
 import { Input } from '@/shared/ui/shadcn/input'
 import { Button } from '@/shared/ui/shadcn/button'
-import { GroupCreateApi } from '../api/groupCreateApi'
+import { useGroupManagement } from '../model/useGroupManagement'
+import { formValidators } from '@/entities/group'
 
 interface CreateGroupModalProps {
   isOpen: boolean
@@ -15,20 +16,22 @@ interface CreateGroupModalProps {
 export default function CreateGroupModal({ isOpen, onClose }: CreateGroupModalProps) {
   const router = useRouter()
   const [groupName, setGroupName] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { createGroup } = useGroupManagement()
 
   const handleSubmit = async () => {
-    if (!groupName.trim()) {
-      setError('그룹 이름을 입력해주세요.')
+    // entities의 폼 검증 사용
+    const validation = formValidators.validateGroupNameRealTime(groupName)
+    if (!validation.isValid) {
+      setError(validation.message || '그룹 이름이 올바르지 않습니다.')
       return
     }
 
-    setIsLoading(true)
     setError(null)
 
     try {
-      const newGroup = await GroupCreateApi.createGroup({
+      // Tanstack Query mutation 사용 (자동 로딩 상태 관리, 캐시 업데이트, 에러 핸들링)
+      const newGroup = await createGroup.mutateAsync({
         name: groupName.trim()
       })
 
@@ -39,10 +42,11 @@ export default function CreateGroupModal({ isOpen, onClose }: CreateGroupModalPr
       setGroupName('')
       onClose()
     } catch (error) {
-      console.error('그룹 생성 실패:', error)
-      setError('그룹 생성에 실패했습니다. 다시 시도해주세요.')
-    } finally {
-      setIsLoading(false)
+      // 에러는 useGroupManagement에서 이미 처리됨 (토스트 메시지 표시)
+      // 여기서는 모달 특화 에러만 처리
+      if (error && typeof error === 'object' && 'message' in error) {
+        setError(error.message as string)
+      }
     }
   }
 
@@ -77,7 +81,7 @@ export default function CreateGroupModal({ isOpen, onClose }: CreateGroupModalPr
                 className="bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-orange-500"
                 maxLength={50}
                 onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !isLoading) {
+                  if (e.key === 'Enter' && !createGroup.isPending) {
                     handleSubmit()
                   }
                 }}
@@ -93,17 +97,17 @@ export default function CreateGroupModal({ isOpen, onClose }: CreateGroupModalPr
           <Button
             variant="ghost"
             onClick={handleClose}
-            disabled={isLoading}
+            disabled={createGroup.isPending}
             className="text-gray-300 hover:text-white hover:bg-gray-700"
           >
             취소
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isLoading || !groupName.trim()}
+            disabled={createGroup.isPending || !groupName.trim()}
             className="bg-orange-500 hover:bg-orange-600 text-white"
           >
-            {isLoading ? '생성 중...' : '확인'}
+            {createGroup.isPending ? '생성 중...' : '확인'}
           </Button>
         </ModalFooter>
       </ModalContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { User, LogOut } from "lucide-react";
 import { useMainAuth } from "@/features/main-integration/model/useMainAuth";
@@ -30,6 +30,24 @@ export default function AppHeader({
   const { isLoggedIn, user } = useMainAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const logout = useLogout();
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // 외부 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    if (isProfileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileMenuOpen]);
 
   return (
     <header
@@ -81,7 +99,7 @@ export default function AppHeader({
           />
         ) : (
           // 로그인 상태
-          <div className="relative">
+          <div className="relative" ref={profileMenuRef}>
             <button
               onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
               className="hover:scale-105 transition-transform duration-200"
@@ -92,44 +110,52 @@ export default function AppHeader({
             </button>
 
             {/* 프로필 드롭다운 메뉴 - 절대 위치로 고정 */}
-            <div
-              className={`absolute top-full right-0 mt-1 transition-all duration-200 ease-in-out ${
-                isProfileMenuOpen
-                  ? "max-h-36 opacity-100"
-                  : "max-h-0 opacity-0 overflow-hidden"
-              }`}
-            >
+            {isProfileMenuOpen && (
               <div
-                className="space-y-1 min-w-[140px] rounded-lg"
-                style={{ backgroundColor: "#222222" }}
+                className="absolute top-full right-0 mt-1 z-50 animate-in fade-in-0 zoom-in-95 duration-200"
+                style={{
+                  minWidth: "160px",
+                  maxWidth: "200px",
+                }}
               >
-                {/* 닉네임 섹션 */}
-                <div className="px-3 py-3 border-b border-gray-700 mb-1">
-                  <p className="text-base font-semibold text-white">
-                    {user?.name || "Keepick User"}
-                  </p>
-                </div>
+                <div
+                  className="rounded-lg shadow-lg border border-gray-700"
+                  style={{ backgroundColor: "#222222" }}
+                >
+                  {/* 닉네임 섹션 */}
+                  <div className="px-4 py-3 border-b border-gray-700">
+                    <p className="text-sm font-medium text-white truncate">
+                      {user?.name || "Keepick User"}
+                    </p>
+                  </div>
 
-                <Link
-                  href="/profile"
-                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm text-gray-300 block flex items-center gap-2"
-                  onClick={() => setIsProfileMenuOpen(false)}
-                >
-                  <User size={14} className="text-gray-400" />
-                  프로필 페이지
-                </Link>
-                <button
-                  onClick={() => {
-                    logout();
-                    setIsProfileMenuOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-red-900/50 transition-colors text-sm text-red-400 hover:text-red-300 flex items-center gap-2"
-                >
-                  <LogOut size={14} className="text-red-400" />
-                  로그아웃
-                </button>
+                  {/* 메뉴 아이템들 */}
+                  <div className="py-1">
+                    <Link
+                      href="/profile"
+                      className="w-full text-left px-4 py-2 hover:bg-gray-800 transition-colors text-sm text-gray-300 flex items-center gap-2 no-underline"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    >
+                      <User size={14} className="text-gray-400" />
+                      프로필 페이지
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        logout();
+                        setIsProfileMenuOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-red-900/30 transition-colors text-sm text-red-400 hover:text-red-300 flex items-center gap-2 border-none bg-transparent cursor-pointer"
+                    >
+                      <LogOut size={14} className="text-red-400" />
+                      로그아웃
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </nav>

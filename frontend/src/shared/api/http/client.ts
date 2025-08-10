@@ -68,10 +68,13 @@ class ApiClient {
             }
           }
 
-          // 토큰 갱신 실패 시 로그아웃
+          // 토큰 갱신 실패 시 로그아웃 (메인페이지에서는 리다이렉트하지 않음)
           localStorage.removeItem("accessToken");
           localStorage.removeItem("refreshToken");
-          if (typeof window !== "undefined") {
+          
+          // 현재 페이지가 메인페이지가 아닌 경우에만 리다이렉트
+          if (typeof window !== "undefined" && window.location.pathname !== "/") {
+            console.log("🔒 401 에러로 인한 로그아웃, 메인페이지로 리다이렉트");
             window.location.href = "/";
           }
         }

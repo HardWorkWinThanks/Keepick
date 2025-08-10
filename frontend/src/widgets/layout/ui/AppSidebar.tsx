@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { ChevronRight, ChevronDown, Settings, Check } from 'lucide-react'
+import { AnimatePresence, motion } from "framer-motion"
 import { FriendsTabWidget } from "@/widgets/friends"
 import { useMainGroups } from "@/features/main-integration/model/useMainGroups"
 import { useMainAuth } from "@/features/main-integration/model/useMainAuth"
 import { ScrollArea } from "@/shared/ui/shadcn/scroll-area"
-import { GroupApi } from "@/features/group-management/api/groupApi"
-import { GroupListApi, type GroupListItem } from "@/features/group-management/api/groupListApi"
+import { useGroupManagement, CreateGroupModal, LeaveGroupModal, GroupManagementApi, groupQueryKeys } from "@/features/group-management"
+import { useQuery } from "@tanstack/react-query"
+import { groupListSelectors, groupFormatters } from "@/entities/group"
+import type { GroupListItem } from "@/entities/group"
 import { useModal } from "@/shared/ui/modal/Modal"
-import CreateGroupModal from "@/features/group-management/ui/CreateGroupModal"
 
 interface AppSidebarProps {
   sidebarHovered: boolean
@@ -41,24 +43,45 @@ export default function AppSidebar({
 }: AppSidebarProps) {
   const [expandedGroups, setExpandedGroups] = useState<number[]>([])
   const [groupsSectionExpanded, setGroupsSectionExpanded] = useState(true)
-  const [friendsSectionExpanded, setFriendsSectionExpanded] = useState(true)
+  const [friendsSectionExpanded, setFriendsSectionExpanded] = useState(false) // 초기값을 false로 변경
+  const [groupMembersExpanded, setGroupMembersExpanded] = useState(false) // 그룹원 드롭다운 상태 추가
   const [isEditingGroup, setIsEditingGroup] = useState(false)
   const [editedGroupName, setEditedGroupName] = useState(currentGroup?.name || '')
   const [editedGroupDescription, setEditedGroupDescription] = useState(currentGroup?.description || '')
-  const [myGroups, setMyGroups] = useState<GroupListItem[]>([])
   const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false)
+  const [leaveGroupTarget, setLeaveGroupTarget] = useState<GroupListItem | null>(null)
   const createGroupModal = useModal()
-  const { groups, navigateToGroup } = useMainGroups()
+  const leaveGroupModal = useModal()
+  const { groups, navigateToGroup, isGroupsLoading: mainGroupsLoading } = useMainGroups()
   const { isLoggedIn } = useMainAuth()
+  const { updateGroup, useGroupMembers } = useGroupManagement()
+  const [isMounted, setIsMounted] = useState(false)
 
-  // 로그인 시 내 그룹 목록 캐시
+  // Hydration 완료 후에만 인증 상태 기반 렌더링 적용
   useEffect(() => {
-    if (isLoggedIn && currentGroup) {
-      GroupListApi.getMyGroups()
-        .then(setMyGroups)
-        .catch(error => console.error('그룹 목록 조회 실패:', error))
-    }
-  }, [isLoggedIn, currentGroup])
+    setIsMounted(true)
+  }, [])
+  
+  // 로그인된 상태에서만 그룹 목록 조회 - enabled 옵션 추가
+  const { data: allGroups = [], isLoading: isGroupsLoading } = useQuery({
+    queryKey: groupQueryKeys.lists(),
+    queryFn: GroupManagementApi.getMyGroups,
+    enabled: isMounted && isLoggedIn, // Hydration 완료 후 로그인된 상태에서만 실행
+    staleTime: 1 * 60 * 1000, // 1분으로 단축 (더 자주 업데이트)
+    gcTime: 5 * 60 * 1000, // 5분 가비지 컬렉션
+    refetchOnWindowFocus: true, // 윈도우 포커스 시 자동 리패치
+    refetchOnReconnect: true, // 네트워크 재연결 시 자동 리패치
+  })
+  
+  // entities 셀렉터를 사용해서 수락된 그룹만 필터링하고 정렬
+  const myGroups = isMounted && isLoggedIn ? groupListSelectors.sortByName(
+    groupListSelectors.getAcceptedGroups(allGroups)
+  ) : []
+
+  // 현재 그룹의 멤버 목록 조회
+  const { data: groupMembers = [], isLoading: isLoadingMembers } = useGroupMembers(
+    currentGroup ? parseInt(currentGroup.id) : 0
+  )
 
   const toggleGroup = (groupId: number) => {
     setExpandedGroups(prev => 
@@ -76,24 +99,30 @@ export default function AppSidebar({
     setFriendsSectionExpanded(prev => !prev)
   }
 
+  const toggleGroupMembersSection = () => {
+    setGroupMembersExpanded(!groupMembersExpanded)
+  }
+
   const canEditGroup = true // TODO: 그룹 생성자인지 확인하는 로직
 
   const toggleEditGroup = async () => {
     if (isEditingGroup) {
-      // 저장 로직
+      // 저장 로직 - Tanstack Query mutation 사용
       if (currentGroup) {
         try {
-          const updatedGroup = await GroupApi.updateGroup(currentGroup.id, {
-            name: editedGroupName,
-            description: editedGroupDescription,
-            thumbnailUrl: currentGroup.thumbnailImage || ""
+          await updateGroup.mutateAsync({
+            groupId: parseInt(currentGroup.id),
+            data: {
+              name: editedGroupName,
+              description: editedGroupDescription,
+              thumbnailUrl: currentGroup.thumbnailImage || ""
+            }
           })
           
-          // TODO: 성공 시 그룹 데이터 업데이트
-          console.log('그룹 정보 수정 완료:', updatedGroup)
+          // 성공 시 자동으로 캐시 업데이트되고 토스트 메시지 표시됨
         } catch (error) {
-          console.error('그룹 정보 수정 중 오류:', error)
-          // TODO: 에러 처리 (토스트 메시지 등)
+          // 에러는 useGroupManagement에서 처리됨
+          // Tanstack Query가 자동으로 이전 상태로 롤백
         }
       }
     } else {
@@ -107,7 +136,7 @@ export default function AppSidebar({
   const shouldShowSidebar = sidebarHovered || sidebarPinned
 
   // 로그인하지 않은 경우 사이드바 숨김
-  if (!isLoggedIn) {
+  if (!isMounted || !isLoggedIn) {
     return null
   }
 
@@ -163,6 +192,7 @@ export default function AppSidebar({
         onMouseLeave={() => setSidebarHovered(false)}
       >
         <ScrollArea className="h-full">
+          <div className="pb-4">
           {/* Group Selector - 그룹 스페이스에서는 그룹 선택 드롭다운 */}
           {shouldShowSidebar && showCreateGroupButton && (
             <div 
@@ -192,18 +222,21 @@ export default function AppSidebar({
                         <button
                           key={group.groupId}
                           onClick={() => {
-                            navigateToGroup(group.name)
+                            // 그룹 ID로 직접 이동
+                            window.location.href = `/group/${group.groupId}`
                             setIsGroupDropdownOpen(false)
                           }}
                           className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                            currentGroup.id === group.groupId.toString() 
+                            currentGroup?.id === group.groupId.toString() 
                               ? 'bg-orange-500/20 text-orange-400' 
                               : 'text-gray-300'
                           }`}
                         >
                           <div className="flex justify-between items-center">
                             <span>{group.name}</span>
-                            <span className="text-xs text-gray-500">{group.memberCount}명</span>
+                            <span className="text-xs text-gray-500">
+                              {groupFormatters.formatMemberCount(group.memberCount || 0)}
+                            </span>
                           </div>
                         </button>
                       ))}
@@ -292,18 +325,130 @@ export default function AppSidebar({
                 <div>
                   <p className="text-xs font-medium text-gray-400 mb-2">그룹 설명</p>
                   {isEditingGroup ? (
-                    <textarea
-                      value={editedGroupDescription}
-                      onChange={(e) => setEditedGroupDescription(e.target.value)}
-                      className="w-full bg-gray-800 text-gray-300 px-2 py-1 rounded text-sm leading-relaxed border border-orange-500/30 focus:border-orange-500 focus:outline-none resize-none"
-                      rows={3}
-                      placeholder="그룹 설명을 입력하세요"
-                    />
+                    <div>
+                      <textarea
+                        value={editedGroupDescription}
+                        onChange={(e) => {
+                          if (e.target.value.length <= 100) {
+                            setEditedGroupDescription(e.target.value)
+                          }
+                        }}
+                        className="w-full bg-gray-800 text-gray-300 px-2 py-1 rounded text-sm leading-relaxed border border-orange-500/30 focus:border-orange-500 focus:outline-none resize-none"
+                        rows={3}
+                        placeholder="그룹 설명을 입력하세요 (최대 100자)"
+                        maxLength={100}
+                      />
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-xs text-gray-500">
+                          {editedGroupDescription.length}/100자
+                        </span>
+                        {editedGroupDescription.length > 80 && (
+                          <span className="text-xs text-orange-400">
+                            {100 - editedGroupDescription.length}자 남음
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   ) : (
-                    <p className="text-sm text-gray-300 leading-relaxed">
-                      {currentGroup.description}
+                    <p className="text-sm text-gray-300 leading-relaxed break-words">
+                      {currentGroup.description || "그룹 설명이 없습니다."}
                     </p>
                   )}
+                </div>
+                
+                {/* 그룹원 목록 */}
+                <div className="mt-4 pt-3 border-t border-gray-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-medium text-gray-400">그룹원</p>
+                      <span className="text-xs text-gray-500">
+                        {groupMembers.length}명
+                      </span>
+                    </div>
+                    <button
+                      onClick={toggleGroupMembersSection}
+                      className="p-1 rounded hover:bg-gray-800 transition-all duration-200"
+                    >
+                      <motion.div
+                        animate={{ 
+                          rotate: groupMembersExpanded ? 90 : 0 
+                        }}
+                        transition={{ 
+                          duration: 0.3, 
+                          ease: [0.32, 0.72, 0, 1] 
+                        }}
+                      >
+                        <ChevronRight size={12} className="text-gray-400" />
+                      </motion.div>
+                    </button>
+                  </div>
+                  
+                  <AnimatePresence>
+                    {groupMembersExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{
+                          duration: 0.3,
+                          ease: [0.32, 0.72, 0, 1],
+                          opacity: { duration: 0.25 }
+                        }}
+                        className="overflow-hidden"
+                      >
+                        <motion.div 
+                          initial={{ y: -10, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          exit={{ y: -10, opacity: 0 }}
+                          transition={{
+                            duration: 0.25,
+                            delay: 0.1,
+                            ease: [0.32, 0.72, 0, 1]
+                          }}
+                        >
+                          {isLoadingMembers ? (
+                            <div className="flex justify-center py-2">
+                              <div className="text-xs text-gray-500">로딩 중...</div>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {groupMembers.map((member, index) => (
+                                <div key={member.memberId || `member-${index}`} className="flex items-center gap-2 p-1">
+                                  <div className="w-6 h-6 bg-gray-700 rounded-full flex items-center justify-center text-xs">
+                                    {(member.profileUrl || member.profileImageUrl) ? (
+                                      <img 
+                                        src={member.profileUrl || member.profileImageUrl || ''} 
+                                        alt={member.nickname || member.name}
+                                        className="w-full h-full rounded-full object-cover"
+                                      />
+                                    ) : (
+                                      <span className="text-gray-400">
+                                        {(member.nickname || member.name)?.charAt(0) || '?'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-gray-300 truncate">
+                                      {member.nickname || member.name || '알 수 없음'}
+                                    </p>
+                                    {member.role === 'OWNER' && (
+                                      <span className="text-xs text-orange-400">👑 리더</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                              
+                              {groupMembers.length === 0 && (
+                                <div className="text-center py-2">
+                                  <p className="text-xs text-gray-500">그룹원이 없습니다.</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
             </div>
@@ -330,47 +475,101 @@ export default function AppSidebar({
                   ? 'max-h-96 opacity-100' 
                   : 'max-h-0 opacity-0 overflow-hidden'
               }`}>
-                <div className="space-y-1">
-                {groups.map((group) => (
-                  <div key={group.id} className="space-y-1">
-                    {/* Group Item */}
-                    <div className="flex items-center justify-between group">
-                      <button 
-                        className="flex-1 text-left px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm cursor-pointer"
-                        onClick={() => navigateToGroup(group.name)}
-                      >
-                        {group.name}
-                      </button>
-                      <button
-                        onClick={() => toggleGroup(group.id)}
-                        className="p-1 rounded hover:bg-gray-800 transition-all duration-200"
-                      >
-                        {expandedGroups.includes(group.id) ? (
-                          <ChevronDown size={16} className="text-gray-400 transition-transform duration-200" />
-                        ) : (
-                          <ChevronRight size={16} className="text-gray-400 transition-transform duration-200" />
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Dropdown Content */}
-                    <div className={`ml-4 pl-3 border-l border-gray-700 transition-all duration-200 ease-in-out ${
-                      expandedGroups.includes(group.id) 
-                        ? 'max-h-24 opacity-100' 
-                        : 'max-h-0 opacity-0 overflow-hidden'
-                    }`}>
-                      <div className="space-y-1">
-                        <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm text-gray-300">
-                          그룹 초대
-                        </button>
-                        <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-red-900/50 transition-colors text-sm text-red-400 hover:text-red-300">
-                          그룹 탈퇴
-                        </button>
-                      </div>
-                    </div>
+                {isGroupsLoading ? (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    그룹 목록을 불러오는 중...
                   </div>
-                ))}
-                </div>
+                ) : myGroups.length > 0 ? (
+                  <div className="space-y-1">
+                    {myGroups.map((group) => (
+                      <div key={group.groupId} className="space-y-1">
+                        {/* Group Item */}
+                        <div className="flex items-center justify-between group">
+                          <button 
+                            className="flex-1 text-left px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm cursor-pointer text-white"
+                            onClick={() => {
+                              // 그룹 ID로 직접 이동
+                              window.location.href = `/group/${group.groupId}`
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              {group.thumbnailUrl && (
+                                <img
+                                  src={group.thumbnailUrl}
+                                  alt={`${group.name} 썸네일`}
+                                  className="w-4 h-4 rounded-full object-cover"
+                                />
+                              )}
+                              <span>{group.name}</span>
+                            </div>
+                          </button>
+                          <button
+                            onClick={() => toggleGroup(group.groupId)}
+                            className="p-1 rounded hover:bg-gray-800 transition-all duration-200"
+                          >
+                            <motion.div
+                              animate={{ 
+                                rotate: expandedGroups.includes(group.groupId) ? 90 : 0 
+                              }}
+                              transition={{ 
+                                duration: 0.3, 
+                                ease: [0.32, 0.72, 0, 1] 
+                              }}
+                            >
+                              <ChevronRight size={16} className="text-gray-400" />
+                            </motion.div>
+                          </button>
+                        </div>
+
+                        {/* Dropdown Content */}
+                        <AnimatePresence>
+                          {expandedGroups.includes(group.groupId) && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{
+                                duration: 0.3,
+                                ease: [0.32, 0.72, 0, 1], // 부드러운 이징
+                                opacity: { duration: 0.25 }
+                              }}
+                              className="ml-4 pl-3 border-l border-gray-700 overflow-hidden"
+                            >
+                              <motion.div 
+                                initial={{ y: -10, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: -10, opacity: 0 }}
+                                transition={{
+                                  duration: 0.25,
+                                  delay: 0.1,
+                                  ease: [0.32, 0.72, 0, 1]
+                                }}
+                                className="space-y-1 py-2"
+                              >
+                                <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm text-gray-300">
+                                  그룹 초대
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    setLeaveGroupTarget(group)
+                                    leaveGroupModal.onOpen()
+                                  }}
+                                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-red-900/50 transition-colors text-sm text-red-400 hover:text-red-300"
+                                >
+                                  그룹 탈퇴
+                                </button>
+                              </motion.div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    가입된 그룹이 없습니다
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -402,6 +601,7 @@ export default function AppSidebar({
               </div>
             </div>
           )}
+          </div>
         </ScrollArea>
       </div>
 
@@ -410,6 +610,18 @@ export default function AppSidebar({
         isOpen={createGroupModal.isOpen}
         onClose={createGroupModal.onClose}
       />
+      
+      {/* Leave Group Modal */}
+      {leaveGroupTarget && (
+        <LeaveGroupModal 
+          isOpen={leaveGroupModal.isOpen}
+          onClose={() => {
+            leaveGroupModal.onClose()
+            setLeaveGroupTarget(null)
+          }}
+          group={leaveGroupTarget}
+        />
+      )}
     </>
   )
 }

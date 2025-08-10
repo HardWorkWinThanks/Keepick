@@ -5,7 +5,7 @@ import { setTokens, clearAuth, setAuthLoading } from "./authSlice";
 import { setUser, clearUser, setUserLoading } from "@/entities/user";
 import { authApi } from "../api/authApi";
 import { useEffect } from "react";
-import { usePathname, redirect } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 interface AuthInitializerProps {
@@ -21,7 +21,9 @@ interface AuthInitializerProps {
 export function AuthInitializer({ children }: AuthInitializerProps) {
   const dispatch = useAppDispatch();
   const pathname = usePathname();
+  const router = useRouter();
   const [isInitialized, setIsInitialized] = useState(false); // 초기화 플래그 추가
+  const [hasRedirected, setHasRedirected] = useState(false); // 리다이렉트 플래그 추가
 
   const { isAuthenticated, isLoading: authLoading } = useAppSelector(
     (state) => state.auth
@@ -52,6 +54,16 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
         return; // 서버사이드이거나 이미 초기화된 경우 건너뛰기
       }
 
+      // OAuth 콜백 처리 중인 경우 초기화 건너뛰기 (중복 방지)
+      const currentUrl = window.location.href;
+      const isOAuthCallback = currentUrl.includes('token=') || currentUrl.includes('accessToken=') || currentUrl.includes('error=');
+      
+      if (isOAuthCallback) {
+        console.log("💡 OAuth 콜백 처리 중, AuthInitializer 초기화 건너뛰기");
+        setIsInitialized(true);
+        return;
+      }
+
       const accessToken = localStorage.getItem("accessToken");
       const refreshToken = localStorage.getItem("refreshToken");
 
@@ -78,22 +90,6 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
     initializeAuth();
   }, []); // 의존성 없음 - 앱 시작 시 한 번만 실행
 
-  const hasToken =
-    typeof window !== "undefined" && localStorage.getItem("accessToken");
-  const isInitializing = !isInitialized || authLoading || userLoading;
-
-  // 보호된 경로 체크
-  const protectedPaths = ["/profile", "/group", "/chat"];
-  const isProtectedPath = pathname
-    ? protectedPaths.some((path) => pathname.startsWith(path))
-    : false;
-
-  // useEffect 내에서만 redirect 처리
-  useEffect(() => {
-    if (isInitialized && isProtectedPath && !hasToken) {
-      redirect("/");
-    }
-  }, [isInitialized, isProtectedPath, hasToken]);
-
+  // AuthInitializer는 오직 인증 상태만 초기화하고, 리다이렉트는 하지 않음
   return <>{children}</>;
 }

@@ -1,7 +1,6 @@
 "use client"
 
 import { GroupSpaceView } from "@/features/group-space"
-import { FriendsTab } from "@/features/friend-management"
 import type { Group } from "@/entities/group"
 
 interface GroupSpaceWidgetProps {
