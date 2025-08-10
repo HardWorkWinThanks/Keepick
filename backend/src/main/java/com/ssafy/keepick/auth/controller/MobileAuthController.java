@@ -18,11 +18,12 @@ import com.ssafy.keepick.global.response.ApiResponse;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-public class MobileAuthController {
+public class MobileAuthController implements MobileAuthApiSpec {
     
     private final MobileLoginService mobileLoginService;
     
     @PostMapping("/login")
+    @Override
     public ApiResponse<MobileLoginResponse> login(@Valid @RequestBody MobileLoginRequest request) {
         log.info("모바일 로그인 요청: provider = {}", request.getProvider());
         
