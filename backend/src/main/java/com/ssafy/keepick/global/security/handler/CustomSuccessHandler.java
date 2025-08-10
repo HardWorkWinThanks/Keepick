@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -44,10 +45,22 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         log.debug("🔑 JWT 토큰 생성 완료: 사용자: {} | 토큰 길이: {}",
                 username, token.length());
         
-        // 쿼리 스트링으로 JWT 토큰 전달
-        String redirectUrl = frontendUrl + "/?token=" + token;
-        response.sendRedirect(redirectUrl);
+        // JWT 토큰을 HttpOnly 쿠키로 설정 (ResponseCookie 사용)
+        ResponseCookie tokenCookie = ResponseCookie.from("access_token", token)
+                .httpOnly(true)
+                .secure(true) // HTTPS 환경이므로 true
+                .path("/")
+                .maxAge(3600) // 1시간 유효
+                .sameSite("None") // Cross-origin을 위해 필요
+                .build();
         
-        log.info("🔄 프론트엔드 리다이렉트: {} | 사용자: {}", redirectUrl, username);
+        response.addHeader("Set-Cookie", tokenCookie.toString());
+        
+        log.info("🍪 ResponseCookie 설정 완료: SameSite=None, Secure=true");
+        
+        // 프론트엔드로 리다이렉트 (토큰은 쿠키에 포함됨)
+        response.sendRedirect(frontendUrl);
+        
+        log.info("🔄 프론트엔드 리다이렉트: {} | 사용자: {}", frontendUrl, username);
     }
 }
