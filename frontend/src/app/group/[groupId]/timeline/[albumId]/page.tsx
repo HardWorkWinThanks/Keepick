@@ -7,7 +7,7 @@ import { useAuthGuard } from "@/features/auth/model/useAuthGuard"
 interface TimelineAlbumRouteProps {
   params: Promise<{
     groupId: string
-    albumTitle: string
+    albumId: string
   }>
 }
 
@@ -30,8 +30,6 @@ export default function TimelineAlbumRoute({ params }: TimelineAlbumRouteProps) 
     return null // useAuthGuard가 자동으로 리다이렉트 처리
   }
 
-  // URL 디코딩 처리
-  const decodedAlbumTitle = decodeURIComponent(resolvedParams.albumTitle)
-
-  return <TimelineAlbumPage groupId={resolvedParams.groupId} albumTitle={decodedAlbumTitle} />
+  // albumId는 디코딩이 필요없음 (ID는 보통 순수 숫자/문자)
+  return <TimelineAlbumPage groupId={resolvedParams.groupId} albumId={resolvedParams.albumId} />
 }

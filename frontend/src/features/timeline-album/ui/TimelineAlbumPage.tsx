@@ -8,7 +8,7 @@ import type { TimelineEvent } from "@/entities/album"
 
 interface TimelineAlbumPageProps {
   groupId: string
-  albumTitle: string
+  albumId: string
 }
 
 // 섹션별 이미지 레이아웃 컴포넌트
@@ -94,8 +94,9 @@ function TimelineImageLayout({ event, index }: { event: TimelineEvent; index: nu
   )
 }
 
-export default function TimelineAlbumPage({ groupId, albumTitle }: TimelineAlbumPageProps) {
-  const { timelineEvents, loading, scrollY } = useTimelineAlbum(groupId, albumTitle)
+export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPageProps) {
+  const { timelineEvents, loading } = useTimelineAlbum(groupId, albumId)
+  
 
   if (loading) {
     return (
@@ -111,27 +112,28 @@ export default function TimelineAlbumPage({ groupId, albumTitle }: TimelineAlbum
   return (
     <div className="min-h-screen bg-[#111111] text-white">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm border-b border-gray-800">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#111111]/95 backdrop-blur-sm border-b border-gray-800">
         <div className="flex items-center justify-between px-8 py-4">
           <Link href={`/group/${groupId}`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
             <ArrowLeft size={20} />
             <span className="font-keepick-primary text-sm">돌아가기</span>
           </Link>
-          <h1 className="font-keepick-heavy text-xl tracking-wider">{albumTitle.toUpperCase()} TIMELINE</h1>
+          <h1 className="font-keepick-heavy text-xl tracking-wider">ALBUM {albumId} TIMELINE</h1>
           <div className="w-20"></div> {/* Spacer for centering */}
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="pt-20">
+      <main className="pt-20 bg-[#111111]">
         {timelineEvents.map((event, index) => (
           <motion.section
             key={event.id}
+            id={`section-${index}`}
             initial={{ opacity: 0, y: 100 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
             viewport={{ once: true, margin: "-100px" }}
-            className="min-h-screen flex items-center justify-center px-8 py-16"
+            className="min-h-screen flex items-center justify-center px-8 py-16 bg-[#111111]"
           >
             <div className="max-w-7xl w-full">
               <div
@@ -190,7 +192,7 @@ export default function TimelineAlbumPage({ groupId, albumTitle }: TimelineAlbum
       {/* Footer */}
       <footer className="bg-[#111111] border-t border-gray-800 py-16">
         <div className="max-w-7xl mx-auto px-8 text-center">
-          <h2 className="font-keepick-heavy text-3xl md:text-4xl mb-4 tracking-wider">{albumTitle}</h2>
+          <h2 className="font-keepick-heavy text-3xl md:text-4xl mb-4 tracking-wider">ALBUM {albumId}</h2>
           <p className="font-keepick-primary text-gray-400 text-sm tracking-wider">소중한 순간들을 함께 나누는 공간</p>
           <div className="mt-8 flex justify-center gap-8 text-sm font-keepick-primary text-gray-500">
             <Link href={`/group/${groupId}`} className="hover:text-white transition-colors">

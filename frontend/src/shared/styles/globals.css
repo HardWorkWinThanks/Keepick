@@ -32,7 +32,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #111111;
     --foreground: #ededed;
   }
 }
@@ -41,6 +41,11 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* 타임라인 페이지 강제 배경색 설정 */
+body {
+  background-color: #111111 !important;
 }
 
 /* Next.js 개발 도구 완전히 숨기기 */
@@ -141,37 +146,41 @@ body {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-/* SB Aggro 폰트 정의 */
+/* LINE Seed KR 폰트 정의 */
 @font-face {
-  font-family: 'SB Aggro';
-  src: url('/fonts/SB_Window_Font/SB_Aggro_M.ttf') format('truetype');
+  font-family: 'LINE Seed KR';
+  src: url('/fonts/LINE_SEED_KR/LINESeedKR-Rg.woff2') format('woff2'),
+       url('/fonts/LINE_SEED_KR/LINESeedKR-Rg.woff') format('woff');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'SB Aggro';
-  src: url('/fonts/SB_Window_Font/SB_Aggro_B.ttf') format('truetype');
+  font-family: 'LINE Seed KR';
+  src: url('/fonts/LINE_SEED_KR/LINESeedKR-Bd.woff2') format('woff2'),
+       url('/fonts/LINE_SEED_KR/LINESeedKR-Bd.woff') format('woff');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'SB Aggro';
-  src: url('/fonts/SB_Window_Font/SB_Aggro_L.ttf') format('truetype');
+  font-family: 'LINE Seed KR';
+  src: url('/fonts/LINE_SEED_KR/LINESeedKR-Th.woff2') format('woff2'),
+       url('/fonts/LINE_SEED_KR/LINESeedKR-Th.woff') format('woff');
   font-weight: 300;
   font-style: normal;
   font-display: swap;
 }
 
-/* 폰트 스타일링 - SB Aggro 폰트 사용 */
+/* 폰트 스타일링 - LINE Seed KR 폰트 사용 */
 .font-keepick-primary {
-  font-family: 'SB Aggro', var(--font-montserrat), sans-serif;
+  font-family: 'LINE Seed KR', var(--font-montserrat), sans-serif;
 }
 
 .font-keepick-heavy {
-  font-family: 'SB Aggro', var(--font-montserrat), sans-serif;
+  font-family: 'LINE Seed KR', var(--font-montserrat), sans-serif;
   font-weight: 700;
 }
+
