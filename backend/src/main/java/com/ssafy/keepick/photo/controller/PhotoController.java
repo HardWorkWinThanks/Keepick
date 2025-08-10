@@ -37,7 +37,7 @@ public class PhotoController {
     }
 
     @Operation(summary = "다수 이미지 업로드 요청 API", description = """
-        이미지를 업로드할 수 있는 presigned URL을 반환하는 API입니다.  
+        이미지를 업로드할 수 있는 presigned URL을 반환하는 API입니다.
         URL에 photo ID를 포함시키기 위해, 먼저 메타데이터와 함께 비어 있는 photo 객체를 생성해 저장한 후 presigned URL을 발급합니다.
         """)
     @PostMapping("/groups/{groupId}/photos/presigned-urls")

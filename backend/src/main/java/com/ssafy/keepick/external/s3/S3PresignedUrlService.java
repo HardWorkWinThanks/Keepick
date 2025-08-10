@@ -1,8 +1,9 @@
 package com.ssafy.keepick.external.s3;
 
+import com.ssafy.keepick.external.s3.dto.S3ImagePathDto;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
-import com.ssafy.keepick.global.utils.file.FileUtils;
+import com.ssafy.keepick.global.utils.FileUtils;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoCommandDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,9 @@ public class S3PresignedUrlService {
 
     private final S3Presigner s3Presigner;
 
+    @Value("${spring.cloud.aws.region.static}")
+    private String region;
+
     @Value("${app.aws.s3.bucket-name}")
     private String bucketName;
 
@@ -35,7 +39,7 @@ public class S3PresignedUrlService {
     /**
      * Presigned URL 생성 (PUT 방식)
      */
-    public String generatePresignedUrl(String fileName, String contentType) {
+    public S3ImagePathDto generatePresignedUrl(String fileName, String contentType) {
         try {
             String uniqueFileName = FileUtils.generateUniqueFileName(fileName);
             String objectKey = originalsPrefix + uniqueFileName;
@@ -53,9 +57,10 @@ public class S3PresignedUrlService {
 
             PresignedPutObjectRequest presignedRequest = s3Presigner.presignPutObject(presignRequest);
             String presignedUrl = presignedRequest.url().toString();
-
-            log.debug("Presigned URL 생성: {} -> {}", fileName, objectKey);
-            return presignedUrl;
+            String publicUrl = FileUtils.generatePublicUrl(bucketName, region, objectKey);
+            log.info("Presigned URL 생성: {} -> {}", fileName, objectKey);
+            log.info("Public url 생성 : {}", publicUrl);
+            return S3ImagePathDto.of(presignedUrl, publicUrl);
 
         } catch (Exception e) {
             log.error("Presigned URL 생성 실패: {}", fileName, e);
@@ -66,7 +71,7 @@ public class S3PresignedUrlService {
     /**
      * 여러 파일에 대한 Presigned URL 배열 생성
      */
-    public List<String> generatePresignedUrls(List<GroupPhotoCommandDto> photoCommandDtoList) {
+    public List<S3ImagePathDto> generatePresignedUrls(List<GroupPhotoCommandDto> photoCommandDtoList) {
         return photoCommandDtoList.stream()
                 .map(info -> generatePresignedUrl(info.getFileName(), info.getContentType()))
                 .toList();

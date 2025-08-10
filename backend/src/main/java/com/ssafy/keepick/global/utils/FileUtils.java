@@ -1,4 +1,4 @@
-package com.ssafy.keepick.global.utils.file;
+package com.ssafy.keepick.global.utils;
 
 
 import com.ssafy.keepick.global.exception.BaseException;
@@ -28,6 +28,10 @@ public class FileUtils {
         if (key.endsWith(".gif")) return "image/gif";
         if (key.endsWith(".webp")) return "image/webp";
         return "image/jpeg";
+    }
+
+    public static String generatePublicUrl(String bucketName, String region, String objectKey) {
+        return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, objectKey);
     }
 
     public static String generateUniqueFileName(String originalFileName) {

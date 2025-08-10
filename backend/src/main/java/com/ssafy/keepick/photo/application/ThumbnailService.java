@@ -2,7 +2,7 @@ package com.ssafy.keepick.photo.application;
 
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
-import com.ssafy.keepick.global.utils.file.FileUtils;
+import com.ssafy.keepick.global.utils.FileUtils;
 import com.ssafy.keepick.photo.domain.Photo;
 import com.ssafy.keepick.photo.persistence.PhotoRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +23,12 @@ import java.util.concurrent.CompletableFuture;
 public class ThumbnailService {
     private final ImageService imageService;
     private final PhotoRepository photoRepository;
+
+    @Value("${spring.cloud.aws.region.static}")
+    private String region;
+
+    @Value("${app.aws.s3.bucket-name}")
+    private String bucketName;
 
     @Value("${app.thumbnail.width}")
     private int thumbnailWidth;
@@ -61,7 +67,8 @@ public class ThumbnailService {
         Long ImageId = Long.parseLong(FileUtils.extractImageNumber(objectKey));
         Photo photo = photoRepository.findById(ImageId)
                 .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND));
-        photo.uploadThumbnail(objectKey);
+        String thumbnailUrl = FileUtils.generatePublicUrl(bucketName, region, objectKey);
+        photo.uploadThumbnail(thumbnailUrl);
         photoRepository.save(photo);
     }
 
