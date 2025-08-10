@@ -7,6 +7,7 @@ import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoCommandDto;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
+import com.ssafy.keepick.photo.application.dto.SimilarPhotoDto;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoSearchRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
@@ -20,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -94,8 +97,39 @@ public class GroupPhotoService {
         return photoList.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public Page<GroupPhotoDto> getBlurryPhotos(Long groupId, int page, int size) {
         Page<Photo> photoPage = photoRepository.findBlurryPhotosByGroupId(groupId, PageRequest.of(page, size));
         return photoPage.map(GroupPhotoDto::from);
     }
+
+    @Transactional(readOnly = true)
+    public Page<SimilarPhotoDto> getSimilarClusters(Long groupId, int page, int size) {
+        // 1. 유사 사진 클러스터 기본 정보(대표 사진ID, 썸네일, 개수) 페이징 조회
+        Page<SimilarPhotoDto> clusterPage = photoRepository.findSimilarClusters(groupId, PageRequest.of(page, size));
+
+        // 2. 모든 유사 클러스터 clusterId 리스트 추출
+        List<Long> clusterIds = clusterPage.stream()
+                .map(SimilarPhotoDto::getClusterId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        if (clusterIds.isEmpty()) {
+            return clusterPage; // 유사한 사진 클러스터가 없으면 바로 반환
+        }
+
+        // 3. clusterId 리스트로 해당 그룹 내 모든 사진 조회
+        List<Photo> photoList = photoRepository.findAllByGroupIdAndClusterIdInAndDeletedAtIsNull(groupId, clusterIds);
+
+        // 4. clusterId 기준으로 사진 그룹핑
+        Map<Long, List<Photo>> photoListByCluster = photoList.stream().collect(Collectors.groupingBy(Photo::getClusterId));
+
+        // 5. 각 클러스터 DTO에 사진 리스트 매칭
+        clusterPage.forEach(cluster -> {
+            cluster.setPhotos(photoListByCluster.get(cluster.getClusterId()));
+        });
+
+        return clusterPage;
+    }
+
 }

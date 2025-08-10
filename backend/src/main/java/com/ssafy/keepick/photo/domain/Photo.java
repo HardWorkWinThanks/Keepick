@@ -39,7 +39,7 @@ public class Photo extends BaseTimeEntity {
 
     private boolean blurred;
 
-    private Integer similarKey;
+    private Long clusterId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Group group;

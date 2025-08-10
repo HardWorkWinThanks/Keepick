@@ -5,12 +5,11 @@ import com.ssafy.keepick.global.response.PagingResponse;
 import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.photo.application.GroupPhotoService;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
+import com.ssafy.keepick.photo.application.dto.SimilarPhotoDto;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoSearchRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
-import com.ssafy.keepick.photo.controller.response.GroupPhotoDetailResponse;
-import com.ssafy.keepick.photo.controller.response.GroupPhotoIdResponse;
-import com.ssafy.keepick.photo.controller.response.GroupPhotoUploadResponse;
+import com.ssafy.keepick.photo.controller.response.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -62,24 +61,25 @@ public class PhotoController {
 
     @Operation(summary = "흐린 사진 조회 API", description = "그룹 갤러리의 사진 중 흐린 사진만 조회한 결과를 페이징하여 반환합니다.")
     @GetMapping("/groups/{groupId}/blurry-photos")
-    public ApiResponse<?> getBlurryPhotos(
+    public ApiResponse<PagingResponse<GroupPhotoDetailResponse>> getBlurryPhotos(
             @PathVariable Long groupId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
     ) {
         Page<GroupPhotoDto> result = groupPhotoService.getBlurryPhotos(groupId, page, size);
         return ApiResponse.ok(PagingResponse.from(result, GroupPhotoDetailResponse::from));
     }
 
-    @Operation(summary = "유사 사진 그룹 조회 API", description = "그룹 갤러리의 사진 중 유사 사진 그룹을 조회한 결과를 페이징하여 반환합니다.")
+    @Operation(summary = "유사 사진 묶음(클러스터) 조회 API", description = "그룹 갤러리의 사진 중 유사 사진 클러스터를 조회한 결과를 페이징하여 반환합니다.")
     @GetMapping("/groups/{groupId}/similar-photos")
-    public ApiResponse<?> getSimilarPhotos(
+    public ApiResponse<PagingResponse<GroupPhotoSimilarClusterResponse>> getSimilarClusters(
             @PathVariable Long groupId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
     ) {
-        return null;
+        Page<SimilarPhotoDto> result = groupPhotoService.getSimilarClusters(groupId, page, size);
+        return ApiResponse.ok(PagingResponse.from(result, GroupPhotoSimilarClusterResponse::from));
     }
 
-    @Operation(summary = "그룹 전체 사진, 흐린 사진, 유사 사진 조회 API", description = "그룹 갤러리 초기 화면 로딩을 위한 전체 사진, 흐린 사진, 유사 사진 일부를 조회한 결과를 페이징하여 반환합니다.")
+    @Operation(summary = "그룹 전체 사진, 흐린 사진, 유사 사진 묶음 조회 API", description = "그룹 갤러리 초기 화면 로딩을 위한 전체 사진, 흐린 사진, 유사 사진 묶음 일부를 조회한 결과를 페이징하여 반환합니다.")
     @GetMapping("/groups/{groupId}/photos/overview")
-    public ApiResponse<?> getGroupPhotosOverview(
+    public ApiResponse<GroupPhotoOverviewResponse> getGroupPhotosOverview(
             @PathVariable Long groupId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
     ) {
         return null;
