@@ -60,8 +60,10 @@ export function useAlbumStorage() {
   /**
    * 개발 및 테스트용 기본 사진 데이터 목록을 반환합니다.
    * @returns 기본 Photo 객체 배열
+   * const getDefaultPhotos = (): Photo[] => [ 로 나중에 바꾸기.
    */
   const getDefaultPhotos = (): Photo[] => [
+    
     { id: "photo1", src: "/ssafy-dummy1.jpg", name: "사진1" },
     { id: "photo2", src: "/ssafy-dummy2.jpg", name: "사진2" },
     { id: "photo3", src: "/ssafy-dummy3.jpg", name: "사진3" },

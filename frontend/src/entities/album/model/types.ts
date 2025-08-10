@@ -5,10 +5,32 @@ export interface TimelineEvent {
   id: string; // 이벤트 고유 ID
   title: string; // 이벤트 제목 (예: "제주도 여행")
   date: string; // 날짜
-  location: string; // 장소
-  emoji: string; // 이벤트 대표 이모지
+  location?: string; // 장소 (선택사항)
+  emoji?: string; // 이벤트 대표 이모지 (선택사항)
   description: string; // 상세 설명
   photos: Photo[]; // 해당 이벤트에 속한 사진 목록
+  // 타임라인 앨범용 추가 필드
+  subtitle?: string; // 부제목 (영어)
+  images?: TimelineImage[]; // 레이아웃용 이미지 배열
+}
+
+// 타임라인 이미지 - 타임라인 앨범 레이아웃용
+export interface TimelineImage {
+  src: string;
+  size: "large" | "small";
+  position: string;
+  alt?: string;
+}
+
+// 타임라인 앨범 - 여러 이벤트를 포함하는 앨범
+export interface TimelineAlbum {
+  id: number;
+  title: string;
+  description?: string;
+  coverImage: string;
+  events: TimelineEvent[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 // 티어 배틀 진행 시, 사진을 배치하는 과정의 데이터 구조

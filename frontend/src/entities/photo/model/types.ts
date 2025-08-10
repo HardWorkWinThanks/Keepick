@@ -5,13 +5,6 @@ export interface Photo {
   name?: string; // 사진 이름 (선택 사항)
 }
 
-// 새로운 사진을 생성할 때 필요한 데이터
-export interface CreatePhotoInput {
-  id: string;
-  src: string;
-  name?: string;
-}
-
 // 사진을 드래그 앤 드롭할 때 전달되는 데이터
 export interface DragPhotoData {
   photoId: string; // 드래그하는 사진의 ID

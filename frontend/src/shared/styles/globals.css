@@ -141,12 +141,37 @@ body {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-/* 폰트 스타일링 - 기존 프로젝트 폰트 활용 */
+/* SB Aggro 폰트 정의 */
+@font-face {
+  font-family: 'SB Aggro';
+  src: url('/fonts/SB_Window_Font/SB_Aggro_M.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SB Aggro';
+  src: url('/fonts/SB_Window_Font/SB_Aggro_B.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SB Aggro';
+  src: url('/fonts/SB_Window_Font/SB_Aggro_L.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 폰트 스타일링 - SB Aggro 폰트 사용 */
 .font-keepick-primary {
-  font-family: var(--font-montserrat), sans-serif;
+  font-family: 'SB Aggro', var(--font-montserrat), sans-serif;
 }
 
 .font-keepick-heavy {
-  font-family: var(--font-montserrat), sans-serif;
-  font-weight: 800;
+  font-family: 'SB Aggro', var(--font-montserrat), sans-serif;
+  font-weight: 700;
 }

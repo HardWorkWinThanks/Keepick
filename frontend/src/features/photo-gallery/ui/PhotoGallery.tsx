@@ -86,51 +86,41 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
             </div>
 
             {/* Right: Controls */}
-            <div className="flex flex-col items-end gap-3">
-              {/* Selection Mode Button */}
-              <AnimatePresence mode="wait">
-                {!isSelectionMode ? (
-                  <motion.button
-                    key="keep-button"
-                    onClick={enterSelectionMode}
-                    initial={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{
-                      opacity: 0,
-                      y: 100,
-                      scale: 0.9,
-                      transition: { duration: 0.5, ease: "easeInOut" },
-                    }}
-                    className="px-6 py-2 bg-transparent border-2 border-[#FE7A25] text-white font-keepick-heavy text-sm tracking-wider transition-all duration-300 hover:bg-[#FE7A25]/10"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    Keep!
-                  </motion.button>
-                ) : (
-                  <motion.button
-                    key="exit-button"
-                    onClick={exitSelectionMode}
-                    initial={{
-                      opacity: 0,
-                      y: -100,
-                      scale: 0.9,
-                      transition: { duration: 0.5, ease: "easeInOut" },
-                    }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{
-                      opacity: 0,
-                      y: -100,
-                      scale: 0.9,
-                      transition: { duration: 0.5, ease: "easeInOut" },
-                    }}
-                    className="px-4 py-2 border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 font-keepick-primary text-sm transition-colors"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <X size={16} />
-                  </motion.button>
-                )}
-              </AnimatePresence>
+            <div className="flex flex-col items-end gap-3 w-32">
+              {/* Selection Mode Button - Fixed height container */}
+              <div className="h-10 flex items-center">
+                <AnimatePresence mode="wait">
+                  {!isSelectionMode ? (
+                    <motion.button
+                      key="keep-button"
+                      onClick={enterSelectionMode}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="px-6 py-2 bg-transparent border-2 border-[#FE7A25] text-white font-keepick-heavy text-sm tracking-wider transition-all duration-300 hover:bg-[#FE7A25]/10"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Keep!
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      key="exit-button"
+                      onClick={exitSelectionMode}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="px-4 py-2 border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 font-keepick-primary text-sm transition-colors"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <X size={16} />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </div>
 
               {/* Sort Button */}
               <div className="flex items-center gap-2">
@@ -148,20 +138,25 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                 </button>
               </div>
 
-              {/* Delete Button (Selection Mode Only) */}
-              {isSelectionMode && selectedPhotos.length > 0 && (
-                <motion.button
-                  onClick={deleteSelectedPhotos}
-                  className="p-2 border border-red-600 text-red-400 hover:bg-red-600 hover:text-white transition-colors"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                >
-                  <Trash2 size={16} />
-                </motion.button>
-              )}
+              {/* Delete Button (Selection Mode Only) - Fixed position */}
+              <div className="h-10 flex items-center">
+                <AnimatePresence>
+                  {isSelectionMode && selectedPhotos.length > 0 && (
+                    <motion.button
+                      onClick={deleteSelectedPhotos}
+                      className="p-2 border border-red-600 text-red-400 hover:bg-red-600 hover:text-white transition-colors"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Trash2 size={16} />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
         </div>

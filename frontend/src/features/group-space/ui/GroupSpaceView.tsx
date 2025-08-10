@@ -28,7 +28,7 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
     <div className="min-h-screen bg-[#111111] text-white pb-8">
       {/* Album/Gallery Mode Section - 메인 섹션으로 이동, 크기와 색상 조정 */}
       <div className="px-8 pt-6 pb-4 pl-20">
-        <div className="relative">
+        <div className="flex items-start gap-4">
           <AnimatePresence mode="wait">
             <motion.h1
               key={currentMode.id}
@@ -42,8 +42,8 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
             </motion.h1>
           </AnimatePresence>
           
-          {/* Mode Navigation Arrows - GALLERY 기준으로 고정 위치, 크기 조정 */}
-          <div className="mt-3 absolute top-2 flex flex-col gap-2" style={{ left: '470px' }}>
+          {/* Mode Navigation Arrows - flexbox로 텍스트 옆에 자동 정렬 */}
+          <div className="flex flex-col gap-2 mt-2 ml-4">
             <button
               onClick={() => changeMainMode("up")}
               disabled={isAnimating}
@@ -129,6 +129,10 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                         ease: "easeOut",
                       }}
                       className="group cursor-pointer w-full"
+                      onClick={() => {
+                        // 타임라인 앨범의 개별 앨범 페이지로 이동
+                        window.location.href = `/group/${group.groupId}/timeline/${encodeURIComponent(photo.title)}`
+                      }}
                     >
                       <div className="relative aspect-[4/5] overflow-hidden bg-[#222222]/50 rounded-sm w-full border border-white/10">
                         <Image
@@ -161,7 +165,7 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
         <div className="relative px-8 pb-8">
           <div className="flex justify-end items-end">
             {/* Album Type with Navigation */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-start gap-4">
               {/* Album Type Text */}
               <div className="text-right">
                 <AnimatePresence mode="wait">
@@ -178,19 +182,19 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                       {currentAlbum.name}
                     </h2>
                     {/* 한글 부제목 */}
-                    <p className="mr-2 text-lg md:text-xl lg:text-2xl font-keepick-primary font-medium text-[#F5E7C6] mt-2 tracking-wide">
+                    <p className="text-lg md:text-xl lg:text-2xl font-keepick-primary font-medium text-[#F5E7C6] mt-2 tracking-wide">
                       {currentAlbum.subtitle}
                     </p>
                   </motion.div>
                 </AnimatePresence>
               </div>
 
-              {/* Navigation Arrows */}
-              <div className="flex flex-col gap-2 mt-4">
+              {/* Navigation Arrows - flexbox로 텍스트 옆에 자동 정렬 */}
+              <div className="flex flex-col gap-2 mt-2 ml-4">
                 <button
                   onClick={() => changeAlbumType("up")}
                   disabled={isAnimating}
-                  className="mb-6 w-8 h-8 flex items-center justify-center hover:bg-white/10 transition-all duration-300 disabled:opacity-50 text-[#FE7A25]"
+                  className="w-8 h-8 flex items-center justify-center hover:bg-white/10 transition-all duration-300 disabled:opacity-50 text-[#FE7A25]"
                 >
                   <ChevronUp size={16} />
                 </button>
