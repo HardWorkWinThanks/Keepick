@@ -3,6 +3,7 @@
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useGroupSpace } from "../model/useGroupSpace"
+import { PhotoGallery } from "@/features/photo-gallery"
 import type { Group } from "@/entities/group"
 import Image from "next/image"
 
@@ -227,34 +228,15 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                 scale: { duration: 0.4 }
               }}
             >
-              {/* Gallery Mode - 빈 컴포넌트 (추후 구현) */}
-              <div className="flex-1 flex items-center justify-center px-4 py-8">
-                <div className="text-center text-gray-400">
-                  <motion.p 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.2, duration: 0.3 }}
-                    className="text-2xl mb-4"
-                  >
-                    🖼️
-                  </motion.p>
-                  <motion.p 
-                    initial={{ y: 10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.3, duration: 0.3 }}
-                    className="text-lg"
-                  >
-                    Gallery 모드
-                  </motion.p>
-                  <motion.p 
-                    initial={{ y: 10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.4, duration: 0.3 }}
-                    className="text-sm mt-2"
-                  >
-                    추후 구현 예정입니다
-                  </motion.p>
-                </div>
+              {/* Gallery Mode - PhotoGallery 컴포넌트 */}
+              <div className="flex-1">
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.2, duration: 0.3 }}
+                >
+                  <PhotoGallery groupId={group.groupId.toString()} />
+                </motion.div>
               </div>
             </motion.div>
           )}

@@ -17,3 +17,36 @@ export interface DragPhotoData {
   photoId: string; // 드래그하는 사진의 ID
   source: string | "available"; // 사진의 출처 (어떤 앨범 뷰 또는 'available' 목록)
 }
+
+// 갤러리용 확장된 사진 타입
+export interface GalleryPhoto {
+  id: number;
+  src: string;
+  title: string;
+  category: string;
+  aspectRatio: number;
+  width: number;
+  height: number;
+  date: string;
+  tags: string[];
+}
+
+export interface PhotoTag {
+  id: string;
+  name: string;
+  count?: number;
+}
+
+export interface PhotoFilter {
+  tags: string[];
+  category?: string;
+  dateRange?: {
+    start: string;
+    end: string;
+  };
+}
+
+export interface PhotoSelection {
+  selectedIds: number[];
+  isSelectionMode: boolean;
+}
