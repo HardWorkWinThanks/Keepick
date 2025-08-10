@@ -14,7 +14,7 @@ export interface GroupMember {
   invitationId?: number;
   memberId: number;
   name: string;
-  nickname?: string;
+  nickname: string;
   email?: string;
   profileUrl?: string;
   profileImageUrl?: string | null;
@@ -25,7 +25,7 @@ export interface GroupMember {
 export interface GroupListItem {
   groupId: number;
   name: string;
-  memberCount?: number;
+  memberCount: number;
   invitationId?: number;
   invitationStatus: "PENDING" | "ACCEPTED" | "REJECTED";
   thumbnailUrl?: string;

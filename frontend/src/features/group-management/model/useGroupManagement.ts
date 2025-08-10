@@ -72,7 +72,9 @@ export function useGroupManagement() {
           name: newGroup.name,
           memberCount: 1,
           invitationId: 0,
-          invitationStatus: "ACCEPTED"
+          invitationStatus: "ACCEPTED",
+          thumbnailUrl: undefined, // 새 그룹은 썸네일이 없음
+          createdAt: newGroup.createdAt
         }] : undefined
       )
     },
