@@ -5,13 +5,16 @@ import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.persistence.GroupRepository;
-import com.ssafy.keepick.photo.application.dto.GroupPhotoCommandDto;
-import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
+import com.ssafy.keepick.photo.application.dto.*;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoSearchRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
 import com.ssafy.keepick.photo.domain.Photo;
+import com.ssafy.keepick.photo.domain.PhotoMember;
+import com.ssafy.keepick.photo.domain.PhotoTag;
+import com.ssafy.keepick.photo.persistence.PhotoMemberRepository;
 import com.ssafy.keepick.photo.persistence.PhotoRepository;
+import com.ssafy.keepick.photo.persistence.PhotoTagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -29,6 +34,8 @@ public class GroupPhotoService {
     private final GroupRepository groupRepository;
     private final PhotoRepository photoRepository;
     private final ImageService imageService;
+    private final PhotoTagRepository photoTagRepository;
+    private final PhotoMemberRepository photoMemberRepository;
 
 
     @Transactional
@@ -68,11 +75,12 @@ public class GroupPhotoService {
         // 1. 그룹 확인
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
-        // 2. 사진 삭제
-        // TODO: 앨범에 포함된 사진인 경우 삭제 건너뛰기
+
+        // 2. 사진 삭제 - 전달된 사진 중 앨범에 포함되지 않은 사진만 조회하여 삭제
         List<Long> ids = request.getPhotoIds();
-        photoRepository.softDeleteAllById(ids);
-        return ids.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
+        List<Long> deleteIds = photoRepository.findPhotoIdNotInAnyAlbum(ids);
+        photoRepository.softDeleteAllById(deleteIds);
+        return deleteIds.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -92,6 +100,66 @@ public class GroupPhotoService {
         int offset = (int) (Math.random() * Math.max(1, total - size));
         List<Photo> photoList = photoRepository.findRandomByMemberId(memberId, size, offset);
         return photoList.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<GroupPhotoDto> getBlurredPhotos(Long groupId, int page, int size) {
+        Page<Photo> photoPage = photoRepository.findBlurredPhotosByGroupId(groupId, PageRequest.of(page, size));
+        return photoPage.map(GroupPhotoDto::from);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PhotoClusterDto> getSimilarClusters(Long groupId, int page, int size) {
+        return getSimilarPhotoClusters(groupId, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public GroupPhotoOverviewDto getGroupPhotoOverview(Long groupId, int size) {
+        Page<Photo> allPhotoPage = photoRepository.findByGroupIdAndDeletedAtIsNull(groupId, PageRequest.of(0, size));
+        Page<Photo> blurredPhotoPage = photoRepository.findBlurredPhotosByGroupId(groupId, PageRequest.of(0, size));
+        Page<PhotoClusterDto> clusterPhotoPage = getSimilarPhotoClusters(groupId, 0, size);
+        return GroupPhotoOverviewDto.from(allPhotoPage, blurredPhotoPage, clusterPhotoPage);
+    }
+
+    @Transactional(readOnly = true)
+    public PhotoTagDto getGroupPhotoTags(Long groupId, Long photoId) {
+        // 그룹 내 사진인지 확인
+        if(!photoRepository.existsByGroupIdAndIdAndDeletedAtIsNull(groupId, photoId)) {
+            throw new BaseException(ErrorCode.PHOTO_NOT_FOUND);
+        }
+
+        // 사진 태그, 인식된 회원 조회
+        List<PhotoTag> tags = photoTagRepository.findAllByPhotoId(photoId);
+        List<PhotoMember> members = photoMemberRepository.findAllByPhotoId(photoId);
+        return PhotoTagDto.from(tags, members);
+    }
+
+    private Page<PhotoClusterDto> getSimilarPhotoClusters(Long groupId, int page, int size) {
+        // 1. 유사 사진 클러스터 기본 정보(대표 사진ID, 썸네일, 개수) 페이징 조회
+        Page<PhotoClusterDto> clusterPage = photoRepository.findSimilarClusters(groupId, PageRequest.of(page, size));
+
+        // 2. 모든 유사 클러스터 clusterId 리스트 추출
+        List<Long> clusterIds = clusterPage.stream()
+                .map(PhotoClusterDto::getClusterId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        if (clusterIds.isEmpty()) {
+            return clusterPage; // 유사한 사진 클러스터가 없으면 바로 반환
+        }
+
+        // 3. clusterId 리스트로 해당 그룹 내 모든 사진 조회
+        List<Photo> photoList = photoRepository.findAllByGroupIdAndClusterIdInAndDeletedAtIsNull(groupId, clusterIds);
+
+        // 4. clusterId 기준으로 사진 그룹핑
+        Map<Long, List<Photo>> photoListByCluster = photoList.stream().collect(Collectors.groupingBy(Photo::getClusterId));
+
+        // 5. 각 클러스터 DTO에 사진 리스트 매칭
+        clusterPage.forEach(cluster -> {
+            cluster.setPhotos(photoListByCluster.get(cluster.getClusterId()));
+        });
+
+        return clusterPage;
     }
 
 }

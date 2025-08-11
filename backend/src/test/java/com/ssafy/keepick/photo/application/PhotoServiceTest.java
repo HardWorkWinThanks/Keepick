@@ -83,16 +83,18 @@ public class PhotoServiceTest extends BaseTest {
         @DisplayName("사진 삭제 성공 테스트")
         void deleteGroupPhoto_Success() {
             // given
+            List<Long> notInAlbumPhotoIds = List.of(1L);
             given(groupRepository.findById(1L)).willReturn(Optional.of(testGroup));
-            doNothing().when(photoRepository).softDeleteAllById(deleteRequest.getPhotoIds());
+            given(photoRepository.findPhotoIdNotInAnyAlbum(deleteRequest.getPhotoIds())).willReturn(notInAlbumPhotoIds);
+            doNothing().when(photoRepository).softDeleteAllById(anyList());
 
             // when
             List<GroupPhotoDto> result = groupPhotoService.deleteGroupPhoto(1L, deleteRequest);
 
             // then
-            assertThat(result).hasSize(2);
+            assertThat(result).hasSize(1);
             verify(groupRepository).findById(1L);
-            verify(photoRepository).softDeleteAllById(deleteRequest.getPhotoIds());
+            verify(photoRepository).softDeleteAllById(notInAlbumPhotoIds);
         }
 
         @Test
