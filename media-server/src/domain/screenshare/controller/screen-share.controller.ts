@@ -1,183 +1,390 @@
-// src/domain/screen-share/controller/screen-share.controller.ts
+// src/domain/screenshare/controller/screen-share.controller.ts
 
 import { Request, Response } from 'express';
-import { ScreenShareService } from '../services/screen-share.service';
 import { logger } from '../../../utils/logger';
+import { ScreenShareService } from '../services/screen-share.service';
+import {
+  StartScreenShareRequest,
+  StopScreenShareRequest,
+  CreateScreenShareConsumerRequest,
+} from '../types/screen-share.types';
 
 export class ScreenShareController {
-  constructor(
-    private screenShareService: ScreenShareService
-  ) {}
-
-  // GET /api/screen-share/status/:roomId
-  async getScreenShareStatus(req: Request, res: Response): Promise<void> {
-    try {
-      const { roomId } = req.params;
-      
-      const isActive = this.screenShareService.isScreenShareActive(roomId);
-      const activeShare = this.screenShareService.getActiveScreenShare(roomId);
-
-      res.json({
-        success: true,
-        isActive,
-        screenShare: activeShare ? {
-          producerId: activeShare.id,
-          peerId: activeShare.peerId,
-          createdAt: activeShare.createdAt
-        } : null
-      });
-    } catch (error) {
-      logger.error('Get screen share status error:', error);
-      res.status(500).json({
-        success: false,
-        error: error
-      });
-    }
+  constructor(private screenShareService: ScreenShareService) {
+    console.log('ScreenShareController initialized');
+    logger.info('ScreenShareController initialized');
   }
 
   // POST /api/screen-share/start
-  async startScreenShare(req: Request, res: Response): Promise<void> {
+  startScreenShare = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { roomId, peerId, rtpParameters } = req.body;
+      console.log('POST /api/screen-share/start called', req.body);
+      logger.info('Screen share start API called', {
+        body: req.body,
+        ip: req.ip,
+      });
 
-      if (!roomId || !peerId || !rtpParameters) {
+      const { roomId, peerId, rtpCapabilities, rtpParameters } = req.body;
+
+      // 입력 검증
+      if (!roomId || !peerId || !rtpCapabilities || !rtpParameters) {
+        console.log('Invalid request: missing required fields');
         res.status(400).json({
           success: false,
-          error: 'Missing required parameters'
+          error: 'Missing required fields: roomId, peerId, rtpCapabilities, rtpParameters',
         });
         return;
       }
 
-      const result = await this.screenShareService.startScreenShare({
+      const request: StartScreenShareRequest = {
         roomId,
         peerId,
-        rtpParameters
+        rtpCapabilities,
+        rtpParameters,
+      };
+
+      const response = await this.screenShareService.startScreenShare(request);
+
+      if (response.success) {
+        console.log(`Screen share started via API - Producer: ${response.producerId}`);
+        logger.info('Screen share started via API', {
+          roomId,
+          peerId,
+          producerId: response.producerId,
+        });
+
+        res.status(200).json(response);
+      } else {
+        console.log(`Screen share start failed via API: ${response.error}`);
+        logger.warn('Screen share start failed via API', {
+          roomId,
+          peerId,
+          error: response.error,
+        });
+
+        res.status(400).json(response);
+      }
+
+    } catch (error) {
+      console.error('Error in startScreenShare API:', error);
+      logger.error('Error in startScreenShare API', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
       });
 
-      res.json({
-        success: true,
-        producerId: result.producerId
-      });
-    } catch (error) {
-      logger.error('Start screen share error:', error);
       res.status(500).json({
         success: false,
-        error: error
+        error: 'Internal server error',
       });
     }
-  }
+  };
 
   // POST /api/screen-share/stop
-  async stopScreenShare(req: Request, res: Response): Promise<void> {
+  stopScreenShare = async (req: Request, res: Response): Promise<void> => {
     try {
+      console.log('POST /api/screen-share/stop called', req.body);
+      logger.info('Screen share stop API called', {
+        body: req.body,
+        ip: req.ip,
+      });
+
       const { roomId, peerId, producerId } = req.body;
 
+      // 입력 검증
       if (!roomId || !peerId || !producerId) {
+        console.log('Invalid request: missing required fields');
         res.status(400).json({
           success: false,
-          error: 'Missing required parameters'
+          error: 'Missing required fields: roomId, peerId, producerId',
         });
         return;
       }
 
-      await this.screenShareService.stopScreenShare({
-        roomId,
-        peerId,
-        producerId
-      });
-
-      res.json({ success: true });
-    } catch (error) {
-      logger.error('Stop screen share error:', error);
-      res.status(500).json({
-        success: false,
-        error: error
-      });
-    }
-  }
-
-  // POST /api/screen-share/consume
-  async consumeScreenShare(req: Request, res: Response): Promise<void> {
-    try {
-      const { roomId, peerId, producerId, rtpCapabilities } = req.body;
-
-      if (!roomId || !peerId || !producerId || !rtpCapabilities) {
-        res.status(400).json({
-          success: false,
-          error: 'Missing required parameters'
-        });
-        return;
-      }
-
-      const result = await this.screenShareService.consumeScreenShare({
+      const request: StopScreenShareRequest = {
         roomId,
         peerId,
         producerId,
-        rtpCapabilities
+      };
+
+      const response = await this.screenShareService.stopScreenShare(request);
+
+      if (response.success) {
+        console.log(`Screen share stopped via API`);
+        logger.info('Screen share stopped via API', {
+          roomId,
+          peerId,
+          producerId,
+        });
+
+        res.status(200).json(response);
+      } else {
+        console.log(`Screen share stop failed via API: ${response.error}`);
+        logger.warn('Screen share stop failed via API', {
+          roomId,
+          peerId,
+          producerId,
+          error: response.error,
+        });
+
+        res.status(400).json(response);
+      }
+
+    } catch (error) {
+      console.error('Error in stopScreenShare API:', error);
+      logger.error('Error in stopScreenShare API', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
       });
 
-      res.json({
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  };
+
+  // POST /api/screen-share/create-consumer
+  createConsumer = async (req: Request, res: Response): Promise<void> => {
+    try {
+      console.log('POST /api/screen-share/create-consumer called', req.body);
+      logger.info('Screen share create consumer API called', {
+        body: req.body,
+        ip: req.ip,
+      });
+
+      const { roomId, peerId, producerId, rtpCapabilities } = req.body;
+
+      // 입력 검증
+      if (!roomId || !peerId || !producerId || !rtpCapabilities) {
+        console.log('Invalid request: missing required fields');
+        res.status(400).json({
+          success: false,
+          error: 'Missing required fields: roomId, peerId, producerId, rtpCapabilities',
+        });
+        return;
+      }
+
+      const request: CreateScreenShareConsumerRequest = {
+        roomId,
+        peerId,
+        producerId,
+        rtpCapabilities,
+      };
+
+      const response = await this.screenShareService.createScreenShareConsumer(request);
+
+      if (response.success) {
+        console.log(`Screen share consumer created via API - Consumer: ${response.consumerId}`);
+        logger.info('Screen share consumer created via API', {
+          roomId,
+          peerId,
+          producerId,
+          consumerId: response.consumerId,
+        });
+
+        res.status(200).json(response);
+      } else {
+        console.log(`Screen share consumer creation failed via API: ${response.error}`);
+        logger.warn('Screen share consumer creation failed via API', {
+          roomId,
+          peerId,
+          producerId,
+          error: response.error,
+        });
+
+        res.status(400).json(response);
+      }
+
+    } catch (error) {
+      console.error('Error in createConsumer API:', error);
+      logger.error('Error in createConsumer API', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  };
+
+  // GET /api/screen-share/active/:roomId
+  getActiveScreenShares = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { roomId } = req.params;
+      console.log(`GET /api/screen-share/active/${roomId} called`);
+      logger.info('Get active screen shares API called', {
+        roomId,
+        ip: req.ip,
+      });
+
+      if (!roomId) {
+        console.log('Invalid request: missing roomId parameter');
+        res.status(400).json({
+          success: false,
+          error: 'Missing roomId parameter',
+        });
+        return;
+      }
+
+      const activeScreenShares = this.screenShareService.getActiveScreenShares(roomId);
+
+      console.log(`Retrieved ${activeScreenShares.length} active screen shares for room: ${roomId}`);
+      logger.info('Active screen shares retrieved via API', {
+        roomId,
+        count: activeScreenShares.length,
+      });
+
+      res.status(200).json({
         success: true,
-        params: result.params
+        screenShares: activeScreenShares,
+        count: activeScreenShares.length,
       });
+
     } catch (error) {
-      logger.error('Consume screen share error:', error);
+      console.error('Error in getActiveScreenShares API:', error);
+      logger.error('Error in getActiveScreenShares API', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
       res.status(500).json({
         success: false,
-        error: error
+        error: 'Internal server error',
       });
     }
-  }
+  };
 
-  // PUT /api/screen-share/consumer/:consumerId/resume
-  async resumeConsumer(req: Request, res: Response): Promise<void> {
+  // DELETE /api/screen-share/cleanup/:roomId/:peerId
+  cleanupPeer = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { consumerId } = req.params;
-      const { peerId } = req.body;
+      const { roomId, peerId } = req.params;
+      console.log(`DELETE /api/screen-share/cleanup/${roomId}/${peerId} called`);
+      logger.info('Screen share cleanup peer API called', {
+        roomId,
+        peerId,
+        ip: req.ip,
+      });
 
-      if (!peerId) {
+      if (!roomId || !peerId) {
+        console.log('Invalid request: missing roomId or peerId parameter');
         res.status(400).json({
           success: false,
-          error: 'Missing peerId'
+          error: 'Missing roomId or peerId parameter',
         });
         return;
       }
 
-      await this.screenShareService.resumeConsumer(consumerId, peerId);
+      this.screenShareService.cleanupPeer(roomId, peerId);
 
-      res.json({ success: true });
+      console.log(`Screen share cleanup completed for peer: ${peerId} in room: ${roomId}`);
+      logger.info('Screen share cleanup completed via API', {
+        roomId,
+        peerId,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Peer cleanup completed',
+      });
+
     } catch (error) {
-      logger.error('Resume screen share consumer error:', error);
+      console.error('Error in cleanupPeer API:', error);
+      logger.error('Error in cleanupPeer API', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
       res.status(500).json({
         success: false,
-        error: error
+        error: 'Internal server error',
       });
     }
-  }
+  };
 
-  // PUT /api/screen-share/consumer/:consumerId/pause
-  async pauseConsumer(req: Request, res: Response): Promise<void> {
+  // DELETE /api/screen-share/room/:roomId
+  cleanupRoom = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { consumerId } = req.params;
-      const { peerId } = req.body;
+      const { roomId } = req.params;
+      console.log(`DELETE /api/screen-share/room/${roomId} called`);
+      logger.info('Screen share cleanup room API called', {
+        roomId,
+        ip: req.ip,
+      });
 
-      if (!peerId) {
+      if (!roomId) {
+        console.log('Invalid request: missing roomId parameter');
         res.status(400).json({
           success: false,
-          error: 'Missing peerId'
+          error: 'Missing roomId parameter',
         });
         return;
       }
 
-      await this.screenShareService.pauseConsumer(consumerId, peerId);
+      this.screenShareService.cleanupRoom(roomId);
 
-      res.json({ success: true });
+      console.log(`Screen share room cleanup completed: ${roomId}`);
+      logger.info('Screen share room cleanup completed via API', {
+        roomId,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Room cleanup completed',
+      });
+
     } catch (error) {
-      logger.error('Pause screen share consumer error:', error);
+      console.error('Error in cleanupRoom API:', error);
+      logger.error('Error in cleanupRoom API', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
       res.status(500).json({
         success: false,
-        error: error
+        error: 'Internal server error',
       });
     }
-  }
+  };
+
+  // GET /api/screen-share/debug/:roomId
+  debugRoom = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { roomId } = req.params;
+      console.log(`GET /api/screen-share/debug/${roomId} called`);
+      logger.info('Screen share debug API called', {
+        roomId,
+        ip: req.ip,
+      });
+
+      if (!roomId) {
+        console.log('Invalid request: missing roomId parameter');
+        res.status(400).json({
+          success: false,
+          error: 'Missing roomId parameter',
+        });
+        return;
+      }
+
+      this.screenShareService.debugRoom(roomId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Debug information logged to console',
+      });
+
+    } catch (error) {
+      console.error('Error in debugRoom API:', error);
+      logger.error('Error in debugRoom API', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  };
 }
