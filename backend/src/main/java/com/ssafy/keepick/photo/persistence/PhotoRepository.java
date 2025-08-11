@@ -50,4 +50,15 @@ public interface PhotoRepository extends JpaRepository<Photo,Long>, PhotoQueryFa
     List<Photo> findAllByGroupIdAndClusterIdInAndDeletedAtIsNull(@Param("groupId") Long groupId, @Param("clusterIds") List<Long> clusterIds);
 
     boolean existsByGroupIdAndPhotoId(Long groupId, Long photoId);
+
+    @Query("""
+        SELECT p.id
+        FROM Photo p
+        LEFT JOIN TimelineAlbumPhoto tlap ON p.id = tlap.photo.id AND tlap.deletedAt IS NULL
+        LEFT JOIN TierAlbumPhoto tap ON p.id = tap.photo.id AND tap.deletedAt IS NULL
+        WHERE p.id IN :ids
+          AND tlap.id IS NULL
+          AND tap.id IS NULL
+    """)
+    List<Long> findPhotoIdNotInAnyAlbum(@Param("ids") List<Long> ids);
 }

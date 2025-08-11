@@ -75,11 +75,12 @@ public class GroupPhotoService {
         // 1. 그룹 확인
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
-        // 2. 사진 삭제
-        // TODO: 앨범에 포함된 사진인 경우 삭제 건너뛰기
+
+        // 2. 사진 삭제 - 전달된 사진 중 앨범에 포함되지 않은 사진만 조회하여 삭제
         List<Long> ids = request.getPhotoIds();
-        photoRepository.softDeleteAllById(ids);
-        return ids.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
+        List<Long> deleteIds = photoRepository.findPhotoIdNotInAnyAlbum(ids);
+        photoRepository.softDeleteAllById(deleteIds);
+        return deleteIds.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

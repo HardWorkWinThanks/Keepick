@@ -86,13 +86,14 @@ public class PhotoController {
         return ApiResponse.ok(GroupPhotoOverviewResponse.from(result));
     }
 
+    @Operation(summary = "그룹 사진 태그 조회 API", description = "그룹 사진의 태그 목록, 인식된 회원 이름 목록을 조회합니다.")
     @GetMapping("/groups/{groupId}/photos/{photoId}/tags")
     public ApiResponse<?> getGroupPhotoTags(@PathVariable Long groupId, @PathVariable Long photoId) {
         PhotoTagDto result = groupPhotoService.getGroupPhotoTags(groupId, photoId);
         return ApiResponse.ok(GroupPhotoTagResponse.from(result));
     }
 
-    @Operation(summary = "그룹 사진 삭제 API", description = "아직 구현 중 / 앨범에 포함된 사진은 삭제되지 않습니다.")
+    @Operation(summary = "그룹 사진 삭제 API", description = "앨범에 포함된 사진은 삭제되지 않습니다.")
     @DeleteMapping("/groups/{groupId}/photos")
     public ApiResponse<List<GroupPhotoIdResponse>> deleteGroupPhotos(@PathVariable Long groupId, @RequestBody GroupPhotoDeleteRequest request) {
         List<GroupPhotoDto> result = groupPhotoService.deleteGroupPhoto(groupId, request);
