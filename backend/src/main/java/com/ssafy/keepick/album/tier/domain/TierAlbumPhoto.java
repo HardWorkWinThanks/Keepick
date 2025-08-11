@@ -7,6 +7,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "tier_album_photo")
 @Getter
@@ -31,6 +33,8 @@ public class TierAlbumPhoto {
 
     @Column(name = "sequence")
     private Integer sequence;
+
+    private LocalDateTime deletedAt;
 
     private TierAlbumPhoto(TierAlbum album, Photo photo, Tier tier, Integer sequence) {
         this.album = album;

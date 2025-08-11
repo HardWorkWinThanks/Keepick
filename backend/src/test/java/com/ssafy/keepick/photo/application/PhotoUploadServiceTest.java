@@ -77,7 +77,7 @@ class PhotoUploadServiceTest extends BaseTest {
 
         when(groupRepository.findById(anyLong())).thenReturn(Optional.of(group));
         when(photoRepository.saveAll(anyList())).thenReturn(initialPhotos);
-        when(imageService.generatePresignedUrls(anyList())).thenReturn(expectedUrls);
+//        when(imageService.generatePresignedUrls(anyList())).thenReturn(expectedUrls);
 
         // When
         List<String> actualUrls = groupService.uploadGroupPhoto(groupId, request);

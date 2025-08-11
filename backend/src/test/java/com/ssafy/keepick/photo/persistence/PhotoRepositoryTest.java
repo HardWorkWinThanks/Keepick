@@ -1,12 +1,17 @@
 package com.ssafy.keepick.photo.persistence;
 
+import com.ssafy.keepick.album.tier.domain.Tier;
+import com.ssafy.keepick.album.tier.domain.TierAlbum;
+import com.ssafy.keepick.album.tier.domain.TierAlbumPhoto;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.domain.GroupMember;
 import com.ssafy.keepick.member.domain.Member;
+import com.ssafy.keepick.photo.application.dto.PhotoClusterDto;
 import com.ssafy.keepick.photo.domain.Photo;
 import com.ssafy.keepick.photo.domain.PhotoMember;
 import com.ssafy.keepick.photo.domain.PhotoTag;
 import com.ssafy.keepick.support.BaseRepositoryTest;
+import com.ssafy.keepick.timeline.domain.TimelineAlbum;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -434,4 +439,81 @@ class PhotoRepositoryTest extends BaseRepositoryTest {
             assertThat(result.getTotalElements()).isEqualTo(3);
         }
     }
+
+    @Nested
+    @DisplayName("findBlurryPhotosByGroupIdTest 테스트")
+    class findBlurryPhotosByGroupIdTest {
+        @Test
+        @DisplayName("그룹의 사진 중 흐린 사진을 조회합니다.")
+        void findBlurryPhotosByGroupId() {
+            // given
+            Pageable pageable = PageRequest.of(0, 10);
+            testPhoto1.updateBlurred();
+            testPhoto2.updateBlurred();
+
+            photoRepository.saveAll(List.of(testPhoto1, testPhoto2));
+
+            // when
+            Page<Photo> result = photoRepository.findBlurryPhotosByGroupId(testGroup.getId(), pageable);
+
+            // then
+            assertThat(result.getContent()).hasSize(2);
+            assertThat(result.getTotalElements()).isEqualTo(2);
+        }
+    }
+    
+    @Nested
+    @DisplayName("findPhotoIdNotInAnyAlbum 테스트")
+    class findPhotoIdNotInAnyAlbumTest {
+        @Test
+        @DisplayName("어떤 앨범에도 속하지 않은 사진의 ID를 조회합니다.")
+        void findPhotoIdNotInAnyAlbum() {
+            // given
+            entityManager.persist(TimelineAlbum.createTimelineAlbum(testGroup, List.of(testPhoto1)));
+            TierAlbum tierAlbum = TierAlbum.createTierAlbum(testGroup.getId());
+            entityManager.persist(tierAlbum);
+            entityManager.persist(TierAlbumPhoto.createTierAlbumPhoto(tierAlbum, testPhoto2, Tier.S, 1));
+
+            // when
+            List<Long> photoIdNotInAnyAlbum = photoRepository.findPhotoIdNotInAnyAlbum(List.of(testPhoto1.getId(), testPhoto2.getId(), testPhoto3.getId(), deletedPhoto.getId()));
+
+            // then
+            assertThat(photoIdNotInAnyAlbum).hasSize(1);
+            assertThat(photoIdNotInAnyAlbum).contains(testPhoto3.getId());
+            assertThat(photoIdNotInAnyAlbum).doesNotContain(testPhoto1.getId(), testPhoto2.getId(), deletedPhoto.getId());
+        }
+    }
+    
+    @Nested
+    @DisplayName("findSimilarClusters 테스트")
+    class findSimilarClustersTest {
+        @Test
+        @DisplayName("유사한 사진 그룹을 조회합니다.")
+        void findSimilarClusters() {
+            // given
+            Pageable pageable = PageRequest.of(0, 10);
+            testPhoto1.updateClusterId(101L);
+            testPhoto2.updateClusterId(101L);
+            testPhoto3.updateClusterId(102L);
+            deletedPhoto.updateClusterId(102L);
+
+            photoRepository.saveAll(List.of(testPhoto1, testPhoto2, testPhoto3, deletedPhoto));
+
+            // when
+            Page<PhotoClusterDto> result = photoRepository.findSimilarClusters(testGroup.getId(), pageable);
+
+            // then
+            assertThat(result.getContent()).hasSize(2);
+
+            PhotoClusterDto dto1 = result.getContent().get(0);
+            assertThat(dto1.getClusterId()).isEqualTo(101L);
+            assertThat(dto1.getPhotoCount()).isEqualTo(2);
+
+            PhotoClusterDto dto2 = result.getContent().get(1);
+            assertThat(dto2.getClusterId()).isEqualTo(102L);
+            assertThat(dto2.getPhotoCount()).isEqualTo(1);
+        }
+
+    }
+
 }

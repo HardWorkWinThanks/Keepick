@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Getter
 @Entity
@@ -82,6 +83,16 @@ public class Photo extends BaseTimeEntity {
                 .group(group)
                 .status(PhotoStatus.PENDING_UPLOAD)
                 .build();
+    }
+
+    public void updateBlurred() {
+        this.blurred = true;
+    }
+
+    public void updateClusterId(Long clusterId) {
+        if (!Objects.equals(this.clusterId, clusterId)) {
+            this.clusterId = clusterId;
+        }
     }
 
 }

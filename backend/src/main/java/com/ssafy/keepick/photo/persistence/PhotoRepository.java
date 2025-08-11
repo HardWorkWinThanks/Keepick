@@ -49,7 +49,7 @@ public interface PhotoRepository extends JpaRepository<Photo,Long>, PhotoQueryFa
 
     List<Photo> findAllByGroupIdAndClusterIdInAndDeletedAtIsNull(@Param("groupId") Long groupId, @Param("clusterIds") List<Long> clusterIds);
 
-    boolean existsByGroupIdAndPhotoId(Long groupId, Long photoId);
+    boolean existsByGroupIdAndIdAndDeletedAtIsNull(Long groupId, Long id);
 
     @Query("""
         SELECT p.id
@@ -59,6 +59,7 @@ public interface PhotoRepository extends JpaRepository<Photo,Long>, PhotoQueryFa
         WHERE p.id IN :ids
           AND tlap.id IS NULL
           AND tap.id IS NULL
+          AND p.deletedAt is NULL
     """)
     List<Long> findPhotoIdNotInAnyAlbum(@Param("ids") List<Long> ids);
 }
