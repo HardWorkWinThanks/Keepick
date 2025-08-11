@@ -88,6 +88,14 @@ export function setupSocketHandlers(io: Server): void {
     socket.on("resume_consumer", async (data: { consumerId: string }) => {
       await mediaEventsHandler.handleResumeConsumer(socket, data);
     });
+
+    // =========================
+    // Gesture 관련 이벤트
+    socket.on('gesture_detect', (data) => {
+      console.log('Gesture detected:', data);
+      // 같은 방의 다른 클라이언트들에게만 브로드캐스트 (자신 제외)
+      socket.to(data.roomId).emit('gesture_detected', data);
+    });
     
     // =========================
     // 화면 공유 관련 이벤트
