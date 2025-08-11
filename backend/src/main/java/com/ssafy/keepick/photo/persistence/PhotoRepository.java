@@ -46,4 +46,6 @@ public interface PhotoRepository extends JpaRepository<Photo,Long>, PhotoQueryFa
     Page<Photo> findBlurryPhotosByGroupId(@Param("groupId") Long groupId, Pageable pageable);
 
     List<Photo> findAllByGroupIdAndClusterIdInAndDeletedAtIsNull(@Param("groupId") Long groupId, @Param("clusterIds") List<Long> clusterIds);
+
+    boolean existsByGroupIdAndPhotoId(Long groupId, Long photoId);
 }

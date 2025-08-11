@@ -6,6 +6,7 @@ import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.photo.application.GroupPhotoService;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
 import com.ssafy.keepick.photo.application.dto.PhotoClusterDto;
+import com.ssafy.keepick.photo.application.dto.PhotoTagDto;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoSearchRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
@@ -83,6 +84,12 @@ public class PhotoController {
             @PathVariable Long groupId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
     ) {
         return null;
+    }
+
+    @GetMapping("/groups/{groupId}/photos/{photoId}/tags")
+    public ApiResponse<?> getGroupPhotoTags(@PathVariable Long groupId, @PathVariable Long photoId) {
+        PhotoTagDto result = groupPhotoService.getGroupPhotoTags(groupId, photoId);
+        return ApiResponse.ok(GroupPhotoTagResponse.from(result));
     }
 
     @Operation(summary = "그룹 사진 삭제 API", description = "아직 구현 중 / 앨범에 포함된 사진은 삭제되지 않습니다.")

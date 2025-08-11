@@ -8,11 +8,16 @@ import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoCommandDto;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
 import com.ssafy.keepick.photo.application.dto.PhotoClusterDto;
+import com.ssafy.keepick.photo.application.dto.PhotoTagDto;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoSearchRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
 import com.ssafy.keepick.photo.domain.Photo;
+import com.ssafy.keepick.photo.domain.PhotoMember;
+import com.ssafy.keepick.photo.domain.PhotoTag;
+import com.ssafy.keepick.photo.persistence.PhotoMemberRepository;
 import com.ssafy.keepick.photo.persistence.PhotoRepository;
+import com.ssafy.keepick.photo.persistence.PhotoTagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,6 +37,8 @@ public class GroupPhotoService {
     private final GroupRepository groupRepository;
     private final PhotoRepository photoRepository;
     private final ImageService imageService;
+    private final PhotoTagRepository photoTagRepository;
+    private final PhotoMemberRepository photoMemberRepository;
 
 
     @Transactional
@@ -132,4 +139,15 @@ public class GroupPhotoService {
         return clusterPage;
     }
 
+    public PhotoTagDto getGroupPhotoTags(Long groupId, Long photoId) {
+        // 그룹 내 사진인지 확인
+        if(photoRepository.existsByGroupIdAndPhotoId(groupId, photoId)) {
+            throw new BaseException(ErrorCode.PHOTO_NOT_FOUND);
+        }
+
+        // 사진 태그, 인식된 회원 조회
+        List<PhotoTag> tags = photoTagRepository.findAllByPhotoId(photoId);
+        List<PhotoMember> members = photoMemberRepository.findAllByPhotoId(photoId);
+        return PhotoTagDto.from(tags, members);
+    }
 }
