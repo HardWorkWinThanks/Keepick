@@ -29,7 +29,7 @@ import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
 
 @ExtendWith(MockitoExtension.class)
-class MobileAuthServiceTest extends BaseTest {
+class MobileLoginServiceTest extends BaseTest {
 
     @Mock
     private MemberRepository memberRepository;
@@ -72,13 +72,16 @@ class MobileAuthServiceTest extends BaseTest {
         given(memberRepository.findByEmail("test@gmail.com")).willReturn(Optional.of(member));
         given(jwtUtil.createToken(1L, "test@gmail.com")).willReturn("jwt-token");
         given(refreshTokenService.issue(1L, "test@gmail.com", anyString())).willReturn("refresh-token-jti");
-        given(restTemplate.exchange(anyString(), any(), any(), eq(Map.class)))
+        given(restTemplate.exchange(anyString(), any(), any(), any(Class.class)))
                 .willReturn(new ResponseEntity<>(googleUserInfo, HttpStatus.OK));
 
         // when
-        MobileLoginResponse response = mobileAuthService.login(request);
+        var loginDto = mobileAuthService.login(request);
+        MobileLoginResponse response = loginDto.toResponse();
 
         // then
+        assertThat(loginDto.getAccessToken()).isEqualTo("jwt-token");
+        assertThat(loginDto.getRefreshTokenJti()).isEqualTo("refresh-token-jti");
         assertThat(response.getAccessToken()).isEqualTo("jwt-token");
         assertThat(response.getRefreshToken()).isEqualTo("refresh-token-jti");
         verify(jwtUtil).createToken(1L, "test@gmail.com");
@@ -130,7 +133,7 @@ class MobileAuthServiceTest extends BaseTest {
         given(memberRepository.save(any(Member.class))).willReturn(savedMember);
         given(jwtUtil.createToken(1L, "test@gmail.com")).willReturn("jwt-token");
         given(refreshTokenService.issue(1L, "test@gmail.com", anyString())).willReturn("refresh-token-jti");
-        given(restTemplate.exchange(anyString(), any(), any(), eq(Map.class)))
+        given(restTemplate.exchange(anyString(), any(), any(), any(Class.class)))
                 .willReturn(new ResponseEntity<>(googleUserInfo, HttpStatus.OK));
 
         // when
@@ -154,7 +157,7 @@ class MobileAuthServiceTest extends BaseTest {
         given(memberRepository.findByEmail("test@gmail.com")).willReturn(Optional.of(existingMember)); // 기존 회원
         given(jwtUtil.createToken(1L, "test@gmail.com")).willReturn("jwt-token");
         given(refreshTokenService.issue(1L, "test@gmail.com", anyString())).willReturn("refresh-token-jti");
-        given(restTemplate.exchange(anyString(), any(), any(), eq(Map.class)))
+        given(restTemplate.exchange(anyString(), any(), any(), any(Class.class)))
                 .willReturn(new ResponseEntity<>(googleUserInfo, HttpStatus.OK));
 
         // when

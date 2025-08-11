@@ -5,6 +5,7 @@ import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.persistence.GroupRepository;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoCommandDto;
+import com.ssafy.keepick.external.s3.dto.S3ImagePathDto;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
 import com.ssafy.keepick.photo.domain.Photo;
 import com.ssafy.keepick.photo.persistence.PhotoRepository;
@@ -77,7 +78,10 @@ class PhotoUploadServiceTest extends BaseTest {
 
         when(groupRepository.findById(anyLong())).thenReturn(Optional.of(group));
         when(photoRepository.saveAll(anyList())).thenReturn(initialPhotos);
-        when(imageService.generatePresignedUrls(anyList())).thenReturn(expectedUrls);
+        when(imageService.generatePresignedUrls(anyList())).thenReturn(List.of(
+            new S3ImagePathDto("file1.jpg", "http://presigned.url/1"),
+            new S3ImagePathDto("file2.jpg", "http://presigned.url/2")
+        ));
 
         // When
         List<String> actualUrls = groupService.uploadGroupPhoto(groupId, request);
