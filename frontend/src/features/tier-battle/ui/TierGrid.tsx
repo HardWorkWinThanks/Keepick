@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Photo } from "@/entities/photo";
 import { TierData, DragOverPosition, TierConfig } from "../model/types";
+import { TIER_COLORS, getTierColor } from "@/shared/config/tierColors";
 
 interface TierGridProps {
   tiers: TierConfig[];
@@ -38,28 +39,34 @@ export function TierGrid({
   onDragEnd,
 }: TierGridProps) {
   return (
-    <div className="bg-white rounded-xl shadow-md border p-4 space-y-2">
+    <div className="bg-[#222222] rounded-xl shadow-lg border border-gray-700 p-4 space-y-2">
       {tiers.map(({ label, color }) => (
         <div key={label} className="flex items-start">
           <div
-            className={`w-16 h-28 flex-shrink-0 flex items-center justify-center text-white      
-  text-3xl font-black rounded-l-md bg-gradient-to-br ${color}`}
+            className="w-16 h-28 flex-shrink-0 flex items-center justify-center text-3xl font-black rounded-l-md bg-gray-800 border-r border-gray-600 relative"
           >
-            {label}
+            <span 
+              style={{ color: getTierColor(label as keyof typeof TIER_COLORS) }}
+            >
+              {label}
+            </span>
+            <div 
+              className="absolute left-0 top-0 w-1 h-full rounded-l-md"
+              style={{ backgroundColor: getTierColor(label as keyof typeof TIER_COLORS) }}
+            />
           </div>
           <div
             className="flex-1 p-2 flex flex-wrap gap-2 items-center border-t border-b
-  border-r rounded-r-md min-h-[112px]"
+  border-r border-gray-600 rounded-r-md min-h-[112px] bg-[#111111]"
             onDragOver={(e) => onDragOverTierArea(e, label)}
             onDrop={(e) => onDropTierArea(e, label)}
           >
             {(tierPhotos[label] || []).length === 0 && !draggingPhotoId && (
               <div
-                className="w-full h-full flex flex-col items-center justify-center
-  text-gray-400 text-center"
+                className="w-full h-full flex items-center justify-center
+  text-gray-500 text-center"
               >
-                <span className="text-3xl mb-2">📷</span>
-                <span className="text-sm">사진을 여기에 드래그하세요.</span>
+                <span className="text-sm font-keepick-primary">빈 티어</span>
               </div>
             )}
             {(tierPhotos[label] || []).map((photo, index) => (
@@ -73,7 +80,7 @@ export function TierGrid({
               >
                 {dragOverPosition?.tier === label &&
                   dragOverPosition.index === index && (
-                    <div className="w-1.5 h-20 bg-teal-400 rounded-full transition-all" />
+                    <div className="w-1.5 h-20 bg-[#FE7A25] rounded-full transition-all" />
                   )}
 
                 <div
@@ -117,7 +124,7 @@ export function TierGrid({
             ))}
             {dragOverPosition?.tier === label &&
               dragOverPosition.index === (tierPhotos[label] || []).length && (
-                <div className="w-1.5 h-20 bg-teal-400 rounded-full ml-2 transition-all" />
+                <div className="w-1.5 h-20 bg-[#FE7A25] rounded-full ml-2 transition-all" />
               )}
           </div>
         </div>

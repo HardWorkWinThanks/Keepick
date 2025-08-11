@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useTierAlbum } from "../model/useTierAlbum"
 import type { TierInfo, TierType } from "../types"
 import { Photo, DragPhotoData } from "@/entities/photo"
+import { TIER_COLORS } from "@/shared/config/tierColors"
 import {
   useAlbumState,
   useAlbumStorage,
@@ -19,7 +20,8 @@ import {
   TierData,
 } from "@/features/tier-battle"
 import { PhotoModal } from "@/features/photos-viewing"
-import { TierEditingSidebar } from "./TierEditingSidebar"
+import { DraggablePhotoGrid } from "@/features/photo-drag-drop"
+import { ScrollArea } from "@/shared/ui/shadcn/scroll-area"
 
 interface TierAlbumPageProps {
   groupId: string
@@ -28,11 +30,11 @@ interface TierAlbumPageProps {
 
 // 티어 정보
 const tiers: TierInfo[] = [
-  { id: "S", name: "S", color: "#FE7A25" },
-  { id: "A", name: "A", color: "#4ECDC4" },
-  { id: "B", name: "B", color: "#45B7D1" },
-  { id: "C", name: "C", color: "#96CEB4" },
-  { id: "D", name: "D", color: "#FFEAA7" },
+  { id: "S", name: "S", color: TIER_COLORS.S },
+  { id: "A", name: "A", color: TIER_COLORS.A },
+  { id: "B", name: "B", color: TIER_COLORS.B },
+  { id: "C", name: "C", color: TIER_COLORS.C },
+  { id: "D", name: "D", color: TIER_COLORS.D },
 ]
 
 // Tilt Shine Card 컴포넌트
@@ -46,7 +48,7 @@ const TiltShineCard: React.FC<TiltShineCardProps> = ({ children, tierColor, clas
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
   const [shine, setShine] = useState({ x: 50, y: 50 })
-  const rafRef = useRef<number>()
+  const rafRef = useRef<number | undefined>(undefined)
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!wrapperRef.current) return
@@ -128,7 +130,6 @@ const TiltShineCard: React.FC<TiltShineCardProps> = ({ children, tierColor, clas
 
 export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) {
   const [isEditMode, setIsEditMode] = useState(false)
-  const [showAlbumInfoModal, setShowAlbumInfoModal] = useState(false)
   
   const {
     isLoading,
@@ -231,7 +232,7 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
     }
   }
 
-  // 드래그 핸들러들
+  // 드래그 핸들러들 (tier-battle의 형식에 맞게 수정)
   const handleDragStart = (
     e: React.DragEvent,
     photo: Photo,
@@ -247,6 +248,15 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
   const handleDragEnd = () => {
     setDraggingPhotoId(null)
     setDragOverPosition(null)
+  }
+
+  // 사용가능한 사진용 드래그 핸들러 (useTierGrid의 setDraggingPhotoId 사용)
+  const handleAvailablePhotoDragStart = (_: React.DragEvent<HTMLDivElement>, photo: Photo) => {
+    setDraggingPhotoId(photo.id)
+  }
+
+  const handleAvailablePhotoDragEnd = () => {
+    setDraggingPhotoId(null)
   }
 
   const handleDragOverTierArea = (e: React.DragEvent, tier: string) => {
@@ -318,8 +328,9 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
           currentOpponentIndex: 0,
           targetTier,
           targetIndex,
-          sourceType: source,
+          sourceType: source as "available" | string, // 타입 수정
         })
+        setShowComparisonModal(true) // 배틀 모달 열기
         return
       }
     }
@@ -386,51 +397,79 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
       {/* Main Content */}
       <main className={`${isEditMode ? 'min-h-screen bg-[#111111] pt-20' : 'h-screen flex flex-col pt-16'} relative z-10`}>
         {isEditMode ? (
-          // 편집 모드 - TierAlbumWidget 내용
-          <div className={`space-y-6 animate-fade-in pb-8 transition-all duration-300 ${isEditMode ? 'ml-[320px] pr-8 pl-8' : 'px-8'}`}>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-keepick-heavy text-white">티어 편집 모드</h2>
-              <button
-                onClick={() => setPrecisionTierMode(!precisionTierMode)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 ${
-                  precisionTierMode
-                    ? "bg-[#FE7A25] text-white ring-2 ring-[#FE7A25]"
-                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                }`}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                <span className="hidden sm:block">
-                  {precisionTierMode ? "배틀 활성화됨" : "정밀 배틀"}
-                </span>
-              </button>
+          // 편집 모드 - 사이드바 레이아웃
+          <div className="flex gap-6 animate-fade-in pb-8 px-8 h-screen">
+            {/* 좌측: 사용가능한 사진 사이드바 */}
+            <div className="w-80 flex-shrink-0 space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-keepick-heavy text-white">티어 편집</h2>
+                <button
+                  onClick={() => setPrecisionTierMode(!precisionTierMode)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-semibold transition-all duration-300 ${
+                    precisionTierMode
+                      ? "bg-[#FE7A25] text-white ring-2 ring-[#FE7A25]"
+                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span className="text-sm">
+                    {precisionTierMode ? "배틀" : "배틀"}
+                  </span>
+                </button>
+              </div>
+
+              <div className="bg-gray-800/50 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="text-sm font-medium text-gray-300">사용가능한 사진</h3>
+                  <span className="text-xs text-gray-500">{availablePhotos.length}장</span>
+                </div>
+                
+                <ScrollArea className="h-[calc(100vh-200px)]">
+                  <DraggablePhotoGrid
+                    photos={availablePhotos}
+                    onDragStart={handleAvailablePhotoDragStart}
+                    onDragEnd={handleAvailablePhotoDragEnd}
+                    draggingPhotoId={draggingPhotoId}
+                    sourceId="available"
+                    gridClassName="grid grid-cols-3 gap-2 pb-2"
+                    photoClassName="aspect-square w-full object-cover rounded shadow-sm hover:scale-105 transition-transform cursor-grab"
+                  />
+                </ScrollArea>
+              </div>
+
+              {/* 사용방법 */}
+              <div className="bg-gray-800/30 rounded-lg p-3">
+                <div className="space-y-1 text-xs text-gray-400">
+                  <div>• 사진을 드래그해서 티어로 이동</div>
+                  <div>• 정밀 배틀 모드로 순위 결정</div>
+                  <div>• 티어 내에서 순서 조정 가능</div>
+                </div>
+              </div>
             </div>
 
-            <TierGrid
-              tiers={battleTiers}
-              tierPhotos={tierPhotos}
-              dragOverPosition={dragOverPosition}
-              draggingPhotoId={draggingPhotoId}
-              onImageClick={handleImageClick}
-              onReturnToAvailable={(photoId, fromTier) =>
-                handleReturnToAvailable(photoId, fromTier, (photo) =>
-                  setAvailablePhotos((prev) => [...prev, photo])
-                )
-              }
-              onDragOverTierArea={handleDragOverTierArea}
-              onDropTierArea={handleDropTierArea}
-              onDragOverPosition={handleDragOverPosition}
-              onDropAtPosition={handleDropAtPosition}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-            />
-
-            <TierEditingSidebar
-              isOpen={isEditMode}
-              onClose={() => setIsEditMode(false)}
-              availablePhotos={availablePhotos}
-            />
+            {/* 우측: 티어 그리드 */}
+            <div className="flex-1">
+              <TierGrid
+                tiers={battleTiers}
+                tierPhotos={tierPhotos}
+                dragOverPosition={dragOverPosition}
+                draggingPhotoId={draggingPhotoId}
+                onImageClick={handleImageClick}
+                onReturnToAvailable={(photoId, fromTier) =>
+                  handleReturnToAvailable(photoId, fromTier, (photo) =>
+                    setAvailablePhotos((prev) => [...prev, photo])
+                  )
+                }
+                onDragOverTierArea={handleDragOverTierArea}
+                onDropTierArea={handleDropTierArea}
+                onDragOverPosition={handleDragOverPosition}
+                onDropAtPosition={handleDropAtPosition}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              />
+            </div>
 
             <TierBattleModal
               isOpen={showComparisonModal}
@@ -626,8 +665,8 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
                   index === currentPhotoIndex ? "ring-2 scale-110" : "opacity-60 hover:opacity-100"
                 }`}
                 style={{
-                  ringColor: index === currentPhotoIndex ? currentTierInfo.color : "transparent",
-                }}
+                  "--tw-ring-color": index === currentPhotoIndex ? currentTierInfo.color : "transparent",
+                } as React.CSSProperties}
               >
                 <img src={photo.src || "/placeholder.svg"} alt={photo.title} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
