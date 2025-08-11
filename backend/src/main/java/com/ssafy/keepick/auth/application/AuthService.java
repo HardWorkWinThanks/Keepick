@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 public class AuthService {
     
     private final JWTUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
     
     /**
      * 쿠키에서 access_token을 추출하고 새로운 토큰을 발급합니다.
