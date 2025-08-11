@@ -34,8 +34,6 @@ public class TierAlbumPhoto {
     @Column(name = "sequence")
     private Integer sequence;
 
-    private LocalDateTime deletedAt;
-
     private TierAlbumPhoto(TierAlbum album, Photo photo, Tier tier, Integer sequence) {
         this.album = album;
         this.photo = photo;

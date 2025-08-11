@@ -65,10 +65,10 @@ class GroupPhotoServiceTest extends BaseTest {
         // given
         Page<Photo> page = new PageImpl<>(List.of(testPhoto1, testPhoto2, testPhoto3), PageRequest.of(0, 10), 3);
 
-        given(photoRepository.findBlurryPhotosByGroupId(eq(groupId), any(PageRequest.class))).willReturn(page);
+        given(photoRepository.findBlurredPhotosByGroupId(eq(groupId), any(PageRequest.class))).willReturn(page);
 
         // when
-        Page<GroupPhotoDto> dto = groupPhotoService.getBlurryPhotos(groupId, 0, 10);
+        Page<GroupPhotoDto> dto = groupPhotoService.getBlurredPhotos(groupId, 0, 10);
 
         // then
         assertThat(dto.getContent()).hasSize(3);
@@ -114,7 +114,7 @@ class GroupPhotoServiceTest extends BaseTest {
         given(photoRepository.findByGroupIdAndDeletedAtIsNull(eq(groupId), any(PageRequest.class))).willReturn(allPhotoPage);
 
         Page<Photo> blurryPhotoPage = new PageImpl<>(List.of(testPhoto1, testPhoto2), PageRequest.of(0, 10), 2);
-        given(photoRepository.findBlurryPhotosByGroupId(eq(groupId), any(PageRequest.class))).willReturn(blurryPhotoPage);
+        given(photoRepository.findBlurredPhotosByGroupId(eq(groupId), any(PageRequest.class))).willReturn(blurryPhotoPage);
 
         // 유사한 사진 그룹 응답
         testPhoto1.updateClusterId(101L);
@@ -133,7 +133,7 @@ class GroupPhotoServiceTest extends BaseTest {
 
         // then
         assertThat(resultDto.getAllPhotos().getContent()).hasSize(3);
-        assertThat(resultDto.getBlurryPhotos().getContent()).hasSize(2);
+        assertThat(resultDto.getBlurredPhotos().getContent()).hasSize(2);
         assertThat(resultDto.getSimilarPhotos().getContent()).hasSize(2);
     }
 

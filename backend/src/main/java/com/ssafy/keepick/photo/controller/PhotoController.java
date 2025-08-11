@@ -62,16 +62,16 @@ public class PhotoController {
     }
 
     @Operation(summary = "흐린 사진 조회 API", description = "그룹 갤러리의 사진 중 흐린 사진만 조회한 결과를 페이징하여 반환합니다.")
-    @GetMapping("/groups/{groupId}/blurry-photos")
-    public ApiResponse<PagingResponse<GroupPhotoDetailResponse>> getBlurryPhotos(
+    @GetMapping("/groups/{groupId}/blurred")
+    public ApiResponse<PagingResponse<GroupPhotoDetailResponse>> getBlurredPhotos(
             @PathVariable Long groupId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
     ) {
-        Page<GroupPhotoDto> result = groupPhotoService.getBlurryPhotos(groupId, page, size);
+        Page<GroupPhotoDto> result = groupPhotoService.getBlurredPhotos(groupId, page, size);
         return ApiResponse.ok(PagingResponse.from(result, GroupPhotoDetailResponse::from));
     }
 
     @Operation(summary = "유사 사진 묶음(클러스터) 조회 API", description = "그룹 갤러리의 사진 중 유사 사진 클러스터를 조회한 결과를 페이징하여 반환합니다.")
-    @GetMapping("/groups/{groupId}/similar-photos")
+    @GetMapping("/groups/{groupId}/similar")
     public ApiResponse<PagingResponse<GroupPhotoSimilarClusterResponse>> getSimilarClusters(
             @PathVariable Long groupId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
     ) {

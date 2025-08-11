@@ -45,7 +45,7 @@ public interface PhotoRepository extends JpaRepository<Photo,Long>, PhotoQueryFa
             "WHERE p.group.id = :groupId " +
             "AND p.blurred = true " +
             "AND p.deletedAt IS NULL")
-    Page<Photo> findBlurryPhotosByGroupId(@Param("groupId") Long groupId, Pageable pageable);
+    Page<Photo> findBlurredPhotosByGroupId(@Param("groupId") Long groupId, Pageable pageable);
 
     List<Photo> findAllByGroupIdAndClusterIdInAndDeletedAtIsNull(@Param("groupId") Long groupId, @Param("clusterIds") List<Long> clusterIds);
 
@@ -54,8 +54,8 @@ public interface PhotoRepository extends JpaRepository<Photo,Long>, PhotoQueryFa
     @Query("""
         SELECT p.id
         FROM Photo p
-        LEFT JOIN TimelineAlbumPhoto tlap ON p.id = tlap.photo.id AND tlap.deletedAt IS NULL
-        LEFT JOIN TierAlbumPhoto tap ON p.id = tap.photo.id AND tap.deletedAt IS NULL
+        LEFT JOIN TimelineAlbumPhoto tlap ON p.id = tlap.photo.id
+        LEFT JOIN TierAlbumPhoto tap ON p.id = tap.photo.id 
         WHERE p.id IN :ids
           AND tlap.id IS NULL
           AND tap.id IS NULL

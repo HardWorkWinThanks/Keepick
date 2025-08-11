@@ -12,13 +12,13 @@ import org.springframework.data.domain.Page;
 public class GroupPhotoOverviewDto {
 
     private Page<GroupPhotoDto> allPhotos;
-    private Page<GroupPhotoDto> blurryPhotos;
+    private Page<GroupPhotoDto> blurredPhotos;
     private Page<PhotoClusterDto> similarPhotos;
 
-    public static GroupPhotoOverviewDto from(Page<Photo> allPhotos, Page<Photo> blurryPhotos, Page<PhotoClusterDto> similarPhotos) {
+    public static GroupPhotoOverviewDto from(Page<Photo> allPhotos, Page<Photo> blurredPhotos, Page<PhotoClusterDto> similarPhotos) {
         return GroupPhotoOverviewDto.builder()
                 .allPhotos(allPhotos.map(GroupPhotoDto::from))
-                .blurryPhotos(blurryPhotos.map(GroupPhotoDto::from))
+                .blurredPhotos(blurredPhotos.map(GroupPhotoDto::from))
                 .similarPhotos(similarPhotos)
                 .build();
     }

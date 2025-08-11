@@ -103,8 +103,8 @@ public class GroupPhotoService {
     }
 
     @Transactional(readOnly = true)
-    public Page<GroupPhotoDto> getBlurryPhotos(Long groupId, int page, int size) {
-        Page<Photo> photoPage = photoRepository.findBlurryPhotosByGroupId(groupId, PageRequest.of(page, size));
+    public Page<GroupPhotoDto> getBlurredPhotos(Long groupId, int page, int size) {
+        Page<Photo> photoPage = photoRepository.findBlurredPhotosByGroupId(groupId, PageRequest.of(page, size));
         return photoPage.map(GroupPhotoDto::from);
     }
 
@@ -116,9 +116,9 @@ public class GroupPhotoService {
     @Transactional(readOnly = true)
     public GroupPhotoOverviewDto getGroupPhotoOverview(Long groupId, int size) {
         Page<Photo> allPhotoPage = photoRepository.findByGroupIdAndDeletedAtIsNull(groupId, PageRequest.of(0, size));
-        Page<Photo> blurryPhotoPage = photoRepository.findBlurryPhotosByGroupId(groupId, PageRequest.of(0, size));
+        Page<Photo> blurredPhotoPage = photoRepository.findBlurredPhotosByGroupId(groupId, PageRequest.of(0, size));
         Page<PhotoClusterDto> clusterPhotoPage = getSimilarPhotoClusters(groupId, 0, size);
-        return GroupPhotoOverviewDto.from(allPhotoPage, blurryPhotoPage, clusterPhotoPage);
+        return GroupPhotoOverviewDto.from(allPhotoPage, blurredPhotoPage, clusterPhotoPage);
     }
 
     @Transactional(readOnly = true)

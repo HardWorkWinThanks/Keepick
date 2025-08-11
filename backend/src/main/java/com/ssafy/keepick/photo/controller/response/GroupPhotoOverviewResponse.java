@@ -16,7 +16,7 @@ public class GroupPhotoOverviewResponse {
     private PagingResponse<GroupPhotoDetailResponse> allPhotos;
 
     @Schema(description = "그룹 내 흐린 사진 목록 (페이징 적용하여 요청받은 size만큼 반환)")
-    private PagingResponse<GroupPhotoDetailResponse> blurryPhotos;
+    private PagingResponse<GroupPhotoDetailResponse> blurredPhotos;
 
     @Schema(description = "그룹 내 유사한 사진 묶음 목록 (페이징 적용하여 요청받은 size만큼 반환)")
     private PagingResponse<GroupPhotoSimilarClusterResponse> similarPhotos;
@@ -24,7 +24,7 @@ public class GroupPhotoOverviewResponse {
     public static GroupPhotoOverviewResponse from(GroupPhotoOverviewDto dto) {
         return GroupPhotoOverviewResponse.builder()
                 .allPhotos(PagingResponse.from(dto.getAllPhotos(), GroupPhotoDetailResponse::from))
-                .blurryPhotos(PagingResponse.from(dto.getBlurryPhotos(), GroupPhotoDetailResponse::from))
+                .blurredPhotos(PagingResponse.from(dto.getBlurredPhotos(), GroupPhotoDetailResponse::from))
                 .similarPhotos(PagingResponse.from(dto.getSimilarPhotos(), GroupPhotoSimilarClusterResponse::from))
                 .build();
     }

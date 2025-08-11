@@ -454,7 +454,7 @@ class PhotoRepositoryTest extends BaseRepositoryTest {
             photoRepository.saveAll(List.of(testPhoto1, testPhoto2));
 
             // when
-            Page<Photo> result = photoRepository.findBlurryPhotosByGroupId(testGroup.getId(), pageable);
+            Page<Photo> result = photoRepository.findBlurredPhotosByGroupId(testGroup.getId(), pageable);
 
             // then
             assertThat(result.getContent()).hasSize(2);
