@@ -190,7 +190,7 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
       if (result.success && result.data) {
         setTierPhotos(
           result.data?.tierPhotos as TierData || {
-            S: [{ id: "photo_s1", src: "/jaewan1.jpg", name: "S급 사진1" }],
+            S: [{ id: "photo_s1", src: "/dummy/jaewan1.jpg", name: "S급 사진1" }],
             A: [],
             B: [],
             C: [],
@@ -201,7 +201,7 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
       } else {
         // 기본 데이터 설정
         setTierPhotos({
-          S: [{ id: "photo_s1", src: "/jaewan1.jpg", name: "S급 사진1" }],
+          S: [{ id: "photo_s1", src: "/dummy/jaewan1.jpg", name: "S급 사진1" }],
           A: [],
           B: [],
           C: [],

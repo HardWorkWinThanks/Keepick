@@ -6,7 +6,7 @@ import type { TierPhoto } from "../types"
 // 샘플 티어 사진 데이터
 const tierPhotos: TierPhoto[] = [
   // S 티어 (5장)
-  { id: 1, src: "/jaewan1.jpg", title: "가족 여행 최고의 순간", date: "2024.07.15", tier: "S" },
+  { id: 1, src: "/dummy/jaewan1.jpg", title: "가족 여행 최고의 순간", date: "2024.07.15", tier: "S" },
   { id: 2, src: "/dummy/main-dummy2.jpg", title: "졸업식", date: "2024.02.20", tier: "S" },
   { id: 3, src: "/dummy/main-dummy3.jpg", title: "결혼기념일", date: "2024.05.10", tier: "S" },
   { id: 4, src: "/dummy/main-dummy4.jpg", title: "아기 첫걸음", date: "2024.03.25", tier: "S" },

@@ -93,7 +93,7 @@
   //       { id: "photo2", src: "/ssafy-dummy2.jpg", name: "사진2" },
   //       { id: "photo3", src: "/ssafy-dummy3.jpg", name: "사진3" },
   //       { id: "photo4", src: "/ssafy-dummy4.jpg", name: "사진4" },
-  //       { id: "photo5", src: "/jaewan1.jpg", name: "사진5" },
+  //       { id: "photo5", src: "/dummy/jaewan1.jpg", name: "사진5" },
   //       { id: "photo6", src: "/food-dummy1.jpg", name: "사진6" },
   //     ];
 

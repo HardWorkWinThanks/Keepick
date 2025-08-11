@@ -39,7 +39,7 @@ export function ProfileForm() {
   const safeProfileUrl =
     currentUser?.profileUrl && currentUser.profileUrl.trim() !== ""
       ? currentUser.profileUrl
-      : "/basic_profile.webp";
+      : "/placeholder/basic_profile.webp";
 
   const safeIdentificationUrl =
     currentUser?.identificationUrl &&
