@@ -6,6 +6,7 @@ import { ArrowLeft, Edit } from "lucide-react"
 import Link from "next/link"
 import { useTimelineAlbum } from "../model/useTimelineAlbum"
 import { TimelineEditingSidebar } from "./TimelineEditingSidebar"
+import { AlbumInfoModal } from "./AlbumInfoModal"
 import { PhotoDropZone } from "@/features/photo-drag-drop"
 import type { TimelineEvent } from "@/entities/album"
 import type { DragPhotoData } from "@/entities/photo"
@@ -23,7 +24,10 @@ function TimelineImageLayout({
   onImageDrop,
   dragOverImageIndex,
   onImageDragOver,
-  onImageDragLeave 
+  onImageDragLeave,
+  isSelectingCoverImage = false,
+  onCoverImageSelect,
+  selectedCoverImageId
 }: { 
   event: TimelineEvent; 
   index: number;
@@ -32,6 +36,9 @@ function TimelineImageLayout({
   dragOverImageIndex?: number | null;
   onImageDragOver?: (imageIndex: number) => void;
   onImageDragLeave?: () => void;
+  isSelectingCoverImage?: boolean;
+  onCoverImageSelect?: (photo: Photo) => void;
+  selectedCoverImageId?: string;
 }) {
   if (!event.images) return null
 
@@ -66,36 +73,66 @@ function TimelineImageLayout({
   const imageClasses = [layout.mainClass, layout.small1Class, layout.small2Class]
 
   const createImageDropZone = (imageIndex: number, className: string, imageData: any, filter: string) => {
-    const ImageWrapper = isEditMode ? PhotoDropZone : motion.div
+    const ImageWrapper = isEditMode && !isSelectingCoverImage ? PhotoDropZone : motion.div
+    
+    const isSelected = isSelectingCoverImage && imageData && selectedCoverImageId === imageData.id
 
     const baseProps = {
-      className: `${className} ${isEditMode && dragOverImageIndex === imageIndex ? 'ring-2 ring-[#FE7A25]' : ''}`
+      className: `${className} ${
+        isEditMode && dragOverImageIndex === imageIndex ? 'ring-2 ring-[#FE7A25]' : ''
+      } ${
+        isSelectingCoverImage ? 'cursor-pointer hover:ring-2 hover:ring-orange-300' : ''
+      } ${
+        isSelected ? 'ring-2 ring-orange-500' : ''
+      }`
     }
 
-    const editModeProps = isEditMode ? {
+    const editModeProps = isEditMode && !isSelectingCoverImage ? {
       onDrop: (dragData: DragPhotoData) => onImageDrop?.(imageIndex, dragData),
       onDragOver: () => onImageDragOver?.(imageIndex),
       onDragLeave: onImageDragLeave,
       isDragOver: dragOverImageIndex === imageIndex,
       dropZoneId: `image-${index}-${imageIndex}`
-    } : {
+    } : !isSelectingCoverImage ? {
       initial: { opacity: 0, scale: 0.9, rotate: index % 2 === 0 ? -2 : 2 },
       whileInView: { opacity: 1, scale: 1, rotate: index % 2 === 0 ? -2 : 2 },
       transition: { duration: 0.6, delay: 0.3 + imageIndex * 0.2 },
       viewport: { once: true }
+    } : {}
+
+    const handleCoverImageClick = () => {
+      if (isSelectingCoverImage && imageData && onCoverImageSelect) {
+        onCoverImageSelect({
+          id: imageData.id,
+          src: imageData.src,
+          name: imageData.name || `Timeline ${imageData.id}`
+        })
+      }
     }
 
     return (
-      <ImageWrapper key={`image-${imageIndex}`} {...baseProps} {...editModeProps}>
+      <ImageWrapper 
+        key={`image-${imageIndex}`} 
+        {...baseProps} 
+        {...editModeProps}
+        {...(isSelectingCoverImage ? { onClick: handleCoverImageClick } : {})}
+      >
         <img
           src={imageData?.src || "/placeholder.svg"}
           alt={`${event.title} ${imageIndex === 0 ? 'main' : `detail ${imageIndex}`}`}
           className={`w-full h-full object-cover ${filter}`}
         />
-        {isEditMode && (
+        {isEditMode && !isSelectingCoverImage && (
           <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
             <div className="text-white text-center text-sm font-keepick-primary">
               사진 {imageIndex + 1}
+            </div>
+          </div>
+        )}
+        {isSelectingCoverImage && isSelected && (
+          <div className="absolute inset-0 bg-orange-500/20 flex items-center justify-center">
+            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+              <span className="text-white text-sm">✓</span>
             </div>
           </div>
         )}
@@ -123,6 +160,15 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
   const [dragOverImage, setDragOverImage] = useState<{ sectionIndex: number; imageIndex: number } | null>(null)
   const [editedEvents, setEditedEvents] = useState<{ [key: string]: Partial<TimelineEvent> }>({})
   const [editedImages, setEditedImages] = useState<{ [key: string]: any[] }>({})
+  const [editedAlbumInfo, setEditedAlbumInfo] = useState({
+    title: '',
+    startDate: '',
+    endDate: '',
+    description: '',
+    coverImage: null as Photo | null
+  })
+  const [isSelectingCoverImage, setIsSelectingCoverImage] = useState(false)
+  const [showAlbumInfoModal, setShowAlbumInfoModal] = useState(false)
 
   const handleEditModeToggle = () => {
     setIsEditMode(!isEditMode)
@@ -141,7 +187,52 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       })
       setEditedEvents(initialEditData)
       setEditedImages(initialImageData)
+      // 앨범 정보 초기화 (더미 데이터)
+      setEditedAlbumInfo({
+        title: `ALBUM ${albumId} TIMELINE`,
+        startDate: '2024.03.15',
+        endDate: '2024.03.20',
+        description: '소중한 순간들을 함께 나누는 공간',
+        coverImage: dummyPhotos[0] // 첫 번째 사진을 기본 대표 이미지로
+      })
     }
+  }
+
+  const handleAlbumInfoChange = (field: keyof typeof editedAlbumInfo, value: string | Photo | null) => {
+    setEditedAlbumInfo(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const handleCoverImageSelect = (photo: Photo) => {
+    setEditedAlbumInfo(prev => ({
+      ...prev,
+      coverImage: photo
+    }))
+    setIsSelectingCoverImage(false)
+    setShowAlbumInfoModal(true) // 대표 이미지 선택 후 모달 다시 활성화
+  }
+
+  // 선택 가능한 모든 이미지 가져오기
+  const getAllSelectableImages = (): Photo[] => {
+    const allImages: Photo[] = [...dummyPhotos]
+    
+    // 타임라인 섹션의 모든 이미지들도 추가
+    timelineEvents.forEach(event => {
+      const eventImages = getDisplayImages(event)
+      eventImages.forEach(image => {
+        if (image && !allImages.find(existing => existing.id === image.id)) {
+          allImages.push({
+            id: image.id,
+            src: image.src,
+            name: image.name || `Timeline ${image.id}`
+          })
+        }
+      })
+    })
+    
+    return allImages
   }
 
   const handleImageDrop = (sectionIndex: number, imageIndex: number, dragData: DragPhotoData) => {
@@ -245,14 +336,28 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
             <ArrowLeft size={20} />
             <span className="font-keepick-primary text-sm">돌아가기</span>
           </Link>
-          <h1 className="font-keepick-heavy text-xl tracking-wider">ALBUM {albumId} TIMELINE</h1>
+          <div className="text-center">
+            <h1 className="font-keepick-heavy text-xl tracking-wider">ALBUM {albumId} TIMELINE</h1>
+            {isSelectingCoverImage && (
+              <p className="text-sm text-[#FE7A25] font-keepick-primary mt-1">대표 이미지를 선택하세요</p>
+            )}
+          </div>
           <button 
             onClick={handleEditModeToggle}
-            className="flex items-center gap-2 px-4 py-2 bg-[#FE7A25] hover:bg-[#e66b20] text-white rounded-lg transition-colors"
+            className={`group relative overflow-hidden px-5 py-2.5 rounded-xl transition-all duration-300 transform hover:scale-105 ${
+              isEditMode 
+                ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 hover:shadow-lg hover:shadow-green-500/25" 
+                : "bg-gradient-to-r from-[#FE7A25] to-[#FF6B35] hover:from-[#e66b20] hover:to-[#e65c2e] hover:shadow-lg hover:shadow-orange-500/25"
+            }`}
             title={isEditMode ? "편집 완료" : "앨범 편집"}
           >
-            <Edit size={16} />
-            <span className="font-keepick-primary text-sm">{isEditMode ? "완료" : "수정"}</span>
+            <div className="absolute inset-0 bg-white/10 translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
+            <div className="relative flex items-center gap-2 text-white">
+              <Edit size={16} />
+              <span className="font-keepick-primary text-sm tracking-wide">
+                {isEditMode ? "완료" : "수정"}
+              </span>
+            </div>
           </button>
         </div>
       </header>
@@ -291,6 +396,8 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
                       onChange={(e) => handleTextChange(event.id, 'date', e.target.value)}
                       className="text-[#FE7A25] font-keepick-primary text-sm tracking-wider bg-transparent border border-[#FE7A25]/30 rounded px-2 py-1 focus:border-[#FE7A25] focus:outline-none"
                       placeholder="날짜를 입력하세요"
+                      onDrop={(e) => e.preventDefault()}
+                      onDragOver={(e) => e.preventDefault()}
                     />
                   ) : (
                     <div className="text-[#FE7A25] font-keepick-primary text-sm tracking-wider">{event.date}</div>
@@ -305,6 +412,8 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
                       placeholder="제목을 입력하세요"
                       rows={Math.max(2, getDisplayValue(event, 'title').split('\n').length)}
                       style={{ height: 'auto', minHeight: '120px' }}
+                      onDrop={(e) => e.preventDefault()}
+                      onDragOver={(e) => e.preventDefault()}
                     />
                   ) : (
                     <h2 className="font-keepick-heavy text-4xl md:text-5xl lg:text-6xl leading-tight tracking-wide">
@@ -323,6 +432,8 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
                       placeholder="부제목을 입력하세요 (선택사항)"
                       rows={Math.max(1, Math.ceil((getDisplayValue(event, 'subtitle') || '').split('\n').length) || 1)}
                       style={{ height: 'auto', minHeight: '40px' }}
+                      onDrop={(e) => e.preventDefault()}
+                      onDragOver={(e) => e.preventDefault()}
                     />
                   ) : (
                     event.subtitle && (
@@ -343,6 +454,8 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
                       placeholder="설명을 입력하세요"
                       rows={Math.max(3, Math.ceil(getDisplayValue(event, 'description').length / 40) + getDisplayValue(event, 'description').split('\n').length)}
                       style={{ width: '100%', maxWidth: '28rem', height: 'auto', minHeight: '80px' }}
+                      onDrop={(e) => e.preventDefault()}
+                      onDragOver={(e) => e.preventDefault()}
                     />
                   ) : (
                     <p className="font-keepick-primary text-gray-300 leading-relaxed text-base md:text-lg max-w-md">
@@ -366,6 +479,9 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
                     dragOverImageIndex={dragOverImage?.sectionIndex === index ? dragOverImage.imageIndex : null}
                     onImageDragOver={(imageIndex) => handleImageDragOver(index, imageIndex)}
                     onImageDragLeave={handleImageDragLeave}
+                    isSelectingCoverImage={isSelectingCoverImage}
+                    onCoverImageSelect={handleCoverImageSelect}
+                    selectedCoverImageId={editedAlbumInfo.coverImage?.id}
                   />
                 </div>
               </div>
@@ -399,6 +515,18 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
         isOpen={isEditMode} 
         onClose={() => setIsEditMode(false)}
         availablePhotos={dummyPhotos}
+        onShowAlbumInfoModal={() => setShowAlbumInfoModal(true)}
+      />
+
+      {/* Album Info Modal */}
+      <AlbumInfoModal
+        isOpen={showAlbumInfoModal}
+        onClose={() => setShowAlbumInfoModal(false)}
+        albumInfo={editedAlbumInfo}
+        onAlbumInfoChange={handleAlbumInfoChange}
+        onCoverImageSelect={handleCoverImageSelect}
+        isSelectingCoverImage={isSelectingCoverImage}
+        onToggleCoverImageSelection={() => setIsSelectingCoverImage(!isSelectingCoverImage)}
       />
     </div>
   )
