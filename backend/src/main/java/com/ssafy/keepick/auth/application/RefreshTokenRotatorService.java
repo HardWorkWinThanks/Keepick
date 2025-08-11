@@ -49,44 +49,52 @@ public class RefreshTokenRotatorService {
             -- ARGV[5]: 현재 시간 (밀리초)
             -- ARGV[6]: 만료 시간 (초)
             -- ARGV[7]: TTL (초)
+            -- ARGV[8]: 기존 JTI
             
             -- 기존 토큰 존재 확인
             if redis.call('EXISTS', KEYS[1]) == 0 then
-                return {err = 'TOKEN_NOT_FOUND'}
+                return {'err','TOKEN_NOT_FOUND'}
             end
             
             -- 토큰 상태 확인
             local status = redis.call('HGET', KEYS[1], 'status')
             if status ~= 'ACTIVE' then
-                return {err = 'TOKEN_REUSED', status = status}
+                return {'err','TOKEN_REUSED', status or 'UNKNOWN'}
             end
             
             -- 패밀리 상태 확인
-            local familyStatusKey = 'family_status:' .. ARGV[4]
-            local familyStatus = redis.call('GET', familyStatusKey)
-            if familyStatus == 'REVOKED' or familyStatus == 'COMPROMISED' then
-                return {err = 'FAMILY_REVOKED', status = familyStatus}
+            local familyStatusKey = 'family_status:' .. tostring(ARGV[4])
+            local fstat = redis.call('GET', familyStatusKey)
+            if fstat == 'REVOKED' or fstat == 'COMPROMISED' then
+                return {'err','FAMILY_REVOKED', fstat}
+            end
+            
+            local ttl = tonumber(ARGV[7])
+            if not ttl then
+                return {'err','BAD_TTL', tostring(ARGV[7])}
             end
             
             -- 기존 토큰을 USED로 표시
-            redis.call('HSET', KEYS[1], 'status', 'USED')
-            redis.call('HSET', KEYS[1], 'last_used_at_ms', ARGV[5])
+            redis.call('HSET', KEYS[1], 'status', 'USED', 'last_used_at_ms', tostring(ARGV[5]))
             
             -- 새 토큰 생성
-            redis.call('HSET', KEYS[3], 'member_id', ARGV[2])
-            redis.call('HSET', KEYS[3], 'username', ARGV[3])
-            redis.call('HSET', KEYS[3], 'family_id', ARGV[4])
-            redis.call('HSET', KEYS[3], 'status', 'ACTIVE')
-            redis.call('HSET', KEYS[3], 'issued_at_ms', ARGV[5])
-            redis.call('HSET', KEYS[3], 'exp_sec', ARGV[6])
-            redis.call('EXPIRE', KEYS[3], ARGV[7])
+            redis.call('HSET', KEYS[3],
+                'member_id', tostring(ARGV[2]),
+                'username', tostring(ARGV[3] or ''),
+                'family_id', tostring(ARGV[4]),
+                'status', 'ACTIVE',
+                'issued_at_ms', tostring(ARGV[5]),
+                'exp_sec', tostring(ARGV[6])
+            )
+            redis.call('EXPIRE', KEYS[3], ttl)
             
             -- 패밀리 그룹 관리: 새 토큰 추가, 기존 토큰 제거
             redis.call('SADD', KEYS[2], ARGV[1])
-            redis.call('SREM', KEYS[2], redis.call('HGET', KEYS[1], 'jti'))
-            redis.call('EXPIRE', KEYS[2], ARGV[7])
+            redis.call('SREM', KEYS[2], ARGV[8])
+            redis.call('EXPIRE', KEYS[2], ttl)
             
-            return {ok = 'SUCCESS', member_id = ARGV[2], username = ARGV[3], family_id = ARGV[4], exp_sec = ARGV[6], ttl_seconds = ARGV[7]}
+            -- 반드시 배열로!
+            return {'ok', tostring(ARGV[2]), tostring(ARGV[3] or ''), tostring(ARGV[4]), tostring(ARGV[6]), tostring(ARGV[7])}
             """;
 
     /**
@@ -136,32 +144,32 @@ public class RefreshTokenRotatorService {
                 familyId,
                 String.valueOf(currentTimeMs),
                 String.valueOf(expSec),
-                String.valueOf(ttlSeconds)
+                String.valueOf(ttlSeconds),
+                rtJti
         );
 
         try {
             // Lua 스크립트 실행
             Object result = stringRedisTemplate.execute(
-                    RedisScript.of(ROTATE_TOKEN_SCRIPT, Object.class),
+                    RedisScript.of(ROTATE_TOKEN_SCRIPT, List.class), // 반환을 List로 기대
                     keys,
-                    args.toArray()
+                    args.toArray(new String[0])                      // 전부 문자열
             );
 
-            if (result instanceof List<?> resultList && !resultList.isEmpty()) {
-                Object firstResult = resultList.get(0);
-                
-                if ("err".equals(firstResult)) {
-                    String errorType = (String) resultList.get(1);
-                    handleRotationError(errorType, rtJti, memberId, familyId, resultList);
-                } else if ("ok".equals(firstResult)) {
+            if (result instanceof List<?> r && !r.isEmpty()) {
+                String tag = (String) r.get(0);
+                if ("err".equals(tag)) {
+                    handleRotationError((String) r.get(1), rtJti, memberId, familyId, r);
+                } else if ("ok".equals(tag)) {
+                    long expSecFromRedis = Long.parseLong((String) r.get(4));
+                    int ttlSec = Integer.parseInt((String) r.get(5));
                     log.info("리프레시 토큰 회전 성공: oldJti={}, newJti={}, memberId={}, familyId={}, expSec={}, ttlSeconds={}",
-                            rtJti, newJti, memberId, familyId, expSec, ttlSeconds);
-                    
-                    return new RefreshCtx(memberId, username, familyId, rtJti, newJti, expSec, (int) ttlSeconds);
+                            rtJti, newJti, memberId, familyId, expSecFromRedis, ttlSec);
+                    return new RefreshCtx(memberId, username, familyId, rtJti, newJti, expSecFromRedis, ttlSec);
                 }
             }
 
-            // 예상치 못한 결과
+            // 여기로 내려오면 형식 불일치
             log.error("토큰 회전 중 예상치 못한 결과: jti={}, result={}", rtJti, result);
             throw new BaseException(ErrorCode.INTERNAL_SERVER_ERROR);
 
@@ -181,7 +189,7 @@ public class RefreshTokenRotatorService {
                 throw new BaseException(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
                 
             case "TOKEN_REUSED":
-                String status = (String) resultList.get(2);
+                String status = resultList.size() > 2 ? (String) resultList.get(2) : "UNKNOWN";
                 log.warn("리프레시 토큰 재사용/폐기 감지: jti={}, status={}, memberId={}, familyId={}", 
                         rtJti, status, memberId, familyId);
                 
@@ -192,10 +200,15 @@ public class RefreshTokenRotatorService {
                 throw new BaseException(ErrorCode.REFRESH_TOKEN_REUSED);
                 
             case "FAMILY_REVOKED":
-                String familyStatus = (String) resultList.get(2);
+                String familyStatus = resultList.size() > 2 ? (String) resultList.get(2) : "UNKNOWN";
                 log.warn("폐기된 패밀리의 리프레시 토큰 사용 시도: jti={}, memberId={}, familyId={}, status={}", 
                         rtJti, memberId, familyId, familyStatus);
                 throw new BaseException(ErrorCode.REFRESH_TOKEN_REVOKED);
+                
+            case "BAD_TTL":
+                String badTtl = resultList.size() > 2 ? (String) resultList.get(2) : "UNKNOWN";
+                log.error("잘못된 TTL 값: jti={}, ttl={}", rtJti, badTtl);
+                throw new BaseException(ErrorCode.INTERNAL_SERVER_ERROR);
                 
             default:
                 log.error("알 수 없는 회전 오류: jti={}, errorType={}", rtJti, errorType);
