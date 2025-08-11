@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react";
-import { photoGalleryApi } from "../api/photoGalleryApi";
-import { extractMultipleImageMetadata } from "@/shared/lib/imageMetadata";
+import { uploadImages } from "@/features/image-upload/api/imageUploadApi";
 
 interface UploadProgress {
   fileName: string;
@@ -47,49 +46,23 @@ export function usePhotoUpload() {
     setTotalProgress(0);
 
     try {
-      // 1단계: 모든 파일의 메타데이터 추출
-      console.log('메타데이터 추출 시작...');
+      // 업로드 상태 변경
       initialProgress.forEach(item => {
-        updateFileProgress(item.fileName, { status: 'uploading', progress: 10 });
+        updateFileProgress(item.fileName, { status: 'uploading', progress: 20 });
       });
       
-      const metadataList = await extractMultipleImageMetadata(files);
+      // uploadImages 함수를 사용하여 전체 업로드 처리
+      console.log('이미지 업로드 시작...');
       
-      // 메타데이터 추출 완료
-      initialProgress.forEach(item => {
-        updateFileProgress(item.fileName, { progress: 30 });
-      });
-      
-      // 2단계: Presigned URL 요청
-      console.log('Presigned URL 요청...');
-      const uploadResponse = await photoGalleryApi.imagesUpload(groupId, {
-        files: metadataList
-      });
-      
-      // Presigned URL 받기 완료
-      initialProgress.forEach(item => {
-        updateFileProgress(item.fileName, { progress: 50 });
-      });
-
-      // 3단계: S3에 파일들을 병렬로 업로드
-      console.log('S3 업로드 시작...');
-      const uploadPromises = files.map(async (file, index) => {
+      // 진행률 업데이트를 위한 개별 처리
+      const uploadPromises = files.map(async (file) => {
         const fileName = file.name;
-        const presignedData = uploadResponse[index];
         
-        if (!presignedData) {
-          updateFileProgress(fileName, { 
-            status: 'error', 
-            error: 'Presigned URL을 받지 못했습니다.',
-            progress: 0 
-          });
-          return;
-        }
-
         try {
-          updateFileProgress(fileName, { progress: 70 });
+          updateFileProgress(fileName, { progress: 50 });
           
-          await photoGalleryApi.uploadToS3(presignedData.presignedUrl, file);
+          // 단일 파일을 배열로 감싸서 uploadImages 호출
+          const [result] = await uploadImages(groupId, [file]);
           
           updateFileProgress(fileName, { 
             status: 'completed', 
@@ -97,6 +70,7 @@ export function usePhotoUpload() {
           });
           
           console.log(`${fileName} 업로드 완료`);
+          return result;
         } catch (error) {
           console.error(`${fileName} 업로드 실패:`, error);
           updateFileProgress(fileName, { 
@@ -104,6 +78,7 @@ export function usePhotoUpload() {
             error: '업로드에 실패했습니다.',
             progress: 0 
           });
+          throw error;
         }
       });
 

@@ -89,7 +89,7 @@ function TimelineImageLayout({
     }
 
     const editModeProps = isEditMode && !isSelectingCoverImage ? {
-      onDrop: (dragData: DragPhotoData) => onImageDrop?.(imageIndex, dragData),
+      onDrop: (dragData: DragPhotoData, e: React.DragEvent) => onImageDrop?.(imageIndex, dragData),
       onDragOver: () => onImageDragOver?.(imageIndex),
       onDragLeave: onImageDragLeave,
       isDragOver: dragOverImageIndex === imageIndex,
@@ -111,11 +111,21 @@ function TimelineImageLayout({
       }
     }
 
+    if (isEditMode && !isSelectingCoverImage) {
+      return (
+        <PhotoDropZone 
+          key={`image-${imageIndex}`} 
+          {...baseProps} 
+          {...editModeProps}
+        >
+      );
+    }
+    
     return (
-      <ImageWrapper 
+      <motion.div 
         key={`image-${imageIndex}`} 
         {...baseProps} 
-        {...editModeProps}
+        {...(!isSelectingCoverImage ? editModeProps : {})}
         {...(isSelectingCoverImage ? { onClick: handleCoverImageClick } : {})}
       >
         <img

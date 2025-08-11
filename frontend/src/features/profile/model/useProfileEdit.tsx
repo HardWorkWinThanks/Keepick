@@ -6,6 +6,7 @@ import { profileApi } from "../api/profileApi";
 import { useAppDispatch, useAppSelector } from "@/shared/config/hooks";
 import { updateUser } from "@/entities/user/model/userSlice";
 import { useEffect } from "react";
+import { uploadImage } from "@/features/image-upload/api/imageUploadApi";
 
 // 프로필 수정 페이지의 상태와 비즈니스 로직을 관리하는 커스텀 훅입니다.
 export function useProfileEdit() {
@@ -61,23 +62,6 @@ export function useProfileEdit() {
   };
 
   /**
-   * 이미지 파일에서 width/height 추출하는 함수
-   */
-  const getImageDimensions = (
-    file: File
-  ): Promise<{ width: number; height: number }> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        resolve({ width: img.width, height: img.height });
-        URL.revokeObjectURL(img.src); // 메모리 해제
-      };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
-  /**
    * 범용 이미지 업로드 함수
    * @param imageType - 'profile' | 'identification'
    * @param setLoading - 해당 로딩 상태 setter
@@ -112,30 +96,8 @@ export function useProfileEdit() {
         try {
           setLoading(true);
 
-          // ✅ 이미지 크기 추출
-          const { width, height } = await getImageDimensions(file);
+          const { publicUrl } = await uploadImage(file)
 
-          // 1단계: PreSignedUrl 요청
-          const { presignedUrl, publicUrl } = await profileApi.getPresignedUrl({
-            fileName: file.name,
-            contentType: file.type,
-            fileSize: file.size,
-            width,
-            height,
-            takenAt: new Date().toISOString(),
-          });
-
-         
-
-          // console.log("presignedUrl:", presignedUrl);
-
-          console.log("1단계 완료");
-
-          // 2단계: S3 업로드
-          await profileApi.uploadToS3(presignedUrl, file);
-          console.log("2단계 완료");
-
-          // 3단계: 사용자 정보 업데이트 (타입에 따라 필드 결정)
           const updateData =
             imageType === "profile"
               ? { profileUrl: publicUrl }
