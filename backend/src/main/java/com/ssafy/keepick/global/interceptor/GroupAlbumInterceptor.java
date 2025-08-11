@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class GroupAlbumInterceptor implements HandlerInterceptor {
 
-    private final Pattern pattern = Pattern.compile("^/api/groups/(\\d+)/(\\w+)-albums/(\\d+)$");
+    private final Pattern pattern = Pattern.compile("^/api/groups/(\\d+)/(\\w+)-albums(?:/(\\d+))?$");
 
     private final TimelineAlbumRepository timelineAlbumRepository;
     private final TierAlbumRepository tierAlbumRepository;
@@ -41,10 +41,17 @@ public class GroupAlbumInterceptor implements HandlerInterceptor {
 
         Long groupId = Long.parseLong(matcher.group(1));
         String albumType = matcher.group(2);
-        Long albumId = Long.parseLong(matcher.group(3));
+        String albumIdStr = matcher.group(3);
         
-        log.info("[GroupAlbumInterceptor] 파싱된 정보 - GroupId: {}, AlbumType: {}, AlbumId: {}", groupId, albumType, albumId);
+        log.info("[GroupAlbumInterceptor] 파싱된 정보 - GroupId: {}, AlbumType: {}, AlbumId: {}", groupId, albumType, albumIdStr);
 
+        // 앨범 목록 조회인 경우 (albumId가 없는 경우) 검증 생략
+        if (albumIdStr == null) {
+            log.info("[GroupAlbumInterceptor] 앨범 목록 조회 요청 - 검증 생략");
+            return true;
+        }
+
+        Long albumId = Long.parseLong(albumIdStr);
         boolean isGroupAlbum = switch (albumType) {
             case "timeline" -> validateTimelineAlbumBelongsToGroup(albumId, groupId);
             case "tier" -> validateTierAlbumBelongsToGroup(albumId, groupId);

@@ -34,7 +34,7 @@ public class GroupService {
     public GroupDto createGroup(GroupCreateRequest request, Long loginMemberId) {
         // 그룹 생성
         Member member = memberRepository.findById(loginMemberId).orElseThrow(() -> new BaseException(MEMBER_NOT_FOUND));
-        Group group = Group.createGroup(request.getName(), member);
+        Group group = Group.createGroup(request.getName(), request.getDescription(), request.getGroupThumbnailUrl(), member);
         groupRepository.save(group);
         // 그룹 생성자는 그룹에 가입
         joinCreatorToGroup(group, member);
