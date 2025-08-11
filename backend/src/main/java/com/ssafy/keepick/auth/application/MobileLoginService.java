@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 모바일 소셜 로그인 서비스
@@ -37,11 +38,12 @@ public class MobileLoginService {
     private final MemberRepository memberRepository;
     private final JWTUtil jwtUtil;
     private final RestTemplate restTemplate;
+    private final RefreshTokenService refreshTokenService;
     
     /**
      * 모바일 소셜 로그인 처리
      * @param request provider와 accessToken을 포함한 로그인 요청
-     * @return JWT 토큰을 포함한 로그인 응답
+     * @return JWT 토큰과 리프레시 토큰을 포함한 로그인 응답
      */
     public MobileLoginResponse login(MobileLoginRequest request) {
         String provider = request.getProvider().toLowerCase();
@@ -87,7 +89,13 @@ public class MobileLoginService {
         // 4. JWT 토큰 생성 (memberId와 email을 username으로 사용)
         String jwtToken = jwtUtil.createToken(member.getId(), member.getEmail());
         
-        return MobileLoginResponse.of(jwtToken);
+        // 5. 리프레시 토큰 발급 (새로운 패밀리 ID 생성)
+        String familyId = UUID.randomUUID().toString();
+        String refreshTokenJti = refreshTokenService.issue(member.getId(), member.getEmail(), familyId);
+        
+        log.info("모바일 로그인 완료: 사용자 = {} (ID: {}), 패밀리 = {}", member.getEmail(), member.getId(), familyId);
+        
+        return MobileLoginResponse.of(jwtToken, refreshTokenJti);
     }
     
     /**
