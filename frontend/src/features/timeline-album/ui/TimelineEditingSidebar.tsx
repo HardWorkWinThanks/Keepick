@@ -9,21 +9,10 @@ import type { Photo, DragPhotoData } from "@/entities/photo"
 interface TimelineEditingSidebarProps {
   isOpen: boolean
   onClose: () => void
+  availablePhotos: Photo[]
 }
 
-// 더미 데이터 - 갤러리에서 선택한 사진들
-const dummyPhotos: Photo[] = [
-  { id: "1", src: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop", name: "산 풍경 1" },
-  { id: "2", src: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&h=300&fit=crop", name: "숲 풍경" },
-  { id: "3", src: "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=300&h=300&fit=crop", name: "바다 풍경" },
-  { id: "4", src: "https://images.unsplash.com/photo-1418489098061-ce87b5dc3aee?w=300&h=300&fit=crop", name: "산 풍경 2" },
-  { id: "5", src: "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=300&h=300&fit=crop", name: "호수 풍경" },
-  { id: "6", src: "https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=300&h=300&fit=crop", name: "일출 풍경" },
-  { id: "7", src: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop", name: "구름 풍경" },
-  { id: "8", src: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&h=300&fit=crop", name: "나무 풍경" },
-]
-
-export function TimelineEditingSidebar({ isOpen, onClose }: TimelineEditingSidebarProps) {
+export function TimelineEditingSidebar({ isOpen, onClose, availablePhotos }: TimelineEditingSidebarProps) {
   const [draggingPhotoId, setDraggingPhotoId] = useState<string | null>(null)
 
   const handleDragStart = (_: React.DragEvent<HTMLDivElement>, photo: Photo) => {
@@ -63,11 +52,11 @@ export function TimelineEditingSidebar({ isOpen, onClose }: TimelineEditingSideb
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium text-gray-300">선택된 사진</h3>
-                <span className="text-xs text-gray-500">{dummyPhotos.length}장</span>
+                <span className="text-xs text-gray-500">{availablePhotos.length}장</span>
               </div>
               
               <DraggablePhotoGrid
-                photos={dummyPhotos}
+                photos={availablePhotos}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 draggingPhotoId={draggingPhotoId}

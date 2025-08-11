@@ -16,7 +16,23 @@ interface TimelineAlbumPageProps {
 }
 
 // 섹션별 이미지 레이아웃 컴포넌트
-function TimelineImageLayout({ event, index }: { event: TimelineEvent; index: number }) {
+function TimelineImageLayout({ 
+  event, 
+  index, 
+  isEditMode = false,
+  onImageDrop,
+  dragOverImageIndex,
+  onImageDragOver,
+  onImageDragLeave 
+}: { 
+  event: TimelineEvent; 
+  index: number;
+  isEditMode?: boolean;
+  onImageDrop?: (imageIndex: number, dragData: DragPhotoData) => void;
+  dragOverImageIndex?: number | null;
+  onImageDragOver?: (imageIndex: number) => void;
+  onImageDragLeave?: () => void;
+}) {
   if (!event.images) return null
 
   const layoutProps = {
@@ -47,53 +63,56 @@ function TimelineImageLayout({ event, index }: { event: TimelineEvent; index: nu
   }
 
   const layout = layoutProps[index % 4 as keyof typeof layoutProps]
+  const imageClasses = [layout.mainClass, layout.small1Class, layout.small2Class]
+
+  const createImageDropZone = (imageIndex: number, className: string, imageData: any, filter: string) => {
+    const ImageWrapper = isEditMode ? PhotoDropZone : motion.div
+
+    const baseProps = {
+      className: `${className} ${isEditMode && dragOverImageIndex === imageIndex ? 'ring-2 ring-[#FE7A25]' : ''}`
+    }
+
+    const editModeProps = isEditMode ? {
+      onDrop: (dragData: DragPhotoData) => onImageDrop?.(imageIndex, dragData),
+      onDragOver: () => onImageDragOver?.(imageIndex),
+      onDragLeave: onImageDragLeave,
+      isDragOver: dragOverImageIndex === imageIndex,
+      dropZoneId: `image-${index}-${imageIndex}`
+    } : {
+      initial: { opacity: 0, scale: 0.9, rotate: index % 2 === 0 ? -2 : 2 },
+      whileInView: { opacity: 1, scale: 1, rotate: index % 2 === 0 ? -2 : 2 },
+      transition: { duration: 0.6, delay: 0.3 + imageIndex * 0.2 },
+      viewport: { once: true }
+    }
+
+    return (
+      <ImageWrapper key={`image-${imageIndex}`} {...baseProps} {...editModeProps}>
+        <img
+          src={imageData?.src || "/placeholder.svg"}
+          alt={`${event.title} ${imageIndex === 0 ? 'main' : `detail ${imageIndex}`}`}
+          className={`w-full h-full object-cover ${filter}`}
+        />
+        {isEditMode && (
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+            <div className="text-white text-center text-sm font-keepick-primary">
+              사진 {imageIndex + 1}
+            </div>
+          </div>
+        )}
+      </ImageWrapper>
+    )
+  }
 
   return (
     <>
       {/* Main large image */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9, rotate: index % 2 === 0 ? -2 : 2 }}
-        whileInView={{ opacity: 1, scale: 1, rotate: index % 2 === 0 ? -2 : 2 }}
-        transition={{ duration: 0.6, delay: 0.3 }}
-        viewport={{ once: true }}
-        className={layout.mainClass}
-      >
-        <img
-          src={event.images[0]?.src || "/placeholder.svg"}
-          alt={`${event.title} main`}
-          className={`w-full h-full object-cover ${layout.filters[0]}`}
-        />
-      </motion.div>
+      {createImageDropZone(0, layout.mainClass, event.images[0], layout.filters[0])}
 
       {/* Small image 1 */}
-      <motion.div
-        initial={{ opacity: 0, x: index % 2 === 0 ? 50 : -50, rotate: 3 }}
-        whileInView={{ opacity: 1, x: 0, rotate: 3 }}
-        transition={{ duration: 0.6, delay: 0.5 }}
-        viewport={{ once: true }}
-        className={layout.small1Class}
-      >
-        <img
-          src={event.images[1]?.src || "/placeholder.svg"}
-          alt={`${event.title} detail 1`}
-          className={`w-full h-full object-cover ${layout.filters[1]}`}
-        />
-      </motion.div>
+      {createImageDropZone(1, layout.small1Class, event.images[1], layout.filters[1])}
 
       {/* Small image 2 */}
-      <motion.div
-        initial={{ opacity: 0, x: index % 2 === 0 ? 30 : -30, rotate: -5 }}
-        whileInView={{ opacity: 1, x: 0, rotate: -5 }}
-        transition={{ duration: 0.6, delay: 0.7 }}
-        viewport={{ once: true }}
-        className={layout.small2Class}
-      >
-        <img
-          src={event.images[2]?.src || "/placeholder.svg"}
-          alt={`${event.title} detail 2`}
-          className={`w-full h-full object-cover ${layout.filters[2]}`}
-        />
-      </motion.div>
+      {createImageDropZone(2, layout.small2Class, event.images[2], layout.filters[2])}
     </>
   )
 }
@@ -101,14 +120,16 @@ function TimelineImageLayout({ event, index }: { event: TimelineEvent; index: nu
 export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPageProps) {
   const { timelineEvents, loading } = useTimelineAlbum(groupId, albumId)
   const [isEditMode, setIsEditMode] = useState(false)
-  const [dragOverSection, setDragOverSection] = useState<string | null>(null)
+  const [dragOverImage, setDragOverImage] = useState<{ sectionIndex: number; imageIndex: number } | null>(null)
   const [editedEvents, setEditedEvents] = useState<{ [key: string]: Partial<TimelineEvent> }>({})
+  const [editedImages, setEditedImages] = useState<{ [key: string]: any[] }>({})
 
   const handleEditModeToggle = () => {
     setIsEditMode(!isEditMode)
     if (!isEditMode) {
       // 편집 모드 진입 시 현재 데이터로 초기화
       const initialEditData: { [key: string]: Partial<TimelineEvent> } = {}
+      const initialImageData: { [key: string]: any[] } = {}
       timelineEvents.forEach(event => {
         initialEditData[event.id] = {
           title: event.title,
@@ -116,22 +137,52 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
           description: event.description,
           date: event.date
         }
+        initialImageData[event.id] = [...(event.images || [])]
       })
       setEditedEvents(initialEditData)
+      setEditedImages(initialImageData)
     }
   }
 
-  const handleDrop = (dragData: DragPhotoData, sectionId: string) => {
-    console.log("드롭된 사진:", dragData, "섹션:", sectionId)
-    // TODO: 실제 드롭 로직 구현
+  const handleImageDrop = (sectionIndex: number, imageIndex: number, dragData: DragPhotoData) => {
+    const currentEvent = timelineEvents[sectionIndex]
+    if (!currentEvent) return
+
+    // 사이드바에서 드래그된 사진 찾기
+    const draggedPhoto = dummyPhotos.find(photo => photo.id === dragData.photoId)
+    if (!draggedPhoto) return
+
+    // 현재 이미지와 새 이미지 교체
+    setEditedImages(prev => {
+      const currentImages = prev[currentEvent.id] || [...(currentEvent.images || [])]
+      const oldImage = currentImages[imageIndex]
+      
+      // 새 이미지로 교체
+      const newImages = [...currentImages]
+      newImages[imageIndex] = draggedPhoto
+
+      console.log("이미지 교체:", {
+        section: sectionIndex,
+        imageIndex,
+        oldImage: oldImage?.src,
+        newImage: draggedPhoto.src
+      })
+
+      return {
+        ...prev,
+        [currentEvent.id]: newImages
+      }
+    })
+
+    setDragOverImage(null)
   }
 
-  const handleDragOver = (sectionId: string) => {
-    setDragOverSection(sectionId)
+  const handleImageDragOver = (sectionIndex: number, imageIndex: number) => {
+    setDragOverImage({ sectionIndex, imageIndex })
   }
 
-  const handleDragLeave = () => {
-    setDragOverSection(null)
+  const handleImageDragLeave = () => {
+    setDragOverImage(null)
   }
 
   const handleTextChange = (eventId: string, field: keyof TimelineEvent, value: string) => {
@@ -150,6 +201,25 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     }
     return event[field] as string
   }
+
+  const getDisplayImages = (event: TimelineEvent): any[] => {
+    if (isEditMode && editedImages[event.id]) {
+      return editedImages[event.id]
+    }
+    return event.images || []
+  }
+
+  // 더미 데이터를 상위 컴포넌트로 이동
+  const dummyPhotos = [
+    { id: "1", src: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop", name: "산 풍경 1" },
+    { id: "2", src: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&h=300&fit=crop", name: "숲 풍경" },
+    { id: "3", src: "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=300&h=300&fit=crop", name: "바다 풍경" },
+    { id: "4", src: "https://images.unsplash.com/photo-1418489098061-ce87b5dc3aee?w=300&h=300&fit=crop", name: "산 풍경 2" },
+    { id: "5", src: "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=300&h=300&fit=crop", name: "호수 풍경" },
+    { id: "6", src: "https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=300&h=300&fit=crop", name: "일출 풍경" },
+    { id: "7", src: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop", name: "구름 풍경" },
+    { id: "8", src: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&h=300&fit=crop", name: "나무 풍경" },
+  ]
 
   if (loading) {
     return (
@@ -283,26 +353,21 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
                 </div>
 
                 {/* Images Collage */}
-                <PhotoDropZone
-                  onDrop={(dragData) => handleDrop(dragData, `section-${index}`)}
-                  onDragOver={() => handleDragOver(`section-${index}`)}
-                  onDragLeave={handleDragLeave}
-                  isDragOver={dragOverSection === `section-${index}`}
-                  dropZoneId={`section-${index}`}
+                <div
                   className={`col-span-12 lg:col-span-7 relative h-[500px] md:h-[600px] ${
                     index % 2 === 0 ? "" : "lg:col-start-1"
-                  } ${isEditMode && dragOverSection === `section-${index}` ? "ring-2 ring-[#FE7A25] bg-[#FE7A25]/10" : ""}`}
+                  }`}
                 >
-                  <TimelineImageLayout event={event} index={index} />
-                  {isEditMode && (
-                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                      <div className="text-white text-center">
-                        <div className="text-lg font-keepick-primary">사진을 여기에 드롭하세요</div>
-                        <div className="text-sm text-gray-300">최대 3장까지 추가 가능</div>
-                      </div>
-                    </div>
-                  )}
-                </PhotoDropZone>
+                  <TimelineImageLayout 
+                    event={{ ...event, images: getDisplayImages(event) }}
+                    index={index}
+                    isEditMode={isEditMode}
+                    onImageDrop={(imageIndex, dragData) => handleImageDrop(index, imageIndex, dragData)}
+                    dragOverImageIndex={dragOverImage?.sectionIndex === index ? dragOverImage.imageIndex : null}
+                    onImageDragOver={(imageIndex) => handleImageDragOver(index, imageIndex)}
+                    onImageDragLeave={handleImageDragLeave}
+                  />
+                </div>
               </div>
             </div>
           </motion.section>
@@ -332,7 +397,8 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       {/* Timeline Editing Sidebar */}
       <TimelineEditingSidebar 
         isOpen={isEditMode} 
-        onClose={() => setIsEditMode(false)} 
+        onClose={() => setIsEditMode(false)}
+        availablePhotos={dummyPhotos}
       />
     </div>
   )
