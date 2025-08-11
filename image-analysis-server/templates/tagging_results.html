@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>분석 결과</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    h1 { color: #333; }
+    h2 { margin-top: 32px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    .group-box { border: 1px solid #ccc; padding: 10px; margin-bottom: 20px; }
+    .group-title { font-weight: bold; margin-bottom: 10px; }
+    .group-images, .tagged, .thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+    .group-images img, .tagged img, .thumbs img { width: 150px; height: 100px; object-fit: cover; border: 1px solid #ddd; }
+    .tagged img { border: 2px solid #5cb85c; }
+    .chip { display:inline-block; padding:2px 8px; background:#eef2ff; border-radius:999px; font-size:12px; margin-right:6px }
+    .muted { color:#666; font-size:12px; }
+    .card { border:1px solid #e5e7eb; border-radius:8px; padding:10px; margin:10px 0; }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .kv { font-family: ui-monospace, Menlo, Consolas, monospace; font-size:12px; margin-top:4px; }
+  </style>
+</head>
+<body>
+  <h1>🔍 분석 결과</h1>
+
+  {# ----------------------------------------------------
+     1) 흐림 사진 (레거시/신규 키 모두 지원)
+     전달 예시:
+       results = quality["results"]
+     ---------------------------------------------------- #}
+  <h2>📷 흐림 사진</h2>
+  {% if results %}
+    {% set blur_rows = [] %}
+    {% for r in results %}
+      {% set is_blur = r.get('Blur', r.get('is_blur')) %}
+      {% if is_blur %}
+        {% set _ = blur_rows.append(r) %}
+      {% endif %}
+    {% endfor %}
+
+    {% if blur_rows %}
+      <table>
+        <thead>
+          <tr><th>파일명</th><th>흐림 여부</th><th>Laplacian 값</th></tr>
+        </thead>
+        <tbody>
+          {% for r in blur_rows %}
+            {% set fname = r.get('File', r.get('name')) %}
+            {% set lap = r.get('LaplacianVar', r.get('laplacian_variance')) %}
+            <tr>
+              <td>{{ fname }}</td>
+              <td>흐림</td>
+              <td>{{ "%.2f"|format(lap|float) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>흐림 사진 없음</p>
+    {% endif %}
+  {% else %}
+    <p>흐림 사진 없음</p>
+  {% endif %}
+
+  {# ----------------------------------------------------
+     2) 유사 사진 그룹 (새 groups 또는 groups_legacy)
+     추가로 album_images(name->url) 있으면 원본 URL로 표시
+     전달 예시:
+       groups = quality["groups"]
+       groups_legacy = quality.get("groups_legacy")
+       album_images = { name: url, ... }  # optional
+     ---------------------------------------------------- #}
+  <h2>🧩 유사 사진 그룹</h2>
+  {% set show_groups = groups if groups else [] %}
+  {% if not show_groups and groups_legacy %}
+    {% set show_groups = groups_legacy | map('list') | list
+      | map('tojson') %}{% endset %}
+  {% endif %}
+
+  {% if groups or groups_legacy %}
+    {% if groups %}
+      {# 새 구조: [{group_id, images:[...], similarities:[...]}] #}
+      {% for g in groups %}
+        <div class="group-box">
+          <div class="group-title">그룹 #{{ g.group_id }} ({{ g.images|length }}장)</div>
+          <div class="group-images">
+            {% for name in g.images %}
+              {% if album_images and album_images.get(name) %}
+                <img src="{{ album_images.get(name) }}" alt="{{ name }}">
+              {% else %}
+                {# 서버에 저장된 파일명이라면 기존 라우트 재사용 #}
+                <img src="{{ url_for('uploaded_source_file', filename=name) }}" alt="{{ name }}">
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% if g.similarities %}
+            <div class="kv muted">
+              유사쌍 예: 
+              {% for s in g.similarities[:5] %}
+                {{ s.image1 }}~{{ s.image2 }} ({{ "%.2f"|format(s.similarity) }}){% if not loop.last %}, {% endif %}
+              {% endfor %}
+              {% if g.similarities|length > 5 %} …{% endif %}
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      {# 레거시: [["img1","img2"], ...] #}
+      {% for group in groups_legacy %}
+        <div class="group-box">
+          <div class="group-title">유사 사진 그룹 ({{ group|length }}장)</div>
+          <div class="group-images">
+            {% for name in group %}
+              {% if album_images and album_images.get(name) %}
+                <img src="{{ album_images.get(name) }}" alt="{{ name }}">
+              {% else %}
+                <img src="{{ url_for('uploaded_source_file', filename=name) }}" alt="{{ name }}">
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% else %}
+    <p>유사 그룹 없음</p>
+  {% endif %}
+
+  {# ----------------------------------------------------
+     3) 얼굴 태그 + 객체 인식 결과
+     두 형태 모두 표시:
+       (A) per-image 방식: tag_results = tag_and_detect["results"]
+       (B) 인물별 묶음: tagged_images_by_person (또는 tagged_images)
+     태깅 썸네일은 base64 또는 서버 저장 파일 경로로 표시
+     ---------------------------------------------------- #}
+  <h2>🏷️ 태깅/객체 인식 결과</h2>
+
+  {# (A) per-image 상세 #}
+  {% if tag_results %}
+    {% for it in tag_results %}
+      <div class="card">
+        <div class="row">
+          <div>
+            <span class="chip">이미지</span> <b>{{ it.image_name }}</b>
+          </div>
+          <div class="muted">
+            얼굴 {{ it.total_faces }}개
+            {% if it.faces %} · 매칭 {{ it.faces|length }}개{% endif %}
+            {% if it.objects %} · 객체 {{ it.objects|length }}개{% endif %}
+          </div>
+        </div>
+        <div class="thumbs" style="margin-top:8px">
+          {% set img_src = None %}
+          {% if it.tagged_image_base64 %}
+            {% set img_src = "data:image/jpeg;base64," + it.tagged_image_base64 %}
+          {% elif it.tagged_image_path %}
+            {# 파일 시스템 경로라면 직접 서빙 라우트가 있어야 함(예: /uploads/tagged_results/<fn>) #}
+            {% set img_src = it.tagged_image_path %}
+          {% elif it.tagged_image_filename %}
+            {% set img_src = url_for('static', filename='results/' + it.tagged_image_filename) %}
+          {% elif album_images and album_images.get(it.image_name) %}
+            {% set img_src = album_images.get(it.image_name) %}
+          {% endif %}
+
+          {% if img_src %}
+            <img src="{{ img_src }}" alt="{{ it.image_name }}">
+          {% endif %}
+        </div>
+
+        {% if it.faces %}
+          <div class="kv"><b>Faces:</b>
+            {% for f in it.faces %}
+              {{ f.person_name }} ({{ "%.2f"|format(f.distance) }}){% if not loop.last %}, {% endif %}
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% if it.objects %}
+          <div class="kv"><b>Objects:</b>
+            {% for o in it.objects %}
+              {{ o.label }} ({{ "%.2f"|format(o.conf) }}){% if not loop.last %}, {% endif %}
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="muted">배치 태깅 결과가 아직 없습니다.</p>
+  {% endif %}
+
+  {# (B) 인물별 묶음 (레거시 호환) #}
+  {% set person_map = tagged_images_by_person if tagged_images_by_person else tagged_images %}
+  {% if person_map %}
+    <h3>👤 인물별 태그 이미지</h3>
+    {% for name, images in person_map.items() %}
+      <div class="group-box">
+        <div class="group-title">인물: {{ name }}</div>
+        <div class="tagged">
+          {% for fn in images %}
+            {# 새 구조에선 파일명이 아닌 원본 name일 수 있음 → album_images 폴백 #}
+            {% if album_images and album_images.get(fn) %}
+              <img src="{{ album_images.get(fn) }}" alt="{{ fn }}">
+            {% else %}
+              <img src="{{ url_for('static', filename='results/' + fn) }}" alt="{{ fn }}">
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  {% endif %}
+</body>
+</html>
