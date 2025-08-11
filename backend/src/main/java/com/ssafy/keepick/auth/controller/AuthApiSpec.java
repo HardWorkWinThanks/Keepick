@@ -149,20 +149,32 @@ public interface AuthApiSpec {
     @Operation(
         summary = "토큰 갱신",
         description = """
-            쿠키에 저장된 refresh_token을 검증하고 새로운 액세스 토큰을 발급합니다.
+            웹/모바일 클라이언트의 refresh_token을 검증하고 새로운 액세스 토큰을 발급합니다.
+            
+            🔄 자동 클라이언트 감지:
+            1. User-Agent 헤더 확인
+            2. 쿠키 존재 여부 확인  
+            3. 모바일 앱 특화 헤더 (X-Mobile-App) 확인
+            
+            🌐 웹 클라이언트:
+            - 쿠키에 저장된 refresh_token을 사용
+            - 새로운 리프레시 토큰은 쿠키로 자동 설정
+            - 응답 본문에는 새로운 액세스 토큰만 포함
+            
+            📱 모바일 클라이언트:
+            - 요청 바디의 refreshToken 파라미터 사용
+            - 응답 본문에 새로운 액세스 토큰과 리프레시 토큰 모두 포함
             
             🔄 동작 흐름:
-            1. 클라이언트에서 쿠키에 저장된 refresh_token 확인
+            1. 클라이언트 타입 자동 감지
             2. 리프레시 토큰 검증 및 회전 (새로운 리프레시 토큰 발급)
             3. 새로운 액세스 토큰 발급
-            4. 응답 본문에 새로운 액세스 토큰 반환
-            5. 새로운 리프레시 토큰을 쿠키에 설정
+            4. 클라이언트 타입에 따른 응답 반환
             
             ⚠️ 주의사항:
-            - 쿠키에 유효한 refresh_token이 있어야 합니다
+            - 웹: 쿠키에 유효한 refresh_token이 있어야 합니다
+            - 모바일: 요청 바디에 refreshToken 파라미터가 있어야 합니다
             - 리프레시 토큰이 만료되거나 재사용된 경우 갱신할 수 없습니다
-            - 새로운 액세스 토큰은 응답 본문에 포함됩니다
-            - 새로운 리프레시 토큰은 HttpOnly 쿠키로 자동 설정됩니다
             """
     )
     @ApiResponses(value = {
@@ -172,18 +184,33 @@ public interface AuthApiSpec {
             content = @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ApiResponse.class),
-                examples = @ExampleObject(
-                    name = "성공 응답 예시",
-                    value = """
-                    {
-                        "status": 200,
-                        "message": "요청이 성공적으로 처리되었습니다.",
-                        "data": {
-                            "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                examples = {
+                    @ExampleObject(
+                        name = "웹 클라이언트 성공 응답",
+                        value = """
+                        {
+                            "status": 200,
+                            "message": "요청이 성공적으로 처리되었습니다.",
+                            "data": {
+                                "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                            }
                         }
-                    }
-                    """
-                )
+                        """
+                    ),
+                    @ExampleObject(
+                        name = "모바일 클라이언트 성공 응답",
+                        value = """
+                        {
+                            "status": 200,
+                            "message": "요청이 성공적으로 처리되었습니다.",
+                            "data": {
+                                "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                                "refreshToken": "5abcde9-b7af-123b-9425-bb01234567-example"
+                            }
+                        }
+                        """
+                    )
+                }
             )
         ),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -206,5 +233,5 @@ public interface AuthApiSpec {
             )
         )
     })
-    ApiResponse<TokenRefreshResponse> refreshToken(HttpServletRequest request, HttpServletResponse response);
+    ApiResponse<?> refreshToken(HttpServletRequest request, HttpServletResponse response);
 }

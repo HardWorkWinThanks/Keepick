@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ssafy.keepick.auth.application.MobileAuthService;
 import com.ssafy.keepick.auth.application.AuthService;
 import com.ssafy.keepick.auth.controller.request.MobileLoginRequest;
-import com.ssafy.keepick.auth.controller.request.MobileTokenRefreshRequest;
 import com.ssafy.keepick.auth.controller.response.MobileLoginResponse;
 import com.ssafy.keepick.auth.controller.response.MobileTokenRefreshResponse;
 import com.ssafy.keepick.auth.controller.response.TokenRefreshResponse;
@@ -44,24 +43,23 @@ public class AuthController implements AuthApiSpec {
     
     @PostMapping("/token/refresh")
     @Override
-    public ApiResponse<TokenRefreshResponse> refreshToken(HttpServletRequest request, HttpServletResponse response) {
-        log.info("웹 리프레시 토큰으로 액세스 토큰 갱신 요청");
+    public ApiResponse<?> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        log.info("토큰 갱신 요청 (웹/모바일 자동 감지)");
         
         var refreshDto = authService.refreshToken(request, response);
-        TokenRefreshResponse body = refreshDto.toResponse();
         
-        log.info("웹 액세스 토큰 갱신 성공");
-        return ApiResponse.ok(body);
-    }
-    
-    @PostMapping("/token/refresh/mobile")
-    public ApiResponse<MobileTokenRefreshResponse> refreshTokenMobile(@Valid @RequestBody MobileTokenRefreshRequest request) {
-        log.info("모바일 리프레시 토큰으로 액세스 토큰 갱신 요청");
-        
-        var refreshDto = mobileAuthService.refreshToken(request.getRefreshToken());
-        MobileTokenRefreshResponse response = refreshDto.toResponse();
-        
-        log.info("모바일 액세스 토큰 갱신 성공");
-        return ApiResponse.ok(response);
+        // DTO 타입에 따라 적절한 응답 변환
+        if (refreshDto instanceof com.ssafy.keepick.auth.application.dto.WebTokenRefreshDto webDto) {
+            TokenRefreshResponse body = webDto.toResponse();
+            log.info("웹 액세스 토큰 갱신 성공");
+            return ApiResponse.ok(body);
+        } else if (refreshDto instanceof com.ssafy.keepick.auth.application.dto.MobileTokenRefreshDto mobileDto) {
+            MobileTokenRefreshResponse body = mobileDto.toResponse();
+            log.info("모바일 액세스 토큰 갱신 성공");
+            return ApiResponse.ok(body);
+        } else {
+            log.error("알 수 없는 DTO 타입: {}", refreshDto.getClass().getSimpleName());
+            throw new RuntimeException("알 수 없는 응답 타입");
+        }
     }
 }
