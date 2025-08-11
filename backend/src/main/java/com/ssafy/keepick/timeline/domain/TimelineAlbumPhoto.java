@@ -4,7 +4,6 @@ import com.ssafy.keepick.photo.domain.Photo;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
 import java.util.Objects;
 
 @EqualsAndHashCode(of = {"id"})
@@ -28,8 +27,6 @@ public class TimelineAlbumPhoto {
     private Photo photo;
 
     private Integer sequence;
-
-    private LocalDateTime deletedAt;
 
     private TimelineAlbumPhoto(TimelineAlbum album, Photo photo) {
         this.album = album;
@@ -55,17 +52,6 @@ public class TimelineAlbumPhoto {
         if (!Objects.equals(this.sequence, sequence)) {
             this.sequence = sequence;
         }
-    }
-
-    public void delete() {
-        // 섹션과 앨범에서 사진 삭제
-        if(this.section != null) {
-            this.section.removePhoto(this);
-        }
-        if(this.album != null) {
-            this.album.getPhotos().remove(this);
-        }
-        this.deletedAt = LocalDateTime.now();
     }
 
 }

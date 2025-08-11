@@ -8,12 +8,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface TimelineAlbumPhotoRepository extends JpaRepository<TimelineAlbumPhoto, Long> {
 
     @EntityGraph(attributePaths = "photo")
-    List<TimelineAlbumPhoto> findUnusedPhotosByAlbumIdAndSectionIsNullAndDeletedAtIsNull(Long albumId);
+    List<TimelineAlbumPhoto> findUnusedPhotosByAlbumIdAndSectionIsNull(Long albumId);
 
     // 주어진 사진 목록 중 타임라인 앨범에 없는 사진 조회
     @Query("""
@@ -24,7 +23,6 @@ public interface TimelineAlbumPhotoRepository extends JpaRepository<TimelineAlbu
             SELECT tap.photo.id
             FROM TimelineAlbumPhoto tap
             WHERE tap.album.id = :albumId
-            AND tap.deletedAt IS NULL
         )
     """)
     List<Photo> findNotInAlbumByPhotoIds(@Param("albumId") Long albumId, @Param("photoIds") List<Long> photoIds);
@@ -34,10 +32,9 @@ public interface TimelineAlbumPhotoRepository extends JpaRepository<TimelineAlbu
         FROM TimelineAlbumPhoto tap
         WHERE tap.album.id = :albumId
         AND tap.photo.id IN :photoIds
-        AND tap.deletedAt IS NULL
     """)
     List<TimelineAlbumPhoto> findAllByAlbumIdAndPhotoIdIn(@Param("albumId") Long albumId, @Param("photoIds") List<Long> photoIds);
 
     @EntityGraph(attributePaths = {"section", "photo"})
-    List<TimelineAlbumPhoto> findAllByAlbumIdAndDeletedAtIsNull(Long albumId);
+    List<TimelineAlbumPhoto> findAllByAlbumId(Long albumId);
 }

@@ -15,8 +15,6 @@ public interface TimelineAlbumSectionRepository extends JpaRepository<TimelineAl
         LEFT JOIN FETCH tas.photos tsp
         LEFT JOIN FETCH tsp.photo p
         WHERE tas.album.id = :albumId
-        AND tas.deletedAt IS NULL
-        AND tsp.deletedAt IS NULL
         ORDER BY tas.sequence ASC, tsp.sequence ASC
     """)
     List<TimelineAlbumSection> findAllByAlbumId(@Param("albumId") Long albumId);

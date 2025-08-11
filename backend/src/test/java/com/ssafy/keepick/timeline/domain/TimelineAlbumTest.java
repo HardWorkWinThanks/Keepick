@@ -72,7 +72,6 @@ class TimelineAlbumTest extends BaseTest {
 
         // then
         assertThat(album.getSections()).doesNotContain(section);
-        assertThat(section.getDeletedAt()).isNotNull();
     }
 
     @DisplayName("타임라인 앨범의 사진 개수는 섹션에 포함된 사진 개수와 같다.")
@@ -150,40 +149,6 @@ class TimelineAlbumTest extends BaseTest {
 
         assertThat(album.getPhotos()).contains(albumPhoto);
         assertThat(albumPhoto.getAlbum()).isEqualTo(album);
-
-    }
-
-
-    @DisplayName("타임라인 앨범의 사진을 삭제한다.")
-    @Test
-    void removePhotoFromTimelineAlbum() {
-        // given
-        Group group = Group.createGroup("TEST", null);
-
-        Photo photo1 = createPhoto(group);
-        Photo photo2 = createPhoto(group);
-
-        TimelineAlbum album = TimelineAlbum.createTimelineAlbum(group, List.of(photo1, photo2));
-
-        TimelineAlbumPhoto albumPhoto1 = album.getPhotos().get(0);
-        TimelineAlbumPhoto albumPhoto2 = album.getPhotos().get(1);
-
-        TimelineAlbumSection section = album.createTimelineAlbumSection();
-        section.addPhoto(albumPhoto1);
-
-        // when
-        albumPhoto1.delete();
-        albumPhoto2.delete();
-
-        // then
-        assertThat(albumPhoto1.getDeletedAt()).isNotNull();
-        assertThat(albumPhoto2.getDeletedAt()).isNotNull();
-
-        // 섹션과 앨범에서 사진 제거
-        assertThat(section.getPhotos()).doesNotContain(albumPhoto1);
-        assertThat(section.getPhotos()).doesNotContain(albumPhoto2);
-        assertThat(album.getPhotos()).doesNotContain(albumPhoto1);
-        assertThat(album.getPhotos()).doesNotContain(albumPhoto2);
 
     }
 

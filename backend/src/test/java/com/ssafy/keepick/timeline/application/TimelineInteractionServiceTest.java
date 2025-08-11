@@ -230,7 +230,7 @@ class TimelineInteractionServiceTest extends BaseRepositoryTest {
 
         // when
         timelineInteractionService.deletePhotoFromTimelineAlbum(group.getId(), album.getId(), request);
-        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findAllByAlbumIdAndDeletedAtIsNull(album.getId());
+        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findAllByAlbumId(album.getId());
 
         // then
         assertThat(photos).extracting("id").doesNotContain(photo.getId());

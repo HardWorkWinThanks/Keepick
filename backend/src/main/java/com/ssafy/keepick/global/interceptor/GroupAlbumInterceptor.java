@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class GroupAlbumInterceptor implements HandlerInterceptor {
 
-    private final Pattern pattern = Pattern.compile("^/api/groups/(\\d+)/(\\w+)-albums(?:/(\\d+))?$");
+    private final Pattern pattern = Pattern.compile("^/api/groups/(\\d+)/(\\w+)-albums(?:/(\\d+)(?:/([^/]+))?)?$");
 
     private final TimelineAlbumRepository timelineAlbumRepository;
     private final TierAlbumRepository tierAlbumRepository;

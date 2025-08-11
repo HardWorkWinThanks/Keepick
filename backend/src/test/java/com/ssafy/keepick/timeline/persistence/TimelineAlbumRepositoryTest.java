@@ -49,7 +49,6 @@ class TimelineAlbumRepositoryTest extends BaseRepositoryTest {
         TimelineAlbumSection section1 = album1.createTimelineAlbumSection();
         TimelineAlbumSection section2 = album1.createTimelineAlbumSection();
         TimelineAlbumSection section3 = album1.createTimelineAlbumSection();
-        section3.delete();
 
         entityManager.flush();
         entityManager.clear();
@@ -60,9 +59,8 @@ class TimelineAlbumRepositoryTest extends BaseRepositoryTest {
 
         // then
         assertThat(findAlbum1.getId()).isEqualTo(album1.getId());
-        assertThat(findAlbum1.getSections().size()).isEqualTo(2);
-        assertThat(findAlbum1.getSections()).containsExactly(section1, section2);
-        assertThat(findAlbum1.getSections()).doesNotContain(section3);
+        assertThat(findAlbum1.getSections().size()).isEqualTo(3);
+        assertThat(findAlbum1.getSections()).containsExactly(section1, section2, section3);
 
         assertThat(findAlbum2.isEmpty()).isTrue();
     }

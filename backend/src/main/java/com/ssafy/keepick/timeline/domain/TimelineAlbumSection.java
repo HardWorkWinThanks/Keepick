@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -35,8 +34,6 @@ public class TimelineAlbumSection {
 
     @OneToMany(mappedBy = "section")
     private List<TimelineAlbumPhoto> photos = new ArrayList<>();
-
-    private LocalDateTime deletedAt;
 
     public TimelineAlbumSection(TimelineAlbum album) {
         this.album = album;
@@ -77,19 +74,17 @@ public class TimelineAlbumSection {
     }
 
     public void removePhoto(TimelineAlbumPhoto photo) {
-        if(!this.photos.contains(photo)) {
-            throw new IllegalStateException("해당 사진은 섹션에 존재하지 않아 삭제할 수 없습니다. photoId=" + photo.getId());
+        if (this.photos.remove(photo)) {
+            photo.removeFromSection();
+            this.album.decreasePhotoCount();
         }
-        this.photos.remove(photo);
-        photo.removeFromSection();
-        this.album.decreasePhotoCount();
     }
 
-    public void delete() {
+    public void removeFromAlbum() {
+        // 섹션에 포함된 사진을 사용하지 않는 상태로 바꿈
         for (var photo : new ArrayList<>(this.photos)) {
             this.removePhoto(photo);
         }
-        this.deletedAt = LocalDateTime.now();
     }
 
 }

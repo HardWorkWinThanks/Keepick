@@ -20,7 +20,6 @@ public interface TimelineAlbumRepository extends JpaRepository<TimelineAlbum, Lo
         LEFT JOIN FETCH a.sections s
         WHERE a.id = :id
         AND a.deletedAt IS NULL
-        AND s.deletedAt IS NULL
     """)
     Optional<TimelineAlbum> findAlbumWithSectionsByIdAndDeletedAtIsNull(@Param("id") Long id);
 

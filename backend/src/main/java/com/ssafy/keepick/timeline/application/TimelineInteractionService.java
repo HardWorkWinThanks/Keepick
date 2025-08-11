@@ -16,6 +16,7 @@ import com.ssafy.keepick.timeline.domain.TimelineAlbumPhoto;
 import com.ssafy.keepick.timeline.domain.TimelineAlbumSection;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumPhotoRepository;
 import com.ssafy.keepick.timeline.persistence.TimelineAlbumRepository;
+import com.ssafy.keepick.timeline.persistence.TimelineAlbumSectionRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ import java.util.stream.IntStream;
 public class TimelineInteractionService {
 
     private final TimelineAlbumRepository timelineAlbumRepository;
+    private final TimelineAlbumSectionRepository timelineAlbumSectionRepository;
     private final TimelineAlbumPhotoRepository timelineAlbumPhotoRepository;
     private final GroupRepository groupRepository;
     private final PhotoRepository photoRepository;
@@ -148,7 +150,7 @@ public class TimelineInteractionService {
                 .collect(Collectors.toSet());
 
         // 기존 albumPhotos 전부 조회
-        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findAllByAlbumIdAndDeletedAtIsNull(album.getId());
+        List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findAllByAlbumId(album.getId());
 
         // 제거 대상 필터링
         List<TimelineAlbumPhoto> removedPhotos = photos.stream()
@@ -176,14 +178,15 @@ public class TimelineInteractionService {
                 .filter(section -> !requestedIds.contains(section.getId()))
                 .collect(Collectors.toList());
 
-        removedSections.forEach(album::removeSection);
+        removedSections.forEach(album::removeSection); // 앨범에서 섹션 제거
+        timelineAlbumSectionRepository.deleteAll(removedSections); // DB에서 섹션 삭제
     }
 
     @Transactional
     public List<TimelineAlbumPhotoDto> addPhotoToTimelineAlbum(Long groupId, Long albumId, TimelinePhotoRequest request) {
         TimelineAlbum album = timelineAlbumRepository.findAlbumByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
 
-        // 앨범에 포함되지 않은 사진만 앨범에 추가 <- 중복 제거 맞아?
+        // 앨범에 포함되지 않은 사진만 앨범에 추가
         List<Photo> photos = timelineAlbumPhotoRepository.findNotInAlbumByPhotoIds(albumId, request.getPhotoIds());
 
         // 타임라인 앨범에 사진 추가
@@ -195,11 +198,15 @@ public class TimelineInteractionService {
 
     @Transactional
     public void deletePhotoFromTimelineAlbum(Long groupId, Long albumId, @Valid TimelinePhotoRequest request) {
-        TimelineAlbum album = timelineAlbumRepository.findAlbumByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
+        timelineAlbumRepository.findAlbumByIdAndDeletedAtIsNull(albumId).orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
 
         // 삭제할 사진을 조회하고 삭제
         List<TimelineAlbumPhoto> photos = timelineAlbumPhotoRepository.findAllByAlbumIdAndPhotoIdIn(albumId, request.getPhotoIds());
-        photos.forEach(TimelineAlbumPhoto::delete);
+        // 섹션에서 사진 제거
+        photos.stream()
+                .filter(photo -> photo.getSection() != null)
+                .forEach(photo -> photo.getSection().removePhoto(photo));
+        timelineAlbumPhotoRepository.deleteAll(photos); // DB에서 사진 삭제
     }
 
 }
