@@ -98,7 +98,7 @@ export class MediaEventsHandler {
       const consumer = await transport.consume({
         producerId,
         rtpCapabilities,
-        paused: true, // 일단 정지 상태로 생성
+        paused: false, // 이거 바꿈 !!
       });
 
       // 생성된 consumer를 peer의 맵에 저장

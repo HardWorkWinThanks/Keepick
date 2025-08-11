@@ -1,11 +1,16 @@
 package com.ssafy.keepick.photo.persistence;
 
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.ssafy.keepick.photo.application.dto.PhotoClusterDto;
 import com.ssafy.keepick.photo.domain.Photo;
 
 import static com.ssafy.keepick.photo.domain.QPhoto.*;
 
+import com.ssafy.keepick.photo.domain.QPhoto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -54,6 +59,56 @@ public class PhotoQueryFactoryImpl implements PhotoQueryFactory {
 
         return new PageImpl<>(photos, pageable, total != null ? total : 0);
     }
+    @Override
+    public Page<PhotoClusterDto> findSimilarClusters(Long groupId, Pageable pageable) {
+        QPhoto photo = QPhoto.photo;
+        QPhoto photoSub = new QPhoto("photoSub");
+
+        // 유사한 사진 클러스터 대표 사진 ID 서브쿼리
+        JPQLQuery<Long> thumbnailPhotoIdSubquery = JPAExpressions
+                .select(photoSub.id.min())
+                .from(photoSub)
+                .where(photoSub.clusterId.eq(photo.clusterId));
+
+        // 유사한 사진 클러스터 대표 사진 썸네일 서브쿼리
+        JPQLQuery<String> thumbnailPhotoUrlSubquery = JPAExpressions
+                .select(photoSub.thumbnailUrl)
+                .from(photoSub)
+                .where(photoSub.id.eq(thumbnailPhotoIdSubquery));
+
+        // 유사한 사진 클러스터 조회
+        List<PhotoClusterDto> photos = jpaQueryFactory
+                .select(Projections.constructor(
+                        PhotoClusterDto.class,
+                        photo.clusterId,
+                        thumbnailPhotoIdSubquery,
+                        thumbnailPhotoUrlSubquery,
+                        photo.count().longValue()
+                ))
+                .from(photo)
+                .where(
+                        groupIdEq(groupId),
+                        clustered(),
+                        notDeleted()
+                )
+                .groupBy(photo.clusterId)
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        // 유사한 사진 클러스터 개수
+        Long total = jpaQueryFactory
+                .select(photo.clusterId.countDistinct())
+                .from(photo)
+                .where(
+                        groupIdEq(groupId),
+                        clustered(),
+                        notDeleted()
+                )
+                .fetchOne();
+
+        return new PageImpl<>(photos, pageable, total != null ? total : 0);
+    }
 
     private BooleanExpression groupIdEq(Long groupId) {
         return photo.group.id.eq(groupId);
@@ -85,5 +140,9 @@ public class PhotoQueryFactoryImpl implements PhotoQueryFactory {
 
     private BooleanExpression notDeleted() {
         return photo.deletedAt.isNull();
+    }
+
+    private BooleanExpression clustered() {
+        return photo.clusterId.isNotNull();
     }
 }
