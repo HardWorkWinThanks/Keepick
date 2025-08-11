@@ -3,7 +3,7 @@ package com.ssafy.keepick.auth.application;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.ssafy.keepick.auth.controller.response.TokenRefreshResponse;
+import com.ssafy.keepick.auth.application.dto.WebTokenRefreshDto;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.global.security.util.JWTUtil;
@@ -24,15 +24,16 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     
     /**
+     * 웹용 토큰 갱신 처리
      * 쿠키에서 refresh_token을 추출하고 새로운 액세스 토큰을 발급합니다.
      * 
      * @param request HTTP 요청 객체
      * @param response HTTP 응답 객체 (새로운 리프레시 토큰 쿠키 설정용)
-     * @return 새로운 액세스 토큰이 포함된 응답
+     * @return 웹용 토큰 갱신 DTO
      * @throws BaseException 토큰이 없거나 유효하지 않은 경우
      */
-    public TokenRefreshResponse refreshToken(HttpServletRequest request, HttpServletResponse response) {
-        log.info("토큰 갱신 요청 처리 시작");
+    public WebTokenRefreshDto refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        log.info("웹 토큰 갱신 요청 처리 시작");
         
         // 쿠키에서 refresh_token 추출
         String refreshTokenJti = extractRefreshTokenFromCookie(request);
@@ -84,10 +85,10 @@ public class AuthService {
      * 
      * @param refreshTokenJti 검증할 리프레시 토큰 JTI
      * @param response HTTP 응답 객체 (새로운 리프레시 토큰 쿠키 설정용)
-     * @return 새로운 액세스 토큰이 포함된 응답
+     * @return 웹용 토큰 갱신 DTO
      * @throws BaseException 토큰이 유효하지 않은 경우
      */
-    private TokenRefreshResponse validateRefreshTokenAndCreateAccessToken(String refreshTokenJti, HttpServletResponse response) {
+    private WebTokenRefreshDto validateRefreshTokenAndCreateAccessToken(String refreshTokenJti, HttpServletResponse response) {
         try {
             // 리프레시 토큰 검증 및 회전
             var refreshCtx = refreshTokenService.validateAndRotate(refreshTokenJti);
@@ -106,16 +107,16 @@ public class AuthService {
             
             response.addHeader("Set-Cookie", refreshTokenCookie.toString());
             
-            log.info("토큰 갱신 성공: 사용자 {} (ID: {}), 패밀리: {}, 만료시간: {}", 
+            log.info("웹 토큰 갱신 성공: 사용자 {} (ID: {}), 패밀리: {}, 만료시간: {}", 
                     refreshCtx.username(), refreshCtx.memberId(), refreshCtx.familyId(), refreshCtx.newRtExpiresEpochSec());
             
-            return TokenRefreshResponse.of(newAccessToken);
+            return WebTokenRefreshDto.of(newAccessToken, refreshCtx.newJti());
             
         } catch (BaseException e) {
             // BaseException은 그대로 재抛出
             throw e;
         } catch (Exception e) {
-            log.error("토큰 갱신 실패: 리프레시 토큰 검증 중 오류 발생", e);
+            log.error("웹 토큰 갱신 실패: 리프레시 토큰 검증 중 오류 발생", e);
             throw new BaseException(ErrorCode.UNAUTHORIZED);
         }
     }

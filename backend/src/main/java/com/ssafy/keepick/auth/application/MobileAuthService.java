@@ -11,8 +11,9 @@ import com.ssafy.keepick.auth.application.dto.OAuth2Provider;
 import com.ssafy.keepick.auth.application.dto.GoogleProvider;
 import com.ssafy.keepick.auth.application.dto.KakaoProvider;
 import com.ssafy.keepick.auth.application.dto.NaverProvider;
+import com.ssafy.keepick.auth.application.dto.MobileLoginDto;
+import com.ssafy.keepick.auth.application.dto.MobileTokenRefreshDto;
 import com.ssafy.keepick.auth.controller.request.MobileLoginRequest;
-import com.ssafy.keepick.auth.controller.response.MobileLoginResponse;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.global.security.util.JWTUtil;
@@ -26,14 +27,14 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 모바일 소셜 로그인 서비스
- * 모바일 앱에서 SDK를 통해 발급받은 accessToken으로 소셜 로그인 처리
+ * 모바일 인증 서비스
+ * 모바일 앱의 소셜 로그인과 토큰 갱신을 처리
  * 지원 provider: google, kakao, naver
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class MobileLoginService {
+public class MobileAuthService {
     
     private final MemberRepository memberRepository;
     private final JWTUtil jwtUtil;
@@ -43,9 +44,9 @@ public class MobileLoginService {
     /**
      * 모바일 소셜 로그인 처리
      * @param request provider와 accessToken을 포함한 로그인 요청
-     * @return JWT 토큰과 리프레시 토큰을 포함한 로그인 응답
+     * @return 모바일 로그인 DTO
      */
-    public MobileLoginResponse login(MobileLoginRequest request) {
+    public MobileLoginDto login(MobileLoginRequest request) {
         String provider = request.getProvider().toLowerCase();
         String accessToken = request.getAccessToken();
         
@@ -95,7 +96,36 @@ public class MobileLoginService {
         
         log.info("모바일 로그인 완료: 사용자 = {} (ID: {}), 패밀리 = {}", member.getEmail(), member.getId(), familyId);
         
-        return MobileLoginResponse.of(jwtToken, refreshTokenJti);
+        return MobileLoginDto.of(jwtToken, refreshTokenJti);
+    }
+    
+    /**
+     * 모바일용 토큰 갱신
+     * @param refreshToken 갱신할 리프레시 토큰
+     * @return 모바일용 토큰 갱신 DTO
+     */
+    public MobileTokenRefreshDto refreshToken(String refreshToken) {
+        log.info("모바일 토큰 갱신 요청 처리 시작");
+        
+        try {
+            // 리프레시 토큰 검증 및 회전
+            var refreshCtx = refreshTokenService.validateAndRotate(refreshToken);
+            
+            // 새로운 액세스 토큰 생성
+            String newAccessToken = jwtUtil.createToken(refreshCtx.memberId(), refreshCtx.username());
+            
+            log.info("모바일 토큰 갱신 성공: 사용자 {} (ID: {}), 패밀리: {}, 만료시간: {}", 
+                    refreshCtx.username(), refreshCtx.memberId(), refreshCtx.familyId(), refreshCtx.newRtExpiresEpochSec());
+            
+            return MobileTokenRefreshDto.of(newAccessToken, refreshCtx.newJti());
+            
+        } catch (BaseException e) {
+            // BaseException은 그대로 재抛出
+            throw e;
+        } catch (Exception e) {
+            log.error("모바일 토큰 갱신 실패: 리프레시 토큰 검증 중 오류 발생", e);
+            throw new BaseException(ErrorCode.UNAUTHORIZED);
+        }
     }
     
     /**

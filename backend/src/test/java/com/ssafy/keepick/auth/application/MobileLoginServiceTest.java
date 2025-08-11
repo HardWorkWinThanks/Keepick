@@ -29,7 +29,7 @@ import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
 
 @ExtendWith(MockitoExtension.class)
-class MobileLoginServiceTest extends BaseTest {
+class MobileAuthServiceTest extends BaseTest {
 
     @Mock
     private MemberRepository memberRepository;
@@ -40,8 +40,11 @@ class MobileLoginServiceTest extends BaseTest {
     @Mock
     private RestTemplate restTemplate;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     @InjectMocks
-    private MobileLoginService mobileLoginService;
+    private MobileAuthService mobileAuthService;
 
     private Map<String, Object> googleUserInfo;
 
@@ -68,15 +71,18 @@ class MobileLoginServiceTest extends BaseTest {
         
         given(memberRepository.findByEmail("test@gmail.com")).willReturn(Optional.of(member));
         given(jwtUtil.createToken(1L, "test@gmail.com")).willReturn("jwt-token");
+        given(refreshTokenService.issue(1L, "test@gmail.com", anyString())).willReturn("refresh-token-jti");
         given(restTemplate.exchange(anyString(), any(), any(), eq(Map.class)))
                 .willReturn(new ResponseEntity<>(googleUserInfo, HttpStatus.OK));
 
         // when
-        MobileLoginResponse response = mobileLoginService.login(request);
+        MobileLoginResponse response = mobileAuthService.login(request);
 
         // then
         assertThat(response.getAccessToken()).isEqualTo("jwt-token");
+        assertThat(response.getRefreshToken()).isEqualTo("refresh-token-jti");
         verify(jwtUtil).createToken(1L, "test@gmail.com");
+        verify(refreshTokenService).issue(1L, "test@gmail.com", anyString());
     }
 
     @Test
@@ -87,7 +93,7 @@ class MobileLoginServiceTest extends BaseTest {
 
         // when & then
         // facebook은 지원하지 않는 provider이므로 OAuth2_AUTHENTICATION_FAILED 예외가 발생할 수 있음
-        assertThatThrownBy(() -> mobileLoginService.login(request))
+        assertThatThrownBy(() -> mobileAuthService.login(request))
                 .isInstanceOf(BaseException.class)
                 .matches(e -> {
                     BaseException be = (BaseException) e;
@@ -105,7 +111,7 @@ class MobileLoginServiceTest extends BaseTest {
                 .willReturn(new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED));
 
         // when & then
-        assertThatThrownBy(() -> mobileLoginService.login(request))
+        assertThatThrownBy(() -> mobileAuthService.login(request))
                 .isInstanceOf(BaseException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.OAUTH2_AUTHENTICATION_FAILED);
     }
@@ -123,14 +129,16 @@ class MobileLoginServiceTest extends BaseTest {
         given(memberRepository.findByEmail("test@gmail.com")).willReturn(Optional.empty()); // 신규 회원
         given(memberRepository.save(any(Member.class))).willReturn(savedMember);
         given(jwtUtil.createToken(1L, "test@gmail.com")).willReturn("jwt-token");
+        given(refreshTokenService.issue(1L, "test@gmail.com", anyString())).willReturn("refresh-token-jti");
         given(restTemplate.exchange(anyString(), any(), any(), eq(Map.class)))
                 .willReturn(new ResponseEntity<>(googleUserInfo, HttpStatus.OK));
 
         // when
-        mobileLoginService.login(request);
+        mobileAuthService.login(request);
 
         // then
         verify(memberRepository).save(any(Member.class)); // 신규 회원이므로 save 호출
+        verify(refreshTokenService).issue(1L, "test@gmail.com", anyString());
     }
 
     @Test
@@ -145,13 +153,15 @@ class MobileLoginServiceTest extends BaseTest {
         
         given(memberRepository.findByEmail("test@gmail.com")).willReturn(Optional.of(existingMember)); // 기존 회원
         given(jwtUtil.createToken(1L, "test@gmail.com")).willReturn("jwt-token");
+        given(refreshTokenService.issue(1L, "test@gmail.com", anyString())).willReturn("refresh-token-jti");
         given(restTemplate.exchange(anyString(), any(), any(), eq(Map.class)))
                 .willReturn(new ResponseEntity<>(googleUserInfo, HttpStatus.OK));
 
         // when
-        mobileLoginService.login(request);
+        mobileAuthService.login(request);
 
         // then
         verify(memberRepository, never()).save(any(Member.class)); // 기존 회원이므로 save 호출하지 않음
+        verify(refreshTokenService).issue(1L, "test@gmail.com", anyString());
     }
 }
