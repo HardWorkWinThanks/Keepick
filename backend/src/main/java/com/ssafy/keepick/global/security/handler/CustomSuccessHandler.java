@@ -57,8 +57,7 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 .sameSite("None") // Cross-origin을 위해 필요
                 .build();
         
-        // 크롬 3rd-party 정책 대응을 위한 파티션 쿠키 설정
-        response.addHeader("Set-Cookie", refreshTokenCookie.toString() + "; Partitioned");
+        response.addHeader("Set-Cookie", refreshTokenCookie.toString());
         
         log.info("🍪 리프레시 토큰 쿠키 설정 완료: SameSite=None, Secure=true, TTL=30일");
         

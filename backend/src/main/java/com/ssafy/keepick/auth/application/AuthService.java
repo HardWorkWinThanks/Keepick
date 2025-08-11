@@ -51,13 +51,28 @@ public class AuthService {
     private String extractRefreshTokenFromCookie(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         
+        log.debug("요청된 쿠키 개수: {}", cookies != null ? cookies.length : 0);
+        log.debug("요청 URL: {}", request.getRequestURL());
+        log.debug("요청 도메인: {}", request.getServerName());
+        log.debug("요청 포트: {}", request.getServerPort());
+        log.debug("요청 스키마: {}", request.getScheme());
+        
         if (cookies != null) {
             for (Cookie cookie : cookies) {
+                log.debug("쿠키 이름: {}, 값: {}, 도메인: {}, 경로: {}, 보안: {}, HttpOnly: {}", 
+                    cookie.getName(), 
+                    cookie.getValue(),
+                    cookie.getDomain(),
+                    cookie.getPath(),
+                    cookie.getSecure(),
+                    cookie.isHttpOnly());
                 if ("refresh_token".equals(cookie.getName())) {
                     log.debug("쿠키에서 refresh_token 추출 완료");
                     return cookie.getValue();
                 }
             }
+        } else {
+            log.debug("쿠키 배열이 null입니다");
         }
         
         log.warn("토큰 갱신 실패: 쿠키에서 refresh_token을 찾을 수 없음");
@@ -89,7 +104,7 @@ public class AuthService {
                     .maxAge(java.time.Duration.ofSeconds(refreshCtx.newRtTtlSeconds()))
                     .build();
             
-            response.addHeader("Set-Cookie", refreshTokenCookie.toString() + "; Partitioned");
+            response.addHeader("Set-Cookie", refreshTokenCookie.toString());
             
             log.info("토큰 갱신 성공: 사용자 {} (ID: {}), 패밀리: {}, 만료시간: {}", 
                     refreshCtx.username(), refreshCtx.memberId(), refreshCtx.familyId(), refreshCtx.newRtExpiresEpochSec());
