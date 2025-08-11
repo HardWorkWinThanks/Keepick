@@ -1,7 +1,19 @@
 package com.ssafy.keepick.album.tier.application;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDetailDto;
 import com.ssafy.keepick.album.tier.application.dto.TierAlbumDto;
+import com.ssafy.keepick.album.tier.application.dto.TierAlbumPhotoDto;
 import com.ssafy.keepick.album.tier.controller.request.UpdateTierAlbumRequest;
 import com.ssafy.keepick.album.tier.domain.Tier;
 import com.ssafy.keepick.album.tier.domain.TierAlbum;
@@ -13,16 +25,8 @@ import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.global.response.PagingResponse;
 import com.ssafy.keepick.photo.domain.Photo;
 import com.ssafy.keepick.photo.persistence.PhotoRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -211,5 +215,50 @@ public class TierAlbumService {
             .mapToInt(List::size) // 각 티어의 사진 개수
             .sum(); // 모든 티어의 사진 개수 합계
         tierAlbum.updatePhotoCount(assignedPhotoCount);
+    }
+
+    @Transactional
+    public List<TierAlbumPhotoDto> uploadPhotoToTierAlbum(Long groupId, Long tierAlbumId, List<Long> photoIds) {
+        TierAlbum tierAlbum = tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId)
+                .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
+        int currentPhotoCount = tierAlbum.getAllPhotos().size();
+        List<TierAlbumPhotoDto> addedPhotos = new ArrayList<>();
+        for (int i = 0; i < photoIds.size(); i++) {
+            final int sequence = i; // Effectively final for lambda
+            final Long photoId = photoIds.get(i); // Effectively final for lambda
+            Photo photo = photoRepository.findById(photoId)
+                .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND));
+            boolean isPhotoAlreadyInAlbum = tierAlbum.getAllPhotos().stream()
+                .anyMatch(albumPhoto -> albumPhoto.getPhoto().getId().equals(photoId));
+            if (isPhotoAlreadyInAlbum) {
+                throw new BaseException(ErrorCode.INVALID_PARAMETER);
+            }
+            TierAlbumPhoto tierAlbumPhoto = TierAlbumPhoto.createTierAlbumPhoto(
+                tierAlbum,
+                photo,
+                null,
+                currentPhotoCount + sequence
+            );
+            TierAlbumPhoto savedTierAlbumPhoto = tierAlbumPhotoRepository.save(tierAlbumPhoto);
+            addedPhotos.add(TierAlbumPhotoDto.from(savedTierAlbumPhoto));
+        }
+        return addedPhotos;
+    }
+
+    @Transactional
+    public void deletePhotoFromTierAlbum(Long groupId, Long tierAlbumId, List<Long> photoIds) {
+        TierAlbum tierAlbum = tierAlbumRepository.findAlbumWithPhotosById(tierAlbumId)
+                .orElseThrow(() -> new BaseException(ErrorCode.ALBUM_NOT_FOUND));
+        for (Long photoId : photoIds) {
+            TierAlbumPhoto tierAlbumPhoto = tierAlbum.getAllPhotos().stream()
+                .filter(albumPhoto -> albumPhoto.getPhoto().getId().equals(photoId))
+                .findFirst()
+                .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND));
+            tierAlbumPhotoRepository.delete(tierAlbumPhoto);
+        }
+        List<TierAlbumPhoto> remainingPhotos = tierAlbumPhotoRepository.findByAlbumId(tierAlbumId);
+        for (int i = 0; i < remainingPhotos.size(); i++) {
+            remainingPhotos.get(i).updateSequence(i);
+        }
     }
 }
