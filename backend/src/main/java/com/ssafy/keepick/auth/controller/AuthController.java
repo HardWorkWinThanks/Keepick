@@ -1,5 +1,7 @@
 package com.ssafy.keepick.auth.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,13 +41,11 @@ public class AuthController implements AuthApiSpec {
     
     @PostMapping("/token/refresh")
     @Override
-    public ApiResponse<TokenRefreshResponse> refreshToken(jakarta.servlet.http.HttpServletRequest request) {
-        log.info("토큰 갱신 요청");
+    public ApiResponse<TokenRefreshResponse> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        log.info("리프레시 토큰으로 액세스 토큰 갱신 요청");
+        TokenRefreshResponse body = authService.refreshToken(request, response);
         
-        TokenRefreshResponse response = authService.refreshToken(request);
-        
-        log.info("토큰 갱신 성공");
-        
-        return ApiResponse.ok(response);
+        log.info("액세스 토큰 갱신 성공");
+        return ApiResponse.ok(body);
     }
 }

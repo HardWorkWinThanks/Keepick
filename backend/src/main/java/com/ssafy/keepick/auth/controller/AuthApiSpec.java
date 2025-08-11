@@ -3,8 +3,8 @@ package com.ssafy.keepick.auth.controller;
 import com.ssafy.keepick.auth.controller.request.MobileLoginRequest;
 import com.ssafy.keepick.auth.controller.response.MobileLoginResponse;
 import com.ssafy.keepick.auth.controller.response.TokenRefreshResponse;
-import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.global.exception.ErrorResponse;
+import com.ssafy.keepick.global.response.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -13,6 +13,8 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * 인증 API 명세 인터페이스
@@ -147,18 +149,20 @@ public interface AuthApiSpec {
     @Operation(
         summary = "토큰 갱신",
         description = """
-            쿠키에 저장된 access_token을 검증하고 새로운 JWT 토큰을 발급합니다.
+            쿠키에 저장된 refresh_token을 검증하고 새로운 액세스 토큰을 발급합니다.
             
             🔄 동작 흐름:
-            1. 클라이언트에서 쿠키에 저장된 access_token 확인
-            2. 토큰 유효성 검증 (만료 여부, 서명 검증)
-            3. 유효한 경우 새로운 JWT 토큰 발급
-            4. 응답 본문에 새로운 토큰 반환
+            1. 클라이언트에서 쿠키에 저장된 refresh_token 확인
+            2. 리프레시 토큰 검증 및 회전 (새로운 리프레시 토큰 발급)
+            3. 새로운 액세스 토큰 발급
+            4. 응답 본문에 새로운 액세스 토큰 반환
+            5. 새로운 리프레시 토큰을 쿠키에 설정
             
             ⚠️ 주의사항:
-            - 쿠키에 유효한 access_token이 있어야 합니다
-            - 토큰이 만료된 경우 갱신할 수 없습니다
-            - 새로운 토큰은 응답 본문에 포함됩니다
+            - 쿠키에 유효한 refresh_token이 있어야 합니다
+            - 리프레시 토큰이 만료되거나 재사용된 경우 갱신할 수 없습니다
+            - 새로운 액세스 토큰은 응답 본문에 포함됩니다
+            - 새로운 리프레시 토큰은 HttpOnly 쿠키로 자동 설정됩니다
             """
     )
     @ApiResponses(value = {
@@ -202,5 +206,5 @@ public interface AuthApiSpec {
             )
         )
     })
-    ApiResponse<TokenRefreshResponse> refreshToken(jakarta.servlet.http.HttpServletRequest request);
+    ApiResponse<TokenRefreshResponse> refreshToken(HttpServletRequest request, HttpServletResponse response);
 }
