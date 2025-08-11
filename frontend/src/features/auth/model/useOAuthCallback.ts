@@ -36,6 +36,9 @@ export const useOAuthCallback = () => {
       try {
         if (error) {
           console.error("OAuth2 Error:", error);
+          // URL 파라미터 정리 후 에러와 함께 홈으로 이동
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, '', cleanUrl);
           router.replace("/?error=" + encodeURIComponent(error));
           return;
         }
@@ -60,12 +63,18 @@ export const useOAuthCallback = () => {
           // 3. 사용자 정보 가져오기
           await fetchUserInfo();
 
-          // 4. 성공 후 홈으로 이동
+          // 4. 성공 후 URL 파라미터 정리하고 홈으로 이동
           console.log("✅ OAuth 로그인 완료, 홈으로 이동");
+          // URL 파라미터를 모두 제거하여 OAuthHandler가 다시 실행되지 않도록 함
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, '', cleanUrl);
           router.replace("/");
         }
       } catch (error) {
         console.error("OAuth 처리 중 오류:", error);
+        // URL 파라미터 정리 후 에러와 함께 홈으로 이동
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
         router.replace("/?error=login_failed");
       } finally {
         isProcessing.current = false; // 처리 완료
@@ -91,7 +100,9 @@ export const useOAuthCallback = () => {
       dispatch(setUser(data.data));
     } catch (error) {
       console.error("User info fetch error:", error);
-      // 사용자 정보 가져오기 실패 시 에러 페이지로
+      // URL 파라미터 정리 후 사용자 정보 가져오기 실패 시 에러 페이지로
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
       router.replace("/?error=fetch_failed");
     } finally {
       // 로딩 상태 종료

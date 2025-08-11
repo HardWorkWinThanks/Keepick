@@ -2,20 +2,40 @@
 
 import { useState } from "react";
 import { TimelineEvent } from "@/entities/album";
-import { Photo } from "@/entities/photo";
+import { Photo, DragPhotoData } from "@/entities/photo";
+
+export interface TimelineEditState {
+  timelineEvents: TimelineEvent[];
+  isEditing: boolean;
+  dragOverEventId: string | null;
+  selectedEventId: string | null;
+}
+
+export interface TimelineEditHandlers {
+  handleToggleEdit: () => void;
+  handleFieldChange: (eventId: string, field: keyof TimelineEvent, value: string) => void;
+  handleAddEvent: () => void;
+  handleDeleteEvent: (eventId: string) => void;
+  handleAddPhotoToEvent: (eventId: string, photo: Photo) => void;
+  handleRemovePhotoFromEvent: (eventId: string, photoId: string) => void;
+  handleDragOver: (eventId: string) => void;
+  handleDragLeave: () => void;
+  handleDrop: (eventId: string, dragData: DragPhotoData) => void;
+  handleSelectEvent: (eventId: string | null) => void;
+}
 
 /**
  * 타임라인 앨범의 편집과 관련된 상태와 로직을 관리하는 커스텀 훅입니다.
- * 이벤트 추가/수정, 사진 추가/삭제, 드래그 앤 드롭 등의 기능을 포함합니다.
+ * 이벤트 추가/수정/삭제, 사진 추가/삭제, 드래그 앤 드롭 등의 기능을 포함합니다.
  * @param initialEvents - 훅 초기화 시 사용될 기본 타임라인 이벤트 목록
  * @returns 타임라인 편집 관련 상태와 핸들러 함수들을 반환합니다.
  */
 export function useTimelineEdit(initialEvents: TimelineEvent[] = []) {
-  // 타임라인 이벤트 목록을 관리하는 상태
-  const [timelineEvents, setTimelineEvents] =
-    useState<TimelineEvent[]>(initialEvents);
-  // 사진을 드래그할 때, 마우스가 올라가 있는 이벤트 카드의 ID를 추적하는 상태
+  // 타임라인 편집 상태 관리
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>(initialEvents);
+  const [isEditing, setIsEditing] = useState(false);
   const [dragOverEventId, setDragOverEventId] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   /**
    * 이벤트의 특정 필드(제목, 날짜 등) 값을 변경하는 핸들러입니다.
@@ -36,19 +56,38 @@ export function useTimelineEdit(initialEvents: TimelineEvent[] = []) {
   };
 
   /**
+   * 편집 모드를 토글하는 핸들러입니다.
+   */
+  const handleToggleEdit = () => {
+    setIsEditing(prev => !prev);
+    setSelectedEventId(null);
+  };
+
+  /**
    * 새로운 타임라인 이벤트를 추가하는 핸들러입니다.
    */
   const handleAddEvent = () => {
     const newEvent: TimelineEvent = {
-      id: `event_${Date.now()}`, // 고유 ID 생성
+      id: `event_${Date.now()}`,
       title: "새로운 추억",
+      subtitle: "NEW MEMORY",
       date: new Date().toISOString().split("T")[0].replaceAll("-", "."),
-      location: "어디에서?",
-      emoji: "😊",
-      description: "",
+      description: "여기에 추억을 적어보세요...",
       photos: [],
+      images: [],
     };
-    setTimelineEvents((prev) => [...prev, newEvent]);
+    setTimelineEvents(prev => [...prev, newEvent]);
+    setSelectedEventId(newEvent.id);
+  };
+
+  /**
+   * 이벤트를 삭제하는 핸들러입니다.
+   */
+  const handleDeleteEvent = (eventId: string) => {
+    setTimelineEvents(prev => prev.filter(event => event.id !== eventId));
+    if (selectedEventId === eventId) {
+      setSelectedEventId(null);
+    }
   };
 
   /**
@@ -69,72 +108,85 @@ export function useTimelineEdit(initialEvents: TimelineEvent[] = []) {
   /**
    * 이벤트에서 특정 사진을 제거하는 핸들러입니다.
    * @param eventId - 사진을 제거할 이벤트의 ID
-   * @param photoToRemove - 제거할 사진 객체
+   * @param photoId - 제거할 사진의 ID
    */
-  const handleRemovePhotoFromEvent = (
-    eventId: string,
-    photoToRemove: Photo
-  ) => {
-    setTimelineEvents((prev) =>
-      prev.map((event) =>
+  const handleRemovePhotoFromEvent = (eventId: string, photoId: string) => {
+    setTimelineEvents(prev =>
+      prev.map(event =>
         event.id === eventId
           ? {
               ...event,
-              photos: event.photos.filter((p) => p.id !== photoToRemove.id),
+              photos: event.photos.filter(p => p.id !== photoId),
             }
           : event
       )
     );
   };
 
+  /**
+   * 이벤트를 선택하는 핸들러입니다.
+   */
+  const handleSelectEvent = (eventId: string | null) => {
+    setSelectedEventId(eventId);
+  };
+
   // --- 드래그 앤 드롭 핸들러 ---
 
   /**
-   * 사진을 드래그하여 이벤트 카드 위로 올렸을 때 호출됩니다.
+   * 드래그 오버 핸들러
    */
-  const handleDragOver = (
-    e: React.DragEvent<HTMLDivElement>,
-    eventId: string
-  ) => {
-    e.preventDefault(); // 드롭을 허용하도록 기본 동작 방지
-    setDragOverEventId(eventId); // 드래그 오버 상태 업데이트
+  const handleDragOver = (eventId: string) => {
+    setDragOverEventId(eventId);
   };
 
   /**
-   * 사진을 이벤트 카드 위에 드롭했을 때 호출됩니다.
-   * @param e - 드래그 이벤트 객체
-   * @param targetEventId - 드롭 대상 이벤트의 ID
-   * @returns 드롭된 사진 데이터를 반환하여, 부모 컴포넌트에서 'availablePhotos' 목록에서 제거할 수 있도록 합니다.
-   */
-  const handleDrop = (
-    e: React.DragEvent<HTMLDivElement>,
-    targetEventId: string
-  ) => {
-    e.preventDefault();
-    // 드래그 데이터에서 사진 정보를 파싱합니다.
-    const photoData = JSON.parse(e.dataTransfer.getData("photo")) as Photo;
-    handleAddPhotoToEvent(targetEventId, photoData);
-    setDragOverEventId(null); // 드래그 오버 상태 초기화
-    return photoData;
-  };
-
-  /**
-   * 드래그하던 사진이 이벤트 카드 영역을 벗어났을 때 호출됩니다.
+   * 드래그 리브 핸들러
    */
   const handleDragLeave = () => {
     setDragOverEventId(null);
   };
 
-  return {
+  /**
+   * 드롭 핸들러
+   */
+  const handleDrop = (eventId: string, dragData: DragPhotoData) => {
+    // 실제로는 상위 컴포넌트에서 사진 객체를 찾아서 전달해야 함
+    // 여기서는 기본 구조만 제공
+    const photo: Photo = {
+      id: dragData.photoId,
+      src: "", // 실제 구현에서는 찾아서 채워야 함
+      name: "",
+    };
+    
+    handleAddPhotoToEvent(eventId, photo);
+    setDragOverEventId(null);
+  };
+
+  const state: TimelineEditState = {
     timelineEvents,
-    setTimelineEvents,
+    isEditing,
     dragOverEventId,
+    selectedEventId,
+  };
+
+  const handlers: TimelineEditHandlers = {
+    handleToggleEdit,
     handleFieldChange,
     handleAddEvent,
+    handleDeleteEvent,
     handleAddPhotoToEvent,
     handleRemovePhotoFromEvent,
     handleDragOver,
-    handleDrop,
     handleDragLeave,
+    handleDrop,
+    handleSelectEvent,
+  };
+
+  return {
+    state,
+    handlers,
+    // 편의를 위한 개별 export
+    ...state,
+    ...handlers,
   };
 }

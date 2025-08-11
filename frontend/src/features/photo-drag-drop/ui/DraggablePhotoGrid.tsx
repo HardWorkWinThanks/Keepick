@@ -38,6 +38,7 @@ export function DraggablePhotoGrid({
       source: sourceId,
     };
     e.dataTransfer.setData("text/plain", JSON.stringify(dragData));
+    e.dataTransfer.effectAllowed = "move";
     onDragStart?.(e, photo, sourceId);
   };
 
