@@ -8,7 +8,7 @@ package com.ssafy.keepick.auth.application.dto;
  * @param familyId        패밀리 ID (같은 패밀리의 토큰들을 그룹화)
  * @param oldJti          이전 JWT ID
  * @param newJti          새로운 JWT ID
- * @param newRtExpiresAt  새로운 리프레시 토큰 만료 시간 (밀리초)
+ * @param newRtExpiresEpochSec  새로운 리프레시 토큰 만료 시간 (초)
  * @param newRtTtlSeconds 새로운 리프레시 토큰 TTL (초)
  */
 public record RefreshCtx(
@@ -17,6 +17,6 @@ public record RefreshCtx(
         String familyId,
         String oldJti,
         String newJti,
-        Long newRtExpiresAt,
-        Long newRtTtlSeconds) {
+        Long newRtExpiresEpochSec,
+        int newRtTtlSeconds) {
 }
