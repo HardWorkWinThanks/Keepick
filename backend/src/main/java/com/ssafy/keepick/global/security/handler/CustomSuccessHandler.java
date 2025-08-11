@@ -1,10 +1,11 @@
 package com.ssafy.keepick.global.security.handler;
 
 import java.io.IOException;
+import java.util.UUID;
 
+import com.ssafy.keepick.auth.application.RefreshTokenService;
 import com.ssafy.keepick.auth.application.dto.CustomOAuth2Member;
 
-import com.ssafy.keepick.global.security.util.JWTUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -21,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @RequiredArgsConstructor
 public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
-    private final JWTUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -40,25 +41,28 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         log.info("🎉 OAuth2 로그인 성공: 사용자: {} (ID: {}) | User-Agent: {}",
                 username, memberId, userAgent);
 
-        String token = jwtUtil.createToken(memberId, username);
+        // 리프레시 토큰 발급 (새로운 패밀리 ID 생성)
+        String familyId = UUID.randomUUID().toString();
+        String refreshTokenJti = refreshTokenService.issue(memberId, username, familyId);
 
-        log.debug("🔑 JWT 토큰 생성 완료: 사용자: {} | 토큰 길이: {}",
-                username, token.length());
+        log.debug("🔄 리프레시 토큰 발급 완료: 사용자: {} | JTI: {} | 패밀리: {}",
+                username, refreshTokenJti, familyId);
         
-        // JWT 토큰을 HttpOnly 쿠키로 설정 (ResponseCookie 사용)
-        ResponseCookie tokenCookie = ResponseCookie.from("access_token", token)
+        // 리프레시 토큰을 HttpOnly 쿠키로 설정 (ResponseCookie 사용)
+        ResponseCookie refreshTokenCookie = ResponseCookie.from("refresh_token", refreshTokenJti)
                 .httpOnly(true)
                 .secure(true) // HTTPS 환경이므로 true
                 .path("/")
-                .maxAge(3600) // 1시간 유효
+                .maxAge(30 * 24 * 60 * 60) // 30일 유효
                 .sameSite("None") // Cross-origin을 위해 필요
                 .build();
         
-        response.addHeader("Set-Cookie", tokenCookie.toString());
+        // 크롬 3rd-party 정책 대응을 위한 파티션 쿠키 설정
+        response.addHeader("Set-Cookie", refreshTokenCookie.toString() + "; Partitioned");
         
-        log.info("🍪 ResponseCookie 설정 완료: SameSite=None, Secure=true");
+        log.info("🍪 리프레시 토큰 쿠키 설정 완료: SameSite=None, Secure=true, TTL=30일");
         
-        // 프론트엔드로 리다이렉트 (토큰은 쿠키에 포함됨)
+        // 프론트엔드로 리다이렉트 (리프레시 토큰은 쿠키에 포함됨)
         response.sendRedirect(frontendUrl);
         
         log.info("🔄 프론트엔드 리다이렉트: {} | 사용자: {}", frontendUrl, username);
