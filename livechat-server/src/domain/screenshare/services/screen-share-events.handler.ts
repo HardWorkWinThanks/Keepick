@@ -18,10 +18,7 @@ export class ScreenShareEventsHandler {
     private screenShareService: ScreenShareService,
     private roomService: RoomService,
     private mediaEventsHandler: MediaEventsHandler
-  ) {
-    console.log('ScreenShareEventsHandler initialized');
-    logger.info('ScreenShareEventsHandler initialized');
-  }
+  ) {}
 
   // 화면 공유 시작 처리
   async handleStartScreenShare(socket: Socket, data: StartScreenShareData): Promise<void> {

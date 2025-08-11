@@ -15,7 +15,6 @@ export class ServerManager {
         cert: fs.readFileSync(serverConfig.ssl.certPath),
       };
       this.server = https.createServer(httpsOptions, app);
-      // this.server = http.createServer(app);
       logger.info("HTTPS server created successfully.");
     } else {
       this.server = http.createServer(app);
