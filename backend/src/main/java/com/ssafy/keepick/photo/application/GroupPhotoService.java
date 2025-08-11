@@ -5,10 +5,7 @@ import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.persistence.GroupRepository;
-import com.ssafy.keepick.photo.application.dto.GroupPhotoCommandDto;
-import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
-import com.ssafy.keepick.photo.application.dto.PhotoClusterDto;
-import com.ssafy.keepick.photo.application.dto.PhotoTagDto;
+import com.ssafy.keepick.photo.application.dto.*;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoSearchRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
@@ -112,6 +109,31 @@ public class GroupPhotoService {
 
     @Transactional(readOnly = true)
     public Page<PhotoClusterDto> getSimilarClusters(Long groupId, int page, int size) {
+        return getSimilarPhotoClusters(groupId, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public GroupPhotoOverviewDto getGroupPhotoOverview(Long groupId, int size) {
+        Page<Photo> allPhotoPage = photoRepository.findByGroupIdAndDeletedAtIsNull(groupId, PageRequest.of(0, size));
+        Page<Photo> blurryPhotoPage = photoRepository.findBlurryPhotosByGroupId(groupId, PageRequest.of(0, size));
+        Page<PhotoClusterDto> clusterPhotoPage = getSimilarPhotoClusters(groupId, 0, size);
+        return GroupPhotoOverviewDto.from(allPhotoPage, blurryPhotoPage, clusterPhotoPage);
+    }
+
+    @Transactional(readOnly = true)
+    public PhotoTagDto getGroupPhotoTags(Long groupId, Long photoId) {
+        // 그룹 내 사진인지 확인
+        if(photoRepository.existsByGroupIdAndPhotoId(groupId, photoId)) {
+            throw new BaseException(ErrorCode.PHOTO_NOT_FOUND);
+        }
+
+        // 사진 태그, 인식된 회원 조회
+        List<PhotoTag> tags = photoTagRepository.findAllByPhotoId(photoId);
+        List<PhotoMember> members = photoMemberRepository.findAllByPhotoId(photoId);
+        return PhotoTagDto.from(tags, members);
+    }
+
+    private Page<PhotoClusterDto> getSimilarPhotoClusters(Long groupId, int page, int size) {
         // 1. 유사 사진 클러스터 기본 정보(대표 사진ID, 썸네일, 개수) 페이징 조회
         Page<PhotoClusterDto> clusterPage = photoRepository.findSimilarClusters(groupId, PageRequest.of(page, size));
 
@@ -139,15 +161,4 @@ public class GroupPhotoService {
         return clusterPage;
     }
 
-    public PhotoTagDto getGroupPhotoTags(Long groupId, Long photoId) {
-        // 그룹 내 사진인지 확인
-        if(photoRepository.existsByGroupIdAndPhotoId(groupId, photoId)) {
-            throw new BaseException(ErrorCode.PHOTO_NOT_FOUND);
-        }
-
-        // 사진 태그, 인식된 회원 조회
-        List<PhotoTag> tags = photoTagRepository.findAllByPhotoId(photoId);
-        List<PhotoMember> members = photoMemberRepository.findAllByPhotoId(photoId);
-        return PhotoTagDto.from(tags, members);
-    }
 }

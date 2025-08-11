@@ -5,6 +5,7 @@ import com.ssafy.keepick.global.response.PagingResponse;
 import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.photo.application.GroupPhotoService;
 import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
+import com.ssafy.keepick.photo.application.dto.GroupPhotoOverviewDto;
 import com.ssafy.keepick.photo.application.dto.PhotoClusterDto;
 import com.ssafy.keepick.photo.application.dto.PhotoTagDto;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoDeleteRequest;
@@ -78,12 +79,11 @@ public class PhotoController {
         return ApiResponse.ok(PagingResponse.from(result, GroupPhotoSimilarClusterResponse::from));
     }
 
-    @Operation(summary = "그룹 전체 사진, 흐린 사진, 유사 사진 묶음 조회 API", description = "그룹 갤러리 초기 화면 로딩을 위한 전체 사진, 흐린 사진, 유사 사진 묶음 일부를 조회한 결과를 페이징하여 반환합니다.")
+    @Operation(summary = "그룹 전체 사진, 흐린 사진, 유사 사진 묶음 조회 API", description = "그룹 갤러리 초기 화면 로딩을 위한 전체 사진, 흐린 사진, 유사 사진 묶음 일부를 조회한 결과를 페이징하여 반환합니다. (조회할 페이지 번호는 항상 0입니다.)")
     @GetMapping("/groups/{groupId}/photos/overview")
-    public ApiResponse<GroupPhotoOverviewResponse> getGroupPhotosOverview(
-            @PathVariable Long groupId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size
-    ) {
-        return null;
+    public ApiResponse<GroupPhotoOverviewResponse> getGroupPhotosOverview(@PathVariable Long groupId, @RequestParam(defaultValue = "10") int size) {
+        GroupPhotoOverviewDto result = groupPhotoService.getGroupPhotoOverview(groupId, size);
+        return ApiResponse.ok(GroupPhotoOverviewResponse.from(result));
     }
 
     @GetMapping("/groups/{groupId}/photos/{photoId}/tags")

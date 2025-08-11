@@ -38,6 +38,8 @@ public interface PhotoRepository extends JpaRepository<Photo,Long>, PhotoQueryFa
 
     List<Photo> findByGroupIdAndDeletedAtIsNull(Long groupId);
 
+    Page<Photo> findByGroupIdAndDeletedAtIsNull(Long groupId, Pageable pageable);
+
     @Query("SELECT p " +
             "FROM Photo p " +
             "WHERE p.group.id = :groupId " +
