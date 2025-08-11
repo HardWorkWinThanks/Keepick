@@ -173,6 +173,9 @@ public class RefreshTokenRotatorService {
             log.error("토큰 회전 중 예상치 못한 결과: jti={}, result={}", rtJti, result);
             throw new BaseException(ErrorCode.INTERNAL_SERVER_ERROR);
 
+        } catch (BaseException e) {
+            // BaseException은 그대로 재throw
+            throw e;
         } catch (Exception e) {
             log.error("토큰 회전 중 오류 발생: jti={}", rtJti, e);
             throw new BaseException(ErrorCode.INTERNAL_SERVER_ERROR);
