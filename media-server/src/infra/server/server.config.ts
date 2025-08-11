@@ -9,7 +9,7 @@ const SSL_CERT_PATH = "certs/server.cert";
 
 export const serverConfig = {
   port: isProduction ? PRODUCTION_PORT : 8443,
-  host: isProduction ? BASE_URL : "172.30.1.29",
+  host: isProduction ? BASE_URL : "192.168.100.74",
   cors: {
     origin: [
       BASE_URL,
