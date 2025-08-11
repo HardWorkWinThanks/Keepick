@@ -8,6 +8,7 @@ import com.ssafy.keepick.auth.application.dto.MobileTokenRefreshDto;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.global.security.util.JWTUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +25,7 @@ public class AuthService {
     private final JWTUtil jwtUtil;
     private final RefreshTokenService refreshTokenService;
     private final MobileAuthService mobileAuthService;
+    private final ObjectMapper objectMapper;
     
     /**
      * 통합 토큰 갱신 처리
@@ -180,12 +182,20 @@ public class AuthService {
      * 요청 바디에서 refreshToken을 추출합니다.
      */
     private String extractRefreshTokenFromBody(HttpServletRequest request) {
-        String refreshToken = request.getParameter("refreshToken");
-        if (refreshToken == null || refreshToken.trim().isEmpty()) {
-            log.warn("모바일 토큰 갱신 실패: 요청 바디에서 refreshToken을 찾을 수 없음");
+        try {
+            // JSON 요청 바디를 읽어서 refreshToken 추출
+            var requestBody = objectMapper.readTree(request.getInputStream());
+            String refreshToken = requestBody.get("refreshToken").asText();
+            
+            if (refreshToken == null || refreshToken.trim().isEmpty()) {
+                log.warn("모바일 토큰 갱신 실패: 요청 바디에서 refreshToken을 찾을 수 없음");
+                throw new BaseException(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
+            }
+            return refreshToken;
+        } catch (Exception e) {
+            log.warn("모바일 토큰 갱신 실패: 요청 바디 파싱 중 오류 발생", e);
             throw new BaseException(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
         }
-        return refreshToken;
     }
     
     /**
