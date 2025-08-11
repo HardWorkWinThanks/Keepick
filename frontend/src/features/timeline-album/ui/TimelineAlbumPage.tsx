@@ -10,6 +10,7 @@ import { AlbumInfoModal } from "./AlbumInfoModal"
 import { PhotoDropZone } from "@/features/photo-drag-drop"
 import type { TimelineEvent } from "@/entities/album"
 import type { DragPhotoData } from "@/entities/photo"
+import { Photo } from "@/entities/photo"
 
 interface TimelineAlbumPageProps {
   groupId: string
