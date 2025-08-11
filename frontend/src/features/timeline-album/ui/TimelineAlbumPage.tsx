@@ -1,10 +1,14 @@
 "use client"
 
+import { useState } from "react"
 import { motion } from "framer-motion"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Edit } from "lucide-react"
 import Link from "next/link"
 import { useTimelineAlbum } from "../model/useTimelineAlbum"
+import { TimelineEditingSidebar } from "./TimelineEditingSidebar"
+import { PhotoDropZone } from "@/features/photo-drag-drop"
 import type { TimelineEvent } from "@/entities/album"
+import type { DragPhotoData } from "@/entities/photo"
 
 interface TimelineAlbumPageProps {
   groupId: string
@@ -96,7 +100,56 @@ function TimelineImageLayout({ event, index }: { event: TimelineEvent; index: nu
 
 export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPageProps) {
   const { timelineEvents, loading } = useTimelineAlbum(groupId, albumId)
-  
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [dragOverSection, setDragOverSection] = useState<string | null>(null)
+  const [editedEvents, setEditedEvents] = useState<{ [key: string]: Partial<TimelineEvent> }>({})
+
+  const handleEditModeToggle = () => {
+    setIsEditMode(!isEditMode)
+    if (!isEditMode) {
+      // 편집 모드 진입 시 현재 데이터로 초기화
+      const initialEditData: { [key: string]: Partial<TimelineEvent> } = {}
+      timelineEvents.forEach(event => {
+        initialEditData[event.id] = {
+          title: event.title,
+          subtitle: event.subtitle,
+          description: event.description,
+          date: event.date
+        }
+      })
+      setEditedEvents(initialEditData)
+    }
+  }
+
+  const handleDrop = (dragData: DragPhotoData, sectionId: string) => {
+    console.log("드롭된 사진:", dragData, "섹션:", sectionId)
+    // TODO: 실제 드롭 로직 구현
+  }
+
+  const handleDragOver = (sectionId: string) => {
+    setDragOverSection(sectionId)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverSection(null)
+  }
+
+  const handleTextChange = (eventId: string, field: keyof TimelineEvent, value: string) => {
+    setEditedEvents(prev => ({
+      ...prev,
+      [eventId]: {
+        ...prev[eventId],
+        [field]: value
+      }
+    }))
+  }
+
+  const getDisplayValue = (event: TimelineEvent, field: keyof TimelineEvent): string => {
+    if (isEditMode && editedEvents[event.id]?.[field] !== undefined) {
+      return editedEvents[event.id][field] as string
+    }
+    return event[field] as string
+  }
 
   if (loading) {
     return (
@@ -112,19 +165,34 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
   return (
     <div className="min-h-screen bg-[#111111] text-white">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#111111]/95 backdrop-blur-sm border-b border-gray-800">
+      <header 
+        className={`fixed top-0 z-50 bg-[#111111]/95 backdrop-blur-sm border-b border-gray-800 transition-all duration-300 ${
+          isEditMode ? 'left-[320px] right-0' : 'left-0 right-0'
+        }`}
+      >
         <div className="flex items-center justify-between px-8 py-4">
           <Link href={`/group/${groupId}`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
             <ArrowLeft size={20} />
             <span className="font-keepick-primary text-sm">돌아가기</span>
           </Link>
           <h1 className="font-keepick-heavy text-xl tracking-wider">ALBUM {albumId} TIMELINE</h1>
-          <div className="w-20"></div> {/* Spacer for centering */}
+          <button 
+            onClick={handleEditModeToggle}
+            className="flex items-center gap-2 px-4 py-2 bg-[#FE7A25] hover:bg-[#e66b20] text-white rounded-lg transition-colors"
+            title={isEditMode ? "편집 완료" : "앨범 편집"}
+          >
+            <Edit size={16} />
+            <span className="font-keepick-primary text-sm">{isEditMode ? "완료" : "수정"}</span>
+          </button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="pt-20 bg-[#111111]">
+      <main 
+        className={`pt-20 bg-[#111111] transition-all duration-300 ${
+          isEditMode ? 'ml-[320px]' : 'ml-0'
+        }`}
+      >
         {timelineEvents.map((event, index) => (
           <motion.section
             key={event.id}
@@ -146,43 +214,95 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
                   }`}
                 >
                   {/* Date */}
-                  <div className="text-[#FE7A25] font-keepick-primary text-sm tracking-wider">{event.date}</div>
+                  {isEditMode ? (
+                    <input
+                      type="text"
+                      value={getDisplayValue(event, 'date')}
+                      onChange={(e) => handleTextChange(event.id, 'date', e.target.value)}
+                      className="text-[#FE7A25] font-keepick-primary text-sm tracking-wider bg-transparent border border-[#FE7A25]/30 rounded px-2 py-1 focus:border-[#FE7A25] focus:outline-none"
+                      placeholder="날짜를 입력하세요"
+                    />
+                  ) : (
+                    <div className="text-[#FE7A25] font-keepick-primary text-sm tracking-wider">{event.date}</div>
+                  )}
 
                   {/* Main Title */}
-                  <h2 className="font-keepick-heavy text-4xl md:text-5xl lg:text-6xl leading-tight tracking-wide">
-                    {event.title.split("\n").map((line, i) => (
-                      <div key={i}>{line}</div>
-                    ))}
-                  </h2>
-
-                  {/* Subtitle */}
-                  {event.subtitle && (
-                    <h3 className="font-keepick-primary text-lg md:text-xl text-gray-400 tracking-widest">
-                      {event.subtitle.split("\n").map((line, i) => (
+                  {isEditMode ? (
+                    <textarea
+                      value={getDisplayValue(event, 'title')}
+                      onChange={(e) => handleTextChange(event.id, 'title', e.target.value)}
+                      className="font-keepick-heavy text-4xl md:text-5xl lg:text-6xl leading-tight tracking-wide bg-transparent border border-white/30 rounded px-3 py-2 focus:border-white focus:outline-none text-white resize-none overflow-hidden w-full"
+                      placeholder="제목을 입력하세요"
+                      rows={Math.max(2, getDisplayValue(event, 'title').split('\n').length)}
+                      style={{ height: 'auto', minHeight: '120px' }}
+                    />
+                  ) : (
+                    <h2 className="font-keepick-heavy text-4xl md:text-5xl lg:text-6xl leading-tight tracking-wide">
+                      {event.title.split("\n").map((line, i) => (
                         <div key={i}>{line}</div>
                       ))}
-                    </h3>
+                    </h2>
+                  )}
+
+                  {/* Subtitle */}
+                  {isEditMode ? (
+                    <textarea
+                      value={getDisplayValue(event, 'subtitle') || ''}
+                      onChange={(e) => handleTextChange(event.id, 'subtitle', e.target.value)}
+                      className="font-keepick-primary text-lg md:text-xl text-gray-400 tracking-widest bg-transparent border border-gray-500/30 rounded px-3 py-2 focus:border-gray-400 focus:outline-none resize-none overflow-hidden w-full"
+                      placeholder="부제목을 입력하세요 (선택사항)"
+                      rows={Math.max(1, Math.ceil((getDisplayValue(event, 'subtitle') || '').split('\n').length) || 1)}
+                      style={{ height: 'auto', minHeight: '40px' }}
+                    />
+                  ) : (
+                    event.subtitle && (
+                      <h3 className="font-keepick-primary text-lg md:text-xl text-gray-400 tracking-widest">
+                        {event.subtitle.split("\n").map((line, i) => (
+                          <div key={i}>{line}</div>
+                        ))}
+                      </h3>
+                    )
                   )}
 
                   {/* Description */}
-                  <p className="font-keepick-primary text-gray-300 leading-relaxed text-base md:text-lg max-w-md">
-                    {event.description}
-                  </p>
+                  {isEditMode ? (
+                    <textarea
+                      value={getDisplayValue(event, 'description')}
+                      onChange={(e) => handleTextChange(event.id, 'description', e.target.value)}
+                      className="font-keepick-primary text-gray-300 leading-relaxed text-base md:text-lg bg-transparent border border-gray-500/30 rounded px-3 py-2 focus:border-gray-400 focus:outline-none resize-none overflow-hidden"
+                      placeholder="설명을 입력하세요"
+                      rows={Math.max(3, Math.ceil(getDisplayValue(event, 'description').length / 40) + getDisplayValue(event, 'description').split('\n').length)}
+                      style={{ width: '100%', maxWidth: '28rem', height: 'auto', minHeight: '80px' }}
+                    />
+                  ) : (
+                    <p className="font-keepick-primary text-gray-300 leading-relaxed text-base md:text-lg max-w-md">
+                      {event.description}
+                    </p>
+                  )}
 
-                  {/* View Button */}
-                  <button className="border border-white/30 px-8 py-3 font-keepick-primary text-sm tracking-wider hover:bg-white hover:text-black transition-all duration-300 mt-8">
-                    자세히 보기
-                  </button>
                 </div>
 
                 {/* Images Collage */}
-                <div
+                <PhotoDropZone
+                  onDrop={(dragData) => handleDrop(dragData, `section-${index}`)}
+                  onDragOver={() => handleDragOver(`section-${index}`)}
+                  onDragLeave={handleDragLeave}
+                  isDragOver={dragOverSection === `section-${index}`}
+                  dropZoneId={`section-${index}`}
                   className={`col-span-12 lg:col-span-7 relative h-[500px] md:h-[600px] ${
                     index % 2 === 0 ? "" : "lg:col-start-1"
-                  }`}
+                  } ${isEditMode && dragOverSection === `section-${index}` ? "ring-2 ring-[#FE7A25] bg-[#FE7A25]/10" : ""}`}
                 >
                   <TimelineImageLayout event={event} index={index} />
-                </div>
+                  {isEditMode && (
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                      <div className="text-white text-center">
+                        <div className="text-lg font-keepick-primary">사진을 여기에 드롭하세요</div>
+                        <div className="text-sm text-gray-300">최대 3장까지 추가 가능</div>
+                      </div>
+                    </div>
+                  )}
+                </PhotoDropZone>
               </div>
             </div>
           </motion.section>
@@ -190,7 +310,11 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       </main>
 
       {/* Footer */}
-      <footer className="bg-[#111111] border-t border-gray-800 py-16">
+      <footer 
+        className={`bg-[#111111] border-t border-gray-800 py-16 transition-all duration-300 ${
+          isEditMode ? 'ml-[320px]' : 'ml-0'
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-8 text-center">
           <h2 className="font-keepick-heavy text-3xl md:text-4xl mb-4 tracking-wider">ALBUM {albumId}</h2>
           <p className="font-keepick-primary text-gray-400 text-sm tracking-wider">소중한 순간들을 함께 나누는 공간</p>
@@ -204,6 +328,12 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
           </div>
         </div>
       </footer>
+
+      {/* Timeline Editing Sidebar */}
+      <TimelineEditingSidebar 
+        isOpen={isEditMode} 
+        onClose={() => setIsEditMode(false)} 
+      />
     </div>
   )
 }
