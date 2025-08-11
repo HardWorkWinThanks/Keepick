@@ -88,18 +88,20 @@ function TimelineImageLayout({
       }`
     }
 
-    const editModeProps = isEditMode && !isSelectingCoverImage ? {
+    const dropZoneProps = {
       onDrop: (dragData: DragPhotoData, e: React.DragEvent) => onImageDrop?.(imageIndex, dragData),
       onDragOver: () => onImageDragOver?.(imageIndex),
       onDragLeave: onImageDragLeave,
       isDragOver: dragOverImageIndex === imageIndex,
       dropZoneId: `image-${index}-${imageIndex}`
-    } : !isSelectingCoverImage ? {
+    };
+
+    const motionProps = {
       initial: { opacity: 0, scale: 0.9, rotate: index % 2 === 0 ? -2 : 2 },
       whileInView: { opacity: 1, scale: 1, rotate: index % 2 === 0 ? -2 : 2 },
       transition: { duration: 0.6, delay: 0.3 + imageIndex * 0.2 },
       viewport: { once: true }
-    } : {}
+    };
 
     const handleCoverImageClick = () => {
       if (isSelectingCoverImage && imageData && onCoverImageSelect) {
@@ -111,23 +113,8 @@ function TimelineImageLayout({
       }
     }
 
-    if (isEditMode && !isSelectingCoverImage) {
-      return (
-        <PhotoDropZone 
-          key={`image-${imageIndex}`} 
-          {...baseProps} 
-          {...editModeProps}
-        >
-      );
-    }
-    
-    return (
-      <motion.div 
-        key={`image-${imageIndex}`} 
-        {...baseProps} 
-        {...(!isSelectingCoverImage ? editModeProps : {})}
-        {...(isSelectingCoverImage ? { onClick: handleCoverImageClick } : {})}
-      >
+    const imageContent = (
+      <>
         <img
           src={imageData?.src || "/placeholder.svg"}
           alt={`${event.title} ${imageIndex === 0 ? 'main' : `detail ${imageIndex}`}`}
@@ -147,7 +134,30 @@ function TimelineImageLayout({
             </div>
           </div>
         )}
-      </ImageWrapper>
+      </>
+    );
+
+    if (isEditMode && !isSelectingCoverImage) {
+      return (
+        <PhotoDropZone 
+          key={`image-${imageIndex}`} 
+          {...baseProps} 
+          {...dropZoneProps}
+        >
+          {imageContent}
+        </PhotoDropZone>
+      );
+    }
+    
+    return (
+      <motion.div 
+        key={`image-${imageIndex}`} 
+        {...baseProps} 
+        {...(!isSelectingCoverImage ? motionProps : {})}
+        {...(isSelectingCoverImage ? { onClick: handleCoverImageClick } : {})}
+      >
+        {imageContent}
+      </motion.div>
     )
   }
 
@@ -209,7 +219,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     }
   }
 
-  const handleAlbumInfoChange = (field: keyof typeof editedAlbumInfo, value: string | Photo | null) => {
+  const handleAlbumInfoChange = (field: string, value: string | Photo | null) => {
     setEditedAlbumInfo(prev => ({
       ...prev,
       [field]: value
