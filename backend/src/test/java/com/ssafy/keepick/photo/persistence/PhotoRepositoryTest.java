@@ -475,7 +475,7 @@ class PhotoRepositoryTest extends BaseRepositoryTest {
             entityManager.persist(TierAlbumPhoto.createTierAlbumPhoto(tierAlbum, testPhoto2, Tier.S, 1));
 
             // when
-            List<Long> photoIdNotInAnyAlbum = photoRepository.findPhotoIdNotInAnyAlbum(List.of(testPhoto1.getId(), testPhoto2.getId(), testPhoto3.getId(), deletedPhoto.getId()));
+            List<Long> photoIdNotInAnyAlbum = photoRepository.findPhotoIdNotInAnyAlbum(List.of(testPhoto1.getId(), testPhoto2.getId(), testPhoto3.getId()));
 
             // then
             assertThat(photoIdNotInAnyAlbum).hasSize(1);

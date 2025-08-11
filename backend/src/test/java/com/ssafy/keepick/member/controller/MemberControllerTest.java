@@ -23,6 +23,7 @@ import com.ssafy.keepick.member.application.MemberService;
 import com.ssafy.keepick.member.controller.request.MemberUpdateRequest;
 import com.ssafy.keepick.member.controller.response.MemberInfoResponse;
 import com.ssafy.keepick.member.controller.response.MemberSearchResponse;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 @ExtendWith(MockitoExtension.class)
 class MemberControllerTest extends BaseTest {
@@ -262,16 +263,13 @@ class MemberControllerTest extends BaseTest {
     void searchMemberByNickname_InvalidNickname_ThrowsException() {
         // given
         String invalidNickname = "";
-        given(memberService.searchMemberByNickname(invalidNickname))
-                .willThrow(new BaseException(ErrorCode.INVALID_PARAMETER));
 
         // when & then
         assertThatThrownBy(() -> memberController.searchMemberByNickname(invalidNickname))
                 .isInstanceOf(BaseException.class)
-                .hasMessage("잘못된 요청 파라미터입니다.")
+                .hasMessage("닉네임은 필수입니다.")
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.INVALID_PARAMETER);
 
-        verify(memberService).searchMemberByNickname(invalidNickname);
     }
 }

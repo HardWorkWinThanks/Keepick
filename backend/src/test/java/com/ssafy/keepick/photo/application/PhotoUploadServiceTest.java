@@ -1,5 +1,6 @@
 package com.ssafy.keepick.photo.application;
 
+import com.ssafy.keepick.external.s3.dto.S3ImagePathDto;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.group.domain.Group;
@@ -52,6 +53,7 @@ class PhotoUploadServiceTest extends BaseTest {
     private Group group;
     private GroupPhotoUploadRequest request;
     private List<String> expectedUrls;
+    private List<S3ImagePathDto> expectedS3ImagePathDtos;
 
     @BeforeEach
     void setUp() {
@@ -63,6 +65,7 @@ class PhotoUploadServiceTest extends BaseTest {
         request = new GroupPhotoUploadRequest(List.of(fileRequest1, fileRequest2));
 
         expectedUrls = List.of("http://presigned.url/1", "http://presigned.url/2");
+        expectedS3ImagePathDtos = List.of(S3ImagePathDto.of("http://presigned.url/1", "http://public.url/1"), S3ImagePathDto.of("http://presigned.url/2", "http://public.url/2"));
     }
 
     @Test
@@ -77,7 +80,7 @@ class PhotoUploadServiceTest extends BaseTest {
 
         when(groupRepository.findById(anyLong())).thenReturn(Optional.of(group));
         when(photoRepository.saveAll(anyList())).thenReturn(initialPhotos);
-//        when(imageService.generatePresignedUrls(anyList())).thenReturn(expectedUrls);
+        when(imageService.generatePresignedUrls(anyList())).thenReturn(expectedS3ImagePathDtos);
 
         // When
         List<String> actualUrls = groupService.uploadGroupPhoto(groupId, request);
@@ -100,8 +103,8 @@ class PhotoUploadServiceTest extends BaseTest {
 
         // 두 번째 saveAll 호출 (originalUrl이 설정된 Photo 객체들)
         assertEquals(2, capturedLists.get(1).size());
-        assertEquals(expectedUrls.get(0), capturedLists.get(1).get(0).getOriginalUrl());
-        assertEquals(expectedUrls.get(1), capturedLists.get(1).get(1).getOriginalUrl());
+        assertEquals(expectedS3ImagePathDtos.get(0).getPublicUrl(), capturedLists.get(1).get(0).getOriginalUrl());
+        assertEquals(expectedS3ImagePathDtos.get(1).getPublicUrl(), capturedLists.get(1).get(1).getOriginalUrl());
 
         ArgumentCaptor<List<GroupPhotoCommandDto>> dtoCaptor = ArgumentCaptor.forClass(List.class);
         verify(imageService).generatePresignedUrls(dtoCaptor.capture());
