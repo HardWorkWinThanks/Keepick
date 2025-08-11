@@ -55,6 +55,11 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
       }
 
       // OAuth 콜백 처리 중인 경우 초기화 건너뛰기 (중복 방지)
+      if (sessionStorage.getItem('oauth_in_progress')) {
+        console.log("💡 OAuth 콜백 처리 중, AuthInitializer 초기화 건너뛰기");
+        return;
+      }
+
       const currentUrl = window.location.href;
       const isOAuthCallback = currentUrl.includes('token=') || currentUrl.includes('accessToken=') || currentUrl.includes('error=');
       

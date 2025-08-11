@@ -68,16 +68,15 @@ export const useOAuthCallback = () => {
           // URL 파라미터를 모두 제거하여 OAuthHandler가 다시 실행되지 않도록 함
           const cleanUrl = window.location.origin + window.location.pathname;
           window.history.replaceState({}, '', cleanUrl);
-          router.replace("/");
         }
       } catch (error) {
         console.error("OAuth 처리 중 오류:", error);
         // URL 파라미터 정리 후 에러와 함께 홈으로 이동
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, '', cleanUrl);
-        router.replace("/?error=login_failed");
       } finally {
         isProcessing.current = false; // 처리 완료
+        sessionStorage.removeItem('oauth_in_progress');
       }
     };
 
@@ -103,7 +102,6 @@ export const useOAuthCallback = () => {
       // URL 파라미터 정리 후 사용자 정보 가져오기 실패 시 에러 페이지로
       const cleanUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, '', cleanUrl);
-      router.replace("/?error=fetch_failed");
     } finally {
       // 로딩 상태 종료
       dispatch(setUserLoading(false));
