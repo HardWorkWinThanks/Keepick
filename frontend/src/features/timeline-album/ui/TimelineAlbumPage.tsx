@@ -324,6 +324,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
   }
 
   // 새로운 TimelineEditor 컴포넌트 사용
+  // 새로운 TimelineEditor 컴포넌트 사용
   return (
     <div className="min-h-screen bg-[#111111] text-white">
       {/* Header */}
