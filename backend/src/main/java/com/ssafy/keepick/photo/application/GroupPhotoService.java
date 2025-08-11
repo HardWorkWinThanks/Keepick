@@ -124,7 +124,7 @@ public class GroupPhotoService {
     @Transactional(readOnly = true)
     public PhotoTagDto getGroupPhotoTags(Long groupId, Long photoId) {
         // 그룹 내 사진인지 확인
-        if(photoRepository.existsByGroupIdAndIdAndDeletedAtIsNull(groupId, photoId)) {
+        if(!photoRepository.existsByGroupIdAndIdAndDeletedAtIsNull(groupId, photoId)) {
             throw new BaseException(ErrorCode.PHOTO_NOT_FOUND);
         }
 
