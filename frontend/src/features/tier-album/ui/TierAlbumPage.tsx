@@ -6,6 +6,20 @@ import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { useTierAlbum } from "../model/useTierAlbum"
 import type { TierInfo, TierType } from "../types"
+import { Photo, DragPhotoData } from "@/entities/photo"
+import {
+  useAlbumState,
+  useAlbumStorage,
+} from "@/features/album-management"
+import {
+  useTierGrid,
+  useTierBattle,
+  TierGrid,
+  TierBattleModal,
+  TierData,
+} from "@/features/tier-battle"
+import { PhotoModal } from "@/features/photos-viewing"
+import { TierEditingSidebar } from "./TierEditingSidebar"
 
 interface TierAlbumPageProps {
   groupId: string
@@ -113,6 +127,9 @@ const TiltShineCard: React.FC<TiltShineCardProps> = ({ children, tierColor, clas
 }
 
 export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) {
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [showAlbumInfoModal, setShowAlbumInfoModal] = useState(false)
+  
   const {
     isLoading,
     currentTier,
@@ -126,7 +143,203 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
     goToPhoto,
   } = useTierAlbum(groupId, albumId)
 
+  // TierAlbumWidget 로직 추가
+  const { saveAlbumData, loadAlbumData, getDefaultPhotos } = useAlbumStorage()
+  const {
+    availablePhotos,
+    setAvailablePhotos,
+    selectedImage,
+    showImageModal,
+    handleImageClick,
+    handleCloseImageModal,
+  } = useAlbumState()
+
+  const {
+    tierPhotos,
+    setTierPhotos,
+    tiers: battleTiers,
+    dragOverPosition,
+    setDragOverPosition,
+    draggingPhotoId,
+    setDraggingPhotoId,
+    handleReturnToAvailable,
+  } = useTierGrid()
+
+  const {
+    showComparisonModal,
+    battleSequence,
+    setBattleSequence,
+    precisionTierMode,
+    setPrecisionTierMode,
+    handleBattleDecision,
+    handleCloseBattleModal,
+  } = useTierBattle()
+
   const currentTierInfo = tiers.find((tier) => tier.id === currentTier)!
+
+  // 편집 모드 토글
+  const toggleEditMode = () => {
+    setIsEditMode(!isEditMode)
+  }
+
+  // TierAlbumWidget 로직 - 앨범 데이터 로드
+  useEffect(() => {
+    if (isEditMode) {
+      const result = loadAlbumData(`tier_${albumId}`)
+      if (result.success && result.data) {
+        setTierPhotos(
+          result.data?.tierPhotos as TierData || {
+            S: [{ id: "photo_s1", src: "/jaewan1.jpg", name: "S급 사진1" }],
+            A: [],
+            B: [],
+            C: [],
+            D: [],
+          }
+        )
+        setAvailablePhotos(result.data.availablePhotos || getDefaultPhotos())
+      } else {
+        // 기본 데이터 설정
+        setTierPhotos({
+          S: [{ id: "photo_s1", src: "/jaewan1.jpg", name: "S급 사진1" }],
+          A: [],
+          B: [],
+          C: [],
+          D: [],
+        })
+        setAvailablePhotos(getDefaultPhotos())
+      }
+    }
+  }, [albumId, isEditMode])
+
+  // 저장 핸들러
+  const handleSave = () => {
+    const success = saveAlbumData(
+      `tier_${albumId}`,
+      { tierPhotos, availablePhotos },
+      tierPhotos.S?.[0]
+    )
+
+    if (success) {
+      // 커버 이미지 저장
+      if (tierPhotos.S?.[0]) {
+        localStorage.setItem(`tierAlbumCover_${albumId}`, tierPhotos.S[0].src)
+      }
+      alert("✅ 티어 앨범이 성공적으로 저장되었습니다!")
+      setIsEditMode(false)
+    } else {
+      alert("❌ 저장 실패")
+    }
+  }
+
+  // 드래그 핸들러들
+  const handleDragStart = (
+    e: React.DragEvent,
+    photo: Photo,
+    source: string | "available"
+  ) => {
+    e.dataTransfer.setData(
+      "text/plain",
+      JSON.stringify({ photoId: photo.id, source })
+    )
+    setDraggingPhotoId(photo.id)
+  }
+
+  const handleDragEnd = () => {
+    setDraggingPhotoId(null)
+    setDragOverPosition(null)
+  }
+
+  const handleDragOverTierArea = (e: React.DragEvent, tier: string) => {
+    e.preventDefault()
+    setDragOverPosition({ tier, index: (tierPhotos[tier] || []).length })
+  }
+
+  const handleDropTierArea = (e: React.DragEvent, targetTier: string) => {
+    e.preventDefault()
+    handleDropAtPosition(e, targetTier, (tierPhotos[targetTier] || []).length)
+  }
+
+  const handleDragOverPosition = (
+    e: React.DragEvent,
+    tier: string,
+    index: number
+  ) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const mouseX = e.clientX - rect.left
+    const isLeftHalf = mouseX < rect.width / 2
+    const targetIndex = isLeftHalf ? index : index + 1
+    setDragOverPosition({ tier, index: targetIndex })
+  }
+
+  const handleDropAtPosition = (
+    e: React.DragEvent,
+    targetTier: string,
+    targetIndex: number
+  ) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverPosition(null)
+
+    const data = JSON.parse(e.dataTransfer.getData("text/plain"))
+    const { photoId, source } = data
+    const draggedPhoto =
+      source === "available"
+        ? availablePhotos.find((p) => p.id === photoId)
+        : tierPhotos[source]?.find((p) => p.id === photoId)
+
+    if (!draggedPhoto) return
+
+    const sourceIndex =
+      source !== "available"
+        ? tierPhotos[source].findIndex((p) => p.id === photoId)
+        : -1
+
+    if (
+      source === targetTier &&
+      (targetIndex === sourceIndex || targetIndex === sourceIndex + 1)
+    )
+      return
+
+    // 정밀 배틀 모드 체크
+    if (
+      precisionTierMode &&
+      tierPhotos[targetTier]?.length > 0 &&
+      source !== targetTier
+    ) {
+      const opponents = [...tierPhotos[targetTier]]
+        .slice(0, targetIndex)
+        .reverse()
+      if (opponents.length > 0) {
+        setBattleSequence({
+          newPhoto: draggedPhoto,
+          opponents,
+          currentOpponentIndex: 0,
+          targetTier,
+          targetIndex,
+          sourceType: source,
+        })
+        return
+      }
+    }
+
+    // 일반 드롭 처리
+    setTierPhotos((prev) => {
+      const newTiers = { ...prev }
+      if (source === "available") {
+        setAvailablePhotos((p) => p.filter((p) => p.id !== photoId))
+      } else {
+        newTiers[source] = [...(newTiers[source] || [])].filter(
+          (p) => p.id !== photoId
+        )
+      }
+      const targetArray = [...(newTiers[targetTier] || [])]
+      targetArray.splice(targetIndex, 0, draggedPhoto)
+      newTiers[targetTier] = targetArray
+      return newTiers
+    })
+  }
 
   // 로딩 상태
   if (isLoading) {
@@ -161,14 +374,85 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
           <div className="text-center">
             <h1 className="font-keepick-heavy text-xl tracking-wider">TIER ALBUM {albumId}</h1>
           </div>
-          <button className="px-6 py-2 border-2 border-orange-500 hover:border-orange-400 text-orange-500 hover:text-orange-400 bg-transparent font-keepick-primary text-sm rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-orange-500/25">
-            티어 수정하기
+          <button 
+            onClick={toggleEditMode}
+            className="px-6 py-2 border-2 border-orange-500 hover:border-orange-400 text-orange-500 hover:text-orange-400 bg-transparent font-keepick-primary text-sm rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-orange-500/25"
+          >
+            {isEditMode ? "티어 완성하기" : "티어 수정하기"}
           </button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="h-screen flex flex-col pt-16 relative z-10">
+      <main className={`${isEditMode ? 'min-h-screen bg-[#111111] pt-20' : 'h-screen flex flex-col pt-16'} relative z-10`}>
+        {isEditMode ? (
+          // 편집 모드 - TierAlbumWidget 내용
+          <div className={`space-y-6 animate-fade-in pb-8 transition-all duration-300 ${isEditMode ? 'ml-[320px] pr-8 pl-8' : 'px-8'}`}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-keepick-heavy text-white">티어 편집 모드</h2>
+              <button
+                onClick={() => setPrecisionTierMode(!precisionTierMode)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 ${
+                  precisionTierMode
+                    ? "bg-[#FE7A25] text-white ring-2 ring-[#FE7A25]"
+                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span className="hidden sm:block">
+                  {precisionTierMode ? "배틀 활성화됨" : "정밀 배틀"}
+                </span>
+              </button>
+            </div>
+
+            <TierGrid
+              tiers={battleTiers}
+              tierPhotos={tierPhotos}
+              dragOverPosition={dragOverPosition}
+              draggingPhotoId={draggingPhotoId}
+              onImageClick={handleImageClick}
+              onReturnToAvailable={(photoId, fromTier) =>
+                handleReturnToAvailable(photoId, fromTier, (photo) =>
+                  setAvailablePhotos((prev) => [...prev, photo])
+                )
+              }
+              onDragOverTierArea={handleDragOverTierArea}
+              onDropTierArea={handleDropTierArea}
+              onDragOverPosition={handleDragOverPosition}
+              onDropAtPosition={handleDropAtPosition}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            />
+
+            <TierEditingSidebar
+              isOpen={isEditMode}
+              onClose={() => setIsEditMode(false)}
+              availablePhotos={availablePhotos}
+            />
+
+            <TierBattleModal
+              isOpen={showComparisonModal}
+              battleSequence={battleSequence}
+              onClose={handleCloseBattleModal}
+              onDecision={(winnerId) =>
+                handleBattleDecision(winnerId, tierPhotos, setTierPhotos, (photoId) =>
+                  setAvailablePhotos((prev) => prev.filter((p) => p.id !== photoId))
+                )
+              }
+              onZoomRequest={handleImageClick}
+            />
+
+            <PhotoModal
+              photo={selectedImage}
+              isOpen={showImageModal}
+              onClose={handleCloseImageModal}
+            />
+          </div>
+        ) : (
+          // 뷰 모드 - 기존 티어 앨범 뷰어
+          <>
         {/* Left Top: Tier Title & Navigation */}
         <div className="absolute top-24 left-8 z-40">
           {/* Large Tier Character with "Tier" text */}
@@ -178,13 +462,13 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="text-8xl md:text-9xl font-line-seed-heavy tracking-wider"
+              className="text-8xl md:text-9xl font-keepick-heavy tracking-wider"
               style={{ color: currentTierInfo.color }}
             >
               {currentTier}
             </motion.h1>
             <span
-              className="text-2xl font-line-seed-heavy tracking-widest opacity-80"
+              className="text-2xl font-keepick-heavy tracking-widest opacity-80"
               style={{
                 color: currentTierInfo.color,
                 textShadow: `0 0 10px ${currentTierInfo.color}40`,
@@ -195,14 +479,14 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
           </div>
 
           <div className="mb-4">
-            <p className="font-line-seed text-gray-400 text-sm mb-1">
+            <p className="font-keepick-primary text-gray-400 text-sm mb-1">
               {currentTier === "S" && "최고의 순간들"}
               {currentTier === "A" && "특별한 기억들"}
               {currentTier === "B" && "좋은 추억들"}
               {currentTier === "C" && "일상의 모습들"}
               {currentTier === "D" && "아쉬운 사진들"}
             </p>
-            <p className="font-line-seed text-gray-500 text-xs">{getTierCount(currentTier)}장의 사진</p>
+            <p className="font-keepick-primary text-gray-500 text-xs">{getTierCount(currentTier)}장의 사진</p>
           </div>
 
           {/* Minimal Tier Navigation */}
@@ -211,7 +495,7 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
               <button
                 key={tier.id}
                 onClick={() => setCurrentTier(tier.id)}
-                className={`w-8 h-8 rounded-full text-sm font-line-seed-heavy transition-all duration-300 relative ${
+                className={`w-8 h-8 rounded-full text-sm font-keepick-heavy transition-all duration-300 relative ${
                   currentTier === tier.id
                     ? "text-black"
                     : "text-gray-500 hover:text-white border border-gray-700 hover:border-gray-500"
@@ -227,14 +511,14 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
 
           {/* Tier Distribution Bar Chart */}
           <div className="max-w-xs">
-            <p className="font-line-seed text-xs text-gray-500 mb-2">티어별 분포</p>
+            <p className="font-keepick-primary text-xs text-gray-500 mb-2">티어별 분포</p>
             <div className="space-y-1">
               {tiers.map((tier) => {
                 const count = getTierCount(tier.id)
                 const percentage = (count / 23) * 100 // 전체 사진 수
                 return (
                   <div key={tier.id} className="flex items-center gap-2">
-                    <span className="font-line-seed text-xs w-4" style={{ color: tier.color }}>
+                    <span className="font-keepick-primary text-xs w-4" style={{ color: tier.color }}>
                       {tier.name}
                     </span>
                     <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
@@ -246,7 +530,7 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
                         }}
                       />
                     </div>
-                    <span className="font-line-seed text-xs text-gray-500 w-6">{count}</span>
+                    <span className="font-keepick-primary text-xs text-gray-500 w-6">{count}</span>
                   </div>
                 )
               })}
@@ -263,12 +547,12 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
               transition={{ duration: 0.5, delay: 0.2 }}
               className="bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/10 w-48"
             >
-              <h3 className="font-line-seed-heavy text-base mb-2" style={{ color: currentTierInfo.color }}>
+              <h3 className="font-keepick-heavy text-base mb-2" style={{ color: currentTierInfo.color }}>
                 사진 #{currentPhotoIndex + 1}
               </h3>
-              <p className="font-line-seed text-gray-400 text-xs mb-3">{currentPhoto.date}</p>
+              <p className="font-keepick-primary text-gray-400 text-xs mb-3">{currentPhoto.date}</p>
 
-              <div className="space-y-1.5 text-xs font-line-seed text-gray-500">
+              <div className="space-y-1.5 text-xs font-keepick-primary text-gray-500">
                 <div className="flex justify-between">
                   <span>등급</span>
                   <span style={{ color: currentTierInfo.color }}>{currentTier}급</span>
@@ -347,7 +631,7 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
               >
                 <img src={photo.src || "/placeholder.svg"} alt={photo.title} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <span className="font-line-seed text-xs text-white">{index + 1}</span>
+                  <span className="font-keepick-primary text-xs text-white">{index + 1}</span>
                 </div>
               </button>
             ))}
@@ -357,7 +641,7 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
         {/* Photo Counter - Bottom Right */}
         {currentTierPhotos.length > 0 && (
           <div className="absolute bottom-8 right-8">
-            <p className="font-line-seed text-gray-400 text-sm">
+            <p className="font-keepick-primary text-gray-400 text-sm">
               {currentPhotoIndex + 1} / {currentTierPhotos.length}
             </p>
           </div>
@@ -367,12 +651,14 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
         {currentTierPhotos.length === 0 && (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <p className="font-line-seed text-gray-400 text-lg mb-4">{currentTierInfo.name}등급에 사진이 없습니다</p>
-              <Link href="/gallery" className="font-line-seed text-orange-500 hover:text-orange-400 transition-colors">
+              <p className="font-keepick-primary text-gray-400 text-lg mb-4">{currentTierInfo.name}등급에 사진이 없습니다</p>
+              <Link href="/gallery" className="font-keepick-primary text-orange-500 hover:text-orange-400 transition-colors">
                 갤러리에서 선택하기
               </Link>
             </div>
           </div>
+        )}
+          </>
         )}
       </main>
     </div>
