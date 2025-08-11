@@ -23,10 +23,12 @@ public class RefreshTokenService {
 
     private final StringRedisTemplate stringRedisTemplate;
 
-    // Redis 키 접두사
+        // Redis 키 접두사
     private static final String RT_KEY_PREFIX = "rt:";
     private static final String FAMILY_KEY_PREFIX = "family:";
-
+    private static final String FAMILY_STATUS_KEY_PREFIX = "family_status:";
+    private static final String MEMBER_FAMILIES_KEY_PREFIX = "member:";
+    
     // 토큰 상태
     private static final String STATUS_ACTIVE = "ACTIVE";
     private static final String STATUS_USED = "USED";
@@ -34,6 +36,7 @@ public class RefreshTokenService {
     
     // 패밀리 상태
     private static final String FAMILY_STATUS_COMPROMISED = "COMPROMISED";
+    private static final String FAMILY_STATUS_REVOKED = "REVOKED";
 
     // 기본 TTL (30일)
     private static final Duration DEFAULT_TTL = Duration.ofDays(30);
@@ -50,8 +53,9 @@ public class RefreshTokenService {
     public String issue(Long memberId, String username, String familyId) {
         // 패밀리 상태 확인
         String familyStatus = getFamilyStatus(familyId);
-        if ("REVOKED".equals(familyStatus)) {
-            log.warn("폐기된 패밀리에 대한 토큰 발급 시도: memberId={}, familyId={}", memberId, familyId);
+        if (FAMILY_STATUS_REVOKED.equals(familyStatus) || FAMILY_STATUS_COMPROMISED.equals(familyStatus)) {
+            log.warn("폐기/침해된 패밀리에 대한 토큰 발급 시도: memberId={}, familyId={}, status={}", 
+                    memberId, familyId, familyStatus);
             throw new BaseException(ErrorCode.REFRESH_TOKEN_REVOKED);
         }
         
@@ -75,6 +79,11 @@ public class RefreshTokenService {
         String familyKey = FAMILY_KEY_PREFIX + familyId;
         stringRedisTemplate.opsForSet().add(familyKey, jti);
         stringRedisTemplate.expire(familyKey, DEFAULT_TTL);
+
+        // 사용자별 패밀리 인덱스 추가 (revokeByMember 최적화)
+        String memberFamiliesKey = MEMBER_FAMILIES_KEY_PREFIX + memberId + ":families";
+        stringRedisTemplate.opsForSet().add(memberFamiliesKey, familyId);
+        stringRedisTemplate.expire(memberFamiliesKey, DEFAULT_TTL);
 
         log.info("리프레시 토큰 발급 완료: jti={}, memberId={}, familyId={}", jti, memberId, familyId);
         return jti;
@@ -119,14 +128,16 @@ public class RefreshTokenService {
                             rtJti, status, memberId, familyId);
                     if (familyId != null) {
                         stringRedisTemplate.opsForValue()
-                            .set("family_status:" + familyId, FAMILY_STATUS_COMPROMISED, DEFAULT_TTL);
+                            .set(FAMILY_STATUS_KEY_PREFIX + familyId, FAMILY_STATUS_REVOKED, DEFAULT_TTL);
+                        // 비동기로 family 전체 폐기 (운영 가시성 향상)
+                        revokeByFamily(familyId);
                     }
                     throw new BaseException(ErrorCode.REFRESH_TOKEN_REUSED);
                 }
 
                 // 패밀리 상태 확인
                 String familyStatus = getFamilyStatus(familyId);
-                if ("REVOKED".equals(familyStatus)) {
+                if (FAMILY_STATUS_REVOKED.equals(familyStatus)) {
                     log.warn("폐기된 패밀리의 리프레시 토큰 사용 시도: jti={}, memberId={}, familyId={}", 
                             rtJti, memberId, familyId);
                     throw new BaseException(ErrorCode.REFRESH_TOKEN_REVOKED);
@@ -228,7 +239,7 @@ public class RefreshTokenService {
         }
 
         // 패밀리 상태를 REVOKED로 설정
-        stringRedisTemplate.opsForValue().set("family_status:" + familyId, "REVOKED", DEFAULT_TTL);
+        stringRedisTemplate.opsForValue().set(FAMILY_STATUS_KEY_PREFIX + familyId, FAMILY_STATUS_REVOKED, DEFAULT_TTL);
 
         // 패밀리 그룹의 모든 토큰을 안전하게 REVOKED로 표시
         String familyKey = FAMILY_KEY_PREFIX + familyId;
@@ -261,29 +272,56 @@ public class RefreshTokenService {
      * @param memberId 사용자 ID
      */
     public void revokeByMember(Long memberId) {
-        // 패턴 매칭으로 해당 사용자의 모든 토큰 찾기
-        Set<String> keys = stringRedisTemplate.keys(RT_KEY_PREFIX + "*");
+        // 사용자별 패밀리 인덱스를 통해 효율적으로 폐기
+        String memberFamiliesKey = MEMBER_FAMILIES_KEY_PREFIX + memberId + ":families";
+        Set<String> families = stringRedisTemplate.opsForSet().members(memberFamiliesKey);
         
+        int revokedFamilies = 0;
+        if (families != null) {
+            for (String familyId : families) {
+                revokeByFamily(familyId);
+                revokedFamilies++;
+            }
+        }
+        
+        // 사용자별 패밀리 인덱스 삭제
+        stringRedisTemplate.delete(memberFamiliesKey);
+
+        log.info("사용자 토큰 폐기 완료: memberId={}, revokedFamilies={}", memberId, revokedFamilies);
+    }
+
+    /**
+     * 특정 패밀리의 모든 토큰을 폐기합니다.
+     * 
+     * @param familyId 패밀리 ID
+     */
+    public void revokeByFamily(String familyId) {
+        // 패밀리 상태를 REVOKED로 설정
+        stringRedisTemplate.opsForValue().set(FAMILY_STATUS_KEY_PREFIX + familyId, FAMILY_STATUS_REVOKED, DEFAULT_TTL);
+
+        // 패밀리 그룹의 모든 토큰을 안전하게 REVOKED로 표시
+        String familyKey = FAMILY_KEY_PREFIX + familyId;
+        Set<String> familyTokens = stringRedisTemplate.opsForSet().members(familyKey);
+
         int revokedCount = 0;
-        if (keys != null) {
-            for (String key : keys) {
-                Map<Object, Object> tokenData = stringRedisTemplate.opsForHash().entries(key);
-                if (!tokenData.isEmpty()) {
-                    String tokenMemberId = (String) tokenData.get("member_id");
-                    if (String.valueOf(memberId).equals(tokenMemberId)) {
-                        String status = (String) tokenData.get("status");
-                        if (STATUS_ACTIVE.equals(status)) {
-                            stringRedisTemplate.opsForHash().put(key, "status", STATUS_REVOKED);
-                            stringRedisTemplate.opsForHash().put(key, "revoked_at_ms",
-                                    String.valueOf(System.currentTimeMillis()));
-                            revokedCount++;
-                        }
-                    }
+        if (familyTokens != null) {
+            for (String jti : familyTokens) {
+                String tokenKey = RT_KEY_PREFIX + jti;
+                // EXISTS 체크로 만료된 키 부활 방지
+                if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(tokenKey))) {
+                    stringRedisTemplate.opsForHash().put(tokenKey, "status", STATUS_REVOKED);
+                    stringRedisTemplate.opsForHash().put(tokenKey, "revoked_at_ms",
+                            String.valueOf(System.currentTimeMillis()));
+                    revokedCount++;
                 }
             }
         }
 
-        log.info("사용자 토큰 폐기 완료: memberId={}, revokedTokens={}", memberId, revokedCount);
+        // 패밀리 그룹 삭제
+        stringRedisTemplate.delete(familyKey);
+
+        log.info("패밀리 토큰 폐기 완료: familyId={}, totalTokens={}, revokedTokens={}", 
+                familyId, familyTokens != null ? familyTokens.size() : 0, revokedCount);
     }
 
     /**
@@ -293,7 +331,7 @@ public class RefreshTokenService {
      * @return 패밀리 상태 (COMPROMISED, REVOKED, null=정상)
      */
     public String getFamilyStatus(String familyId) {
-        return stringRedisTemplate.opsForValue().get("family_status:" + familyId);
+        return stringRedisTemplate.opsForValue().get(FAMILY_STATUS_KEY_PREFIX + familyId);
     }
 
     /**
