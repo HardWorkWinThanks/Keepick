@@ -142,8 +142,11 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                                 router.prefetch(
                                   `/group/${group.groupId}/timeline/${photo.id}`
                                 );
+                              } else if (currentAlbum.id === "tier") {
+                                router.prefetch(
+                                  `/group/${group.groupId}/tier/${photo.id}`
+                                );
                               }
-                              // tier, highlight는 나중에 구현 예정
                             }}
                             onClick={() => {
                               // 앨범 타입에 따라 다른 라우트로 이동
@@ -152,8 +155,9 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                                   `/group/${group.groupId}/timeline/${photo.id}`
                                 );
                               } else if (currentAlbum.id === "tier") {
-                                // TODO: 티어 앨범 라우트 구현 예정
-                                alert(`티어 앨범 "${photo.title}"는 아직 구현 중입니다.`);
+                                router.push(
+                                  `/group/${group.groupId}/tier/${photo.id}`
+                                );
                               } else if (currentAlbum.id === "highlight") {
                                 // TODO: 하이라이트 앨범 라우트 구현 예정  
                                 alert(`하이라이트 앨범 "${photo.title}"는 아직 구현 중입니다.`);
