@@ -56,11 +56,12 @@ export function TimelineEditingSidebar({
               {/* Album Info Button */}
               <button
                 onClick={onShowAlbumInfoModal}
-                className="group w-full relative overflow-hidden bg-gradient-to-r from-[#FE7A25] to-[#FF6B35] hover:from-[#e66b20] hover:to-[#e65c2e] text-white rounded-xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg hover:shadow-orange-500/25"
+                className="group relative w-full p-px rounded-xl overflow-hidden bg-gray-700 transition-all duration-300 transform hover:scale-[1.02] hover:bg-gradient-to-r hover:from-[#FE7A25] hover:to-[#FF6B35]"
               >
-                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                <div className="relative px-4 py-3 flex items-center justify-center gap-2">
-                  <span className="text-sm font-keepick-primary tracking-wider">앨범 정보 변경</span>
+                <div className="bg-[#111111] rounded-[11px] px-4 py-3">
+                  <div className="relative flex items-center justify-center gap-2 text-white">
+                    <span className="text-sm font-keepick-primary tracking-wider">앨범 정보 변경</span>
+                  </div>
                 </div>
               </button>
             </div>

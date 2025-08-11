@@ -190,11 +190,12 @@ export function AlbumInfoModal({
                 </button>
                 <button
                   onClick={onClose}
-                  className="group relative overflow-hidden px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/25"
+                  className="group relative p-px rounded-lg overflow-hidden bg-gray-700 text-white transition-all duration-300 transform hover:scale-105 hover:bg-gradient-to-r hover:from-green-500 hover:to-emerald-600 disabled:opacity-50"
                   disabled={isSelectingCoverImage}
                 >
-                  <div className="absolute inset-0 bg-white/10 translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
-                  <span className="relative">저장</span>
+                  <div className="bg-[#111111] rounded-[7px] px-5 py-2">
+                    <span className="relative">저장</span>
+                  </div>
                 </button>
               </div>
             </motion.div>

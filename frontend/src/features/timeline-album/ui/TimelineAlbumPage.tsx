@@ -342,21 +342,22 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
               <p className="text-sm text-[#FE7A25] font-keepick-primary mt-1">대표 이미지를 선택하세요</p>
             )}
           </div>
-          <button 
+          <button
             onClick={handleEditModeToggle}
-            className={`group relative overflow-hidden px-5 py-2.5 rounded-xl transition-all duration-300 transform hover:scale-105 ${
-              isEditMode 
-                ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 hover:shadow-lg hover:shadow-green-500/25" 
-                : "bg-gradient-to-r from-[#FE7A25] to-[#FF6B35] hover:from-[#e66b20] hover:to-[#e65c2e] hover:shadow-lg hover:shadow-orange-500/25"
+            className={`group relative p-px rounded-xl overflow-hidden bg-gray-700 transition-all duration-300 transform hover:scale-105 hover:bg-gradient-to-r ${
+              isEditMode
+                ? 'hover:from-green-500 hover:to-emerald-600'
+                : 'hover:from-[#FE7A25] hover:to-[#FF6B35]'
             }`}
-            title={isEditMode ? "편집 완료" : "앨범 편집"}
+            title={isEditMode ? '편집 완료' : '앨범 편집'}
           >
-            <div className="absolute inset-0 bg-white/10 translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
-            <div className="relative flex items-center gap-2 text-white">
-              <Edit size={16} />
-              <span className="font-keepick-primary text-sm tracking-wide">
-                {isEditMode ? "완료" : "수정"}
-              </span>
+            <div className="bg-[#111111] rounded-[11px] px-5 py-2.5">
+              <div className="relative flex items-center gap-2 text-white">
+                <Edit size={16} />
+                <span className="font-keepick-primary text-sm tracking-wide">
+                  {isEditMode ? '완료' : '수정'}
+                </span>
+              </div>
             </div>
           </button>
         </div>
