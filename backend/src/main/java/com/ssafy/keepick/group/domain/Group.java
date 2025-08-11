@@ -33,8 +33,19 @@ public class Group extends BaseTimeEntity {
         this.creator = creator;
     }
 
+    private Group(String name, String description, String groupThumbnailUrl, Member creator) {
+        this.name = name;
+        this.description = description;
+        this.groupThumbnailUrl = groupThumbnailUrl;
+        this.creator = creator;
+    }
+
     public static Group createGroup(String name, Member creator) {
         return new Group(name, creator);
+    }
+
+    public static Group createGroup(String name, String description, String groupThumbnailUrl, Member creator) {
+        return new Group(name, description, groupThumbnailUrl, creator);
     }
 
     public void increaseMemberCount() {

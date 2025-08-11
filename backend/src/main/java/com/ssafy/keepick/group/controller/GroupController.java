@@ -31,7 +31,7 @@ public class GroupController {
 
     private final GroupService groupService;
 
-    @Operation(summary = "그룹 생성", description = "그룹 이름으로 새 그룹을 생성합니다.")
+    @Operation(summary = "그룹 생성", description = "그룹 이름, 설명, 썸네일으로 새 그룹을 생성합니다.")
     @PostMapping("")
     public ApiResponse<GroupCreateResponse> createGroup(@Parameter(description = "그룹 이름") @Valid @RequestBody GroupCreateRequest request) {
         Long loginMemberId = AuthenticationUtil.getCurrentUserId();
