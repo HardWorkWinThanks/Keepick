@@ -15,12 +15,12 @@ import java.util.stream.Collectors;
 public class PhotoTagDto {
 
     private List<String> tags;
-    private List<String> memberNames;
+    private List<String> memberNicknames;
 
     public static PhotoTagDto from(List<PhotoTag> photoTags, List<PhotoMember> members) {
         return PhotoTagDto.builder()
                 .tags(photoTags.stream().map(PhotoTag::getTag).collect(Collectors.toList()))
-                .memberNames(members.stream().map(member -> member.getMember().getNickname()).collect(Collectors.toList()))
+                .memberNicknames(members.stream().map(member -> member.getMember().getNickname()).collect(Collectors.toList()))
                 .build();
     }
 }

@@ -36,6 +36,7 @@ public class Photo extends BaseTimeEntity {
 
     private Integer height;
 
+    @Enumerated(EnumType.STRING)
     private PhotoStatus status;
 
     private boolean blurred;

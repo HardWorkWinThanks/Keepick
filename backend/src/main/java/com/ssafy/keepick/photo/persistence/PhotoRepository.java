@@ -59,7 +59,6 @@ public interface PhotoRepository extends JpaRepository<Photo,Long>, PhotoQueryFa
         WHERE p.id IN :ids
           AND tlap.id IS NULL
           AND tap.id IS NULL
-          AND p.deletedAt is NULL
     """)
     List<Long> findPhotoIdNotInAnyAlbum(@Param("ids") List<Long> ids);
 }

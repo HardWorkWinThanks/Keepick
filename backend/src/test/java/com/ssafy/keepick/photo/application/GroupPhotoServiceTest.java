@@ -160,7 +160,7 @@ class GroupPhotoServiceTest extends BaseTest {
 
         // then
         assertThat(groupPhotoTags.getTags()).hasSize(2);
-        assertThat(groupPhotoTags.getMemberNames()).hasSize(2);
+        assertThat(groupPhotoTags.getMemberNicknames()).hasSize(2);
     }
 
     Member createMember(int i) {

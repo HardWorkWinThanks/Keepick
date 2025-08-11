@@ -15,6 +15,11 @@ public class GroupPhotoSearchRequest {
     private List<String> tags;
     private LocalDate startDate;
     private LocalDate endDate;
-    private int page = 0;
-    private int size = 10;
+    private int page;
+    private int size;
+
+    public GroupPhotoSearchRequest() {
+        this.page = 0;
+        this.size = 10;
+    }
 }
