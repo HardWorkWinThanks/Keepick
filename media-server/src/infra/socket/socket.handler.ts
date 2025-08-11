@@ -1,10 +1,12 @@
 import { Server, Socket } from "socket.io";
 import { roomService } from "../../domain/room/factory/room.factory";
 import { chatService } from "../../domain/chat/factory/chat.factory";
+import { screenShareService } from "../../domain/screenshare/factory/screen-share.factory";
 import { RoomEventsHandler } from "../../domain/room/service/room-events.handler";
 import { TransportEventsHandler } from "../../domain/transport/service/transport-events.handler";
 import { MediaEventsHandler } from "../../domain/media/media-events.handler";
 import { ChatEventsHandler } from "../../domain/chat/service/chat-events.handler";
+import { ScreenShareEventsHandler } from '../../domain/screenshare/services/screen-share-events.handler';
 
 import {
   CreateTransportData,
@@ -20,6 +22,11 @@ import {
   TypingData,
   GetMessagesData,
 } from "../../domain/chat/types/chat.types";
+import {
+  StartScreenShareData,
+  StopScreenShareData,
+  ConsumeScreenShareData,
+} from '../../domain/screenshare/types/screen-share.types';
 
 export function setupSocketHandlers(io: Server): void {
   io.on("connection", (socket: Socket) => {
@@ -28,7 +35,11 @@ export function setupSocketHandlers(io: Server): void {
     const transportEventsHandler = new TransportEventsHandler(roomService);
     const mediaEventsHandler = new MediaEventsHandler(roomService, roomEventsHandler);
     const chatEventsHandler = new ChatEventsHandler(chatService);
-
+    const screenShareEventsHandler = new ScreenShareEventsHandler(
+      screenShareService,
+      roomService,
+      mediaEventsHandler
+    );
     // =========================
     // Room 관련 이벤트
     socket.on("join_room", async (data: JoinRoomData) => {
@@ -76,6 +87,28 @@ export function setupSocketHandlers(io: Server): void {
     
     socket.on("resume_consumer", async (data: { consumerId: string }) => {
       await mediaEventsHandler.handleResumeConsumer(socket, data);
+    });
+    
+    // =========================
+    // 화면 공유 관련 이벤트
+    socket.on("start_screen_share", async (data: StartScreenShareData) => {
+      await screenShareEventsHandler.handleStartScreenShare(socket, data);
+    });
+
+    socket.on("stop_screen_share", async (data: StopScreenShareData) => {
+      await screenShareEventsHandler.handleStopScreenShare(socket, data);
+    });
+
+    socket.on("consume_screen_share", async (data: ConsumeScreenShareData) => {
+      await screenShareEventsHandler.handleConsumeScreenShare(socket, data);
+    });
+
+    socket.on("get_active_screen_shares", (data: { roomId: string }) => {
+      screenShareEventsHandler.handleGetActiveScreenShares(socket, data);
+    });
+
+    socket.on("debug_screen_share", (data: { roomId: string }) => {
+      screenShareService.debugRoom(data.roomId);
     });
     
     // =========================

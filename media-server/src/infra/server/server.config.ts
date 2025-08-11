@@ -9,7 +9,7 @@ const SSL_CERT_PATH = "certs/server.cert";
 
 export const serverConfig = {
   port: isProduction ? PRODUCTION_PORT : 8443,
-  host: isProduction ? BASE_URL : "192.168.0.24",
+  host: isProduction ? BASE_URL : "192.168.100.74",
   cors: {
     origin: [
       BASE_URL,
@@ -17,7 +17,9 @@ export const serverConfig = {
       "https://172.30.1.82:3000",
       "https://localhost:3000",
       "http://localhost:3000",
-      "https://192.168.0.24:3000"
+      "https://192.168.0.24:3000",
+      "https://172.30.1.29:3000",
+      "https://192.168.100.74:3000",
     ].filter((url): url is string => !!url),
     credentials: true,
     methods: ["GET", "POST"],
