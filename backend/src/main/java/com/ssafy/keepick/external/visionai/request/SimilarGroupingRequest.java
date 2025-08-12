@@ -17,13 +17,11 @@ import java.util.stream.Collectors;
 public class SimilarGroupingRequest {
     private String jobId;
     private List<ImageRequest> images;
-    private Float similarityThreshold;
 
     public static SimilarGroupingRequest from(String jobId, List<Photo> photos) {
         return SimilarGroupingRequest.builder()
                 .jobId(jobId)
                 .images(photos.stream().map(ImageRequest::from).collect(Collectors.toList()))
-                .similarityThreshold(0.9F)
                 .build();
     }
 }
