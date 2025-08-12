@@ -39,7 +39,7 @@ public class GroupPhotoService {
 
 
     @Transactional
-    public List<String> uploadGroupPhoto(Long groupId, GroupPhotoUploadRequest request) {
+    public List<GroupPhotoUploadDto> uploadGroupPhoto(Long groupId, GroupPhotoUploadRequest request) {
         // 1. 그룹 확인
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
@@ -73,7 +73,9 @@ public class GroupPhotoService {
                 .forEach(i -> photos.get(i).upload(imagePathList.get(i).getPublicUrl()));
         photoRepository.saveAll(photos); // 변경사항 저장
 
-        return imagePathList.stream().map(S3ImagePathDto::getPresignedUrl).toList();
+        return IntStream.range(0, photos.size())
+                .mapToObj(i -> GroupPhotoUploadDto.of(photos.get(i).getId(), imagePathList.get(i).getPresignedUrl()))
+                .toList();
     }
 
     @Transactional

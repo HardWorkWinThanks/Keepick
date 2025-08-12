@@ -4,10 +4,7 @@ import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.global.response.PagingResponse;
 import com.ssafy.keepick.global.security.util.AuthenticationUtil;
 import com.ssafy.keepick.photo.application.GroupPhotoService;
-import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
-import com.ssafy.keepick.photo.application.dto.GroupPhotoOverviewDto;
-import com.ssafy.keepick.photo.application.dto.PhotoClusterDto;
-import com.ssafy.keepick.photo.application.dto.PhotoTagDto;
+import com.ssafy.keepick.photo.application.dto.*;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoSearchRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoUploadRequest;
@@ -45,9 +42,9 @@ public class PhotoController {
     public ApiResponse<List<GroupPhotoUploadResponse>> generatePresignedUrls(
             @PathVariable Long groupId,
             @Valid @RequestBody GroupPhotoUploadRequest request) {
-        List<String> result = groupPhotoService.uploadGroupPhoto(groupId, request);
+        List<GroupPhotoUploadDto> result = groupPhotoService.uploadGroupPhoto(groupId, request);
         List<GroupPhotoUploadResponse> response = result.stream()
-                .map(GroupPhotoUploadResponse::of)
+                .map(GroupPhotoUploadResponse::from)
                 .collect(Collectors.toList());
         return ApiResponse.ok(response);
     }

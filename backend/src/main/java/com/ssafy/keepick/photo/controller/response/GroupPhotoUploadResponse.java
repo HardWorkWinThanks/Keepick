@@ -1,6 +1,7 @@
 package com.ssafy.keepick.photo.controller.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.ssafy.keepick.photo.application.dto.GroupPhotoUploadDto;
 import lombok.*;
 
 import java.util.regex.Matcher;
@@ -13,6 +14,13 @@ public class GroupPhotoUploadResponse {
     private String presignedUrl;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Long imageId;
+
+    public static GroupPhotoUploadResponse from(GroupPhotoUploadDto dto) {
+        return GroupPhotoUploadResponse.builder()
+                .imageId(dto.getPhotoId())
+                .presignedUrl(dto.getPresignedUrl())
+                .build();
+    }
 
     public static GroupPhotoUploadResponse of(String presignedUrl, Long imageId) {
         return GroupPhotoUploadResponse.builder()
