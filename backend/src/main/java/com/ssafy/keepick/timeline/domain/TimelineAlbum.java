@@ -72,11 +72,10 @@ public class TimelineAlbum extends BaseTimeEntity {
     }
 
     public void removeSection(TimelineAlbumSection section) {
-        if (!this.sections.contains(section)) {
+        if (!this.sections.remove(section)) {
             throw new IllegalStateException("해당 섹션은 앨범에 존재하지 않아 삭제할 수 없습니다. sectionId=" + section.getId());
         }
-        this.sections.remove(section);
-        section.delete();
+        section.removeFromAlbum();
     }
 
     public TimelineAlbumPhoto addPhoto(Photo photo) {
