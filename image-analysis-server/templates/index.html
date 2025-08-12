@@ -254,7 +254,7 @@
         const data = await res.json();
         if(!res.ok) throw new Error(data.error||'서버 오류');
 
-        el('groupWrap').innerHTML = groupsHTML(data.groups);
+        el('groupWrap').innerHTML = JSON.stringify(data);
         el('albumResult').style.display='block';
         window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'});
         toast('유사도 분석이 완료되었습니다.');
