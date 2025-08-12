@@ -56,14 +56,11 @@ public class PhotoAnalysisService {
         // 4. 작업 상태 저장
         PhotoAnalysisJob job = PhotoAnalysisJob.builder()
                 .jobId(jobId)
-                .groupId(groupId)
                 .message("이미지 분석 대기중입니다.")
                 .jobStatus(JobStatus.STARTED)
                 .jobType("similar_grouping")
-                .startTime(LocalDateTime.now())
                 .totalImages(photos.size())
                 .processedImages(0)
-                .memberId(currentMemberId)
                 .build();
         try {
             String jobJson = objectMapper.writeValueAsString(job);
@@ -105,14 +102,11 @@ public class PhotoAnalysisService {
         // 4. 작업 상태 저장
         PhotoAnalysisJob job = PhotoAnalysisJob.builder()
                 .jobId(jobId)
-                .groupId(groupId)
                 .message("이미지 분석 대기중입니다.")
                 .jobStatus(JobStatus.STARTED)
-                .jobType("composite")
-                .startTime(LocalDateTime.now())
+                .jobType("integration")
                 .totalImages(photos.size())
                 .processedImages(0)
-                .memberId(currentMemberId)
                 .build();
         try {
             String jobJson = objectMapper.writeValueAsString(job);
