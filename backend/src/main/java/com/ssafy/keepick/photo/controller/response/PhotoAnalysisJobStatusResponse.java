@@ -11,6 +11,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public class PhotoAnalysisJobStatusResponse {
     private String jobId;
+    private String message;
     private JobStatus jobStatus;
     private Integer completedJob;
     private Integer totalJob;
@@ -20,6 +21,7 @@ public class PhotoAnalysisJobStatusResponse {
     public static PhotoAnalysisJobStatusResponse from(PhotoAnalysisJob job) {
         return PhotoAnalysisJobStatusResponse.builder()
                 .jobId(job.getJobId())
+                .message(job.getMessage())
                 .jobStatus(job.getJobStatus())
                 .completedJob(job.getProcessedImages())
                 .totalJob(job.getTotalImages())

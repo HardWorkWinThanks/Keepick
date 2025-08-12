@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>이미지 분석 — 태깅/객체 + 유사도</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0b1020; --card:#11162a; --ink:#e8eeff; --muted:#9db0cf;
+      --pri:#7aa2ff; --ok:#22c55e; --warn:#ef4444; --chip:#1a2342;
+      --bd:#1c2540; --accent:#2a365f; --shadow:0 10px 30px rgba(0,0,0,.25);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:ui-sans-serif,system-ui,AppleSDGothicNeo,'Noto Sans KR',Segoe UI,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,#0b1020 0%,#0e1430 100%);color:var(--ink)}
+    .wrap{max-width:1220px;margin:0 auto;padding:28px 18px 80px}
+    h1{font-size:28px;margin:0 0 12px;display:flex;align-items:center;gap:10px}
+    .sub{color:var(--muted);margin-bottom:22px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .col-6{grid-column:span 6}.col-12{grid-column:span 12}
+    @media (max-width:900px){.col-6{grid-column:span 12}}
+    .card{background:linear-gradient(180deg,var(--card),#0f1630);border:1px solid var(--bd);border-radius:16px;padding:16px 16px 18px;box-shadow:var(--shadow)}
+    h2{font-size:18px;margin:0 0 10px}
+    label{display:block;font-weight:700;margin:6px 0 6px}
+    input,textarea{width:100%;padding:12px 12px;border:1px solid var(--accent);background:#0d1530;color:var(--ink);border-radius:10px}
+    input[type="number"]{max-width:220px}
+    .btn{background:linear-gradient(180deg,#7aa2ff,#5d83e8);color:#0b1020;border:none;border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer;box-shadow:0 10px 18px rgba(122,162,255,.18);transition:transform .05s ease}
+    .btn:hover{transform:translateY(-1px)}
+    .btn:disabled{opacity:.65;cursor:not-allowed;transform:none}
+    .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--accent);box-shadow:none}
+    .btn.ok{background:linear-gradient(180deg,#22c55e,#16a34a);color:#041018;box-shadow:0 10px 18px rgba(34,197,94,.18)}
+    .btn.warn{background:linear-gradient(180deg,#ef4444,#dc2626);color:#fff;box-shadow:0 10px 18px rgba(239,68,68,.18)}
+    .chip{display:inline-flex;align-items:center;gap:6px;background:var(--chip);border:1px solid var(--accent);color:var(--ink);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800}
+    .muted{color:var(--muted);font-size:13px}
+    .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+    .thumb{border:1px solid var(--bd);border-radius:12px;overflow:hidden;background:#0f1530}
+    .thumb img{display:block;width:100%;height:120px;object-fit:cover;background:#0a0f20}
+    .kvs{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;padding:6px 8px;border-top:1px solid var(--bd);color:#cfe0ff}
+    .pill{display:inline-flex;align-items:center;gap:6px;background:#0f1b3d;border:1px solid var(--accent);color:#cfe0ff;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:800}
+    .result{white-space:pre-wrap;background:#081023;color:#b9d1ff;border-radius:12px;padding:12px;max-height:420px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace;border:1px solid var(--accent)}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{border:1px solid var(--bd);padding:8px;text-align:left}
+    .table th{background:#0f1b3d}
+    .sep{height:1px;background:var(--bd);margin:14px 0}
+    .toast{position:fixed;right:18px;bottom:18px;background:#0e1a38;border:1px solid var(--accent);color:#cfe0ff;padding:10px 14px;border-radius:12px;box-shadow:var(--shadow);display:none}
+    .tag{display:inline-flex;gap:6px;padding:2px 8px;border-radius:8px;border:1px solid var(--accent);font-size:12px}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:8px;background:#0d1a36;border:1px solid var(--accent);font-size:12px}
+    .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🖼️ 이미지 분석 대시보드 <span class="pill">배치 자동 태깅</span> <span class="pill">앨범 유사도 수동</span></h1>
+    <div class="sub">배치당 최대 <b>30</b>장 업로드 → 업로드 시 자동 <b>객체+인물+블러</b> 분석 → 여러 배치를 <b>앨범</b>에 누적 후 버튼 눌러 <b>유사도 그룹핑</b> 실행</div>
+
+    <!-- 1. 기준 인물 -->
+    <div class="card">
+      <h2>① 기준 인물</h2>
+      <div class="row">
+        <input id="tName" type="text" placeholder="이름 (예: 홍길동)" />
+        <input id="tUrl" type="url" placeholder="이미지 URL (정면 얼굴)" />
+        <button class="btn" onclick="addTarget()">+ 추가</button>
+        <button class="btn ghost" onclick="clearTargets()">모두 지우기</button>
+      </div>
+      <div id="targetList" class="row" style="margin-top:10px"></div>
+    </div>
+
+    <!-- 2. 배치 업로드 -->
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2>② 배치 업로드 (최대 30장)</h2>
+        <div class="flex">
+          <span class="badge">거리 임계값 <input id="faceTh" type="number" step="0.05" min="0" max="1" value="0.6" style="width:90px"/></span>
+          <span class="badge">YOLO conf <input id="yoloConf" type="number" step="0.05" min="0" max="1" value="0.4" style="width:90px"/></span>
+          <label class="badge"><input id="retB64" type="checkbox" checked/> 썸네일 포함</label>
+        </div>
+      </div>
+      <label>이미지 URL들 (한 줄에 하나씩)</label>
+      <textarea id="batchUrls" rows="5" placeholder="https://.../a.jpg&#10;https://.../b.jpg"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="btnRunBatch" class="btn" onclick="runBatch()">이 배치 업로드 & 자동 분석</button>
+        <button id="btnAddToAlbum" class="btn ghost" onclick="addBatchToAlbum()" disabled>배치 결과 → 앨범 누적</button>
+        <span id="batchMsg" class="muted"></span>
+      </div>
+      <div id="batchThumbs" class="thumbs" style="margin-top:12px"></div>
+      <details style="margin-top:10px"><summary class="muted">원시 JSON 보기</summary><div id="batchJson" class="result"></div></details>
+    </div>
+
+    <!-- 3. 앨범 & 유사도 -->
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2>③ 앨범 & 유사도</h2>
+        <div class="flex">
+          <button class="btn ghost" onclick="clearAlbum()">앨범 비우기</button>
+          <span class="muted">현재 누적: <b id="albumCount">0</b> 장</span>
+        </div>
+      </div>
+      <div id="albumList" class="thumbs" style="margin-top:10px"></div>
+      <div class="sep"></div>
+      <div class="row">
+        <span class="badge">유사도 임계값 <input id="simTh" type="number" step="0.05" min="0" max="1" value="0.9" style="width:90px"/></span>
+        <button id="btnRunAlbum" class="btn ok" onclick="runAlbum()">앨범 유사도 분석 실행</button>
+      </div>
+
+      <div id="albumResult" style="margin-top:16px; display:none">
+        <h3>🧩 유사 사진 그룹</h3>
+        <div id="groupWrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const API_BASE = window.location.origin;
+
+    // 상태
+    const targets = [];     // [{name,url}]
+    let lastBatch = [];     // [{name,url}]
+    const album = [];       // [{name,url}]
+    const el = id => document.getElementById(id);
+    const byLine = s => s.split('\n').map(v=>v.trim()).filter(Boolean);
+
+    // UI helpers
+    function toast(msg){ const t=el('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',2200); }
+    function chipHTML(t,i){ return `<span class="chip">${t.name}</span> <button class="btn ghost" style="padding:4px 8px" onclick="delTarget(${i})">삭제</button>`; }
+    function thumbHTML({src, meta}){ return `<div class="thumb"><img src="${src}" alt="thumb"/><div class="kvs">${meta||''}</div></div>`; }
+
+    function renderTargets(){
+      const box = el('targetList'); box.innerHTML='';
+      targets.forEach((t,i)=>{ const w=document.createElement('div'); w.className='row'; w.innerHTML=chipHTML(t,i); box.appendChild(w); });
+    }
+    function addTarget(){
+      const name = el('tName').value.trim(); const url = el('tUrl').value.trim();
+      if(!name || !url){ toast('이름과 URL을 입력하세요.'); return; }
+      targets.push({name,url}); renderTargets();
+      el('tName').value=''; el('tUrl').value='';
+    }
+    function delTarget(i){ targets.splice(i,1); renderTargets(); }
+    function clearTargets(){ targets.length=0; renderTargets(); }
+
+    function parseBatch(){
+      const urls = byLine(el('batchUrls').value);
+      if(urls.length===0) throw new Error('이미지 URL을 입력하세요.');
+      if(urls.length>30) throw new Error('배치당 최대 30장까지 가능합니다.');
+      const stamp = Date.now().toString(36);
+      return urls.map((url,idx)=>({ url, name:`b${stamp}_${String(idx+1).padStart(2,'0')}` }));
+    }
+
+    async function runBatch(){
+      try{
+        el('batchThumbs').innerHTML=''; el('batchJson').textContent=''; el('batchMsg').textContent='';
+        el('btnRunBatch').disabled = true; el('btnAddToAlbum').disabled = true;
+
+        if(targets.length===0) throw new Error('먼저 기준 인물을 1명 이상 추가하세요.');
+
+        lastBatch = parseBatch();
+        const payload = {
+          target_faces: targets,
+          source_images: lastBatch,
+          face_distance_threshold: parseFloat(el('faceTh').value || '0.6'),
+          yolo: { conf: parseFloat(el('yoloConf').value || '0.4'), imgsz: 640 },
+          return_tagged_images: el('retB64').checked,
+        };
+
+        const res = await fetch(`${API_BASE}/api/tag_and_detect`,{
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        el('batchJson').textContent = JSON.stringify(data, null, 2);
+        if(!res.ok) throw new Error(data.error || '서버 오류');
+
+        // 썸네일 + 메타
+        const out=[];
+        (data.results||[]).forEach(it=>{
+          const src = it.tagged_image_base64
+            ? `data:image/jpeg;base64,${it.tagged_image_base64}`
+            : (it.tagged_image_filename ? `${API_BASE}/uploads/tagged_results/${it.tagged_image_filename}` : (lastBatch.find(b=>b.name===it.image_name)?.url || ''));
+          const faces = (it.found_faces||[]).map(f=>`${f.person_name} (${(typeof f.distance==='number'?f.distance:parseFloat(f.distance))?.toFixed?.(2) ?? f.distance})`).join(', ');
+          const objs  = (it.objects||[]).map(o=>`${o.label} (${(o.conf||0).toFixed(2)})`).join(', ');
+          const blur  = it.is_blur ? `BLUR • ${Number(it.laplacian_variance||0).toFixed(1)}` : `Sharp • ${Number(it.laplacian_variance||0).toFixed(1)}`;
+          const meta = [faces?`faces: ${faces}`:'', objs?`objs: ${objs}`:'', blur].filter(Boolean).join(' | ');
+          out.push(thumbHTML({src, meta}));
+        });
+        el('batchThumbs').innerHTML = out.join('');
+
+        el('batchMsg').innerHTML = `분석 완료 • 이미지 <b>${data.results?.length||0}</b>개`;
+        el('btnAddToAlbum').disabled = false;
+        toast('배치 분석이 완료되었습니다.');
+      }catch(err){
+        el('batchMsg').innerHTML = `<span style="color:var(--warn);font-weight:700">${err.message}</span>`;
+        toast(err.message);
+      }finally{
+        el('btnRunBatch').disabled = false;
+      }
+    }
+
+    function addBatchToAlbum(){
+      if(lastBatch.length===0){ toast('먼저 배치 분석을 실행하세요.'); return; }
+      album.push(...lastBatch);
+      lastBatch = [];
+      renderAlbum();
+      el('btnAddToAlbum').disabled = true;
+      toast('배치를 앨범에 추가했습니다.');
+    }
+
+    function renderAlbum(){
+      el('albumCount').textContent = album.length;
+      el('albumList').innerHTML = album.map(a=>thumbHTML({src:a.url, meta:a.name})).join('');
+    }
+
+    function clearAlbum(){
+      if(!confirm('앨범을 모두 비울까요?')) return;
+      album.length = 0; renderAlbum();
+      el('albumResult').style.display = 'none';
+      el('groupWrap').innerHTML = '';
+      toast('앨범을 비웠습니다.');
+    }
+
+    function groupsHTML(groups){
+      if(!groups || groups.length===0) return '<p class="muted">유사 그룹 없음</p>';
+      return groups.map((g,i)=>{
+        const thumbs = (g.images||[]).map(name=>{
+          const found = album.find(a=>a.name===name);
+          const src = found ? found.url : '';
+          return thumbHTML({src, meta:name});
+        }).join('');
+        const pairs = (g.similarities||[]).slice(0,5).map(s=>`${s.image1} ~ ${s.image2} (${Number(s.similarity||0).toFixed(2)})`).join(', ');
+        return `
+          <div class="card" style="padding:10px">
+            <div class="row" style="justify-content:space-between">
+              <div class="chip">그룹 #${(g.group_id ?? i)+1}</div>
+              <div class="muted">${(g.images||[]).length}장</div>
+            </div>
+            <div class="thumbs" style="margin-top:8px">${thumbs}</div>
+            ${pairs ? `<div class="kvs">예시 유사쌍: ${pairs}${(g.similarities||[]).length>5?' …':''}</div>`:''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function runAlbum(){
+      try{
+        el('btnRunAlbum').disabled = true;
+        if(album.length===0){ toast('앨범에 이미지가 없습니다.'); return; }
+        const payload = {
+          images: album.map(a=>({name:a.name, url:a.url})),
+          similarity_threshold: parseFloat(el('simTh').value || '0.9')
+        };
+        const res = await fetch(`${API_BASE}/api/similar_grouping`,{
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error||'서버 오류');
+
+        el('groupWrap').innerHTML = groupsHTML(data.groups);
+        el('albumResult').style.display='block';
+        window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'});
+        toast('유사도 분석이 완료되었습니다.');
+      }catch(err){
+        toast(err.message);
+        alert(err.message);
+      }finally{
+        el('btnRunAlbum').disabled = false;
+      }
+    }
+
+    // 데모 기본값
+    window.addEventListener('load', ()=>{
+      el('tName').value='테스트인물';
+      el('tUrl').value='https://picsum.photos/400/400?random=6';
+    });
+  </script>
+</body>
+</html>
