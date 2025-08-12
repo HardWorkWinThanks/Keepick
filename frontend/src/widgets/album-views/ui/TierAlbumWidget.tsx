@@ -61,7 +61,7 @@ export function TierAlbumWidget({
     if (result.success && result.data) {
       setTierPhotos(
         result.data?.tierPhotos as TierData || {
-          S: [{ id: "photo_s1", src: "/dummy/jaewan1.jpg", name: "S급 사진1" }],
+          S: [],
           A: [],
           B: [],
           C: [],
@@ -72,7 +72,12 @@ export function TierAlbumWidget({
     } else {
       // 기본 데이터 설정
       setTierPhotos({
-        S: [{ id: "photo_s1", src: "/dummy/jaewan1.jpg", name: "S급 사진1" }],
+        S: [{ id: "photo_s1", src: "/presentation/target_photo", name: "S급 사진1" }  ,
+             {id: "photo_s2", src: "/presentation/target_photo1", name: "S급 사진2"} ,
+             {id: "photo_s3", src: "/presentation/target_photo2", name: "S급 사진3"} ,
+             {id: "photo_s4", src: "/presentation/target_photo3", name: "S급 사진4"} ,
+             {id: "photo_s5", src: "/presentation/target_photo4", name: "S급 사진5"} ,
+             {id: "photo_s6", src: "/presentation/target_photo5", name: "S급 사진6"} ,],
         A: [],
         B: [],
         C: [],

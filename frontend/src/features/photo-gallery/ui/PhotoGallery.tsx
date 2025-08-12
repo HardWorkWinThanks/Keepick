@@ -102,7 +102,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      Keep!
+                      앨범 만들기
                     </motion.button>
                   ) : (
                     <motion.button
