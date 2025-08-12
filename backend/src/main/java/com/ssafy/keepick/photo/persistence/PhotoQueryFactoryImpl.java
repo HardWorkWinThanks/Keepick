@@ -38,7 +38,7 @@ public class PhotoQueryFactoryImpl implements PhotoQueryFactory {
                         takenAtLoe(endDate),
                         notDeleted()
                 )
-                .orderBy(photo.takenAt.desc())
+                .orderBy(photo.takenAt.desc(), photo.id.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
@@ -92,6 +92,7 @@ public class PhotoQueryFactoryImpl implements PhotoQueryFactory {
                         notDeleted()
                 )
                 .groupBy(photo.clusterId)
+                .orderBy(photo.createdAt.max().desc(), photo.clusterId.asc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();

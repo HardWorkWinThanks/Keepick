@@ -18,6 +18,7 @@ import com.ssafy.keepick.photo.persistence.PhotoTagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -104,7 +105,7 @@ public class GroupPhotoService {
 
     @Transactional(readOnly = true)
     public Page<GroupPhotoDto> getBlurredPhotos(Long groupId, int page, int size) {
-        Page<Photo> photoPage = photoRepository.findBlurredPhotosByGroupId(groupId, PageRequest.of(page, size));
+        Page<Photo> photoPage = photoRepository.findBlurredPhotosByGroupId(groupId, PageRequest.of(page, size, Sort.by("id").descending()));
         return photoPage.map(GroupPhotoDto::from);
     }
 
@@ -115,8 +116,8 @@ public class GroupPhotoService {
 
     @Transactional(readOnly = true)
     public GroupPhotoOverviewDto getGroupPhotoOverview(Long groupId, int size) {
-        Page<Photo> allPhotoPage = photoRepository.findByGroupIdAndDeletedAtIsNull(groupId, PageRequest.of(0, size));
-        Page<Photo> blurredPhotoPage = photoRepository.findBlurredPhotosByGroupId(groupId, PageRequest.of(0, size));
+        Page<Photo> allPhotoPage = photoRepository.findByGroupIdAndDeletedAtIsNull(groupId, PageRequest.of(0, size, Sort.by("id").descending()));
+        Page<Photo> blurredPhotoPage = photoRepository.findBlurredPhotosByGroupId(groupId, PageRequest.of(0, size, Sort.by("id").descending()));
         Page<PhotoClusterDto> clusterPhotoPage = getSimilarPhotoClusters(groupId, 0, size);
         return GroupPhotoOverviewDto.from(allPhotoPage, blurredPhotoPage, clusterPhotoPage);
     }
