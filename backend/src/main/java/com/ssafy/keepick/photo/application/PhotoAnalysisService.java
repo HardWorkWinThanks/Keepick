@@ -57,7 +57,8 @@ public class PhotoAnalysisService {
         PhotoAnalysisJob job = PhotoAnalysisJob.builder()
                 .jobId(jobId)
                 .groupId(groupId)
-                .jobStatus(JobStatus.PENDING)
+                .message("이미지 분석 대기중입니다.")
+                .jobStatus(JobStatus.STARTED)
                 .jobType("similar_grouping")
                 .startTime(LocalDateTime.now())
                 .totalImages(photos.size())
@@ -81,7 +82,7 @@ public class PhotoAnalysisService {
                         error -> log.error("작업 실패", error)
                 );
 
-        return CompletableFuture.completedFuture(PhotoAnalysisDto.of(jobId, JobStatus.PENDING));
+        return CompletableFuture.completedFuture(PhotoAnalysisDto.of(jobId, JobStatus.STARTED));
     }
 
     @Async("asyncExecutor")
@@ -105,7 +106,8 @@ public class PhotoAnalysisService {
         PhotoAnalysisJob job = PhotoAnalysisJob.builder()
                 .jobId(jobId)
                 .groupId(groupId)
-                .jobStatus(JobStatus.PENDING)
+                .message("이미지 분석 대기중입니다.")
+                .jobStatus(JobStatus.STARTED)
                 .jobType("composite")
                 .startTime(LocalDateTime.now())
                 .totalImages(photos.size())
@@ -129,6 +131,6 @@ public class PhotoAnalysisService {
                         error -> log.error("작업 실패", error)
                 );
 
-        return CompletableFuture.completedFuture(PhotoAnalysisDto.of(jobId, JobStatus.PENDING));
+        return CompletableFuture.completedFuture(PhotoAnalysisDto.of(jobId, JobStatus.STARTED));
     }
 }

@@ -16,6 +16,7 @@ public class PhotoAnalysisJob {
     private Long groupId;
     private Long memberId;
     private String jobType;
+    private String message;
     private JobStatus jobStatus;
     private LocalDateTime startTime;
     private LocalDateTime completedTime;
