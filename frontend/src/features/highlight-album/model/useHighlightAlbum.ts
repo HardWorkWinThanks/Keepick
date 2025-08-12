@@ -17,10 +17,10 @@ export function useHighlightAlbum(groupId: string, albumId: string) {
     description: "친구들과의 재미있는 시간들",
     coverPhoto: "/family-vacation-best-moment.png",
     emotions: {
-      웃김: ["/family-vacation-best-moment.png", "/family-vacation-best-moment.png"],
-      놀람: ["/family-vacation-best-moment.png", "/family-vacation-best-moment.png"],
-      피곤함: ["/family-vacation-best-moment.png"],
-      진지함: Array(12).fill("/family-vacation-best-moment.png"),
+      웃김: ["/presentation/laugh_002.jpg", "/presentation/laugh_029.jpg", "/presentation/laugh_122.jpg"],
+      놀람: ["/presentation/surprise_018.jpg", "/presentation/surprise_109.jpg", "/presentation/surprise_154.jpg"],
+      피곤함: ["/presentation/yawn_001.jpg", "/presentation/yawn_011.jpg", "/presentation/yawn_065.jpg"],
+      진지함: ["/presentation/serious_021.jpg", "/presentation/serious_072.jpg", "/presentation/serious_119.jpg"],
     },
   }
 

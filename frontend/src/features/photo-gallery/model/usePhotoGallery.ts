@@ -8,6 +8,7 @@ const dummyTags = [
   "인물", "풍경", "음식", "동물", "건물", "자연", "가족", "친구", "여행", "일상",
   "축제", "스포츠", "예술", "꽃", "바다", "산", "도시", "밤", "일출", "일몰",
   "아이", "어른", "웃음", "행복"
+  
 ]
 
 const photoCategories = [
@@ -46,9 +47,35 @@ const generatePhotos = (startIndex: number, count: number): GalleryPhoto[] => {
     const width = baseWidth
     const height = Math.round(baseWidth / randomAspect.ratio)
 
+    // 더미 이미지 목록에서 순서대로 선택
+    const dummyImages = [
+      '/dummy/main-dummy1.jpg',
+      '/dummy/main-dummy2.jpg',
+      '/dummy/main-dummy3.jpg',
+      '/dummy/main-dummy4.jpg',
+      '/dummy/main-dummy5.jpg',
+      '/dummy/main-dummy6.jpg',
+      '/dummy/main-dummy7.jpg',
+      '/dummy/main-dummy8.jpg',
+      '/dummy/main-dummy9.jpg',
+      '/dummy/main-dummy10.jpg',
+      '/dummy/main-dummy11.jpg',
+      '/dummy/main-dummy12.jpg',
+      '/dummy/main-dummy13.jpg',
+      '/dummy/main-dummy14.jpg',
+      '/dummy/main-dummy15.jpg',
+      '/dummy/main-dummy16.jpg',
+      '/dummy/main-dummy17.jpg',
+      '/dummy/main-dummy18.jpg',
+      '/dummy/main-dummy19.jpg',
+      '/dummy/main-dummy20.jpg',
+    ]
+    const imageIndex = (photoId - 1) % dummyImages.length
+    const selectedImage = dummyImages[imageIndex]
+
     photos.push({
       id: photoId,
-      src: `/placeholder.svg?height=${height}&width=${width}&query=${encodeURIComponent(randomTitle)}`,
+      src: selectedImage,
       title: `${randomTitle} #${photoId}`,
       category: randomCategory.category,
       aspectRatio: randomAspect.ratio,

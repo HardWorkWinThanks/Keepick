@@ -63,14 +63,6 @@ export function useAlbumStorage() {
    * const getDefaultPhotos = (): Photo[] => [ 로 나중에 바꾸기.
    */
   const getDefaultPhotos = (): Photo[] => [
-    { id: "photo1", src: "/presentation/target_photo1.jpg", name: "사진1" },
-    { id: "photo2", src: "/presentation/target_photo2.jpg", name: "사진2" },
-    { id: "photo3", src: "/presentation/target_photo3.jpg", name: "사진3" },
-    { id: "photo4", src: "/presentation/target_photo4.jpg", name: "사진4" },
-    { id: "photo5", src: "/presentation/target_photo5.jpg", name: "사진5" },
-    { id: "photo6", src: "/presentation/ugly_074.jpg", name: "사진6" },
-    { id: "photo7", src: "/presentation/ugly_00217.jpg", name: "사진7" },
-    { id: "photo9", src: "/presentation/target_photo.jpg", name: "사진9" },
     { id: "photo10", src: "/dummy/main-dummy10.jpg", name: "사진10" },
     { id: "photo11", src: "/dummy/main-dummy11.jpg", name: "사진11" },
     { id: "photo12", src: "/dummy/main-dummy12.jpg", name: "사진12" },
