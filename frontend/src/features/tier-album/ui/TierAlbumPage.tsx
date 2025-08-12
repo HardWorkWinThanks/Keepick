@@ -168,6 +168,7 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
 
   const {
     showComparisonModal,
+    setShowComparisonModal,
     battleSequence,
     setBattleSequence,
     precisionTierMode,
@@ -395,31 +396,12 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
       </header>
 
       {/* Main Content */}
-      <main className={`${isEditMode ? 'min-h-screen bg-[#111111] pt-20' : 'h-screen flex flex-col pt-16'} relative z-10`}>
+      <main className={`${isEditMode ? 'min-h-screen bg-[#111111] pt-24' : 'h-screen flex flex-col pt-16'} relative z-10`}>
         {isEditMode ? (
           // 편집 모드 - 사이드바 레이아웃
           <div className="flex gap-6 animate-fade-in pb-8 px-8 h-screen">
             {/* 좌측: 사용가능한 사진 사이드바 */}
             <div className="w-80 flex-shrink-0 space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-keepick-heavy text-white">티어 편집</h2>
-                <button
-                  onClick={() => setPrecisionTierMode(!precisionTierMode)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-semibold transition-all duration-300 ${
-                    precisionTierMode
-                      ? "bg-[#FE7A25] text-white ring-2 ring-[#FE7A25]"
-                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  <span className="text-sm">
-                    {precisionTierMode ? "배틀" : "배틀"}
-                  </span>
-                </button>
-              </div>
-
               <div className="bg-gray-800/50 rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-3">
                   <h3 className="text-sm font-medium text-gray-300">사용가능한 사진</h3>
@@ -451,6 +433,32 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
 
             {/* 우측: 티어 그리드 */}
             <div className="flex-1">
+              {/* 메인 섹션 헤더 */}
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-4xl font-keepick-heavy text-white tracking-wider">TIER BATTLE</h1>
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-gray-400 whitespace-nowrap">
+                    <div>• 드래그로 순위 결정</div>
+                    <div>• 정밀배틀: 1대1 토너먼트로 정확한 순위</div>
+                  </div>
+                  <button
+                    onClick={() => setPrecisionTierMode(!precisionTierMode)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 ${
+                      precisionTierMode
+                        ? "bg-[#FE7A25] text-white ring-2 ring-[#FE7A25]"
+                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span className="text-sm">
+                      정밀배틀 {precisionTierMode ? "ON" : "OFF"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+              
               <TierGrid
                 tiers={battleTiers}
                 tierPhotos={tierPhotos}
@@ -594,10 +602,10 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
               <div className="space-y-1.5 text-xs font-keepick-primary text-gray-500">
                 <div className="flex justify-between">
                   <span>등급</span>
-                  <span style={{ color: currentTierInfo.color }}>{currentTier}급</span>
+                  <span style={{ color: currentTierInfo.color }}>{currentTier}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>순서</span>
+                  <span>순위</span>
                   <span>
                     {currentPhotoIndex + 1} / {currentTierPhotos.length}
                   </span>
