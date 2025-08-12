@@ -41,11 +41,11 @@ export const uploadToS3 = async (
 
 // 단일 이미지 PreSignedUrl + PublicUrl 요청
 export const getImageUrl = async (
-  meta: ImageMetadata
+  file: ImageMetadata
 ): Promise<ImageUrlResponseData> => {
   const response = await apiClient.post<ApiResponse<ImageUrlResponseData>>(
     "/api/photos/presigned-url",
-    meta
+    file
   );
 
   return response.data.data;
@@ -54,11 +54,11 @@ export const getImageUrl = async (
 // 복수 이미지 PreSignedUrl + PublicUrl 요청
 export const getImageUrls = async (
   groupId: number,
-  metas: ImageMetadata[]
+  files: ImageMetadata[]
 ): Promise<ImageUrlResponseData[]> => {
   const response = await apiClient.post<ApiResponse<ImageUrlResponseData[]>>(
     `/api/groups/${groupId}/photos/presigned-urls`,
-    metas
+    files
   );
 
   return response.data.data;

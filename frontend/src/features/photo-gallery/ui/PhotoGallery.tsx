@@ -1,10 +1,12 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, SlidersHorizontal, Check, Trash2, X, ChevronUp, ChevronDown, Upload } from "lucide-react"
 import { usePhotoGallery, useMasonryLayout, useDragScroll } from "../model/usePhotoGallery"
 import { PhotoModal, usePhotoModal } from "@/features/photos-viewing"
+import AiMagicButton from "./AiMagicButton"
+import AiServiceModal from "./AiServiceModal"
 
 interface PhotoGalleryProps {
   groupId: string
@@ -38,10 +40,25 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   const columns = useMasonryLayout(filteredPhotos, columnCount)
   const smallPreviewDrag = useDragScroll()
   const expandedPreviewDrag = useDragScroll()
-  const [isPickHovered, setIsPickHovered] = React.useState(false)
   
   // 사진 모달을 위한 상태 관리
   const { photo: selectedPhoto, isOpen: isPhotoModalOpen, openModal: openPhotoModal, closeModal: closePhotoModal } = usePhotoModal()
+  
+  // AI 서비스 모달 상태 관리
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false)
+  
+  // AI 버튼 클릭 핸들러
+  const handleAiServiceClick = () => {
+    setIsAiModalOpen(true)
+  }
+  
+  // 유사한 사진 분류 핸들러 (임시)
+  const handleSimilarPhotosSort = () => {
+    console.log("유사한 사진 분류 실행")
+    setIsAiModalOpen(false)
+    // TODO: 실제 API 연결
+  }
+  
 
   return (
     <div className="min-h-screen bg-[#111111] text-white">
@@ -134,12 +151,18 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                 </button>
               </div> */}
 
-              {/* Upload Button */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 font-keepick-primary">업로드</span>
-                <button className="p-2 border border-gray-700 hover:border-gray-500 transition-colors">
-                  <Upload size={16} className="text-gray-400" />
-                </button>
+              {/* AI & Upload Buttons Row */}
+              <div className="flex items-start gap-3">
+                {/* AI Magic Button */}
+                <AiMagicButton onAiServiceClick={handleAiServiceClick} />
+
+                {/* Upload Button */}
+                <div className="flex flex-col items-center gap-2">
+                  <button className="px-6 py-2 bg-transparent border-2 border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 font-keepick-primary text-sm tracking-wider transition-all duration-300 flex items-center justify-center">
+                    <Upload size={16} />
+                  </button>
+                  <span className="text-xs text-gray-400 font-keepick-primary">업로드</span>
+                </div>
               </div>
 
               {/* Delete Button (Selection Mode Only) - Fixed position */}
@@ -318,7 +341,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                 ease: "easeInOut",
               },
             }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur-lg border-t border-gray-700"
+            className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#FE7A25]/20 to-[#1a1a1a]/98 backdrop-blur-lg border-t-4 border-[#FE7A25] shadow-2xl shadow-[#FE7A25]/30"
           >
             <div className="max-w-7xl mx-auto px-8">
               {/* Expanded Photos Section */}
@@ -336,7 +359,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                       opacity: 0,
                       transition: { duration: 0.4, ease: "easeInOut" },
                     }}
-                    className="overflow-hidden border-b border-gray-700"
+                    className="overflow-hidden border-b border-[#FE7A25]/20"
                   >
                     <div className="py-4 h-full">
                       <p className="font-keepick-primary text-xm text-gray-400 mb-3">
@@ -344,20 +367,14 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                       </p>
 
                       <div
-                        ref={expandedPreviewDrag.ref}
-                        className="h-[calc(100%-2rem)] overflow-x-auto overflow-y-hidden scrollbar-hide cursor-grab select-none"
+                        className="h-[calc(100%-2rem)] overflow-y-auto scrollbar-hide"
                         style={{
                           scrollbarWidth: "none",
                           msOverflowStyle: "none",
-                          cursor: expandedPreviewDrag.isDragging ? "grabbing" : "grab",
                         }}
-                        onMouseDown={expandedPreviewDrag.handleMouseDown}
-                        onMouseMove={expandedPreviewDrag.handleMouseMove}
-                        onMouseUp={expandedPreviewDrag.handleMouseUp}
-                        onMouseLeave={expandedPreviewDrag.handleMouseLeave}
                       >
                         {selectedPhotos.length > 0 ? (
-                          <div className="flex gap-3 h-full pb-4" style={{ width: "max-content" }}>
+                          <div className="grid grid-cols-8 gap-3 pb-4">
                             {selectedPhotoData.map((photo, index) => (
                               <motion.div
                                 key={photo.id}
@@ -365,11 +382,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.9 }}
                                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                                className="relative overflow-hidden rounded cursor-pointer group flex-shrink-0"
-                                style={{
-                                  width: "120px",
-                                  height: "120px",
-                                }}
+                                className="relative overflow-hidden rounded cursor-pointer group aspect-square"
                               >
                                 <img
                                   src={photo.src || "/placeholder.svg"}
@@ -418,6 +431,8 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                       style={{
                         maxWidth: "300px",
                         cursor: smallPreviewDrag.isDragging ? "grabbing" : "grab",
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
                       }}
                       onMouseDown={smallPreviewDrag.handleMouseDown}
                       onMouseMove={smallPreviewDrag.handleMouseMove}
@@ -448,7 +463,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                       )}
                     </div>
 
-                    {selectedPhotos.length > 0 && (
+                    {(selectedPhotos.length > 0 || isPhotosExpanded) && (
                       <button
                         onClick={() => setIsPhotosExpanded(!isPhotosExpanded)}
                         className="flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-white transition-colors font-keepick-primary whitespace-nowrap flex-shrink-0"
@@ -461,57 +476,32 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
 
                   {/* Right: Action Buttons */}
                   <div className="flex items-center gap-3">
-                    <div
-                      className="relative"
-                      onMouseEnter={() => setIsPickHovered(true)}
-                      onMouseLeave={() => setIsPickHovered(false)}
+                    <motion.button
+                      onClick={createTimelineAlbum}
+                      disabled={selectedPhotos.length === 0}
+                      className={`px-4 py-3 bg-transparent border-2 border-[#FE7A25] font-keepick-heavy text-sm tracking-wide transition-all duration-300 whitespace-nowrap ${
+                        selectedPhotos.length === 0
+                          ? "text-gray-500 border-gray-600 cursor-not-allowed"
+                          : "text-white hover:bg-[#FE7A25]/20 hover:border-[#FE7A25] hover:shadow-lg hover:shadow-[#FE7A25]/20"
+                      }`}
+                      whileHover={selectedPhotos.length > 0 ? { scale: 1.05 } : {}}
+                      whileTap={selectedPhotos.length > 0 ? { scale: 0.95 } : {}}
                     >
-                      <AnimatePresence mode="wait">
-                        {!isPickHovered || selectedPhotos.length === 0 ? (
-                          <motion.button
-                            key="single"
-                            initial={{ opacity: 0, y: -20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.4, ease: "easeInOut" }}
-                            disabled={selectedPhotos.length === 0}
-                            className={`px-8 py-3 bg-transparent border-2 font-keepick-heavy text-sm tracking-wider transition-all duration-300 whitespace-nowrap ${
-                              selectedPhotos.length === 0
-                                ? "text-gray-500 border-gray-600 cursor-not-allowed"
-                                : "text-white border-[#FE7A25] hover:bg-[#FE7A25]/10"
-                            }`}
-                          >
-                            Pick!
-                          </motion.button>
-                        ) : (
-                          <motion.div
-                            key="split"
-                            initial={{ opacity: 0, scale: 0.9, y: -20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: -20 }}
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                            className="flex gap-2"
-                          >
-                            <motion.button
-                              onClick={createTimelineAlbum}
-                              className="px-4 py-3 bg-transparent border-2 border-[#FE7A25] text-white font-keepick-heavy text-sm tracking-wide transition-all duration-300 hover:bg-[#FE7A25]/10 whitespace-nowrap"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              타임라인 앨범
-                            </motion.button>
-                            <motion.button
-                              onClick={createTierAlbum}
-                              className="px-4 py-3 bg-transparent border-2 border-[#FE7A25] text-white font-keepick-heavy text-sm tracking-wide transition-all duration-300 hover:bg-[#FE7A25]/10 whitespace-nowrap"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              티어 앨범
-                            </motion.button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
+                      타임라인 앨범
+                    </motion.button>
+                    <motion.button
+                      onClick={createTierAlbum}
+                      disabled={selectedPhotos.length === 0}
+                      className={`px-4 py-3 bg-transparent border-2 border-[#FE7A25] font-keepick-heavy text-sm tracking-wide transition-all duration-300 whitespace-nowrap ${
+                        selectedPhotos.length === 0
+                          ? "text-gray-500 border-gray-600 cursor-not-allowed"
+                          : "text-white hover:bg-[#FE7A25]/20 hover:border-[#FE7A25] hover:shadow-lg hover:shadow-[#FE7A25]/20"
+                      }`}
+                      whileHover={selectedPhotos.length > 0 ? { scale: 1.05 } : {}}
+                      whileTap={selectedPhotos.length > 0 ? { scale: 0.95 } : {}}
+                    >
+                      티어 앨범
+                    </motion.button>
                   </div>
                 </div>
               </div>
@@ -525,6 +515,13 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
         photo={selectedPhoto}
         isOpen={isPhotoModalOpen}
         onClose={closePhotoModal}
+      />
+
+      {/* AI 서비스 소개 모달 */}
+      <AiServiceModal 
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        onSimilarPhotosSort={handleSimilarPhotosSort}
       />
     </div>
   )
