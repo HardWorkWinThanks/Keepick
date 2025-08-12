@@ -15,19 +15,17 @@ import java.util.stream.Collectors;
 @Builder
 @AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public class FaceTaggingRequest {
+public class CompositeAnalysisRequest {
     List<ImageRequest> targetFaces;
     List<ImageRequest> sourceImages;
-    private Float distanceThreshold;
     private boolean returnTaggedImages;
     private String jobId;
 
-    public static FaceTaggingRequest from(String jobId, List<Member> members, List<Photo> photos) {
-        return FaceTaggingRequest.builder()
+    public static CompositeAnalysisRequest from(String jobId, List<Member> members, List<Photo> photos) {
+        return CompositeAnalysisRequest.builder()
                 .jobId(jobId)
                 .targetFaces(members.stream().map(ImageRequest::from).collect(Collectors.toList()))
                 .sourceImages(photos.stream().map(ImageRequest::from).collect(Collectors.toList()))
-                .distanceThreshold(0.6F)
                 .returnTaggedImages(false)
                 .build();
     }
