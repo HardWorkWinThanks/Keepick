@@ -146,6 +146,11 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                                 router.prefetch(
                                   `/group/${group.groupId}/tier/${photo.id}`
                                 );
+                              } else if (currentAlbum.id === "highlight") {
+                                // 임시 - 하이라이트 앨범 사전 로딩
+                                router.prefetch(
+                                  `/group/${group.groupId}/highlight/${photo.id}`
+                                );
                               }
                             }}
                             onClick={() => {
@@ -159,8 +164,10 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                                   `/group/${group.groupId}/tier/${photo.id}`
                                 );
                               } else if (currentAlbum.id === "highlight") {
-                                // TODO: 하이라이트 앨범 라우트 구현 예정  
-                                alert(`하이라이트 앨범 "${photo.title}"는 아직 구현 중입니다.`);
+                                // 임시 - 하이라이트 앨범 라우팅 (실제 API 연동 후 수정 예정)
+                                router.push(
+                                  `/group/${group.groupId}/highlight/${photo.id}`
+                                );
                               }
                             }}
                           >

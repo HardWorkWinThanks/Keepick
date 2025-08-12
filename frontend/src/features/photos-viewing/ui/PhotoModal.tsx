@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Photo } from "@/entities/photo";
 import { useEffect, useCallback } from "react";
+import { X } from "lucide-react";
 
 /**
  * 사진을 클릭했을 때 전체 화면으로 크게 보여주는 모달 컴포넌트입니다.
@@ -55,7 +56,7 @@ export function PhotoModal({ photo, isOpen, onClose }: PhotoModalProps) {
     >
       {/* 이미지 컨테이너 (배경 클릭 이벤트 전파 방지) */}
       <div
-        className="relative max-w-4xl max-h-full"
+        className="relative"
         onClick={(e) => e.stopPropagation()}
         style={{
           animation: "scaleIn 0.2s ease-out",
@@ -67,17 +68,22 @@ export function PhotoModal({ photo, isOpen, onClose }: PhotoModalProps) {
           width={1200}
           height={800}
           className="object-contain rounded-lg shadow-2xl"
-          style={{ maxHeight: "90vh", maxWidth: "90vw" }}
+          style={{ 
+            maxHeight: "90vh", 
+            maxWidth: "90vw",
+            width: "auto",
+            height: "auto"
+          }}
           priority // Next.js 이미지 최적화: 이 이미지를 우선적으로 로드
         />
 
-        {/* 닫기 버튼 */}
+        {/* 닫기 버튼 - shadcn 스타일 */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
-          aria-label="닫기"
+          className="absolute -top-2 -right-2 w-10 h-10 bg-white/90 hover:bg-white text-black hover:text-gray-800 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white shadow-lg"
+          aria-label="모달 닫기"
         >
-          ✕
+          <X size={18} className="stroke-2" />
         </button>
       </div>
 
