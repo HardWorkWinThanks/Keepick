@@ -30,6 +30,12 @@ public class GroupMemberInterceptor implements HandlerInterceptor {
         String method = request.getMethod();
         
         log.info("[GroupMemberInterceptor] 요청 처리 시작 - URI: {}, Method: {}", requestURI, method);
+
+        // analysis가 포함된 URI는 바로 통과
+        if (requestURI.contains("analysis")) {
+            log.info("[GroupMemberInterceptor] analysis 요청이므로 그룹 멤버 검증 생략 - URI: {}", requestURI);
+            return true;
+        }
         
         // 로그인 유저와 그룹 ID 조회
         Long currentUserId = AuthenticationUtil.getCurrentUserId();
