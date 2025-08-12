@@ -42,7 +42,7 @@ public class AlbumResponse {
         @Schema(description = "앨범 이름", example = "여름 여행")
         private String name;
 
-        @Schema(description = "앨범 설명", example = "2025년 여름 바다 여행 기록")
+        @Schema(description = "앨범 설명", example = "2025년 여름 바다 여행 기록", nullable = true)
         private String description;
 
         @Schema(description = "앨범 대표 사진 썸네일 URL", example = "https://example.com/thumbnail.jpg")

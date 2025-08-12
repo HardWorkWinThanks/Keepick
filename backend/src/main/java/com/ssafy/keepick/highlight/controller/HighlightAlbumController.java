@@ -13,6 +13,7 @@ import com.ssafy.keepick.highlight.controller.response.HighlightAlbumSummaryResp
 import com.ssafy.keepick.highlight.controller.response.HighlightScreenshotSaveResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,7 +29,7 @@ public class HighlightAlbumController {
     @PostMapping("/photos")
     @Operation(summary = "하이라이트 스크린샷 업로드", description = "화상채팅 중 감정이 감지되어 캡처된 사진의 S3 URL을 전달받아 저장합니다.")
     public ApiResponse<HighlightScreenshotSaveResponse> saveHighlightScreenshot(@PathVariable Long groupId,
-                                                                                @RequestBody HighlightScreenshotSaveRequest request) {
+                                                                                @Valid @RequestBody HighlightScreenshotSaveRequest request) {
         HighlightAlbumPhotoDto result = highlightAlbumService.saveHighlightScreenshot(groupId, request);
         return ApiResponse.created(HighlightScreenshotSaveResponse.from(result));
     }
@@ -39,7 +40,7 @@ public class HighlightAlbumController {
             감정이 감지되지 않은 참여자는 앨범에 포함되지 않습니다.
             """)
     public ApiResponse<HighlightAlbumResponse> createHighlightAlbum(@PathVariable Long groupId,
-                                                                    @RequestBody HighlightAlbumCreateRequest request) {
+                                                                    @Valid @RequestBody HighlightAlbumCreateRequest request) {
         HighlightAlbumDto result = highlightAlbumService.createHighlightAlbum(groupId, request);
         return ApiResponse.created(HighlightAlbumResponse.from(result));
     }
@@ -50,7 +51,7 @@ public class HighlightAlbumController {
             """)
     public ApiResponse<HighlightAlbumResponse> modifyHighlightAlbum(@PathVariable Long groupId,
                                                                     @PathVariable Long albumId,
-                                                                    @RequestBody HighlightAlbumUpdateRequest request) {
+                                                                    @Valid @RequestBody HighlightAlbumUpdateRequest request) {
         HighlightAlbumDto result = highlightAlbumService.updateHighlightAlbum(albumId, request);
         return ApiResponse.ok(HighlightAlbumResponse.from(result));
     }
@@ -62,7 +63,7 @@ public class HighlightAlbumController {
             """)
     public ApiResponse<HighlightAlbumResponse> deleteHighlightAlbum(@PathVariable Long groupId,
                                                                     @PathVariable Long albumId,
-                                                                    @RequestBody HighlightAlbumUpdateDeleteRequest request) {
+                                                                    @Valid @RequestBody HighlightAlbumUpdateDeleteRequest request) {
         HighlightAlbumDto result = highlightAlbumService.deleteHighlightAlbumPhoto(albumId, request);
         return ApiResponse.ok(HighlightAlbumResponse.from(result));
     }

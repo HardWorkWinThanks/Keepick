@@ -24,13 +24,13 @@ public class FriendDetailResponse {
     @Schema(description = "친구 닉네임", example = "gildong123")
     private String nickname;
 
-    @Schema(description = "친구 프로필 이미지 URL", example = "https://example.com/profile.jpg")
+    @Schema(description = "친구 프로필 이미지 URL (프로필 이미지가 없는 회원의 경우 null 입니다)", example = "https://example.com/profile.jpg", nullable = true)
     private String profileUrl;
 
     @Schema(description = "친구 요청에 대한 응답 상태", example = "PENDING(친구 요청 중), ACCEPTED(친구 요청 수락함), REJECTED(친구 요청 거절함")
     private FriendshipStatus friendshipStatus;
 
-    @Schema(description = "친구 요청 상태 (요청 시와 같은 친구 상태 조건)", example = "FRIEND(친구), SENT(친구 요청 보냄), RECEIVED(친구 요청 받음)")
+    @Schema(description = "친구 요청 상태 (요청 시와 같은 친구 상태 조건 / 내가 보낸 요청인지 받은 요청인지 구분하는 값)", example = "FRIEND(친구), SENT(친구 요청 보냄), RECEIVED(친구 요청 받음)")
     private FriendStatus friendStatus;
 
     @Schema(description = "최초 친구 요청 일시", example = "2025-08-09T14:30:00")

@@ -25,7 +25,7 @@ public class GroupMemberResponse {
     @Schema(description = "회원 이메일 주소", example = "gildong@example.com")
     private String email;
 
-    @Schema(description = "회원 프로필 이미지 URL", example = "https://example.com/profile.jpg")
+    @Schema(description = "회원 프로필 이미지 URL (회원 프로필 이미지가 없는 경우 null 입니다.)", example = "https://example.com/profile.jpg")
     private String profileUrl;
 
     @Schema(description = "그룹 가입 일시", example = "2025-08-09T14:30:00")

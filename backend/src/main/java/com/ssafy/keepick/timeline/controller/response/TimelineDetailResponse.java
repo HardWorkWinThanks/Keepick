@@ -23,7 +23,7 @@ public class TimelineDetailResponse {
     @Schema(description = "앨범 이름", example = "여름 여행")
     private String name;
 
-    @Schema(description = "앨범 설명", example = "2025년 여름 바다 여행 기록")
+    @Schema(description = "앨범 설명", example = "2025년 여름 바다 여행 기록", nullable = true)
     private String description;
 
     @Schema(description = "앨범 썸네일 이미지 URL", example = "https://example.com/thumbnail.jpg")
@@ -32,10 +32,10 @@ public class TimelineDetailResponse {
     @Schema(description = "앨범 썸네일 원본 이미지 URL", example = "https://example.com/original.jpg")
     private String originalUrl;
 
-    @Schema(description = "앨범 시작 날짜", example = "2025-07-01")
+    @Schema(description = "앨범 시작 날짜", example = "2025-07-01", nullable = true)
     private LocalDate startDate;
 
-    @Schema(description = "앨범 종료 날짜", example = "2025-07-10")
+    @Schema(description = "앨범 종료 날짜", example = "2025-07-10", nullable = true)
     private LocalDate endDate;
 
     @Schema(description = "앨범 내 섹션에 포함된 사진 개수", example = "20")
@@ -64,13 +64,13 @@ public class TimelineDetailResponse {
         @Schema(description = "섹션 이름", example = "해변에서")
         private String name;
 
-        @Schema(description = "섹션 설명", example = "바닷가에서 찍은 사진들")
+        @Schema(description = "섹션 설명", example = "바닷가에서 찍은 사진들", nullable = true)
         private String description;
 
-        @Schema(description = "섹션 시작 날짜", example = "2025-07-01")
+        @Schema(description = "섹션 시작 날짜", example = "2025-07-01", nullable = true)
         private LocalDate startDate;
 
-        @Schema(description = "섹션 종료 날짜", example = "2025-07-05")
+        @Schema(description = "섹션 종료 날짜", example = "2025-07-05", nullable = true)
         private LocalDate endDate;
 
         @Schema(description = "섹션 내 사진 목록")

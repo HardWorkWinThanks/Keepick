@@ -22,7 +22,7 @@ public class GroupStatusResponse {
     @Schema(description = "그룹 초대 ID", example = "101")
     private Long invitationId;
 
-    @Schema(description = "그룹 가입 상태 (요청 시 그룹의 가입 상태와 같음)")
+    @Schema(description = "그룹 가입 상태 (ACCEPTED, PENDING, REJECTED, LEFT)", example = "PENDING")
     private GroupMemberStatus invitationStatus;
 
     public static GroupStatusResponse toResponse(GroupMemberDto dto) {

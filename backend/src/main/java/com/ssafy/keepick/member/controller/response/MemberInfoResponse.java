@@ -17,7 +17,7 @@ public class MemberInfoResponse {
     @Schema(description = "닉네임", example = "홍길동")
     private String nickname;
     
-    @Schema(description = "프로필 이미지 URL", example = "https://example.com/profile.jpg")
+    @Schema(description = "프로필 이미지 URL (회원의 프로필 이미지가 없는 경우 null 입니다)", example = "https://example.com/profile.jpg", nullable = true)
     private String profileUrl;
     
     @Schema(description = "이메일 주소", example = "user@example.com")
@@ -30,7 +30,7 @@ public class MemberInfoResponse {
     )
     private String provider;
     
-    @Schema(description = "AI 식별용 이미지 URL (선택사항)", example = "https://example.com/identification.jpg")
+    @Schema(description = "AI 식별용 이미지 URL (선택사항)", example = "https://example.com/identification.jpg", nullable = true)
     private String identificationUrl;
     
     public static MemberInfoResponse from(MemberDto memberDto) {

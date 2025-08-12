@@ -23,13 +23,13 @@ public class GroupPhotoDetailResponse {
     @Schema(description = "사진 썸네일 URL", example = "https://example.com/images/photo_thumbnail.jpg")
     private String thumbnailUrl;
 
-    @Schema(description = "사진 촬영일시", example = "2025-08-11T12:34:56")
+    @Schema(description = "사진 촬영일시", example = "2025-08-11T12:34:56", nullable = true)
     private String takenAt;
 
-    @Schema(description = "사진 가로 해상도(px)", example = "1920")
+    @Schema(description = "사진 가로 해상도(px)", example = "1920", nullable = true)
     private Integer width;
 
-    @Schema(description = "사진 세로 해상도(px)", example = "1080")
+    @Schema(description = "사진 세로 해상도(px)", example = "1080", nullable = true)
     private Integer height;
 
 

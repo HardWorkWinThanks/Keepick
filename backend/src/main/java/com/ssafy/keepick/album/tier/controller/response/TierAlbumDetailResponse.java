@@ -14,7 +14,7 @@ public class TierAlbumDetailResponse {
     @Schema(description = "앨범 제목", example = "여름 휴가 앨범")
     private String title;
     
-    @Schema(description = "앨범 설명", example = "2024년 여름 휴가 사진들")
+    @Schema(description = "앨범 설명", example = "2024년 여름 휴가 사진들", nullable = true)
     private String description;
     
     @Schema(description = "썸네일 이미지 URL", example = "https://example.com/thumb.jpg")
@@ -46,7 +46,7 @@ public class TierAlbumDetailResponse {
         @Schema(description = "원본 이미지 URL", example = "https://example.com/original1.jpg")
         private String originalUrl;
         
-        @Schema(description = "앨범 내 사진 순서", example = "0")
+        @Schema(description = "앨범 내 사진 순서 (UNASSIGNED에 속한 사진은 티어 레벨이 할당되지 않아 sequence가 null입니다.)", example = "0", nullable = true)
         private Integer sequence;
     }
 }

@@ -12,6 +12,6 @@ import java.util.List;
 public class GroupInviteRequest {
 
     @Schema(description = "그룹에 초대할 회원들의 ID 목록", example = "[101, 102, 103]")
-    @NotNull
+    @NotNull(message = "초대 회원 ID 목록은 필수입니다.")
     private List<Long> inviteeIds;
 }
