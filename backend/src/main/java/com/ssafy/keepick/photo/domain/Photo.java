@@ -66,8 +66,12 @@ public class Photo extends BaseTimeEntity {
         this.deletedAt = LocalDateTime.now();
     }
 
+    /**
+     * thumbnailUrl에 기본으로 originUrl을 우선 할당하여 null 방지
+     */
     public void upload(String originalUrl) {
         this.originalUrl = originalUrl;
+        this.thumbnailUrl = originalUrl;
         this.status = PhotoStatus.UPLOADED;
     }
 

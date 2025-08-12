@@ -54,7 +54,8 @@ public enum ErrorCode {
     // 시스템 에러
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다.", "S001"),
     INTERNAL_S3_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S3 서버에서 발생한 오류입니다.", "S002"),
-    INTERNAL_VISION_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 분석 값을 파싱하는데 실패했습니다.", "S003");
+    INTERNAL_THUMBNAIL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "썸네일 생성에 실패했습니다.", "S003"),
+    INTERNAL_VISION_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 분석 값을 파싱하는데 실패했습니다.", "S004");
 
     private final HttpStatus status;
     private final String message;
