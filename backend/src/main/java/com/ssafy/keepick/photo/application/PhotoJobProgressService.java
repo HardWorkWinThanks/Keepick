@@ -62,10 +62,9 @@ public class PhotoJobProgressService {
             }
         });
 
-        emitter.onCompletion(() -> System.out.println("SSE 연결 종료: " + jobId));
-        emitter.onTimeout(() -> emitter.complete());
+        emitter.onCompletion(() -> log.info("SSE 연결 종료: {}", jobId));
+        emitter.onTimeout(emitter::complete);
 
         return emitter;
     }
-
 }
