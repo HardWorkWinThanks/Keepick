@@ -23,7 +23,7 @@ public class PhotoAnalysisController {
     private final PhotoAnalysisService  photoAnalysisService;
     private final PhotoJobProgressService  photoJobProgressService;
 
-    @PostMapping("/composite")
+    @PostMapping("/integration")
     @Operation(summary = "YOLO 객체 검출 + 얼굴 매칭 + 흐림 판별 API", description = "비동기 작업으로 처리되며 작업 id만 우선으로 반환합니다.")
     public CompletableFuture<ApiResponse<PhotoAnalysisJobResponse>> invokeBlurDetection(@PathVariable Long groupId,
                                                                                         @RequestBody PhotoAnalysisRequest request) {
