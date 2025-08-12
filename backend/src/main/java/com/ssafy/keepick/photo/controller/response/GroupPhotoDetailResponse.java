@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.util.List;
+import java.util.Optional;
 
 @Getter
 @Builder
@@ -43,7 +44,9 @@ public class GroupPhotoDetailResponse {
                 .photoId(dto.getPhotoId())
                 .originalUrl(dto.getOriginalUrl())
                 .thumbnailUrl(dto.getThumbnailUrl())
-                .takenAt(dto.getTakenAt().toString())
+                .takenAt(Optional.ofNullable(dto.getTakenAt())
+                        .map(Object::toString)
+                        .orElse(null))
                 .width(dto.getWidth())
                 .height(dto.getHeight())
                 .build();
