@@ -78,13 +78,13 @@ export function PhotoModal({ photo, isOpen, onClose }: PhotoModalProps) {
         />
 
         {/* 닫기 버튼 - shadcn 스타일 */}
-        <button
+        {/* <button
           onClick={onClose}
           className="absolute -top-2 -right-2 w-10 h-10 bg-white/90 hover:bg-white text-black hover:text-gray-800 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white shadow-lg"
           aria-label="모달 닫기"
         >
           <X size={18} className="stroke-2" />
-        </button>
+        </button> */}
       </div>
 
       {/* 간단한 페이드인/스케일인 애니메이션을 위한 인라인 스타일 */}

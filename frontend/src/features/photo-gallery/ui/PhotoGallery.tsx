@@ -4,6 +4,7 @@ import React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, SlidersHorizontal, Check, Trash2, X, ChevronUp, ChevronDown, Upload } from "lucide-react"
 import { usePhotoGallery, useMasonryLayout, useDragScroll } from "../model/usePhotoGallery"
+import { PhotoModal, usePhotoModal } from "@/features/photos-viewing"
 
 interface PhotoGalleryProps {
   groupId: string
@@ -38,6 +39,9 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   const smallPreviewDrag = useDragScroll()
   const expandedPreviewDrag = useDragScroll()
   const [isPickHovered, setIsPickHovered] = React.useState(false)
+  
+  // 사진 모달을 위한 상태 관리
+  const { photo: selectedPhoto, isOpen: isPhotoModalOpen, openModal: openPhotoModal, closeModal: closePhotoModal } = usePhotoModal()
 
   return (
     <div className="min-h-screen bg-[#111111] text-white">
@@ -123,12 +127,12 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
               </div>
 
               {/* Sort Button */}
-              <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400 font-keepick-primary">정렬</span>
                 <button className="p-2 border border-gray-700 hover:border-gray-500 transition-colors">
                   <SlidersHorizontal size={16} className="text-gray-400" />
                 </button>
-              </div>
+              </div> */}
 
               {/* Upload Button */}
               <div className="flex items-center gap-2">
@@ -188,7 +192,14 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                       style={{
                         aspectRatio: photo.aspectRatio,
                       }}
-                      onClick={() => isSelectionMode && togglePhotoSelection(photo.id)}
+                      onClick={() => {
+                        if (isSelectionMode) {
+                          togglePhotoSelection(photo.id)
+                        } else {
+                          // 선택 모드가 아닐 때는 사진 모달 열기
+                          openPhotoModal({ id: photo.id, src: photo.src || "/placeholder.svg", name: photo.title })
+                        }
+                      }}
                     >
                       <img
                         src={photo.src || "/placeholder.svg"}
@@ -328,8 +339,8 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                     className="overflow-hidden border-b border-gray-700"
                   >
                     <div className="py-4 h-full">
-                      <p className="font-keepick-primary text-xs text-gray-400 mb-3">
-                        선택한 사진들로 앨범을 생성할 수 있습니다. 드래그하여 스크롤하세요.
+                      <p className="font-keepick-primary text-xm text-gray-400 mb-3">
+                        선택한 사진들로 앨범을 생성할 수 있습니다. 
                       </p>
 
                       <div
@@ -508,6 +519,13 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 사진 상세보기 모달 */}
+      <PhotoModal 
+        photo={selectedPhoto}
+        isOpen={isPhotoModalOpen}
+        onClose={closePhotoModal}
+      />
     </div>
   )
 }
