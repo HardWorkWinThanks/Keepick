@@ -12,6 +12,7 @@ import com.ssafy.keepick.auth.application.dto.KakaoProvider;
 import com.ssafy.keepick.auth.application.dto.MemberDto;
 import com.ssafy.keepick.auth.application.dto.NaverProvider;
 import com.ssafy.keepick.auth.application.dto.OAuth2Provider;
+import com.ssafy.keepick.member.application.MemberService;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
 
@@ -24,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
 
     private final MemberRepository memberRepository;
+    private final MemberService memberService;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -55,19 +57,21 @@ public class CustomOAuth2MemberService extends DefaultOAuth2UserService {
         if (existMember == null) {
             log.info("새 회원 생성: 이메일 = {}, 제공자 = {}", email, registrationId);
 
-            String nickname = Member.generateNicknameFromEmail(email);
+            // 고유한 닉네임 생성
+            String uniqueNickname = memberService.generateUniqueNicknameFromEmail(email);
+            log.info("생성된 고유 닉네임: {}", uniqueNickname);
             
             Member member = Member.builder()
             .name(oAuth2Response.getName())
             .email(email)
-            .nickname(nickname)
+            .nickname(uniqueNickname)
             .profileUrl(oAuth2Response.getProfileUrl())
             .provider(oAuth2Response.getProvider())
             .providerId(oAuth2Response.getProviderId())
             .build();
 
             Member savedMember = memberRepository.save(member);
-            log.info("회원 생성 완료: ID = {}", savedMember.getId());
+            log.info("회원 생성 완료: ID = {}, 닉네임 = {}", savedMember.getId(), savedMember.getNickname());
 
             MemberDto memberDto = MemberDto.from(savedMember);
 

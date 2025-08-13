@@ -1,12 +1,17 @@
 package com.ssafy.keepick.member.application;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.BDDMockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
+import java.util.List;
 import java.util.Optional;
 
-import com.ssafy.keepick.support.BaseTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,15 +21,14 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.ssafy.keepick.auth.application.dto.MemberDto;
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.global.security.util.AuthenticationUtil;
-import com.ssafy.keepick.auth.application.dto.MemberDto;
 import com.ssafy.keepick.member.controller.request.MemberUpdateRequest;
-import com.ssafy.keepick.member.controller.response.MemberInfoResponse;
-import com.ssafy.keepick.member.controller.response.MemberSearchResponse;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.member.persistence.MemberRepository;
+import com.ssafy.keepick.support.BaseTest;
 
 @ExtendWith(MockitoExtension.class)
 class MemberServiceTest extends BaseTest {
@@ -326,5 +330,158 @@ class MemberServiceTest extends BaseTest {
                 .isEqualTo(ErrorCode.INVALID_PARAMETER);
 
         verify(memberRepository, never()).findByNickname(any());
+    }
+
+    @Test
+    @DisplayName("이메일에서 고유한 닉네임 생성 - 기본 닉네임 사용 가능한 경우")
+    void generateUniqueNicknameFromEmail_WhenBaseNicknameAvailable() {
+        // given
+        String email = "test@example.com";
+        String expectedNickname = "test";
+        
+        given(memberRepository.findByNickname(expectedNickname)).willReturn(Optional.empty());
+
+        // when
+        String result = memberService.generateUniqueNicknameFromEmail(email);
+
+        // then
+        assertThat(result).isEqualTo(expectedNickname);
+        verify(memberRepository).findByNickname(expectedNickname);
+    }
+
+    @Test
+    @DisplayName("이메일에서 고유한 닉네임 생성 - 기본 닉네임이 중복인 경우")
+    void generateUniqueNicknameFromEmail_WhenBaseNicknameExists() {
+        // given
+        String email = "test@example.com";
+        String baseNickname = "test";
+        Member existingMember = Member.builder()
+                .name("Existing User")
+                .email("existing@example.com")
+                .nickname(baseNickname)
+                .provider("google")
+                .providerId("123")
+                .build();
+        
+        // 기본 닉네임은 존재하지만 test1은 존재하지 않는다고 가정
+        given(memberRepository.findByNickname(baseNickname)).willReturn(Optional.of(existingMember));
+        given(memberRepository.findByNicknameStartingWith(baseNickname)).willReturn(List.of(existingMember));
+        given(memberRepository.findByNickname("test1")).willReturn(Optional.empty());
+
+        // when
+        String result = memberService.generateUniqueNicknameFromEmail(email);
+
+        // then
+        assertThat(result).isNotEqualTo(baseNickname);
+        assertThat(result).startsWith(baseNickname);
+        assertThat(result).isEqualTo("test1");
+        verify(memberRepository).findByNicknameStartingWith(baseNickname);
+        verify(memberRepository).findByNickname("test1");
+    }
+
+    @Test
+    @DisplayName("이메일에서 고유한 닉네임 생성 - 여러 중복 닉네임이 있는 경우")
+    void generateUniqueNicknameFromEmail_WhenMultipleNicknamesExist() {
+        // given
+        String email = "test@example.com";
+        String baseNickname = "test";
+        
+        Member existingMember1 = Member.builder()
+                .name("User 1")
+                .email("user1@example.com")
+                .nickname("test")
+                .provider("google")
+                .providerId("123")
+                .build();
+        
+        Member existingMember2 = Member.builder()
+                .name("User 2")
+                .email("user2@example.com")
+                .nickname("test1")
+                .provider("google")
+                .providerId("456")
+                .build();
+        
+        Member existingMember3 = Member.builder()
+                .name("User 3")
+                .email("user3@example.com")
+                .nickname("test3")
+                .provider("google")
+                .providerId("789")
+                .build();
+        
+        // test, test1, test3은 존재하지만 test4는 존재하지 않는다고 가정 (test3 다음이므로 test4)
+        given(memberRepository.findByNickname(baseNickname)).willReturn(Optional.of(existingMember1));
+        given(memberRepository.findByNicknameStartingWith(baseNickname))
+                .willReturn(List.of(existingMember1, existingMember2, existingMember3));
+        given(memberRepository.findByNickname("test4")).willReturn(Optional.empty());
+
+        // when
+        String result = memberService.generateUniqueNicknameFromEmail(email);
+
+        // then
+        assertThat(result).isEqualTo("test4");
+        verify(memberRepository).findByNicknameStartingWith(baseNickname);
+        verify(memberRepository).findByNickname("test4");
+    }
+
+    @Test
+    @DisplayName("이메일에서 고유한 닉네임 생성 - 유효하지 않은 이메일")
+    void generateUniqueNicknameFromEmail_InvalidEmail() {
+        // given
+        String invalidEmail = "invalid-email";
+
+        // when & then
+        assertThatThrownBy(() -> memberService.generateUniqueNicknameFromEmail(invalidEmail))
+                .isInstanceOf(BaseException.class);
+    }
+
+    @Test
+    @DisplayName("이메일에서 고유한 닉네임 생성 - 빈 로컬 파트")
+    void generateUniqueNicknameFromEmail_EmptyLocalPart() {
+        // given
+        String email = "@example.com";
+
+        // when & then
+        assertThatThrownBy(() -> memberService.generateUniqueNicknameFromEmail(email))
+                .isInstanceOf(BaseException.class);
+    }
+
+    @Test
+    @DisplayName("닉네임 중복검사 - 사용 가능한 닉네임")
+    void checkNicknameAvailability_Available() {
+        // given
+        String nickname = "available";
+        given(memberRepository.findByNickname(nickname)).willReturn(Optional.empty());
+
+        // when
+        boolean result = memberService.checkNicknameAvailability(nickname);
+
+        // then
+        assertThat(result).isTrue();
+        verify(memberRepository).findByNickname(nickname);
+    }
+
+    @Test
+    @DisplayName("닉네임 중복검사 - 이미 사용 중인 닉네임")
+    void checkNicknameAvailability_NotAvailable() {
+        // given
+        String nickname = "taken";
+        Member existingMember = Member.builder()
+                .name("Existing User")
+                .email("existing@example.com")
+                .nickname(nickname)
+                .provider("google")
+                .providerId("123")
+                .build();
+        
+        given(memberRepository.findByNickname(nickname)).willReturn(Optional.of(existingMember));
+
+        // when
+        boolean result = memberService.checkNicknameAvailability(nickname);
+
+        // then
+        assertThat(result).isFalse();
+        verify(memberRepository).findByNickname(nickname);
     }
 }
