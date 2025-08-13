@@ -78,6 +78,8 @@ export function useAlbumStorage() {
     { id: "photo22", src: "/dummy/ssafy-dummy3.jpg", name: "싸피3" },
     { id: "photo23", src: "/dummy/food-dummy1.jpg", name: "음식1" },
     { id: "photo24", src: "/dummy/sea-dummy1.jpg", name: "바다1" },
+    { id: "photo25", src: "/dummy/ugly_00217.jpg", name: "ugly1" },
+    { id: "photo26", src: "/dummy/ugly_074.jpg", name: "ugly2" },
   ];
 
   // 훅이 제공하는 함수들을 객체 형태로 반환합니다.

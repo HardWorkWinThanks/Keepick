@@ -184,11 +184,11 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
 
                             <div className="mt-6 space-y-2">
                               {/* 날짜 표시 - 타임라인 앨범일 때만 */}
-                              {currentAlbum.id === "timeline" && (
+                              {/* {currentAlbum.id === "timeline" && (
                                 <p className="text-sm text-[#FE7A25] font-keepick-primary tracking-wider">
                                   2024.03.15 ~ 2024.03.20
                                 </p>
-                              )}
+                              )} */}
                               <h3 className="text-lg font-medium text-white/90 group-hover:text-[#FE7A25] transition-colors">
                                 {photo.title}
                               </h3>

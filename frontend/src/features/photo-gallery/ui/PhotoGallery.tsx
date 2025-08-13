@@ -1,12 +1,15 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, SlidersHorizontal, Check, Trash2, X, ChevronUp, ChevronDown, Upload } from "lucide-react"
+import { ArrowLeft, SlidersHorizontal, Check, Trash2, X, ChevronUp, ChevronDown, Upload, Loader2 } from "lucide-react"
 import { usePhotoGallery, useMasonryLayout, useDragScroll } from "../model/usePhotoGallery"
 import { PhotoModal, usePhotoModal } from "@/features/photos-viewing"
 import AiMagicButton from "./AiMagicButton"
 import AiServiceModal from "./AiServiceModal"
+import { uploadGalleryImages } from "../api/galleryUploadApi"
+import { requestAiAnalysis, createAnalysisStatusSSE, AnalysisStatusMessage } from "../api/aiAnalysisApi"
+import { getGroupPhotos, getPhotoTags, parseTagsString, parseMemberNicknamesString } from "../api/galleryPhotosApi"
 
 interface PhotoGalleryProps {
   groupId: string
@@ -47,6 +50,45 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   // AI 서비스 모달 상태 관리
   const [isAiModalOpen, setIsAiModalOpen] = useState(false)
   
+  // 파일 업로드를 위한 ref
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // SSE 연결 관리
+  const [sseConnection, setSseConnection] = useState<EventSource | null>(null)
+  
+  // 사진 태그 정보 캐시
+  const [photoTagsCache, setPhotoTagsCache] = useState<Record<number, { tags: string[], members: string[] }>>({})
+  
+  // 실시간 태그 목록 (API에서 수집)
+  const [realTimeTags, setRealTimeTags] = useState<string[]>([])
+  
+  // 업로드 상태 관리
+  const [uploadState, setUploadState] = useState<{
+    isUploading: boolean
+    currentStep: 'selecting' | 'uploading' | 'processing' | 'completed'
+    progress: number
+    totalFiles: number
+    uploadedFiles: number
+    message: string
+  }>({
+    isUploading: false,
+    currentStep: 'selecting',
+    progress: 0,
+    totalFiles: 0,
+    uploadedFiles: 0,
+    message: ''
+  })
+  
+  // SSE 연결 정리 (컴포넌트 언마운트 시)
+  useEffect(() => {
+    return () => {
+      if (sseConnection) {
+        console.log('SSE 연결 정리')
+        sseConnection.close()
+      }
+    }
+  }, [sseConnection])
+  
   // AI 버튼 클릭 핸들러
   const handleAiServiceClick = () => {
     setIsAiModalOpen(true)
@@ -57,6 +99,211 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     console.log("유사한 사진 분류 실행")
     setIsAiModalOpen(false)
     // TODO: 실제 API 연결
+  }
+  
+  // SSE 연결 시작
+  const startSSEConnection = (groupId: number, jobId: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      // 기존 연결이 있으면 종료
+      if (sseConnection) {
+        sseConnection.close()
+      }
+      
+      const eventSource = createAnalysisStatusSSE(
+        groupId,
+        jobId,
+        // onMessage: SSE 메시지 수신 시
+        (data: AnalysisStatusMessage) => {
+          console.log('SSE 메시지 수신:', data)
+          
+          // 진행률 계산 (completedJob / totalJob * 100)
+          const progress = data.totalJob > 0 ? (data.completedJob / data.totalJob) * 100 : 0
+          
+          // 업로드 상태 업데이트
+          setUploadState(prev => ({
+            ...prev,
+            progress,
+            message: data.message
+          }))
+          
+          // 상태에 따른 처리
+          if (data.jobStatus === 'COMPLETED') {
+            console.log('AI 분석 완료')
+            eventSource.close()
+            resolve()
+          } else if (data.jobStatus === 'FAILED') {
+            console.error('AI 분석 실패')
+            eventSource.close()
+            reject(new Error(`AI 분석 실패: ${data.message}`))
+          }
+          // STARTED, PROCESSING 상태는 계속 대기
+        },
+        // onError: SSE 연결 오류 시
+        (error: Event) => {
+          console.error('SSE 연결 오류:', error)
+          setSseConnection(null)
+          reject(new Error('SSE 연결 오류'))
+        },
+        // onClose: SSE 연결 종료 시
+        () => {
+          console.log('SSE 연결 종료')
+          setSseConnection(null)
+        }
+      )
+      
+      setSseConnection(eventSource)
+    })
+  }
+  
+  // 사진 태그 정보 로드
+  const loadPhotoTags = async (photoId: number): Promise<void> => {
+    // 이미 캐시되어 있으면 스킵
+    if (photoTagsCache[photoId]) return
+    
+    try {
+      const photoTags = await getPhotoTags(parseInt(groupId), photoId)
+      const tags = parseTagsString(photoTags.tags)
+      const members = parseMemberNicknamesString(photoTags.memberNicknames)
+      
+      // 캐시 업데이트
+      setPhotoTagsCache(prev => ({
+        ...prev,
+        [photoId]: { tags, members }
+      }))
+      
+      // 실시간 태그 목록 업데이트 (중복 제거)
+      setRealTimeTags(prev => {
+        const newTags = [...prev, ...tags]
+        return Array.from(new Set(newTags)).sort()
+      })
+      
+    } catch (error) {
+      console.error(`사진 ${photoId} 태그 로드 실패:`, error)
+    }
+  }
+
+  // 갤러리 새로고침
+  const refreshGallery = async (): Promise<void> => {
+    try {
+      console.log('갤러리 새로고침 중...')
+      const photos = await getGroupPhotos(parseInt(groupId), {
+        page: 0,
+        size: 20 // 기본 페이지 크기
+      })
+      console.log('새로운 사진 목록:', photos)
+      
+      // TODO: 기존 갤러리 상태를 업데이트하는 로직 추가
+      // usePhotoGallery 훅에서 새로고침 함수를 제공해야 함
+      
+    } catch (error) {
+      console.error('갤러리 새로고침 실패:', error)
+    }
+  }
+
+  // 파일 업로드 핸들러
+  const handleUploadClick = () => {
+    fileInputRef.current?.click()
+  }
+  
+  // 파일 선택 핸들러
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+    
+    const imageFiles = Array.from(files).filter(file => 
+      file.type.startsWith('image/')
+    )
+    
+    if (imageFiles.length === 0) {
+      alert('이미지 파일을 선택해주세요.')
+      event.target.value = ''
+      return
+    }
+    
+    // 업로드 시작
+    setUploadState({
+      isUploading: true,
+      currentStep: 'uploading',
+      progress: 0,
+      totalFiles: imageFiles.length,
+      uploadedFiles: 0,
+      message: `${imageFiles.length}개 파일을 업로드합니다.`
+    })
+    
+    try {
+      // S3 업로드 실행
+      const uploadResults = await uploadGalleryImages(parseInt(groupId), imageFiles)
+      
+      // 업로드 완료
+      setUploadState(prev => ({
+        ...prev,
+        currentStep: 'uploading',
+        progress: 100,
+        uploadedFiles: imageFiles.length,
+        message: '파일 업로드가 완료되었습니다.'
+      }))
+      
+      console.log('업로드 완료:', uploadResults)
+      
+      // AI 처리 요청 단계로 이동
+      const photoIds = uploadResults.map(result => result.imageId)
+      
+      setUploadState(prev => ({
+        ...prev,
+        currentStep: 'processing',
+        progress: 100,
+        message: 'AI 분석을 요청하고 있습니다.'
+      }))
+      
+      // AI 분석 요청
+      const aiResult = await requestAiAnalysis(parseInt(groupId), photoIds)
+      console.log('AI 분석 요청 완료:', aiResult)
+      
+      // jobId 확인
+      if (!aiResult.jobId) {
+        throw new Error('AI 분석 요청 응답에서 jobId를 받지 못했습니다.')
+      }
+      
+      // SSE 연결 시작
+      await startSSEConnection(parseInt(groupId), aiResult.jobId)
+      
+      // 갤러리 새로고침
+      await refreshGallery()
+      
+      // 완료 상태로 설정
+      setUploadState(prev => ({
+        ...prev,
+        currentStep: 'completed',
+        message: '모든 작업이 완료되었습니다.'
+      }))
+      
+      // 3초 후 상태 초기화 (사용자가 결과를 볼 시간 제공)
+      setTimeout(() => {
+        setUploadState({
+          isUploading: false,
+          currentStep: 'selecting',
+          progress: 0,
+          totalFiles: 0,
+          uploadedFiles: 0,
+          message: ''
+        })
+      }, 3000)
+      
+    } catch (error) {
+      console.error('업로드 실패:', error)
+      setUploadState({
+        isUploading: false,
+        currentStep: 'selecting',
+        progress: 0,
+        totalFiles: 0,
+        uploadedFiles: 0,
+        message: ''
+      })
+      alert('업로드에 실패했습니다. 다시 시도해주세요.')
+    }
+    
+    // input 초기화
+    event.target.value = ''
   }
   
 
@@ -70,7 +317,14 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
             {/* Left: Tag Filters */}
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-4">
-                <h3 className="font-keepick-primary text-sm text-gray-400 tracking-wider">태그별 분류</h3>
+                <h3 className="font-keepick-primary text-sm text-gray-400 tracking-wider">
+                  태그별 분류
+                  {realTimeTags.length > 0 && (
+                    <span className="ml-2 text-xs text-[#FE7A25]">
+                      +{realTimeTags.length}개 AI 태그
+                    </span>
+                  )}
+                </h3>
                 {selectedTags.length > 0 && (
                   <button
                     onClick={clearAllTags}
@@ -82,21 +336,31 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {allTags.map((tag) => (
-                  <motion.button
-                    key={tag}
-                    onClick={() => toggleTag(tag)}
-                    className={`px-3 py-1.5 text-xs font-keepick-primary tracking-wide transition-all duration-300 ${ 
-                      selectedTags.includes(tag)
-                        ? "bg-white text-black shadow-lg"
-                        : "bg-gray-900 text-gray-300 border border-gray-700 hover:border-gray-500 hover:text-white"
-                    }`}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    {tag}
-                  </motion.button>
-                ))}
+                {/* 기존 태그와 실시간 태그 결합 */}
+                {Array.from(new Set([...allTags, ...realTimeTags])).sort().map((tag) => {
+                  const isRealTimeTag = realTimeTags.includes(tag)
+                  return (
+                    <motion.button
+                      key={tag}
+                      onClick={() => toggleTag(tag)}
+                      className={`px-3 py-1.5 text-xs font-keepick-primary tracking-wide transition-all duration-300 relative ${ 
+                        selectedTags.includes(tag)
+                          ? "bg-white text-black shadow-lg"
+                          : isRealTimeTag
+                          ? "bg-[#FE7A25]/20 text-[#FE7A25] border border-[#FE7A25]/50 hover:bg-[#FE7A25]/30"
+                          : "bg-gray-900 text-gray-300 border border-gray-700 hover:border-gray-500 hover:text-white"
+                      }`}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      {tag}
+                      {/* 실시간 태그 표시 */}
+                      {isRealTimeTag && !selectedTags.includes(tag) && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#FE7A25] rounded-full"></span>
+                      )}
+                    </motion.button>
+                  )
+                })}
               </div>
 
               {selectedTags.length > 0 && (
@@ -158,10 +422,22 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
 
                 {/* Upload Button */}
                 <div className="flex flex-col items-center gap-2">
-                  <button className="px-6 py-2 bg-transparent border-2 border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 font-keepick-primary text-sm tracking-wider transition-all duration-300 flex items-center justify-center">
+                  <button 
+                    onClick={handleUploadClick}
+                    className="px-6 py-2 bg-transparent border-2 border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 font-keepick-primary text-sm tracking-wider transition-all duration-300 flex items-center justify-center"
+                  >
                     <Upload size={16} />
                   </button>
                   <span className="text-xs text-gray-400 font-keepick-primary">업로드</span>
+                  {/* 숨겨진 파일 input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
                 </div>
               </div>
 
@@ -190,18 +466,47 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
 
         {/* Masonry Grid */}
         <div className="max-w-7xl mx-auto">
-          <AnimatePresence mode="wait">
+          {/* 빈 갤러리 상태 */}
+          {filteredPhotos.length === 0 && !loading && (
             <motion.div
-              key={selectedTags.join(",")}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="flex gap-4 items-start"
+              className="flex flex-col items-center justify-center py-32 text-center"
             >
-              {columns.map((column, columnIndex) => (
-                <div key={columnIndex} className="flex-1 flex flex-col gap-4">
-                  {column.map((photo, photoIndex) => (
+              <div className="mb-8">
+                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gray-800 flex items-center justify-center">
+                  <Upload size={40} className="text-gray-500" />
+                </div>
+                <h3 className="text-2xl font-keepick-heavy text-gray-300 mb-3">
+                  갤러리가 비었습니다
+                </h3>
+                <p className="text-gray-500 font-keepick-primary text-lg mb-8">
+                  이미지를 업로드해주세요
+                </p>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-8 py-3 bg-[#FE7A25] text-white font-keepick-primary rounded hover:bg-[#e66a20] transition-colors"
+                >
+                  첫 번째 사진 업로드하기
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* 사진이 있을 때만 표시 */}
+          {filteredPhotos.length > 0 && (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedTags.join(",")}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="flex gap-4 items-start"
+              >
+                {columns.map((column, columnIndex) => (
+                  <div key={columnIndex} className="flex-1 flex flex-col gap-4">
+                    {column.map((photo, photoIndex) => (
                     <motion.div
                       key={photo.id}
                       initial={{ opacity: 0, y: 50 }}
@@ -214,6 +519,10 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                       className="relative overflow-hidden cursor-pointer group"
                       style={{
                         aspectRatio: photo.aspectRatio,
+                      }}
+                      onMouseEnter={() => {
+                        // 마우스 호버 시 태그 정보 미리 로드
+                        loadPhotoTags(photo.id)
                       }}
                       onClick={() => {
                         if (isSelectionMode) {
@@ -257,19 +566,37 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                           <div className="absolute inset-0 flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             <div className="mb-3">
                               <p className="font-keepick-primary text-white text-sm font-medium">{photo.date}</p>
+                              {/* 멤버 닉네임 표시 */}
+                              {photoTagsCache[photo.id]?.members.length > 0 && (
+                                <p className="font-keepick-primary text-gray-300 text-xs mt-1">
+                                  👥 {photoTagsCache[photo.id].members.join(', ')}
+                                </p>
+                              )}
                             </div>
+                            {/* API에서 받은 태그와 기존 태그 결합 표시 */}
                             <div className="flex flex-wrap gap-1">
-                              {photo.tags.slice(0, 4).map((tag, index) => (
+                              {/* API 태그 (우선 표시) */}
+                              {photoTagsCache[photo.id]?.tags.slice(0, 3).map((tag, index) => (
                                 <span
-                                  key={index}
+                                  key={`api-${index}`}
+                                  className="px-2 py-1 bg-[#FE7A25]/80 backdrop-blur-sm text-white text-xs font-keepick-primary rounded-sm"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                              {/* 기존 태그 (남은 공간에 표시) */}
+                              {photo.tags.slice(0, Math.max(0, 4 - (photoTagsCache[photo.id]?.tags.length || 0))).map((tag, index) => (
+                                <span
+                                  key={`legacy-${index}`}
                                   className="px-2 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-keepick-primary rounded-sm"
                                 >
                                   {tag}
                                 </span>
                               ))}
-                              {photo.tags.length > 4 && (
+                              {/* 더 많은 태그가 있을 때 */}
+                              {((photoTagsCache[photo.id]?.tags.length || 0) + photo.tags.length) > 4 && (
                                 <span className="px-2 py-1 bg-white/10 backdrop-blur-sm text-gray-300 text-xs font-keepick-primary rounded-sm">
-                                  +{photo.tags.length - 4}
+                                  +{((photoTagsCache[photo.id]?.tags.length || 0) + photo.tags.length) - 4}
                                 </span>
                               )}
                             </div>
@@ -284,8 +611,9 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
               ))}
             </motion.div>
           </AnimatePresence>
+          )}
 
-          {/* Load More Button */}
+          {/* Load More Button - 사진이 있을 때만 표시 */}
           {hasMore && filteredPhotos.length > 0 && !isSelectionMode && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -303,8 +631,8 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
             </motion.div>
           )}
 
-          {/* No Results */}
-          {filteredPhotos.length === 0 && selectedTags.length > 0 && (
+          {/* No Results - 태그 필터링 결과가 없을 때만 표시 */}
+          {filteredPhotos.length === 0 && selectedTags.length > 0 && allPhotos.length > 0 && (
             <div className="text-center py-16">
               <p className="font-keepick-primary text-gray-400 text-lg mb-4">선택한 태그에 해당하는 사진이 없습니다</p>
               <button
@@ -317,6 +645,67 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
           )}
         </div>
       </main>
+
+      {/* 업로드 진행 상태 헤더 */}
+      <AnimatePresence>
+        {uploadState.isUploading && (
+          <motion.div
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -100, opacity: 0 }}
+            className="fixed top-0 left-0 right-0 z-50 bg-[#1a1a1a]/95 backdrop-blur-sm border-b border-[#FE7A25]"
+          >
+            <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
+              <div className="flex items-center justify-between">
+                {/* 왼쪽: 상태 정보 */}
+                <div className="flex items-center gap-3">
+                  <Loader2 className="animate-spin text-[#FE7A25]" size={18} />
+                  <div>
+                    <p className="text-white font-keepick-primary text-sm">
+                      {uploadState.currentStep === 'uploading' && '파일 업로드 중'}
+                      {uploadState.currentStep === 'processing' && 'AI 분석 중'}
+                      {uploadState.currentStep === 'completed' && '업로드 완료!'}
+                    </p>
+                    <p className="text-gray-400 font-keepick-primary text-xs">
+                      {uploadState.message}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 가운데: 진행률 바 */}
+                <div className="flex-1 max-w-md mx-6">
+                  <div className="flex justify-between text-xs font-keepick-primary text-gray-400 mb-1">
+                    <span>
+                      {uploadState.currentStep === 'uploading' && `${uploadState.uploadedFiles}/${uploadState.totalFiles} 파일`}
+                      {uploadState.currentStep === 'processing' && 'AI 분석 진행 중'}
+                      {uploadState.currentStep === 'completed' && '완료'}
+                    </span>
+                    <span>{Math.round(uploadState.progress)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-1.5">
+                    <motion.div
+                      className="bg-[#FE7A25] h-1.5 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${uploadState.progress}%` }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+                </div>
+
+                {/* 오른쪽: 닫기 버튼 (완료 시에만) */}
+                {uploadState.currentStep === 'completed' && (
+                  <button
+                    onClick={() => setUploadState(prev => ({ ...prev, isUploading: false }))}
+                    className="p-1 hover:bg-gray-800 rounded transition-colors"
+                  >
+                    <X size={16} className="text-gray-400" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Selection Drawer */}
       <AnimatePresence>

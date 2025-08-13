@@ -3,12 +3,12 @@
 import { useState, useEffect, useMemo, useRef } from "react"
 import type { GalleryPhoto, PhotoTag, PhotoFilter, PhotoSelection } from "@/entities/photo"
 
-// 임시 더미 데이터 - 나중에 API로 교체
+// 임시 더미 데이터 - 실제 데이터로 교체하기 위해 주석처리
+/*
 const dummyTags = [
   "인물", "풍경", "음식", "동물", "건물", "자연", "가족", "친구", "여행", "일상",
   "축제", "스포츠", "예술", "꽃", "바다", "산", "도시", "밤", "일출", "일몰",
   "아이", "어른", "웃음", "행복"
-  
 ]
 
 const photoCategories = [
@@ -92,6 +92,7 @@ const generatePhotos = (startIndex: number, count: number): GalleryPhoto[] => {
 
   return photos
 }
+*/
 
 // Masonry 레이아웃 훅
 export const useMasonryLayout = (photos: GalleryPhoto[], columnCount: number) => {
@@ -163,8 +164,9 @@ export const useDragScroll = () => {
 }
 
 export function usePhotoGallery() {
-  const [allPhotos, setAllPhotos] = useState<GalleryPhoto[]>(() => generatePhotos(0, 20))
-  const [filteredPhotos, setFilteredPhotos] = useState<GalleryPhoto[]>(allPhotos)
+  // 실제 데이터 사용을 위해 빈 배열로 초기화
+  const [allPhotos, setAllPhotos] = useState<GalleryPhoto[]>([])
+  const [filteredPhotos, setFilteredPhotos] = useState<GalleryPhoto[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -265,9 +267,11 @@ export function usePhotoGallery() {
     exitSelectionMode()
   }
 
-  // 더 많은 사진 로드
+  // 더 많은 사진 로드 (실제 API 구현 필요)
   const loadMorePhotos = () => {
     setLoading(true)
+    // TODO: 실제 API 호출로 변경
+    /*
     setTimeout(() => {
       const newPhotos = generatePhotos(allPhotos.length, 20)
       setAllPhotos((prev) => [...prev, ...newPhotos])
@@ -276,6 +280,8 @@ export function usePhotoGallery() {
         setHasMore(false)
       }
     }, 1000)
+    */
+    setLoading(false)
   }
 
   return {
