@@ -13,6 +13,7 @@ import com.ssafy.keepick.member.application.MemberService;
 import com.ssafy.keepick.member.controller.request.MemberUpdateRequest;
 import com.ssafy.keepick.member.controller.response.MemberInfoResponse;
 import com.ssafy.keepick.member.controller.response.MemberSearchResponse;
+import com.ssafy.keepick.member.controller.response.NicknameCheckResponse;
 
 import lombok.RequiredArgsConstructor;
 import com.ssafy.keepick.global.exception.BaseException;
@@ -69,6 +70,26 @@ public class MemberController implements MemberApiSpec {
         
         MemberDto memberDto = memberService.searchMemberByNickname(nickname);
         MemberSearchResponse response = MemberSearchResponse.from(memberDto);
+        return ApiResponse.ok(response);
+    }
+    
+    /**
+     * 닉네임 중복검사를 수행합니다.
+     * 
+     * @param nickname 검사할 닉네임 (쿼리 파라미터, 필수)
+     * @return 닉네임 사용 가능 여부
+     */
+    @GetMapping("/check-nickname")
+    @Override
+    public ApiResponse<NicknameCheckResponse> checkNicknameAvailability(
+        @RequestParam(required = false) String nickname
+    ) {
+        if (nickname == null || nickname.trim().isEmpty()) {
+            throw new BaseException(ErrorCode.INVALID_PARAMETER, "닉네임은 필수입니다.");
+        }
+        
+        boolean isAvailable = memberService.checkNicknameAvailability(nickname);
+        NicknameCheckResponse response = NicknameCheckResponse.of(nickname, isAvailable);
         return ApiResponse.ok(response);
     }
 }
