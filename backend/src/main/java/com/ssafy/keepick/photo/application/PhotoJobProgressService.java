@@ -25,7 +25,7 @@ public class PhotoJobProgressService {
 
 
     public SseEmitter subscribeToJobStatus(String jobId) {
-        SseEmitter emitter = new SseEmitter(30_000L); // 30초 타임아웃
+        SseEmitter emitter = new SseEmitter(0L); // 무제한 연결
 
         executor.execute(() -> {
             try {
@@ -34,18 +34,20 @@ public class PhotoJobProgressService {
                     if (json == null) {
                         // 키 없음, 에러 전송 후 종료
                         emitter.send(SseEmitter.event()
-                                .name("error")
+                                .name("job-error")
                                 .data("Job not found: " + jobId));
                         emitter.complete();
                         break;
                     }
 
                     PhotoAnalysisJob job = objectMapper.readValue(json, PhotoAnalysisJob.class);
+                    String responseJson = objectMapper.writeValueAsString(PhotoAnalysisJobStatusResponse.from(job));
 
                     // 클라이언트에 상태 전송
                     emitter.send(SseEmitter.event()
                             .name("job-status")
-                            .data(PhotoAnalysisJobStatusResponse.from(job)));
+                            .data(responseJson)
+                            .reconnectTime(3000));
 
                     // 상태 확인 (json 파싱하여 status 체크)
                     JobStatus status = job.getJobStatus();
