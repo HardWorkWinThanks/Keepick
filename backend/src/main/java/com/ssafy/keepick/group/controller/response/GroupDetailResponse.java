@@ -17,10 +17,10 @@ public class GroupDetailResponse {
     @Schema(description = "그룹 이름", example = "대학교 친구들")
     private String name;
 
-    @Schema(description = "그룹 설명")
+    @Schema(description = "그룹 설명", example = "대학교에서 만난 친구들과의 그룹.", nullable = true)
     private String description;
 
-    @Schema(description = "그룹 썸네일 이미지 URL", example = "https://example.com/image.png")
+    @Schema(description = "그룹 대표 사진 URL (대표 사진을 업로드하지 않은 경우 null 입니다)", example = "http://example.com", nullable = true)
     private String thumbnailUrl;
 
     @Schema(description = "그룹 회원 수", example = "10")

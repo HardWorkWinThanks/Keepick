@@ -39,7 +39,7 @@ public class TierAlbumController implements TierAlbumApi {
     @GetMapping("")
     public ApiResponse<PagingResponse<TierAlbumDto>> getTierAlbumList(
             @PathVariable Long groupId,
-            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         PagingResponse<TierAlbumDto> response = tierAlbumService.getTierAlbumListWithPaging(groupId, page, size);
         return ApiResponse.ok(response);

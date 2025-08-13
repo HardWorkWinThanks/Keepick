@@ -89,9 +89,11 @@ public class HighlightAlbumService {
 
         album.updateNameAndDesc(request.getName(), request.getDescription());
 
-        HighlightAlbumPhoto photo = highlightAlbumPhotoRepository.findById(request.getThumbnailId())
-                .orElseThrow(() -> new BaseException(ErrorCode.PHOTO_NOT_FOUND));
-        album.changeThumbnail(photo.getPhotoUrl());
+        if (request.getThumbnailId() != null) {
+            HighlightAlbumPhoto photo = highlightAlbumPhotoRepository.findById(request.getThumbnailId())
+                    .orElseThrow(() -> new BaseException(ErrorCode.PHOTO_NOT_FOUND));
+            album.changeThumbnail(photo.getPhotoUrl());
+        }
 
         return HighlightAlbumDto.from(album);
     }

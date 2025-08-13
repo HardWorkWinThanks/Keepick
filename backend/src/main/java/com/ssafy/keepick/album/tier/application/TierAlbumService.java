@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +51,11 @@ public class TierAlbumService {
         for (int i = 0; i < photoIds.size(); i++) {
             Photo photo = photoRepository.findById(photoIds.get(i))
                 .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND));
+            
+            // 첫번째 사진으로 앨범 썸네일 세팅
+            if (i == 0) {
+                tierAlbum.updateThumbnail(photo.getOriginalUrl(), photo.getThumbnailUrl());
+            }
 
             TierAlbumPhoto tierAlbumPhoto = TierAlbumPhoto.createTierAlbumPhoto(
                 savedTierAlbum, 
@@ -66,8 +72,8 @@ public class TierAlbumService {
     // 티어 앨범 목록 조회 (페이징)
     @Transactional(readOnly = true)
     public PagingResponse<TierAlbumDto> getTierAlbumListWithPaging(Long groupId, int page, int size) {
-        // Pageable 객체 생성 (page는 0부터 시작하므로 -1)
-        Pageable pageable = PageRequest.of(page - 1, size);
+        // Pageable 객체 생성
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         
         // 페이징된 데이터 조회
         Page<TierAlbum> tierAlbumPage = tierAlbumRepository.findByGroupIdWithPaging(groupId, pageable);

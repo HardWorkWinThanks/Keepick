@@ -8,7 +8,7 @@ import lombok.Getter;
 @Getter
 @Builder
 public class FriendCreateRequest {
-    @Schema(description = "친구 요청을 보낼 회원들의 ID 목록", example = "[101, 102, 103]")
-    @NotNull(message = "최소 1명의 회원에게 친구 요청을 보내야 합니다.")
+    @Schema(description = "친구 요청을 보낼 회원의 ID", example = "101")
+    @NotNull(message = "친구 요청을 보낼 회원을 선택해주세요.")
     private Long friendId;
 }

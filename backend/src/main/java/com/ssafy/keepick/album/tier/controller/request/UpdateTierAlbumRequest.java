@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -16,6 +17,7 @@ public class UpdateTierAlbumRequest {
         description = "앨범 이름",
         example = "여름 휴가 앨범"
     )
+    @NotBlank(message = "앨범 이름은 필수입니다.")
     private String name;
     
     @Schema(

@@ -21,7 +21,7 @@ public class TimelineInfoResponse {
     @Schema(description = "앨범 이름", example = "여름 휴가")
     private String name;
 
-    @Schema(description = "앨범 설명", example = "2025년 여름 바다 여행")
+    @Schema(description = "앨범 설명", example = "2025년 여름 바다 여행", nullable = true)
     private String description;
 
     @Schema(description = "앨범 대표 사진 썸네일 URL", example = "https://example.com/thumbnail.jpg")
@@ -30,10 +30,10 @@ public class TimelineInfoResponse {
     @Schema(description = "앨범 대표 사진 원본 URL", example = "https://example.com/original.jpg")
     private String originalUrl;
 
-    @Schema(description = "앨범 시작 날짜", example = "2025-07-01")
+    @Schema(description = "앨범 시작 날짜", example = "2025-07-01", nullable = true)
     private LocalDate startDate;
 
-    @Schema(description = "앨범 종료 날짜", example = "2025-07-10")
+    @Schema(description = "앨범 종료 날짜", example = "2025-07-10", nullable = true)
     private LocalDate endDate;
 
     @Schema(description = "앨범 내 섹션에 포함된 사진 개수", example = "20")

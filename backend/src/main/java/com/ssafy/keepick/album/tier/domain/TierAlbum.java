@@ -65,8 +65,7 @@ public class TierAlbum extends BaseTimeEntity {
     public void update(String name, String description, String thumbnailUrl, String originalUrl) {
         this.name = name;
         this.description = description;
-        this.thumbnailUrl = thumbnailUrl;
-        this.originalUrl = originalUrl;
+        this.updateThumbnail(originalUrl, thumbnailUrl);
     }
 
     public void delete() {
@@ -96,5 +95,14 @@ public class TierAlbum extends BaseTimeEntity {
         return this.tierAlbumPhotos.stream()
             .sorted((p1, p2) -> Integer.compare(p1.getSequence(), p2.getSequence()))
             .collect(Collectors.toList());
+    }
+
+    public void updateThumbnail(String originalUrl, String thumbnailUrl) {
+        if (originalUrl != null ){
+            this.originalUrl = originalUrl;
+        }
+        if (thumbnailUrl != null) {
+            this.thumbnailUrl = thumbnailUrl;
+        }
     }
 }
