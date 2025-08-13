@@ -27,7 +27,7 @@ export const useSimilarPhotos = (groupId: string, viewMode: string) => {
     getNextPageParam: (lastPage) => 
       lastPage.pageInfo.hasNext ? lastPage.pageInfo.page + 1 : undefined,
     staleTime: 5 * 60 * 1000, // 5분 캐싱
-    enabled: !!groupId && viewMode === 'similar', // 유사사진 모드일 때만 실행
+    enabled: !!groupId && viewMode === 'similar', // 유사사진 탭 활성화시에만 실행 (수동 분석)
   })
 }
 

@@ -357,10 +357,24 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     }
   }
 
-  // Query에서 총 개수 정보를 안전하게 추출 (useMemo 사용)
+  // Query에서 각 탭별 개수 정보를 안전하게 추출 (useMemo 사용)
   const totalPhotosFromQuery = useMemo(() => {
     return allPhotosQuery.data?.pages?.[0]?.pageInfo?.totalElement || 0
   }, [allPhotosQuery.data?.pages])
+
+  const blurredPhotosCount = useMemo(() => {
+    // API에서 pageInfo.totalElement 또는 photoCount 사용
+    return blurredQuery.data?.pages?.[0]?.pageInfo?.totalElement || 
+           blurredQuery.data?.pages?.[0]?.photoCount || 0
+  }, [blurredQuery.data?.pages])
+
+  const similarClustersCount = useMemo(() => {
+    // 유사사진은 수동 분석이므로 데이터가 있을 때만 개수 표시
+    if (!similarQuery.data?.pages || similarQuery.data.pages.length === 0) return 0
+    return similarQuery.data.pages[0]?.pageInfo?.totalElement || 
+           similarQuery.data.pages[0]?.photoCount ||
+           similarQuery.data.pages.reduce((total, page) => total + page.list.length, 0) || 0
+  }, [similarQuery.data?.pages])
 
   // 총 개수 정보 동기화 (한 번만 실행되도록 ref 사용)
   const syncedTotalRef = useRef(false)
@@ -599,7 +613,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                       : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
-                흐린사진 ({blurredPhotos.length})
+흐린사진 ({blurredPhotosCount})
                 {viewMode === 'blurred' && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FE7A25]" />
                 )}
@@ -615,7 +629,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                       : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
-                유사사진 ({similarPhotoClusters.length}개 그룹)
+유사사진 ({similarClustersCount}개 그룹)
                 {viewMode === 'similar' && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FE7A25]" />
                 )}
