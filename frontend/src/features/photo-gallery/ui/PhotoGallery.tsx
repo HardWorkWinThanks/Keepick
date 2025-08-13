@@ -12,7 +12,7 @@ import AiServiceModal from "./AiServiceModal"
 import { uploadGalleryImages } from "../api/galleryUploadApi"
 import { requestAiAnalysis, requestSimilarPhotosAnalysis, createAnalysisStatusSSE, AnalysisStatusMessage } from "../api/aiAnalysisApi"
 import { getGroupPhotos, getGroupOverview, getPhotoTags, convertToGalleryPhoto, deleteGroupPhotos } from "../api/galleryPhotosApi"
-import { useBlurredPhotosFlat, useSimilarPhotosFlat } from "../api/queries"
+import { useBlurredPhotosFlat, useSimilarPhotosFlat, useAllPhotosFlat } from "../api/queries"
 import { useInfiniteScroll } from "@/shared/lib"
 
 interface PhotoGalleryProps {
@@ -58,11 +58,14 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   // 갤러리 뷰 모드 (전체/흐린사진/유사사진)
   const [viewMode, setViewMode] = useState<'all' | 'blurred' | 'similar'>('all')
   
-  // TanStack Query를 사용한 흐린사진 및 유사사진 데이터
+  // TanStack Query를 사용한 전체사진, 흐린사진, 유사사진 데이터
+  const allPhotosQuery = useAllPhotosFlat(groupId, viewMode)
   const blurredQuery = useBlurredPhotosFlat(groupId, viewMode)
   const similarQuery = useSimilarPhotosFlat(groupId, viewMode)
   
   // 쿼리에서 데이터와 로딩 상태 추출
+  const allQueryPhotos = allPhotosQuery.photos
+  const allPhotosLoading = allPhotosQuery.isLoading || allPhotosQuery.isFetchingNextPage
   const blurredPhotos = blurredQuery.photos
   const blurredPhotosLoading = blurredQuery.isLoading || blurredQuery.isFetchingNextPage
   const similarPhotoClusters = similarQuery.clusters
@@ -77,9 +80,14 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
         // 유사사진은 클러스터별로 처리하므로 빈 배열 반환
         return []
       default:
-        return filteredPhotos
+        // 전체 모드에서는 Query 데이터 우선 사용, 태그 필터링 적용
+        const photosToFilter = allQueryPhotos.length > 0 ? allQueryPhotos : filteredPhotos
+        return selectedTags.length > 0 ? 
+          photosToFilter.filter(photo => 
+            selectedTags.some(tag => photo.tags.includes(tag))
+          ) : photosToFilter
     }
-  }, [viewMode, blurredPhotos, filteredPhotos])
+  }, [viewMode, blurredPhotos, allQueryPhotos, filteredPhotos, selectedTags])
 
   const smallPreviewDrag = useDragScroll()
   const expandedPreviewDrag = useDragScroll()
@@ -135,111 +143,24 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     message: ''
   })
   
-  // 전체 사진 개수 상태 (페이징 정보에서 가져옴)
+  // 전체 사진 개수 상태 (페이징 정보에서 가져옴) - 레거시 데이터용
   const [totalPhotosCount, setTotalPhotosCount] = useState(0)
-  const [currentPage, setCurrentPage] = useState(0)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [hasMorePhotos, setHasMorePhotos] = useState(false)
-  const [currentSize, setCurrentSize] = useState(20) // 현재 로드된 사진 수 (디폴트 20장)
-  const defaultPageSize = 20 // 기본 페이지 사이즈 (20, 40, 60, 80...)
-  
-  // 초기 로딩 플래그
-  const hasInitialLoadedRef = useRef(false)
-
-  // 초기 갤러리 데이터 로딩 (컴포넌트 마운트 시 한 번만)
-  useEffect(() => {
-    // groupId가 변경되면 초기 로딩 플래그 리셋
-    hasInitialLoadedRef.current = false
-    
-    if (hasInitialLoadedRef.current) return // 이미 로딩했으면 중복 실행 방지
-    
-    const loadInitialData = async () => {
-      try {
-        hasInitialLoadedRef.current = true // 로딩 시작 표시
-        console.log('갤러리 초기 데이터 로딩 시작... (디폴트 사이즈 20)')
-        const overview = await getGroupOverview(parseInt(groupId), defaultPageSize)
-        
-        // 전체 사진을 갤러리 형식으로 변환
-        const galleryPhotos = overview.allPhotos.list.map(convertToGalleryPhoto)
-        
-        // 갤러리 데이터 설정 (초기 로딩 시에만)
-        setGalleryData(galleryPhotos)
-        
-        // 전체 사진 개수와 페이징 정보 설정
-        setTotalPhotosCount(overview.allPhotos.pageInfo.totalElement)
-        setCurrentPage(overview.allPhotos.pageInfo.page)
-        setHasMorePhotos(overview.allPhotos.pageInfo.hasNext)
-        setCurrentSize(overview.allPhotos.pageInfo.size) // 현재 로드된 사진 수 저장
-        
-        console.log('갤러리 초기 데이터 로딩 완료:', {
-          allPhotos: overview.allPhotos.list.length,
-          totalPhotos: overview.allPhotos.pageInfo.totalElement,
-          hasNext: overview.allPhotos.pageInfo.hasNext,
-          blurredPhotos: overview.blurredPhotos.list.length,
-          similarClusters: overview.similarPhotos.list.length
-        })
-        
-      } catch (error) {
-        console.error('갤러리 초기 데이터 로딩 실패:', error)
-      }
-    }
-    
-    loadInitialData()
-  }, [groupId]) // setGalleryData는 usePhotoGallery에서 안정적으로 제공되므로 의존성에서 제외
-
-  // 더 많은 사진 로드 (누적적으로 사이즈 증가: 20 -> 40 -> 60 -> 80...)
-  const loadMorePhotos = async () => {
-    if (isLoadingMore) return
-    
-    setIsLoadingMore(true)
-    try {
-      const nextSize = currentSize + defaultPageSize // 현재 사이즈에 기본 사이즈만큼 추가
-      console.log(`추가 사진 로딩 시작... (사이즈 ${currentSize} -> ${nextSize})`)
-      
-      // getGroupOverview API를 다음 사이즈로 요청하여 더 많은 사진 가져오기
-      const overview = await getGroupOverview(parseInt(groupId), nextSize)
-      
-      // 전체 사진을 갤러리 형식으로 변환
-      const galleryPhotos = overview.allPhotos.list.map(convertToGalleryPhoto)
-      
-      // 갤러리 데이터 교체 (더 많은 사진으로 교체)
-      setGalleryData(galleryPhotos)
-      
-      // 전체 사진 개수와 페이징 정보 업데이트
-      setTotalPhotosCount(overview.allPhotos.pageInfo.totalElement)
-      setCurrentPage(overview.allPhotos.pageInfo.page)
-      setHasMorePhotos(overview.allPhotos.pageInfo.hasNext)
-      setCurrentSize(nextSize) // 새로운 사이즈 저장
-      
-      console.log(`추가 사진 로딩 완료 (사이즈 ${nextSize}):`, {
-        loadedPhotos: galleryPhotos.length,
-        totalPhotos: overview.allPhotos.pageInfo.totalElement,
-        hasNext: overview.allPhotos.pageInfo.hasNext,
-        currentSize: nextSize
-      })
-      
-    } catch (error) {
-      console.error('추가 사진 로딩 실패:', error)
-    } finally {
-      setIsLoadingMore(false)
-    }
-  }
 
   // 무한 스크롤 적용
   useInfiniteScroll({
-    hasNextPage: viewMode === 'all' ? hasMorePhotos : 
+    hasNextPage: viewMode === 'all' ? allPhotosQuery.hasNextPage : 
                 viewMode === 'blurred' ? blurredQuery.hasNextPage : 
                 viewMode === 'similar' ? similarQuery.hasNextPage : false,
     fetchNextPage: () => {
       if (viewMode === 'all') {
-        loadMorePhotos()
+        allPhotosQuery.fetchNextPage()
       } else if (viewMode === 'blurred') {
         blurredQuery.fetchNextPage()
       } else if (viewMode === 'similar') {
         similarQuery.fetchNextPage()
       }
     },
-    isFetching: viewMode === 'all' ? isLoadingMore : 
+    isFetching: viewMode === 'all' ? allPhotosQuery.isFetchingNextPage : 
                viewMode === 'blurred' ? blurredQuery.isFetchingNextPage : 
                viewMode === 'similar' ? similarQuery.isFetchingNextPage : false,
   })
@@ -295,6 +216,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
       setViewMode('similar')
       
       // TanStack Query 캐시 무효화
+      await queryClient.invalidateQueries({ queryKey: ['all-photos', groupId] })
       await queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] })
       
       setUploadState(prev => ({
@@ -435,33 +357,30 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     }
   }
 
-  // 갤러리 새로고침
-  const refreshGallery = async (): Promise<void> => {
-    try {
-      console.log('갤러리 새로고침 중... (현재 사이즈 유지)')
-      const overview = await getGroupOverview(parseInt(groupId), currentSize)
-      
-      // 전체 사진을 갤러리 형식으로 변환
-      const galleryPhotos = overview.allPhotos.list.map(convertToGalleryPhoto)
-      
-      // 갤러리 데이터 설정
-      setGalleryData(galleryPhotos)
-      
-      // 전체 사진 개수와 페이징 정보 업데이트
-      setTotalPhotosCount(overview.allPhotos.pageInfo.totalElement)
-      setCurrentPage(overview.allPhotos.pageInfo.page)
-      setHasMorePhotos(overview.allPhotos.pageInfo.hasNext)
-      
-      console.log('갤러리 새로고침 완료:', {
-        currentPhotos: galleryPhotos.length,
-        totalPhotos: overview.allPhotos.pageInfo.totalElement,
-        hasNext: overview.allPhotos.pageInfo.hasNext
-      })
-      
-    } catch (error) {
-      console.error('갤러리 새로고침 실패:', error)
+  // Query에서 총 개수 정보를 안전하게 추출 (useMemo 사용)
+  const totalPhotosFromQuery = useMemo(() => {
+    return allPhotosQuery.data?.pages?.[0]?.pageInfo?.totalElement || 0
+  }, [allPhotosQuery.data?.pages])
+
+  // 총 개수 정보 동기화 (한 번만 실행되도록 ref 사용)
+  const syncedTotalRef = useRef(false)
+  useEffect(() => {
+    if (totalPhotosFromQuery > 0 && !syncedTotalRef.current) {
+      setTotalPhotosCount(totalPhotosFromQuery)
+      syncedTotalRef.current = true
     }
-  }
+  }, [totalPhotosFromQuery])
+
+  // Query 데이터 변화 감지용 ref
+  const lastDataLengthRef = useRef(0)
+  useEffect(() => {
+    if (allQueryPhotos.length > 0 && allQueryPhotos.length !== lastDataLengthRef.current) {
+      lastDataLengthRef.current = allQueryPhotos.length
+      if (viewMode === 'all') {
+        setGalleryData(allQueryPhotos)
+      }
+    }
+  }, [allQueryPhotos.length, viewMode])
 
   // TanStack Query를 사용하므로 수동 로딩 함수들은 제거됨
   // 데이터는 useBlurredPhotosFlat, useSimilarPhotosFlat 훅에서 자동 관리
@@ -512,6 +431,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
         
         // TanStack Query 캐시 무효화로 모든 관련 데이터 새로고침
         await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['all-photos', groupId] }),
           queryClient.invalidateQueries({ queryKey: ['blurred-photos', groupId] }),
           queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] })
         ])
@@ -599,9 +519,9 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
       // SSE 연결 시작
       await startSSEConnection(parseInt(groupId), aiResult.jobId)
       
-      // 갤러리 새로고침 및 캐시 무효화
-      await refreshGallery()
+      // TanStack Query 캐시 무효화로 모든 관련 데이터 새로고침
       await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['all-photos', groupId] }),
         queryClient.invalidateQueries({ queryKey: ['blurred-photos', groupId] }),
         queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] })
       ])
@@ -663,7 +583,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                       : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
-                전체 ({totalPhotosCount})
+                전체 ({totalPhotosFromQuery || totalPhotosCount})
                 {viewMode === 'all' && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FE7A25]" />
                 )}
@@ -826,7 +746,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
         {/* Masonry Grid */}
         <div className="max-w-7xl mx-auto">
           {/* 빈 갤러리 상태 */}
-          {displayPhotos.length === 0 && similarPhotoClusters.length === 0 && !loading && !blurredPhotosLoading && !similarPhotosLoading && (
+          {displayPhotos.length === 0 && similarPhotoClusters.length === 0 && !loading && !allPhotosLoading && !blurredPhotosLoading && !similarPhotosLoading && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -858,12 +778,13 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
           )}
 
           {/* 로딩 중 표시 */}
-          {(blurredPhotosLoading || similarPhotosLoading) && (
+          {(allPhotosLoading || blurredPhotosLoading || similarPhotosLoading) && (
             <div className="flex justify-center py-16">
               <div className="flex items-center gap-3">
                 <div className="animate-spin w-6 h-6 border-2 border-[#FE7A25] border-t-transparent rounded-full"></div>
                 <span className="text-gray-400 font-keepick-primary">
-                  {viewMode === 'blurred' ? '흐린사진 로딩 중...' : 
+                  {viewMode === 'all' ? '전체사진 로딩 중...' :
+                   viewMode === 'blurred' ? '흐린사진 로딩 중...' : 
                    viewMode === 'similar' ? '유사사진 로딩 중...' : 
                    '로딩 중...'}
                 </span>
@@ -959,7 +880,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
           )}
 
           {/* 사진이 있을 때만 표시 */}
-          {displayPhotos.length > 0 && !blurredPhotosLoading && !similarPhotosLoading && (
+          {displayPhotos.length > 0 && !allPhotosLoading && !blurredPhotosLoading && !similarPhotosLoading && (
             <AnimatePresence mode="wait">
               <motion.div
                 key={selectedTags.join(",")}

@@ -75,12 +75,6 @@ export const GroupManagementApi = {
 
   // 그룹 상세 조회
   async getGroupInfo(groupId: number): Promise<Group> {
-    // // 더미 데이터 확인
-    // if (DUMMY_GROUP_DETAILS[groupId]) {
-    //   console.log(`더미 그룹 정보 반환: ${groupId}`);
-    //   return DUMMY_GROUP_DETAILS[groupId];
-    // }
-    
     // API 호출
     const response = await apiClient.get<GetGroupInfoResponse>(`/api/groups/${groupId}`)
     return response.data.data;
