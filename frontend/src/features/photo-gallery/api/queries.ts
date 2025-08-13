@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import { getGroupBlurredPhotos, getGroupSimilarPhotos, getGroupOverview, convertToGalleryPhoto } from './galleryPhotosApi'
+import { getGroupBlurredPhotos, getGroupSimilarPhotos, getGroupOverview, getGroupPhotoTags, convertToGalleryPhoto } from './galleryPhotosApi'
 
 /**
  * 흐린사진 무한 스크롤 쿼리 훅
@@ -116,4 +116,16 @@ export const useAllPhotosFlat = (groupId: string, viewMode: string) => {
     ...query,
     photos, // 중복 제거된 갤러리 사진 배열
   }
+}
+
+/**
+ * 전체 태그 조회 쿼리 훅
+ */
+export const useAllTags = (groupId: string) => {
+  return useQuery({
+    queryKey: ['all-tags', groupId],
+    queryFn: () => getGroupPhotoTags(parseInt(groupId)),
+    staleTime: 5 * 60 * 1000, // 5분 캐싱
+    enabled: !!groupId, // groupId가 있을 때만 실행
+  })
 }

@@ -74,6 +74,11 @@ export interface DeletePhotosResponse {
   unDeletedPhotoIds: number[];
 }
 
+// 전체 태그 조회 응답 타입
+export interface GroupTagsResponse {
+  tags: string[];
+}
+
 /**
  * 그룹 초기화면 로딩 (전체사진, 흐린사진, 유사사진 묶음) - 전체 사진에서 더보기 시에도 사용
  */
@@ -162,6 +167,19 @@ export const deleteGroupPhotos = async (
   );
 
   return response.data.data;
+};
+
+/**
+ * 그룹 전체 태그 조회
+ */
+export const getGroupPhotoTags = async (
+  groupId: number
+): Promise<string[]> => {
+  const response = await apiClient.get<ApiResponse<GroupTagsResponse>>(
+    `/api/groups/${groupId}/photos/tags`
+  );
+
+  return response.data.data.tags;
 };
 
 /**

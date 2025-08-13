@@ -12,7 +12,7 @@ import AiServiceModal from "./AiServiceModal"
 import { uploadGalleryImages } from "../api/galleryUploadApi"
 import { requestAiAnalysis, requestSimilarPhotosAnalysis, createAnalysisStatusSSE, AnalysisStatusMessage } from "../api/aiAnalysisApi"
 import { getGroupPhotos, getGroupOverview, getPhotoTags, convertToGalleryPhoto, deleteGroupPhotos } from "../api/galleryPhotosApi"
-import { useBlurredPhotosFlat, useSimilarPhotosFlat, useAllPhotosFlat } from "../api/queries"
+import { useBlurredPhotosFlat, useSimilarPhotosFlat, useAllPhotosFlat, useAllTags } from "../api/queries"
 import { useInfiniteScroll } from "@/shared/lib"
 
 interface PhotoGalleryProps {
@@ -26,9 +26,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   
   const {
     allPhotos,
-    filteredPhotos,
     selectedPhotoData,
-    allTags,
     selectedTags,
     loading,
     hasMore,
@@ -48,7 +46,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     setIsPhotosExpanded,
     setGalleryData,
   } = usePhotoGallery()
-  
+
   // 선택 모드 타입 상태 (앨범 생성 또는 사진 삭제)
   const [selectionType, setSelectionType] = useState<'album' | 'delete' | null>(null)
   const isSelectionMode = selectionType !== null
@@ -58,10 +56,14 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   // 갤러리 뷰 모드 (전체/흐린사진/유사사진)
   const [viewMode, setViewMode] = useState<'all' | 'blurred' | 'similar'>('all')
   
-  // TanStack Query를 사용한 전체사진, 흐린사진, 유사사진 데이터
+  // TanStack Query를 사용한 전체사진, 흐린사진, 유사사진, 태그 데이터
   const allPhotosQuery = useAllPhotosFlat(groupId, viewMode)
   const blurredQuery = useBlurredPhotosFlat(groupId, viewMode)
   const similarQuery = useSimilarPhotosFlat(groupId, viewMode)
+  const allTagsQuery = useAllTags(groupId)
+
+  // API에서 가져온 전체 태그
+  const apiTags = allTagsQuery.data || []
   
   // 쿼리에서 데이터와 로딩 상태 추출
   const allQueryPhotos = allPhotosQuery.photos
@@ -80,14 +82,14 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
         // 유사사진은 클러스터별로 처리하므로 빈 배열 반환
         return []
       default:
-        // 전체 모드에서는 Query 데이터 우선 사용, 태그 필터링 적용
-        const photosToFilter = allQueryPhotos.length > 0 ? allQueryPhotos : filteredPhotos
+        // 전체 모드에서는 Query 데이터 사용, 태그 필터링 적용
+        const photosToFilter = allQueryPhotos.length > 0 ? allQueryPhotos : allPhotos
         return selectedTags.length > 0 ? 
           photosToFilter.filter(photo => 
             selectedTags.some(tag => photo.tags.includes(tag))
           ) : photosToFilter
     }
-  }, [viewMode, blurredPhotos, allQueryPhotos, filteredPhotos, selectedTags])
+  }, [viewMode, blurredPhotos, allQueryPhotos, allPhotos, selectedTags])
 
   const smallPreviewDrag = useDragScroll()
   const expandedPreviewDrag = useDragScroll()
@@ -218,6 +220,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
       // TanStack Query 캐시 무효화
       await queryClient.invalidateQueries({ queryKey: ['all-photos', groupId] })
       await queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] })
+      await queryClient.invalidateQueries({ queryKey: ['all-tags', groupId] })
       
       setUploadState(prev => ({
         ...prev,
@@ -440,14 +443,12 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
         // 로컬 상태 업데이트 (삭제된 사진만 제거)
         deleteSelectedPhotosBase() // 기존 로직 사용하여 UI 업데이트
         
-        // 갤러리 데이터 새로고침으로 서버와 동기화
-        await refreshGallery()
-        
         // TanStack Query 캐시 무효화로 모든 관련 데이터 새로고침
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['all-photos', groupId] }),
           queryClient.invalidateQueries({ queryKey: ['blurred-photos', groupId] }),
-          queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] })
+          queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] }),
+          queryClient.invalidateQueries({ queryKey: ['all-tags', groupId] })
         ])
         
         console.log(`${deleteResult.deletedPhotoIds.length}장 삭제 완료`)
@@ -537,7 +538,8 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['all-photos', groupId] }),
         queryClient.invalidateQueries({ queryKey: ['blurred-photos', groupId] }),
-        queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] })
+        queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] }),
+        queryClient.invalidateQueries({ queryKey: ['all-tags', groupId] })
       ])
       
       // 완료 상태로 설정
@@ -722,9 +724,9 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {/* 기존 태그와 실시간 태그 결합 */}
-              {Array.from(new Set([...allTags, ...realTimeTags])).sort().map((tag) => {
-                const isRealTimeTag = realTimeTags.includes(tag)
+              {/* API 태그와 실시간 태그 결합 */}
+              {Array.from(new Set([...apiTags, ...realTimeTags])).sort().map((tag) => {
+                const isRealTimeTag = realTimeTags.includes(tag) && !apiTags.includes(tag)
                 return (
                   <motion.button
                     key={tag}
@@ -751,7 +753,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
 
             {selectedTags.length > 0 && (
               <p className="text-xs text-gray-500 mt-3 font-keepick-primary">
-                {selectedTags.length}개 태그 선택됨 • {filteredPhotos.length}장의 사진
+                {selectedTags.length}개 태그 선택됨 • {displayPhotos.length}장의 사진
               </p>
             )}
           </div>
@@ -1027,7 +1029,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
 
 
           {/* No Results - 전체 모드에서 태그 필터링 결과가 없을 때만 표시 */}
-          {viewMode === 'all' && filteredPhotos.length === 0 && selectedTags.length > 0 && allPhotos.length > 0 && (
+          {viewMode === 'all' && displayPhotos.length === 0 && selectedTags.length > 0 && (allQueryPhotos.length > 0 || allPhotos.length > 0) && (
             <div className="text-center py-16">
               <p className="font-keepick-primary text-gray-400 text-lg mb-4">선택한 태그에 해당하는 사진이 없습니다</p>
               <button
