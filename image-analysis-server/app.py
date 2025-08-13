@@ -50,7 +50,7 @@ def api_tag_and_detect():
         # 작업 시작 상태 업데이트
         update_job_status(job_id, "integration", "얼굴 매칭 및 객체 인식 작업을 시작합니다", "STARTED", len(sources), 0)
 
-        result = tag_faces_detect_and_blur(
+        result, processed_count = tag_faces_detect_and_blur(
             job_id,
             target_faces=targets,
             source_images=sources,
@@ -67,11 +67,11 @@ def api_tag_and_detect():
 
         if "error" in result:
             # 실패 상태 업데이트
-            update_job_status(job_id, "integration", f"처리 실패: {result['error']}", "FAILED", len(sources), 0, result)
+            update_job_status(job_id, "integration", f"몇몇 작업 처리 실패: {result['error']}", "FAILED", len(sources), processed_count, result)
             status = 400
         else:
             # 완료 상태 업데이트
-            update_job_status(job_id, "integration", "작업이 성공적으로 완료되었습니다", "COMPLETED", len(sources), len(sources), result)
+            update_job_status(job_id, "integration", "작업이 성공적으로 완료되었습니다", "COMPLETED", len(sources), processed_count, result)
             status = 200
 
         return jsonify(result), status

@@ -157,6 +157,7 @@ def tag_faces_detect_and_blur(
     results = []
     tagged_by_person = defaultdict(list)
 
+    processed_count = 0
     # 2) 각 소스 이미지 처리
     for idx, info in enumerate(source_images):
         img_name = info.get('name', f'image_{idx}')
@@ -269,6 +270,8 @@ def tag_faces_detect_and_blur(
                     item["tagged_image_base64"] = b64
 
         results.append(item)
+        processed_count += 1
+        update_job_status(job_id, "integration", f"이미지 {idx + 1}/{len(source_images)} 분석 완료","PROCESSING", len(source_images), processed_count)
 
     # 마무리
     clear_folder(temp_dir)
@@ -287,4 +290,4 @@ def tag_faces_detect_and_blur(
         "results": results,
         "tagged_images_by_person": dict(tagged_by_person),
         "summary": summary
-    }
+    }, processed_count
