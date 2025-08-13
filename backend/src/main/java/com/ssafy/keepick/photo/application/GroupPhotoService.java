@@ -171,4 +171,9 @@ public class GroupPhotoService {
         return clusterPage;
     }
 
+    public GroupPhotoTagDto getGroupPhotoAllTags(Long groupId) {
+        List<String> tagList = photoTagRepository.findTagsByGroupId(groupId);
+        return GroupPhotoTagDto.from(tagList);
+    }
+
 }
