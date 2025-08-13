@@ -1,8 +1,10 @@
 package com.ssafy.keepick.member.controller;
 
-import static org.mockito.BDDMockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,8 +17,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.ssafy.keepick.global.exception.BaseException;
-import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.member.application.MemberService;
 import com.ssafy.keepick.support.BaseTest;
 
@@ -93,5 +93,24 @@ class MemberControllerIntegrationTest extends BaseTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("닉네임은 필수입니다."))
                 .andExpect(jsonPath("$.errorCode").value("B004"));
+    }
+
+    @Test
+    @DisplayName("닉네임 중복검사 API 통합 테스트 - 이미 사용 중인 닉네임")
+    void checkNicknameAvailability_Integration_NotAvailable() throws Exception {
+        // given
+        String nickname = "기존닉네임";
+        given(memberService.checkNicknameAvailability(nickname)).willReturn(false);
+
+        // when & then
+        mockMvc.perform(get("/api/members/check-nickname")
+                        .param("nickname", nickname)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.nickname").value(nickname))
+                .andExpect(jsonPath("$.data.available").value(false));
+        
+        verify(memberService).checkNicknameAvailability(nickname);
     }
 }
