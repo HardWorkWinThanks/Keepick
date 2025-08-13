@@ -26,28 +26,12 @@ export class ChatService {
       throw new Error('Failed to add participant to chat room');
     }
 
-    // 시스템 메시지 추가
-    const systemMessage = this.chatRepository.getSystemMessage(
-      roomId,
-      `${participantName} joined the chat`
-    );
-    this.chatRepository.addMessage(roomId, systemMessage);
-
     logger.info(`Participant ${participantId} (${participantName}) joined chat room ${roomId}`);
     return participant;
   }
 
   leaveChatRoom(roomId: string, participantId: string): void {
     const participant = this.chatRepository.getParticipant(roomId, participantId);
-    
-    if (participant) {
-      // 시스템 메시지 추가
-      const systemMessage = this.chatRepository.getSystemMessage(
-        roomId,
-        `${participant.name} left the chat`
-      );
-      this.chatRepository.addMessage(roomId, systemMessage);
-    }
 
     const success = this.chatRepository.removeParticipant(roomId, participantId);
     
@@ -191,6 +175,10 @@ export class ChatService {
 
   getChatRoom(roomId: string) {
     return this.chatRepository.getChatRoom(roomId);
+  }
+
+  getChatRoomByParticipantId(participantId: string) {
+    return this.chatRepository.getChatRoomByParticipantId(participantId);
   }
 
   getParticipant(roomId: string, participantId: string) {

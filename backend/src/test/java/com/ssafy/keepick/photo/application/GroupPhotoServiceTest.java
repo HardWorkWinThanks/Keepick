@@ -2,10 +2,8 @@ package com.ssafy.keepick.photo.application;
 
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.member.domain.Member;
-import com.ssafy.keepick.photo.application.dto.GroupPhotoDto;
-import com.ssafy.keepick.photo.application.dto.GroupPhotoOverviewDto;
-import com.ssafy.keepick.photo.application.dto.PhotoClusterDto;
-import com.ssafy.keepick.photo.application.dto.PhotoTagDto;
+import com.ssafy.keepick.photo.application.dto.*;
+import com.ssafy.keepick.photo.controller.response.GroupPhotoAllTagResponse;
 import com.ssafy.keepick.photo.domain.Photo;
 import com.ssafy.keepick.photo.domain.PhotoMember;
 import com.ssafy.keepick.photo.domain.PhotoTag;
@@ -27,8 +25,11 @@ import org.springframework.data.domain.PageRequest;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class GroupPhotoServiceTest extends BaseTest {
@@ -162,6 +163,27 @@ class GroupPhotoServiceTest extends BaseTest {
         assertThat(groupPhotoTags.getTags()).hasSize(2);
         assertThat(groupPhotoTags.getMemberNicknames()).hasSize(2);
     }
+
+    @Test
+    void testGetGroupPhotoAllTags() {
+        // given
+        Long groupId = 1L;
+        List<String> mockTags = List.of("tag1", "tag2", "tag3");
+        when(photoTagRepository.findTagsByGroupId(groupId)).thenReturn(mockTags);
+
+        // when
+        GroupPhotoTagDto dto = groupPhotoService.getGroupPhotoAllTags(groupId);
+        GroupPhotoAllTagResponse response = GroupPhotoAllTagResponse.from(dto);
+
+        // then
+        assertNotNull(dto);
+        assertNotNull(response);
+        // DTO 검증
+        assertEquals(3, dto.getTags().size());
+        // Response 검증
+        assertEquals(dto.getTags(), response.getTags());
+    }
+
 
     Member createMember(int i) {
         return Member.builder().name("test" + i).email("email" + i).nickname("nick" + i).provider("google" + i).providerId("pid" + i).identificationUrl("url" + i).build();

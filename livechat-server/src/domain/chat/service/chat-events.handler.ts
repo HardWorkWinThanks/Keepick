@@ -46,8 +46,8 @@ export class ChatEventsHandler {
 
   handleLeaveChat(socket: Socket, data?: { roomId: string }) {
     try {
-      const roomId = data?.roomId;
-      
+      const roomId = data?.roomId ?? this.chatService.getChatRoomByParticipantId(socket.id)?.id;
+
       if (roomId) {
         // 특정 채팅방 떠나기
         this.leaveChatRoom(socket, roomId);
