@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSelector, useDispatch } from "react-redux"
 import { motion } from "framer-motion"
 import { ArrowLeft, Edit } from "lucide-react"
 import Link from "next/link"
@@ -8,9 +9,11 @@ import { useTimelineAlbum } from "../model/useTimelineAlbum"
 import { TimelineEditingSidebar } from "./TimelineEditingSidebar"
 import { AlbumInfoModal } from "./AlbumInfoModal"
 import { PhotoDropZone } from "@/features/photo-drag-drop"
+import type { RootState } from "@/shared/config/store"
 import type { TimelineEvent } from "@/entities/album"
 import type { DragPhotoData } from "@/entities/photo"
 import { Photo } from "@/entities/photo"
+import { clearSelectedPhotos, setIsFromGallery } from "@/features/photo-gallery/model/photoSelectionSlice"
 
 interface TimelineAlbumPageProps {
   groupId: string
@@ -176,6 +179,8 @@ function TimelineImageLayout({
 }
 
 export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPageProps) {
+  const dispatch = useDispatch()
+  const { selectedPhotos, isFromGallery } = useSelector((state: RootState) => state.photoSelection)
   const { timelineEvents, loading } = useTimelineAlbum(groupId, albumId)
   const [isEditMode, setIsEditMode] = useState(false)
   const [dragOverImage, setDragOverImage] = useState<{ sectionIndex: number; imageIndex: number } | null>(null)
@@ -190,6 +195,14 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
   })
   const [isSelectingCoverImage, setIsSelectingCoverImage] = useState(false)
   const [showAlbumInfoModal, setShowAlbumInfoModal] = useState(false)
+
+  // 갤러리에서 선택된 사진들로 앨범을 생성한 경우 자동으로 편집 모드 진입
+  useEffect(() => {
+    if (isFromGallery && selectedPhotos.length > 0) {
+      setIsEditMode(true)
+      console.log('갤러리에서 선택된 사진들로 타임라인 앨범 편집 시작:', selectedPhotos)
+    }
+  }, [isFromGallery, selectedPhotos])
 
   const handleEditModeToggle = () => {
     setIsEditMode(!isEditMode)
@@ -537,8 +550,15 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       {/* Timeline Editing Sidebar */}
       <TimelineEditingSidebar 
         isOpen={isEditMode} 
-        onClose={() => setIsEditMode(false)}
-        availablePhotos={dummyPhotos}
+        onClose={() => {
+          setIsEditMode(false)
+          // 편집 완료 시 선택 상태 초기화
+          if (isFromGallery) {
+            dispatch(clearSelectedPhotos())
+            dispatch(setIsFromGallery(false))
+          }
+        }}
+        availablePhotos={isFromGallery && selectedPhotos.length > 0 ? selectedPhotos : dummyPhotos}
         onShowAlbumInfoModal={() => setShowAlbumInfoModal(true)}
       />
 

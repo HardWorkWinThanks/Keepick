@@ -45,7 +45,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     loadMorePhotos: loadMorePhotosBase,
     setIsPhotosExpanded,
     setGalleryData,
-  } = usePhotoGallery()
+  } = usePhotoGallery(groupId)
 
   // 선택 모드 타입 상태 (앨범 생성 또는 사진 삭제)
   const [selectionType, setSelectionType] = useState<'album' | 'delete' | null>(null)
@@ -840,7 +840,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                           className="relative aspect-square overflow-hidden rounded cursor-pointer group"
                           onClick={() => {
                             if (isSelectionMode) {
-                              togglePhotoSelection(photo.photoId)
+                              togglePhotoSelection(convertToGalleryPhoto(photo))
                             } else {
                               openPhotoModal({ 
                                 id: photo.photoId, 
@@ -866,7 +866,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                           {isSelectionMode && (
                             <div
                               className={`absolute inset-0 border-4 transition-all duration-300 ${
-                                selectedPhotos.includes(photo.photoId)
+                                selectedPhotos.some(selected => selected.id === photo.photoId)
                                   ? isDeleteMode 
                                     ? "border-red-500 bg-red-500/20"
                                     : "border-[#FE7A25] bg-[#FE7A25]/20"
@@ -929,7 +929,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                       }}
                       onClick={() => {
                         if (isSelectionMode) {
-                          togglePhotoSelection(photo.id)
+                          togglePhotoSelection(photo)
                         } else {
                           // 선택 모드가 아닐 때는 사진 모달 열기
                           openPhotoModal({ id: photo.id, src: photo.src || "/placeholder.svg", name: photo.title })
@@ -955,7 +955,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                       {isSelectionMode && (
                         <div
                           className={`absolute inset-0 border-4 transition-all duration-300 ${
-                            selectedPhotos.includes(photo.id)
+                            selectedPhotos.some(selected => selected.id === photo.id)
                               ? isDeleteMode 
                                 ? "border-red-500 bg-red-500/20"
                                 : "border-[#FE7A25] bg-[#FE7A25]/20"
@@ -1200,7 +1200,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
 
                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                   <button
-                                    onClick={() => togglePhotoSelection(photo.id)}
+                                    onClick={() => togglePhotoSelection(photo)}
                                     className="w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
                                   >
                                     <X size={12} className="text-white" />

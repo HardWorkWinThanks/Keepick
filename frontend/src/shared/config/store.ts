@@ -1,12 +1,14 @@
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "@/features/auth/model/authSlice";
 import { userReducer } from "@/entities/user";
+import photoSelectionReducer from "@/features/photo-gallery/model/photoSelectionSlice";
 
 export const makeStore = () => {
   return configureStore({
     reducer: {
       auth: authReducer,
       user: userReducer,
+      photoSelection: photoSelectionReducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
