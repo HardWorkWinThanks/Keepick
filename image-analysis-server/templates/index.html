@@ -153,8 +153,6 @@
         el('batchThumbs').innerHTML=''; el('batchJson').textContent=''; el('batchMsg').textContent='';
         el('btnRunBatch').disabled = true; el('btnAddToAlbum').disabled = true;
 
-        if(targets.length===0) throw new Error('먼저 기준 인물을 1명 이상 추가하세요.');
-
         lastBatch = parseBatch();
         const payload = {
           target_faces: targets,

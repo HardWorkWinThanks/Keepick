@@ -16,7 +16,8 @@ def clear_folder(folder_path):
             if os.path.isfile(fp):
                 try:
                     os.remove(fp)
-                except Exception:
+                except Exception as e:
+                    print(f"[ERROR] 파일 삭제 실패: {fp} / {e}")
                     pass
 
 def read_img_robust(img_path):
@@ -26,7 +27,7 @@ def read_img_robust(img_path):
             numpy_array = np.asarray(bytes_data, dtype=np.uint8)
             return cv2.imdecode(numpy_array, cv2.IMREAD_UNCHANGED)
     except Exception as e:
-        print(f"[오류] 이미지 읽기 실패 {img_path}: {e}")
+        print(f"[ERROR] 이미지 읽기 실패 {img_path}: {e}")
         return None
 
 def get_face_embeddings_from_array(img):
@@ -45,8 +46,8 @@ def download_image(url, save_path):
                 f.write(response.content)
             return True
         else:
-            print(f"[실패] 다운로드 실패: {url}")
+            print(f"[FAILED] 다운로드 실패: {url}")
             return False
     except Exception as e:
-        print(f"[오류] 다운로드 중 예외 발생: {url} / {e}")
+        print(f"[ERROR] 다운로드 중 예외 발생: {url} / {e}")
         return False

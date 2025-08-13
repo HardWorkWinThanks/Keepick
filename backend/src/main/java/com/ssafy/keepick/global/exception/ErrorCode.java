@@ -16,6 +16,7 @@ public enum ErrorCode {
 
     // Member
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다.", "M001"),
+    INVALID_MEMBER_IMAGE(HttpStatus.UNPROCESSABLE_ENTITY, "이용할 수 없는 프로필 이미지입니다.", "M002"),
 
     // Group
     GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 그룹입니다.", "G001"),

@@ -7,12 +7,13 @@ import torch.nn.functional as F
 from collections import defaultdict
 
 from utils import download_image, read_img_robust, clear_folder, get_face_embeddings_from_array
+from job_status import update_job_status
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # --- 선택적 YOLO 로더 (없으면 objects=[]) ---
 _YOLO = None
-def _lazy_load_yolo(model_path="./best.pt"):
+def _lazy_load_yolo(model_path="./final.pt"):
     global _YOLO
     if _YOLO is not None:
         return _YOLO
@@ -31,7 +32,13 @@ def _run_yolo_on_bgr(img_bgr, conf=0.4, imgsz=640):
     if yolo is None:
         return []  # YOLO 미사용 시 빈 리스트
     try:
-        res = yolo.predict(img_bgr, conf=conf, imgsz=imgsz, verbose=False)
+        # 4채널 -> 3채널 변환 처리
+        if img_bgr.shape[2] == 4:
+            img_bgr = cv2.cvtColor(img_bgr, cv2.COLOR_BGRA2BGR)
+        # BGR -> RGB 변환 (YOLO가 RGB 입력 기대)
+        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+
+        res = yolo.predict(img_rgb, conf=conf, imgsz=imgsz, verbose=False)
         r0 = res[0]
         boxes = []
         names = r0.names
@@ -51,7 +58,8 @@ def _run_yolo_on_bgr(img_bgr, conf=0.4, imgsz=640):
                     "bbox": [int(x1), int(y1), int(x2), int(y2)]
                 })
         return boxes
-    except Exception:
+    except Exception as e:
+        print(f"YOLO 예외 발생: {e}")
         return []
 
 def _img_to_base64(img):
@@ -96,6 +104,7 @@ def _faces_to_dicts(faces):
     return out
 
 def tag_faces_detect_and_blur(
+    job_id,
     target_faces,
     source_images,
     distance_threshold=0.6,
@@ -139,15 +148,16 @@ def tag_faces_detect_and_blur(
 
     if not targets:
         clear_folder(temp_dir)
-        return {"error": "기준 인물의 얼굴을 인식할 수 없습니다"}
-
-    # 타깃 텐서로 묶어 매트멀 가속
-    t_names = [n for n, _ in targets]
-    t_embs = torch.stack([e for _, e in targets], dim=0)  # (T, D)
+        update_job_status(job_id, "integration", "기준 인물의 얼굴을 인식할 수 없습니다", "PROCESSING", len(source_images), 0)
+    else:
+        # 타깃 텐서로 묶어 매트멀 가속
+        t_names = [n for n, _ in targets]
+        t_embs = torch.stack([e for _, e in targets], dim=0)  # (T, D)
 
     results = []
     tagged_by_person = defaultdict(list)
 
+    processed_count = 0
     # 2) 각 소스 이미지 처리
     for idx, info in enumerate(source_images):
         img_name = info.get('name', f'image_{idx}')
@@ -185,7 +195,7 @@ def tag_faces_detect_and_blur(
         faces = _faces_to_dicts(faces_raw)
         found_faces = []
 
-        if faces:
+        if targets and faces:
             s_embs = torch.stack([torch.tensor(f["embedding"], dtype=torch.float32, device=device) for f in faces], dim=0)
             s_embs = F.normalize(s_embs, dim=1)  # (S, D)
             sims = torch.matmul(s_embs, t_embs.T)  # (S, T)
@@ -260,6 +270,8 @@ def tag_faces_detect_and_blur(
                     item["tagged_image_base64"] = b64
 
         results.append(item)
+        processed_count += 1
+        update_job_status(job_id, "integration", f"이미지 {idx + 1}/{len(source_images)} 분석 완료","PROCESSING", len(source_images), processed_count)
 
     # 마무리
     clear_folder(temp_dir)
@@ -278,4 +290,4 @@ def tag_faces_detect_and_blur(
         "results": results,
         "tagged_images_by_person": dict(tagged_by_person),
         "summary": summary
-    }
+    }, processed_count
