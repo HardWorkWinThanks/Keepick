@@ -85,7 +85,7 @@ public class TimelineController {
 
     @Operation(summary = "타임라인 앨범에 사진 삭제", description = "특정 타임라인 앨범에서 사진을 삭제합니다.")
     @DeleteMapping("/{albumId}/photos")
-    public ApiResponse<List<TimelineUploadResponse>> deletePhotoFromTimelineAlbum(@PathVariable Long groupId, @PathVariable Long albumId, @Valid @RequestBody TimelinePhotoRequest request) {
+    public ApiResponse<Void> deletePhotoFromTimelineAlbum(@PathVariable Long groupId, @PathVariable Long albumId, @Valid @RequestBody TimelinePhotoRequest request) {
         timelineInteractionService.deletePhotoFromTimelineAlbum(groupId, albumId, request);
         return ApiResponse.of(ResponseCode.DELETED);
     }
