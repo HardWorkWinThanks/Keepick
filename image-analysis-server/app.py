@@ -31,29 +31,27 @@ def api_tag_and_detect():
     job_id = 1
     try:
         data = request.get_json()
-        if (not data or "target_faces" not in data or "source_images" not in data):
+        if (not data or "source_images" not in data):
             return jsonify({"error": "target_faces와 source_images 필드가 필요합니다"}), 400
 
         job_id      = data.get("job_id", 1)
-        targets     = data["target_faces"]
+        targets     = data.get("target_faces",[])
         sources     = data["source_images"]
         face_th     = data.get("face_distance_threshold", 0.6)
         yolo_opt    = data.get("yolo", {"conf": 0.4, "imgsz": 640})
         blur_th     = data.get("blur_threshold", 100.0)
         ret_b64     = data.get("return_tagged_images", False)
 
-        # 작업 시작 상태 업데이트
-        update_job_status(job_id, "integration", "얼굴 매칭 및 객체 인식 작업을 시작합니다", "STARTED", len(sources), 0)
-
         temp_dir    = os.path.join(UPLOAD_FOLDER, "temp_face")
         tagged_dir  = os.path.join(UPLOAD_FOLDER, "tagged_results")
         os.makedirs(temp_dir, exist_ok=True)
         os.makedirs(tagged_dir, exist_ok=True)
 
-        # 처리 중 상태 업데이트
-        update_job_status(job_id, "integration", "이미지를 처리 중입니다", "PROCESSING",  len(sources), 0)
+        # 작업 시작 상태 업데이트
+        update_job_status(job_id, "integration", "얼굴 매칭 및 객체 인식 작업을 시작합니다", "STARTED", len(sources), 0)
 
         result = tag_faces_detect_and_blur(
+            job_id,
             target_faces=targets,
             source_images=sources,
             distance_threshold=face_th,
@@ -78,8 +76,7 @@ def api_tag_and_detect():
 
         return jsonify(result), status
     except Exception as e:
-        if job_id:
-            update_job_status(job_id, "integration",  f"처리 중 오류 발생: {str(e)}", "FAILED", len(sources), 0, result)
+        update_job_status(job_id, "integration",  f"처리 중 오류 발생: {str(e)}", "FAILED", len(sources), 0, result)
         return jsonify({"error": f"처리 중 오류 발생: {str(e)}"}), 500
 
 # 2) 유사도 그룹핑만

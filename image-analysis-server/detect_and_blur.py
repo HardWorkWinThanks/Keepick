@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from collections import defaultdict
 
 from utils import download_image, read_img_robust, clear_folder, get_face_embeddings_from_array
+from job_status import update_job_status
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -103,6 +104,7 @@ def _faces_to_dicts(faces):
     return out
 
 def tag_faces_detect_and_blur(
+    job_id,
     target_faces,
     source_images,
     distance_threshold=0.6,
@@ -146,11 +148,11 @@ def tag_faces_detect_and_blur(
 
     if not targets:
         clear_folder(temp_dir)
-        return {"error": "기준 인물의 얼굴을 인식할 수 없습니다"}
-
-    # 타깃 텐서로 묶어 매트멀 가속
-    t_names = [n for n, _ in targets]
-    t_embs = torch.stack([e for _, e in targets], dim=0)  # (T, D)
+        update_job_status(job_id, "integration", "기준 인물의 얼굴을 인식할 수 없습니다", "PROCESSING", len(source_images), 0)
+    else:
+        # 타깃 텐서로 묶어 매트멀 가속
+        t_names = [n for n, _ in targets]
+        t_embs = torch.stack([e for _, e in targets], dim=0)  # (T, D)
 
     results = []
     tagged_by_person = defaultdict(list)
@@ -192,7 +194,7 @@ def tag_faces_detect_and_blur(
         faces = _faces_to_dicts(faces_raw)
         found_faces = []
 
-        if faces:
+        if targets and faces:
             s_embs = torch.stack([torch.tensor(f["embedding"], dtype=torch.float32, device=device) for f in faces], dim=0)
             s_embs = F.normalize(s_embs, dim=1)  # (S, D)
             sims = torch.matmul(s_embs, t_embs.T)  # (S, T)
