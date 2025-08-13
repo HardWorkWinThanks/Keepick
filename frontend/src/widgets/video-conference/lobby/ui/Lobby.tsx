@@ -5,16 +5,16 @@ import {
   VideoCameraIcon,
   VideoCameraSlashIcon,
   MicrophoneIcon,
-  SpeakerWaveIcon,
   SpeakerXMarkIcon,
-  NoSymbolIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
+  UserIcon, // 사용자 이름 입력을 위한 아이콘 추가
 } from "@heroicons/react/24/solid";
 import { Button } from "@/shared/ui/shadcn/button";
 
 interface LobbyProps {
-  onJoin: (stream: MediaStream) => void;
+  // onJoin 시그니처에 userName 추가
+  onJoin: (stream: MediaStream, userName: string) => void;
   isLoading: boolean;
   error: string | null;
 }
@@ -36,10 +36,12 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
   const [isInitializing, setIsInitializing] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // 사용자 이름 상태 추가
+  const [userName, setUserName] = useState("");
+
   // 권한 확인 함수
   const checkPermissions = async (): Promise<MediaPermissions> => {
     const result: MediaPermissions = { camera: false, microphone: false };
-
     try {
       const cameraPermission = await navigator.permissions.query({
         name: "camera" as PermissionName,
@@ -47,13 +49,11 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
       const microphonePermission = await navigator.permissions.query({
         name: "microphone" as PermissionName,
       });
-
       result.camera = cameraPermission.state === "granted";
       result.microphone = microphonePermission.state === "granted";
     } catch (err) {
       console.log("권한 확인 API를 지원하지 않는 브라우저입니다.");
     }
-
     return result;
   };
 
@@ -61,13 +61,9 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
     const initializeMedia = async () => {
       setIsInitializing(true);
       setMediaError(null);
-
       try {
-        // 먼저 권한 상태 확인
         const perms = await checkPermissions();
         setPermissions(perms);
-
-        // 미디어 스트림 요청
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 1280 },
@@ -80,25 +76,17 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
             autoGainControl: true,
           },
         });
-
         setLocalStream(stream);
         setPermissions({ camera: true, microphone: true });
-
-        // 비디오 엘리먼트에 스트림 연결
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
-
-        // 초기 상태 설정 (트랙이 활성화되어 있는지 확인)
         const videoTrack = stream.getVideoTracks()[0];
         const audioTrack = stream.getAudioTracks()[0];
-
         if (videoTrack) setIsCameraOn(videoTrack.enabled);
         if (audioTrack) setIsMicOn(audioTrack.enabled);
       } catch (err: any) {
         console.error("미디어 장치 접근 오류:", err);
-
-        // 에러 타입에 따른 상세한 메시지 제공
         if (err.name === "NotAllowedError") {
           setMediaError(
             "카메라와 마이크 사용 권한이 필요합니다. 브라우저 설정에서 권한을 허용해주세요."
@@ -116,33 +104,26 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
             `미디어 장치 오류: ${err.message || "알 수 없는 오류"}`
           );
         }
-
         setIsCameraOn(false);
         setIsMicOn(false);
       } finally {
         setIsInitializing(false);
       }
     };
-
     initializeMedia();
-
     return () => {
-      // 컴포넌트 언마운트 시 모든 트랙 정리
       if (localStream) {
         localStream.getTracks().forEach((track) => {
           track.stop();
         });
       }
     };
-  }, []);
+  }, []); // 이 useEffect는 한 번만 실행되므로 의존성 배열은 비어 있어야 합니다.
 
   const handleToggleCamera = async () => {
     if (!localStream) return;
-
     const videoTracks = localStream.getVideoTracks();
-
     if (videoTracks.length === 0 && !isCameraOn) {
-      // 카메라가 꺼져있고 트랙이 없을 때 새로 요청
       try {
         const newStream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -151,7 +132,6 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
             facingMode: "user",
           },
         });
-
         const videoTrack = newStream.getVideoTracks()[0];
         if (videoTrack) {
           localStream.addTrack(videoTrack);
@@ -165,7 +145,6 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
         setMediaError("카메라를 켤 수 없습니다.");
       }
     } else {
-      // 기존 트랙 토글
       videoTracks.forEach((track) => {
         track.enabled = !isCameraOn;
       });
@@ -175,7 +154,6 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
 
   const handleToggleMic = () => {
     if (!localStream) return;
-
     const audioTracks = localStream.getAudioTracks();
     audioTracks.forEach((track) => {
       track.enabled = !isMicOn;
@@ -184,12 +162,15 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
   };
 
   const handleJoinClick = () => {
-    if (localStream && !isLoading) {
-      onJoin(localStream);
+    // userName.trim()으로 공백만 있는 이름은 방지
+    if (localStream && !isLoading && userName.trim()) {
+      onJoin(localStream, userName.trim());
     }
   };
 
-  const canJoinMeeting = localStream && !isLoading && !isInitializing;
+  // 참여 가능 조건에 userName 확인 추가
+  const canJoinMeeting =
+    localStream && !isLoading && !isInitializing && userName.trim() !== "";
   const hasVideoTrack = localStream
     ? localStream.getVideoTracks().length > 0
     : false;
@@ -200,7 +181,6 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
   return (
     <div className="min-h-screen bg-[#222222] flex items-center justify-center p-4 font-body">
       <div className="w-full max-w-2xl">
-        {/* 헤더 - 더 간결하게 */}
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-[#FFFFFF] font-header mb-2">
             회의 준비
@@ -211,7 +191,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
         </div>
 
         <div className="bg-[#2C2C2E] rounded-2xl p-6 shadow-2xl animate-scale-in">
-          {/* 비디오 프리뷰 영역 - 높이 줄임 */}
+          {/* 비디오 프리뷰 영역 */}
           <div className="relative w-full h-96 mb-6 bg-[#222222] rounded-xl overflow-hidden">
             {isInitializing && (
               <div className="absolute inset-0 flex items-center justify-center bg-[#222222]">
@@ -236,7 +216,6 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
               }`}
             />
 
-            {/* 카메라 꺼짐/에러 오버레이 */}
             {!isInitializing &&
               (!isCameraOn || !hasVideoTrack || mediaError) && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-[#A0A0A5] bg-[#222222]">
@@ -262,7 +241,6 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
                 </div>
               )}
 
-            {/* 음성 레벨 표시 (마이크 켜져있을 때) */}
             {isMicOn && hasAudioTrack && !mediaError && (
               <div className="absolute bottom-3 left-3">
                 <div className="flex items-center space-x-2 bg-black/70 rounded-full px-2 py-1 backdrop-blur-sm">
@@ -281,7 +259,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
             )}
           </div>
 
-          {/* 디바이스 상태 정보 - 더 간결하게 */}
+          {/* 디바이스 상태 정보 */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             <div className="flex items-center space-x-2 p-3 bg-[#222222] rounded-lg">
               <div
@@ -330,7 +308,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
             </div>
           </div>
 
-          {/* 컨트롤 버튼들 - 크기 줄임 */}
+          {/* 컨트롤 버튼들 */}
           <div className="flex items-center justify-center space-x-4 mb-6">
             <button
               onClick={handleToggleCamera}
@@ -373,6 +351,24 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
             </button>
           </div>
 
+          {/* 사용자 이름 입력 필드 */}
+          <div className="relative mb-6">
+            <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A0A0A5]" />
+            <input
+              type="text"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canJoinMeeting) {
+                  handleJoinClick();
+                }
+              }}
+              placeholder="이름을 입력하세요"
+              className="w-full bg-[#222222] text-[#FFFFFF] placeholder:text-[#636366] rounded-lg py-3 pl-10 pr-4 border border-[#424245] focus:ring-2 focus:ring-[#FE7A25] focus:border-[#FE7A25] outline-none transition-colors"
+              disabled={isInitializing}
+            />
+          </div>
+
           {/* 참여 버튼 */}
           <Button
             onClick={handleJoinClick}
@@ -412,7 +408,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
                 className="text-[#FE7A25] hover:text-[#E06B1F] underline font-medium"
               >
                 페이지 새로고침
-              </button>
+              </button>{" "}
               을 시도해보세요.
             </p>
           </div>

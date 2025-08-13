@@ -28,14 +28,12 @@ export const UserVideoCard = ({
   const [hasVideo, setHasVideo] = useState(false);
   const [hasAudio, setHasAudio] = useState(false);
 
-  // 이모지 반응 상태 가져오기
-  const emojiReactions = useAppSelector(
-    (state) => state.emojiReaction?.activeReactions || {}
+  const activeReactions = useAppSelector(
+    (state) => state.emojiReaction.activeReactions
   );
-  const currentUserId = socketId || "current-user"; // 현재 사용자 ID
-  const activeReaction = emojiReactions[currentUserId];
+  const currentCardUserId = socketId || "local-user";
+  const activeReaction = activeReactions[currentCardUserId];
 
-  // 원격 스트림 가져오기
   const remoteStream = socketId
     ? mediasoupManager.getRemoteStream(socketId)
     : stream;
@@ -45,32 +43,35 @@ export const UserVideoCard = ({
     if (finalStream && videoRef.current) {
       videoRef.current.srcObject = finalStream;
 
-      // 트랙 상태 확인
       const videoTracks = finalStream.getVideoTracks();
       const audioTracks = finalStream.getAudioTracks();
-
       setHasVideo(videoTracks.length > 0 && videoTracks[0].enabled);
       setHasAudio(audioTracks.length > 0 && audioTracks[0].enabled);
 
-      // 트랙 상태 변경 리스너
-      videoTracks.forEach((track) => {
-        track.addEventListener("ended", () => setHasVideo(false));
-      });
-      audioTracks.forEach((track) => {
-        track.addEventListener("ended", () => setHasAudio(false));
-      });
+      const handleTrackEnded =
+        (setter: React.Dispatch<React.SetStateAction<boolean>>) => () =>
+          setter(false);
+      videoTracks.forEach((track) =>
+        track.addEventListener("ended", handleTrackEnded(setHasVideo))
+      );
+      audioTracks.forEach((track) =>
+        track.addEventListener("ended", handleTrackEnded(setHasAudio))
+      );
     }
   }, [finalStream]);
 
+  const isLocalCard = isMuted;
+  const isSpeaking = hasAudio && !isMuted;
+
   return (
-    <div className="relative w-full h-full bg-[#222222] rounded-xl overflow-hidden border border-[#424245] group">
+    <div className="relative w-full h-full bg-[#222222] rounded-xl overflow-hidden group border border-[#424245]">
       {/* 비디오 */}
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted={isMuted}
-        className={`w-full h-full object-cover transition-opacity duration-300`}
+        className={`w-full h-full object-cover`}
       />
 
       {/* 비디오 없을 때 아바타 */}
@@ -82,16 +83,33 @@ export const UserVideoCard = ({
         </div>
       )}
 
-      {/* 이모지 반응 오버레이 */}
+      {/* 발언자 표시 UI (히트 스타일) */}
       <AnimatePresence>
-        {activeReaction && (
+        {isSpeaking && (
           <motion.div
-            className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-1/4 h-1 bg-[#4ade80] rounded-b-full shadow-[0_0_10px_rgba(74,222,128,0.8)] z-20"
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.2 }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* 반응 오버레이 */}
+      <AnimatePresence>
+        {/*
+          [수정]
+          - activeReaction이 있고, 현재 카드가 로컬 사용자(나 자신)의 카드가 아닐 때만(!isLocalCard) 애니메이션을 표시합니다.
+          - 이를 통해 반응을 보낸 사람은 자신의 화면에서 중복 UI를 보지 않고, 받는 사람의 화면에만 애니메이션이 표시됩니다.
+          - 로컬 사용자에게만 보이던 왼쪽 상단의 정적 이모지 UI는 제거되었습니다.
+        */}
+        {activeReaction && !isLocalCard && (
+          <motion.div
+            key="dynamic-reaction"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-4 pointer-events-none z-20"
             initial={{ scale: 0, opacity: 0 }}
-            animate={{
-              scale: [0, 1.2, 1],
-              opacity: [0, 1, 1, 0],
-            }}
+            animate={{ scale: [0, 1.2, 1], opacity: [0, 1, 1, 0] }}
             exit={{ scale: 0, opacity: 0 }}
             transition={{
               duration: 3,
@@ -99,44 +117,37 @@ export const UserVideoCard = ({
               ease: "easeOut",
             }}
           >
-            <div className="text-6xl filter drop-shadow-lg">
+            <div className="text-7xl filter drop-shadow-lg">
               {activeReaction.emoji}
+            </div>
+            <div className="bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-xl text-lg font-semibold shadow-lg">
+              {activeReaction.userName}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* 사용자 정보 오버레이 */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 z-10">
         <div className="flex items-center justify-between">
           <span className="text-white font-medium truncate">{userName}</span>
-
           <div className="flex items-center space-x-2">
-            {/* 마이크 상태 */}
-            {hasAudio ? (
+            {hasAudio && (
               <div className="p-1 bg-[#4ade80]/20 rounded-full">
                 <MicrophoneIcon className="w-4 h-4 text-[#4ade80]" />
               </div>
-            ) : (
+            )}
+            {!hasAudio && (
               <div className="p-1 bg-[#D22016]/20 rounded-full">
                 <SpeakerXMarkIcon className="w-4 h-4 text-[#D22016]" />
               </div>
             )}
-
-            {/* 비디오 꺼짐 표시 */}
             {!hasVideo && (
               <div className="p-1 bg-[#D22016]/20 rounded-full">
                 <VideoCameraSlashIcon className="w-4 h-4 text-[#D22016]" />
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* 호버 시 상호작용 힌트 (미래 기능용) */}
-      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-        <div className="bg-black/50 backdrop-blur-sm rounded-lg px-2 py-1">
-          <span className="text-white text-xs">제스처로 반응하기</span>
         </div>
       </div>
     </div>

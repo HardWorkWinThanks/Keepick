@@ -24,9 +24,7 @@ interface ConferenceClientPageProps {
 
 export const ConferenceClientPage = ({ roomId }: ConferenceClientPageProps) => {
   const dispatch = useAppDispatch();
-  const { isInRoom, error, userName } = useAppSelector(
-    (state) => state.session
-  );
+  const { isInRoom, error } = useAppSelector((state) => state.session);
   const isJoining = useAppSelector(
     (state) => state.session.status === "pending"
   );
@@ -98,22 +96,21 @@ export const ConferenceClientPage = ({ roomId }: ConferenceClientPageProps) => {
     };
   }, [dispatch, isInRoom]);
 
-  const handleJoin = (stream: MediaStream) => {
+  // [수정] onJoin 핸들러가 userName을 받도록 시그니처 변경
+  const handleJoin = (stream: MediaStream, userName: string) => {
     if (roomId) {
       // 1. Lobby에서 받아온 스트림을 mediasoupManager에 저장
       mediasoupManager.setLocalStream(stream);
 
-      // 2. 임시 사용자 이름 생성
-      const tempUserName = `User_${Math.random().toString(36).substring(7)}`;
+      // 2. [제거] 임시 사용자 이름 생성 로직 제거
+      // const tempUserName = `User_${Math.random().toString(36).substring(7)}`;
 
-      // 3. 채팅 핸들러에 방 정보 설정
-      chatSocketHandler.setRoomInfo(roomId, tempUserName);
+      // 3. [수정] 채팅 핸들러에 전달받은 userName 설정
+      chatSocketHandler.setRoomInfo(roomId, userName);
 
-      // 4. 기존 Thunk 호출
-      console.log(
-        `[1] Thunk 출발! roomId: ${roomId}, 임시 userName: ${tempUserName}`
-      );
-      dispatch(joinRoomThunk({ roomId, userName: tempUserName }));
+      // 4. [수정] Thunk에 전달받은 userName 사용
+      console.log(`[1] Thunk 출발! roomId: ${roomId}, userName: ${userName}`);
+      dispatch(joinRoomThunk({ roomId, userName: userName }));
     }
   };
 

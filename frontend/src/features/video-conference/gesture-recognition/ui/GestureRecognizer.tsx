@@ -1,3 +1,4 @@
+// src/components/GestureRecognizer.tsx
 "use client";
 
 import { useEffect, useRef, useState, useCallback, ReactNode } from "react";
@@ -363,7 +364,7 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
     emoji: "⌛",
     statusIcon: <CpuChipIcon className="w-5 h-5" />,
   });
-  const [visualEffect, setVisualEffect] = useState<string | null>(null);
+  // const [visualEffect, setVisualEffect] = useState<string | null>(null); // 이펙트 표시를 제거했으므로 주석 처리
 
   // --- AI 모델 로딩 ---
   const { handLandmarker, staticModel, dynamicModel, allModelsLoaded, error } =
@@ -372,7 +373,7 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
   // --- 원격 제스처 관리 ---
   const { remoteGestures, remoteEffects, removeEffect } = useRemoteGestures();
 
-  // --- 제스처 브로드캐스트 함수 (서버에 맞게 수정) ---
+  // --- 제스처 브로드캐스트 함수 ---
   const broadcastStaticGesture = useCallback(
     (label: string, emoji: string, confidence: number = 1.0) => {
       const now = Date.now();
@@ -439,6 +440,7 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
     [roomId, userName]
   );
 
+  // --- 예측 로직 ---
   const predictGestures = useCallback(() => {
     const video = analysisVideoRef.current;
     if (!allModelsLoaded || !video || video.readyState < 2) {
@@ -509,9 +511,8 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
                 lastEffectTimeRef.current = currentTime;
                 const [emoji] = (KOREAN_DYNAMIC_LABELS[label] || "").split(" ");
 
-                // 로컬 이펙트 표시
-                setVisualEffect(emoji);
-                setTimeout(() => setVisualEffect(null), 2000);
+                // 로컬 이펙트 표시 제거: setVisualEffect(emoji);
+                // setTimeout(() => setVisualEffect(null), 2000); // 로컬 이펙트 표시 제거
 
                 // 원격 참여자들에게 이펙트 브로드캐스트
                 broadcastGestureEffect(label, emoji);
@@ -631,13 +632,18 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
     );
   }, [isStaticGestureOn, isDynamicGestureOn, allModelsLoaded, error]);
 
-  // 제스처 상태 변경 시 로깅만 (서버에 상태 이벤트가 없음)
+  // 제스처 상태 변경 시 서버에 알림
   useEffect(() => {
     if (roomId && userName) {
       console.log(
-        `⚙️ [INFO] Gesture status changed: static=${isStaticGestureOn}, dynamic=${isDynamicGestureOn}`
+        `⚙️ [BROADCAST] Gesture status: static=${isStaticGestureOn}, dynamic=${isDynamicGestureOn}`
       );
-      // 서버에 제스처 상태 전송 기능이 없으므로 로컬에서만 관리
+      socketApi.broadcastGestureStatus({
+        roomId,
+        userName,
+        staticGestureEnabled: isStaticGestureOn,
+        dynamicGestureEnabled: isDynamicGestureOn,
+      });
     }
   }, [isStaticGestureOn, isDynamicGestureOn, roomId, userName]);
 
@@ -657,11 +663,11 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
       />
 
       {/* 로컬 제스처 표시 */}
-      <GestureDisplayCard
+      {/* <GestureDisplayCard
         title="정적 제스처"
         state={staticGesture}
         position="top-left"
-      />
+      /> */}
       <GestureDisplayCard
         title="동적 제스처"
         state={dynamicGesture}
@@ -680,7 +686,7 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
               userName={gestures.static.userName}
             />
           )}
-          {gestures.dynamic && (
+          {/* {gestures.dynamic && (
             <GestureDisplayCard
               title="원격 동적"
               state={gestures.dynamic}
@@ -688,14 +694,14 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
               isRemote={true}
               userName={gestures.dynamic.userName}
             />
-          )}
+          )} */}
         </div>
       ))}
 
-      {/* 로컬 비주얼 이펙트 */}
-      {visualEffect && (
+      {/* 로컬 비주얼 이펙트 (제거됨) */}
+      {/* {visualEffect && (
         <div className="visual-effect-corner">{visualEffect}</div>
-      )}
+      )} */}
 
       {/* 원격 제스처 이펙트들 */}
       {remoteEffects.map((effect) => (
@@ -736,7 +742,8 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
           }
         }
         
-        .visual-effect-corner {
+        /* visual-effect-corner 스타일은 더 이상 사용되지 않으므로 제거됩니다. */
+        /* .visual-effect-corner {
           position: absolute;
           bottom: 5%;
           right: 5%;
@@ -744,7 +751,8 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
           text-shadow: 0 0 15px rgba(0,0,0,.6);
           z-index: 10;
           animation: fade-in-out-corner 2s ease-in-out forwards;
-        }
+        } */
+
 
         .remote-gesture-effect {
           position: absolute;

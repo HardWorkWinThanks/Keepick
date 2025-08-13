@@ -6,7 +6,7 @@ export interface EmojiReaction {
   emoji: string;
   userId: string;
   userName: string;
-  timestamp: Date;
+  timestamp: number; // [수정] Date 타입을 number로 변경하여 직렬화 문제를 해결
   duration?: number; // 표시 시간 (ms)
 }
 
@@ -53,10 +53,12 @@ const emojiReactionSlice = createSlice({
 
     // 자동으로 만료된 반응들을 정리하는 액션
     cleanupExpiredReactions: (state) => {
-      const now = new Date().getTime();
+      const now = Date.now(); // 현재 시간의 숫자 타임스탬프
       Object.keys(state.activeReactions).forEach((userId) => {
         const reaction = state.activeReactions[userId];
-        const reactionTime = new Date(reaction.timestamp).getTime();
+
+        // [수정] reaction.timestamp가 이미 숫자이므로 변환 과정이 필요 없음
+        const reactionTime = reaction.timestamp;
         const duration = reaction.duration || 3000; // 기본 3초
 
         if (now - reactionTime > duration) {
