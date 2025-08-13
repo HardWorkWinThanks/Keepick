@@ -44,7 +44,7 @@ public class PhotoAnalysisController {
     @Operation(summary = "작업 상태 조회 API", description = """
             비동기적으로 진행되는 이미지 분석 작업의 상태를 조회합니다.
             
-            주기적으로 polling 요청을 하며, 작업이 완료되었을 경우 결과 조회 API를 요청합니다.
+            SSE로 서버에서 진행상황을 푸시합니다. 작업이 완료되었을 경우 결과 조회 API를 요청합니다.
             
             swagger에서는 테스트가 불가능합니다. POSTMAN등을 이용해주세요.
             """)

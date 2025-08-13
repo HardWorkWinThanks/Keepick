@@ -2,6 +2,7 @@ package com.ssafy.keepick.global.config;
 
 import com.ssafy.keepick.global.interceptor.GroupAlbumInterceptor;
 import com.ssafy.keepick.global.interceptor.GroupMemberInterceptor;
+import com.ssafy.keepick.global.interceptor.LoggingInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -13,9 +14,15 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     private final GroupMemberInterceptor groupMemberInterceptor;
     private final GroupAlbumInterceptor groupAlbumInterceptor;
+    private final LoggingInterceptor loggingInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // 로깅
+        registry.addInterceptor(loggingInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns("/swagger-ui/**", "/v3/api-docs/**");
+
         // 그룹 멤버 검사
         registry.addInterceptor(groupMemberInterceptor)
                 .addPathPatterns("/api/groups/**")

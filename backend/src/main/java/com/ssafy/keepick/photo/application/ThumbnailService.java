@@ -59,14 +59,14 @@ public class ThumbnailService {
             return CompletableFuture.completedFuture(null);
 
         } catch (Exception e) {
-            throw new RuntimeException("썸네일 생성 실패: " + e.getMessage(), e);
+            throw new BaseException(ErrorCode.INTERNAL_THUMBNAIL_ERROR, e.getMessage());
         }
     }
 
     public void updatePhotoAddThumbnail(String objectKey) {
         Long ImageId = Long.parseLong(FileUtils.extractImageNumber(objectKey));
         Photo photo = photoRepository.findById(ImageId)
-                .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new BaseException(ErrorCode.PHOTO_NOT_FOUND));
         String thumbnailUrl = FileUtils.generatePublicUrl(bucketName, region, objectKey);
         photo.uploadThumbnail(thumbnailUrl);
         photoRepository.save(photo);
@@ -88,7 +88,7 @@ public class ThumbnailService {
             return outputStream.toByteArray();
 
         } catch (IOException e) {
-            throw new RuntimeException("썸네일 생성 중 오류 발생: " + e.getMessage(), e);
+            throw new BaseException(ErrorCode.INTERNAL_THUMBNAIL_ERROR, e.getMessage());
         }
     }
 

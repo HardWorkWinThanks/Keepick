@@ -40,7 +40,7 @@ public class GroupPhotoService {
 
 
     @Transactional
-    public List<String> uploadGroupPhoto(Long groupId, GroupPhotoUploadRequest request) {
+    public List<GroupPhotoUploadDto> uploadGroupPhoto(Long groupId, GroupPhotoUploadRequest request) {
         // 1. 그룹 확인
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new BaseException(ErrorCode.GROUP_NOT_FOUND));
@@ -54,6 +54,7 @@ public class GroupPhotoService {
                 .map(file -> Photo.createPhoto(file.getTakenAt(), file.getWidth(), file.getHeight(), group))
                 .collect(Collectors.toList());
         photoRepository.saveAll(photos);
+        photoRepository.flush(); // DB에 저장 후 ID 확정
 
         // 3. 요청 → 커맨드 DTO로 변환 (photoId와 이미지 정보 묶기)
         List<GroupPhotoCommandDto> commandDtos = IntStream.range(0, photos.size())
@@ -61,14 +62,21 @@ public class GroupPhotoService {
                 .collect(Collectors.toList());
 
         // 4. presigned URL 발급
-        List<S3ImagePathDto> imagePathList = imageService.generatePresignedUrls(commandDtos);
+        List<S3ImagePathDto> imagePathList;
+        try {
+            imagePathList = imageService.generatePresignedUrls(commandDtos);
+        } catch (Exception e) {
+            throw new BaseException(ErrorCode.PRESIGNED_URL_GENERATION_FAILED, e.getMessage());
+        }
 
         // 5. originalUrl 세팅 및 상태 변경 (status: UPLOAD)
         IntStream.range(0, photos.size())
                 .forEach(i -> photos.get(i).upload(imagePathList.get(i).getPublicUrl()));
         photoRepository.saveAll(photos); // 변경사항 저장
 
-        return imagePathList.stream().map(S3ImagePathDto::getPresignedUrl).toList();
+        return IntStream.range(0, photos.size())
+                .mapToObj(i -> GroupPhotoUploadDto.of(photos.get(i).getId(), imagePathList.get(i).getPresignedUrl()))
+                .toList();
     }
 
     @Transactional
@@ -126,7 +134,7 @@ public class GroupPhotoService {
     public PhotoTagDto getGroupPhotoTags(Long groupId, Long photoId) {
         // 그룹 내 사진인지 확인
         if(!photoRepository.existsByGroupIdAndIdAndDeletedAtIsNull(groupId, photoId)) {
-            throw new BaseException(ErrorCode.PHOTO_NOT_FOUND);
+            throw new BaseException(ErrorCode.PHOTO_NOT_FOUND, "앨범에 존재하지 않는 사진입니다.: " + photoId);
         }
 
         // 사진 태그, 인식된 회원 조회
