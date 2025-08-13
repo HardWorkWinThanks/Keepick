@@ -7,6 +7,9 @@ from job_status import update_job_status
 from detect_and_blur import tag_faces_detect_and_blur
 from similar_grouping import group_similar_images
 
+# 프로필 사진 검증
+from face_validate import validate_face_registration
+
 BASE = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE, "uploads")
 
@@ -114,6 +117,47 @@ def home():
     tmpl = os.path.join(BASE, "templates", "index.html")
     return render_template("index.html") if os.path.exists(tmpl) else "OK"
 
+@app.route("/api/face/validate", methods=["POST"])
+def api_validate_face():
+    """
+    얼굴 등록 검증 API
+    요청 JSON:
+    {
+        "image_url": "https://example.com/image.jpg",
+        "person_name": "홍길동"
+    }
+
+    응답 JSON:
+    {
+        "is_valid": True/False,
+        "message": "...",
+        "error_code": "..."   # 실패 시
+    }
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "JSON 데이터가 필요합니다."}), 400
+
+    image_url = data.get("image_url")
+    person_name = data.get("person_name")
+
+    if not image_url or not person_name:
+        return jsonify({"error": "image_url과 person_name 필수"}), 400
+
+    try:
+        result = validate_face_registration(image_url)
+
+        response = {
+            "is_valid": result.get("is_valid", False),
+            "message": result.get("message", ""),
+            "error_code": result.get("error_code", None)
+        }
+        print(f"[INFO] 얼굴 검증 결과: {response}")
+        return jsonify(response)
+    
+    except Exception as e:
+        return jsonify({"error": f"서버 오류: {str(e)}"}), 500
+    
 if __name__ == "__main__":
     # 프로덕션에선 debug=False 권장
     app.run(host="0.0.0.0", port=5000, debug=True)
