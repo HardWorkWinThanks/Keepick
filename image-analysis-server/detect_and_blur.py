@@ -12,7 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # --- 선택적 YOLO 로더 (없으면 objects=[]) ---
 _YOLO = None
-def _lazy_load_yolo(model_path="./best.pt"):
+def _lazy_load_yolo(model_path="./final.pt"):
     global _YOLO
     if _YOLO is not None:
         return _YOLO
@@ -31,7 +31,13 @@ def _run_yolo_on_bgr(img_bgr, conf=0.4, imgsz=640):
     if yolo is None:
         return []  # YOLO 미사용 시 빈 리스트
     try:
-        res = yolo.predict(img_bgr, conf=conf, imgsz=imgsz, verbose=False)
+        # 4채널 -> 3채널 변환 처리
+        if img_bgr.shape[2] == 4:
+            img_bgr = cv2.cvtColor(img_bgr, cv2.COLOR_BGRA2BGR)
+        # BGR -> RGB 변환 (YOLO가 RGB 입력 기대)
+        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+
+        res = yolo.predict(img_rgb, conf=conf, imgsz=imgsz, verbose=False)
         r0 = res[0]
         boxes = []
         names = r0.names
@@ -51,7 +57,8 @@ def _run_yolo_on_bgr(img_bgr, conf=0.4, imgsz=640):
                     "bbox": [int(x1), int(y1), int(x2), int(y2)]
                 })
         return boxes
-    except Exception:
+    except Exception as e:
+        print(f"YOLO 예외 발생: {e}")
         return []
 
 def _img_to_base64(img):
