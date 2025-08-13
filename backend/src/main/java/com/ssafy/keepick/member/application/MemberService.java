@@ -69,4 +69,18 @@ public class MemberService {
         
         return MemberDto.from(member);
     }
+    
+    /**
+     * 닉네임 중복검사를 수행합니다.
+     * @param nickname 검사할 닉네임
+     * @return 사용 가능 여부 (true: 사용 가능, false: 이미 사용 중)
+     */
+    public boolean checkNicknameAvailability(String nickname) {
+        if (nickname == null || nickname.trim().isEmpty()) {
+            throw new BaseException(ErrorCode.INVALID_PARAMETER);
+        }
+        
+        // 닉네임이 존재하지 않으면 사용 가능
+        return !memberRepository.findByNickname(nickname.trim()).isPresent();
+    }
 }

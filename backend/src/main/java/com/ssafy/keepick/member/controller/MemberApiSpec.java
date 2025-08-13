@@ -3,6 +3,7 @@ package com.ssafy.keepick.member.controller;
 import com.ssafy.keepick.member.controller.request.MemberUpdateRequest;
 import com.ssafy.keepick.member.controller.response.MemberInfoResponse;
 import com.ssafy.keepick.member.controller.response.MemberSearchResponse;
+import com.ssafy.keepick.member.controller.response.NicknameCheckResponse;
 import com.ssafy.keepick.global.response.ApiResponse;
 import com.ssafy.keepick.global.exception.ErrorResponse;
 
@@ -278,6 +279,90 @@ public interface MemberApiSpec {
             description = "검색할 닉네임 (필수)",
             required = true,
             example = "홍길동"
+        )
+        String nickname
+    );
+
+    @Operation(
+        summary = "닉네임 중복검사",
+        description = """
+            닉네임의 사용 가능 여부를 확인합니다.
+            
+            🔍 검사 기능:
+            - 입력된 닉네임이 이미 사용 중인지 확인합니다
+            - 대소문자를 구분하지 않습니다
+            
+            📋 반환 정보:
+            - available: 사용 가능 여부 (true: 사용 가능, false: 이미 사용 중)
+            - nickname: 검사한 닉네임
+            
+            ⚠️ 주의사항:
+            - 닉네임은 필수 파라미터입니다
+            - 빈 문자열이나 공백만 있는 닉네임은 유효하지 않습니다
+            """
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", 
+            description = "검사 성공",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class),
+                examples = {
+                    @ExampleObject(
+                        name = "사용 가능한 닉네임",
+                        value = """
+                        {
+                            "status": 200,
+                            "message": "요청이 성공적으로 처리되었습니다.",
+                            "data": {
+                                "available": true,
+                                "nickname": "새로운닉네임"
+                            }
+                        }
+                        """
+                    ),
+                    @ExampleObject(
+                        name = "이미 사용 중인 닉네임",
+                        value = """
+                        {
+                            "status": 200,
+                            "message": "요청이 성공적으로 처리되었습니다.",
+                            "data": {
+                                "available": false,
+                                "nickname": "기존닉네임"
+                            }
+                        }
+                        """
+                    )
+                }
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400", 
+            description = "잘못된 요청",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class),
+                examples = @ExampleObject(
+                    name = "닉네임 누락",
+                    value = """
+                    {
+                        "status": 400,
+                        "message": "잘못된 요청 파라미터입니다.",
+                        "errorCode": "B004",
+                        "timeStamp": "2025-08-10T15:17:08.797705800"
+                    }
+                    """
+                )
+            )
+        )
+    })
+    ApiResponse<NicknameCheckResponse> checkNicknameAvailability(
+        @Parameter(
+            description = "검사할 닉네임 (필수)",
+            required = true,
+            example = "새로운닉네임"
         )
         String nickname
     );
