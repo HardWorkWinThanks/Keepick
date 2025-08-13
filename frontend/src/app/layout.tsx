@@ -5,9 +5,6 @@ import "@/shared/styles/globals.css";
 import { Inter } from "next/font/google";
 const inter = Inter({ subsets: ["latin"] });
 
-
-
-
 export const metadata: Metadata = {
   title: "Keepick",
   description: "Hello, Keepick",
@@ -20,7 +17,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className={inter.className}>
+      <body
+        className={`${inter.className} bg-background text-text-primary font-body`}
+      >
         <Providers>{children}</Providers>
       </body>
     </html>

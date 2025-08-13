@@ -38,6 +38,7 @@ class MediasoupManager {
     roomId: string;
   }[] = [];
   private isConsuming = false;
+  public getDevice = () => this.device;
 
   public init(dispatch: AppDispatch) {
     this.dispatch = dispatch;
@@ -137,6 +138,11 @@ class MediasoupManager {
     console.log("✅ Consumer transport created");
   }
 
+  public setLocalStream(stream: MediaStream) {
+    this.localStream = stream;
+    console.log("✅ Local stream has been set in mediasoupManager.");
+  }
+
   public async startProducing() {
     if (!this.producerTransport || !this.localStream || !this.dispatch)
       throw new Error("Cannot start producing");
@@ -161,6 +167,7 @@ class MediasoupManager {
     console.log("✅ Started producing audio and video");
   }
 
+  // consume에서 raceCondition 해결하는것이 가장 중요함
   public async consume(
     producerId: string,
     producerSocketId: string,

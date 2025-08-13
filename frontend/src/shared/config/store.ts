@@ -1,3 +1,4 @@
+//src/shared/config/store.ts
 import { configureStore } from "@reduxjs/toolkit";
 
 // 1. 필요한 모든 리듀서를 한 곳으로 가져옵니다.
@@ -7,6 +8,9 @@ import sessionReducer from "@/entities/video-conference/session/model/slice";
 import mediaReducer from "@/entities/video-conference/media/model/slice";
 import webrtcReducer from "@/entities/video-conference/webrtc/model/slice";
 import gestureReducer from "@/entities/video-conference/gesture/model/slice";
+import { chatReducer } from "@/entities/chat/model/slice"; // 채팅 상태
+import { emojiReactionReducer } from "@/entities/emoji-reaction/model/slice"; // 이모지 반응 상태
+import { screenShareReducer } from "@/entities/screen-share/model/slice"; // 화면 공유 상태
 
 // 스토어를 생성하는 makeStore 함수
 export const makeStore = () => {
@@ -19,15 +23,30 @@ export const makeStore = () => {
       media: mediaReducer,
       webrtc: webrtcReducer,
       gesture: gestureReducer,
+      chat: chatReducer, // 채팅 상태 추가
+      emojiReaction: emojiReactionReducer, // 이모지 반응 상태 추가
+      screenShare: screenShareReducer, // 화면 공유 상태 추가
     },
     // 3. 두 개의 미들웨어 설정을 하나로 합칩니다.
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: {
-          // persist와 화상회의 관련 액션을 모두 무시하도록 설정
+          // persist와 화상회의, 채팅, 이모지, 화면공유 관련 액션을 모두 무시하도록 설정
           ignoredActions: ["persist/PERSIST"],
-          ignoredActionPaths: ["payload.stream", "payload.track"],
-          ignoredPaths: ["session.localStream", "webrtc.remoteStreams"],
+          ignoredActionPaths: [
+            "payload.stream",
+            "payload.track",
+            "payload.timestamp",
+            "payload.startedAt",
+          ],
+          ignoredPaths: [
+            "session.localStream",
+            "webrtc.remoteStreams",
+            "chat.messages",
+            "emojiReaction.reactionHistory",
+            "screenShare.localScreenShare.startedAt",
+            "screenShare.remoteScreenShares",
+          ],
         },
       }),
     devTools: true, // devTools 활성화 유지
