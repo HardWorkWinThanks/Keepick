@@ -54,19 +54,19 @@ function TimelineImageLayout({
       mainClass: "absolute top-0 right-0 w-[65%] h-[70%] transform rotate-[1deg] z-10 overflow-hidden",
       small1Class: "absolute bottom-[10%] left-[5%] w-[35%] h-[35%] transform rotate-[-4deg] z-20 overflow-hidden", 
       small2Class: "absolute bottom-[25%] left-[25%] w-[30%] h-[30%] transform rotate-[6deg] z-15 overflow-hidden",
-      filters: ["grayscale", "", ""]
+      filters: ["", "", ""]
     },
     2: { // Section 3: 큰 이미지 왼쪽, 작은 이미지들 오른쪽
       mainClass: "absolute top-0 left-0 w-[65%] h-[70%] transform rotate-[-1deg] z-10 overflow-hidden",
       small1Class: "absolute bottom-[20%] right-[5%] w-[35%] h-[35%] transform rotate-[4deg] z-20 overflow-hidden",
       small2Class: "absolute bottom-[5%] right-[25%] w-[30%] h-[30%] transform rotate-[-3deg] z-15 overflow-hidden",
-      filters: ["contrast-150", "", "grayscale"]
+      filters: ["", "", ""]
     },
     3: { // Section 4: 큰 이미지 중앙-오른쪽, 작은 이미지들 하단
       mainClass: "absolute top-0 left-1/2 transform -translate-x-1/2 w-[60%] h-[65%] rotate-[2deg] z-10 overflow-hidden",
       small1Class: "absolute bottom-[5%] left-[10%] w-[35%] h-[35%] transform rotate-[-2deg] z-20 overflow-hidden",
       small2Class: "absolute bottom-[5%] right-[10%] w-[35%] h-[35%] transform rotate-[5deg] z-15 overflow-hidden",
-      filters: ["", "grayscale", ""]
+      filters: ["", "", ""]
     }
   }
 

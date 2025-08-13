@@ -6,28 +6,32 @@ import type { TimelineEvent } from "@/entities/album"
 // 더미 데이터 생성 함수
 const generateTimelineData = (albumId: string): TimelineEvent[] => {
   const dummyImages = [
-    "/dummy/main-dummy1.jpg",
-    "/dummy/main-dummy2.jpg", 
-    "/dummy/main-dummy3.jpg",
-    "/dummy/jeju-dummy1.webp",
-    "/dummy/jeju-dummy2.jpg",
-    "/dummy/jeju-dummy3.jpg",
-    "/dummy/sea-dummy1.jpg",
-    "/dummy/food-dummy1.jpg",
-    "/dummy/main-dummy4.jpg",
-    "/dummy/main-dummy5.jpg",
-    "/dummy/ssafy-dummy1.jpg",
-    "/dummy/airport-dummy1.jpg"
+    "/dummy/start1.jpg",
+    "/dummy/start2.jpg",
+    "/dummy/start3.jpg",
+    "/dummy/eat1.jpg",
+    "/dummy/eat2.jpg",
+    "/dummy/eat3.jpg",
+    "/dummy/coffe1.jpg",
+    "/dummy/coffe2.jpg",
+    "/dummy/coffe3.jpg",
+    "/dummy/umbrella1.jpg",
+    "/dummy/umbrella2.jpg",
+    "/dummy/umbrella3.jpg",
+    "/dummy/magam1.jpg",
+    "/dummy/magam2.jpg",
+    "/dummy/magam3.jpg",
+
   ]
 
   // 기본 4개 섹션 - 원본과 동일한 구조
   const baseTimelineSections = [
     {
       id: "1",
-      title: "새해 첫날의\n특별한 순간",
-      subtitle: "A SPECIAL MOMENT\nOF NEW YEAR'S DAY",
-      description: "2024년 새해를 맞이하며 온 가족이 모여 새로운 시작을 다짐했습니다. 따뜻한 햇살 아래에서 찍은 가족사진과 아이들의 밝은 웃음소리가 가득했던 하루였습니다.",
-      date: "2024.01.01",
+      title: "오전 개발",
+      subtitle: "여유로운 하루를 보내는 중..",
+      description: "",
+      date: "2025.08.13",
       photos: [],
       images: [
         { src: dummyImages[0], size: "large" as const, position: "main" },
@@ -37,10 +41,10 @@ const generateTimelineData = (albumId: string): TimelineEvent[] => {
     },
     {
       id: "2", 
-      title: "봄나들이\n벚꽃과 함께",
-      subtitle: "SPRING OUTING\nWITH CHERRY BLOSSOMS",
-      description: "따뜻한 봄날, 온 가족이 함께 벚꽃구경을 떠났습니다. 아이들은 떨어지는 꽃잎을 받으며 즐거워했고, 우리는 소중한 추억을 하나 더 만들었습니다.",
-      date: "2024.04.15",
+      title: "맛있는 점심!",
+      subtitle: "밀면 맛도리",
+      description: "",
+      date: "2025.08.13",
       photos: [],
       images: [
         { src: dummyImages[3], size: "large" as const, position: "main" },
@@ -50,10 +54,10 @@ const generateTimelineData = (albumId: string): TimelineEvent[] => {
     },
     {
       id: "3",
-      title: "여름휴가\n바다에서의 하루",
-      subtitle: "SUMMER VACATION\nA DAY AT THE BEACH", 
-      description: "시원한 바닷바람과 함께한 여름휴가. 아이들은 모래성을 쌓고 파도와 놀며 즐거운 시간을 보냈습니다. 석양이 지는 바다를 배경으로 찍은 가족사진이 특히 아름다웠습니다.",
-      date: "2024.07.20",
+      title: "커피와 한 컷!",
+      subtitle: "개발자들이 죽어있다.", 
+      description: "",
+      date: "2025.08.13",
       photos: [],
       images: [
         { src: dummyImages[6], size: "large" as const, position: "main" },
@@ -63,19 +67,33 @@ const generateTimelineData = (albumId: string): TimelineEvent[] => {
     },
     {
       id: "4",
-      title: "크리스마스\n따뜻한 겨울밤",
-      subtitle: "CHRISTMAS\nWARM WINTER NIGHT",
-      description: "반짝이는 크리스마스 트리 아래에서 온 가족이 모여 선물을 나누며 행복한 시간을 보냈습니다. 아이들의 기쁨에 찬 표정과 따뜻한 가족의 사랑이 느껴지는 특별한 밤이었습니다.",
-      date: "2024.12.25",
+      title: "점심 산책 중",
+      subtitle: "우(양)산 쓰고 산책중~",
+      description: "",
+      date: "2025.08.13",
       photos: [],
       images: [
         { src: dummyImages[9], size: "large" as const, position: "main" },
         { src: dummyImages[10], size: "small" as const, position: "bottom-right" },
         { src: dummyImages[11], size: "small" as const, position: "bottom-left" },
       ],
+    },
+    {
+      id: "5",
+      title: "자기계발중",
+      subtitle: "마감 5일전인데 프론트를 시작하고 있는 모습이다.",
+      description: "",
+      date: "2025.08.13",
+      photos: [],
+      images: [
+        { src: dummyImages[12], size: "large" as const, position: "main" },
+        { src: dummyImages[13], size: "small" as const, position: "bottom-right" },
+        { src: dummyImages[14], size: "small" as const, position: "bottom-left" },
+      ],
     }
   ]
 
+  // 앨범 메인 이미지
   // 앨범 ID에 따라 이미지를 다르게 할당 (기본 4개 섹션은 유지)
   const albumSpecificImages = {
     "1": { // 가족여행
@@ -91,15 +109,8 @@ const generateTimelineData = (albumId: string): TimelineEvent[] => {
 
   const albumImages = albumSpecificImages[albumId as keyof typeof albumSpecificImages]?.images || dummyImages
 
-  // 각 섹션의 메인 이미지를 앨범별로 다르게 설정
-  return baseTimelineSections.map((section, index) => ({
-    ...section,
-    images: [
-      { src: albumImages[index], size: "large" as const, position: "main" },
-      { src: albumImages[(index + 1) % albumImages.length], size: "small" as const, position: "bottom-right" },
-      { src: albumImages[(index + 2) % albumImages.length], size: "small" as const, position: "bottom-left" },
-    ]
-  }))
+  // baseTimelineSections의 원본 images 배열 사용 (덮어쓰기 제거)
+  return baseTimelineSections
 }
 
 export function useTimelineAlbum(groupId: string, albumId: string) {
