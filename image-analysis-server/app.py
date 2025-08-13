@@ -1,9 +1,7 @@
 import os
-import redis
-import json
-from datetime import datetime
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
+from job_status import update_job_status
 
 # 모듈: 통합(얼굴+객체+블러), 유사도
 from detect_and_blur import tag_faces_detect_and_blur
@@ -16,31 +14,9 @@ app = Flask(__name__, template_folder=os.path.join(BASE, "templates"))
 CORS(app)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-# Redis 클라이언트 설정
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-
 # 필요 폴더
 for folder in ["temp_face", "temp_similar", "tagged_results"]:
     os.makedirs(os.path.join(UPLOAD_FOLDER, folder), exist_ok=True)
-
-def update_job_status(job_id, job_type, message, job_status, total_images, processed_images, result=None):
-    """Redis에 작업 상태 업데이트"""
-    job_data = {
-        "job_id": job_id,
-        "job_type": job_type,
-        "job_status": job_status,  # "started", "processing", "completed", "failed"
-        "message": message,
-        "timestamp": datetime.now().isoformat(),
-        "result": result,
-        "total_images": total_images,
-        "processed_images": processed_images,
-    }
-    redis_client.setex(f"{job_id}", 3600, json.dumps(job_data))  # 1시간 TTL
-
-def get_job_status(job_id):
-    """Redis에서 작업 상태 조회"""
-    data = redis_client.get(f"{job_id}")
-    return json.loads(data) if data else None
 
 
 # tagged 이미지 서빙 (tagged_image_filename용)
@@ -52,7 +28,7 @@ def serve_tagged(filename):
 # 1) 통합: 얼굴매칭 + 객체인식 + 블러
 @app.route("/api/tag_and_detect", methods=["POST"])
 def api_tag_and_detect():
-    job_id = None
+    job_id = 1
     try:
         data = request.get_json()
         if (not data or "target_faces" not in data or "source_images" not in data):
@@ -113,6 +89,7 @@ def api_similar_grouping():
     try:
         data = request.get_json()
         if not data or "images" not in data:
+            update_job_status(job_id, "similar_grouping", "분석할 이미지가 없습니다", "FAILED", 0, 0)
             return jsonify({"error": "images 필드가 필요합니다"}), 400
 
         job_id   = data.get("job_id", 1)
@@ -122,22 +99,17 @@ def api_similar_grouping():
         os.makedirs(temp_dir, exist_ok=True)
 
         # 작업 시작 상태 업데이트
-        update_job_status(job_id, "similar_grouping", "이미지를 처리 중입니다", "PROCESSING",  len(images), 0)
-
         update_job_status(job_id, "similar_grouping", "유사 이미지 그룹핑 작업을 시작합니다", "STARTED", len(images), 0)
 
-        # 처리 중 상태 업데이트
-        update_job_status(job_id, "similar_grouping", "이미지 유사도를 분석 중입니다", "PROCESSING", len(images), 0)
-
-        result = group_similar_images(images, similarity_threshold=sim_th, temp_dir=temp_dir)
+        # 이미지 분석
+        result = group_similar_images(job_id, images, similarity_threshold=sim_th, temp_dir=temp_dir)
         
         # 완료 상태 업데이트
         update_job_status(job_id, "similar_grouping", "유사 이미지 그룹핑이 완료되었습니다", "COMPLETED", len(images), len(images), result)
         
         return jsonify(result)
     except Exception as e:
-        if job_id:
-            update_job_status(job_id, "similar_grouping",  f"처리 중 오류 발생: {str(e)}", "FAILED", len(images), 0)
+        update_job_status(job_id, "similar_grouping",  f"처리 중 오류 발생: {str(e)}", "FAILED", len(images), 0)
         return jsonify({"error": f"처리 중 오류 발생: {str(e)}"}), 500
 
 @app.route("/", methods=["GET"])

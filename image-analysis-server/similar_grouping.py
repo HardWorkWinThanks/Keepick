@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 from torchvision import models, transforms
 from utils import download_image, read_img_robust, clear_folder
+from job_status import update_job_status
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -23,7 +24,7 @@ def get_cnn_embedding(img_tensor):
     with torch.no_grad():
         return cnn_model(img_tensor.unsqueeze(0).to(device)).flatten()
 
-def group_similar_images(images, similarity_threshold=0.9, temp_dir="temp_similar"):
+def group_similar_images(job_id, images, similarity_threshold=0.9, temp_dir="temp_similar"):
     """
     유사한 이미지들을 그룹화하는 함수
     Args:
@@ -65,6 +66,7 @@ def group_similar_images(images, similarity_threshold=0.9, temp_dir="temp_simila
         except Exception as e:
             print(f"[경고] 임베딩 실패: {img_name} / {e}")
     
+    update_job_status(job_id, "similar_grouping", "이미지 임베딩 생성 완료", "PROCESSING", len(embeddings), 0)
     # 유사성 기반 그룹화
     groups = []
     used = set()
@@ -91,7 +93,6 @@ def group_similar_images(images, similarity_threshold=0.9, temp_dir="temp_simila
                         "image2": embeddings[j][0],
                         "similarity": float(round(sim, 4))
                     })
-        
         used.add(embeddings[i][0])
         
         if len(group) > 1:
@@ -100,6 +101,8 @@ def group_similar_images(images, similarity_threshold=0.9, temp_dir="temp_simila
                 "images": group,
                 "similarities": similarities
             })
+
+        update_job_status(job_id, "similar_grouping", "유사 이미지 분석중입니다.", "PROCESSING", len(embeddings), i)
     
     # 임시 디렉토리 정리
     clear_folder(temp_dir)
