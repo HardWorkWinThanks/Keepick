@@ -6,8 +6,15 @@ import {
   joinRoomThunk,
   leaveRoomThunk,
 } from "@/entities/video-conference/session/model/thunks";
+
+import {
+  consumeNewProducerThunk,
+  handleProducerClosedThunk,
+} from "@/entities/video-conference/consume-stream/model/thunks";
 import { ConferenceLayout } from "@/widgets/video-conference/ConferenceLayout";
 import { JoinForm } from "@/features/video-conference/join-room";
+import { socketApi } from "@/shared/api/socketApi"; // 🛑 API 모듈 import
+import { mediasoupManager } from "@/shared/api/mediasoupManager"; // 🛑 API 모듈 import
 
 interface ConferenceClientPageProps {
   roomId: string;
@@ -19,6 +26,18 @@ export const ConferenceClientPage = ({ roomId }: ConferenceClientPageProps) => {
   const isJoining = useAppSelector(
     (state) => state.session.status === "pending"
   );
+
+  useEffect(() => {
+    // thunk 함수들을 socketApi에 주입하여 초기화합니다.
+    socketApi.init(
+      dispatch,
+      (params) => dispatch(consumeNewProducerThunk(params)),
+      (params) => dispatch(handleProducerClosedThunk(params))
+    );
+    // mediasoupManager에도 dispatch를 주입합니다.
+    mediasoupManager.init(dispatch);
+  }, [dispatch]);
+
   useEffect(() => {
     return () => {
       // 컴포넌트가 사라질 때, 방에 참여한 상태였다면 자동으로 떠납니다.

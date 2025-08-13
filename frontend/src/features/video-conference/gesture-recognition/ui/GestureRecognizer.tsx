@@ -280,14 +280,46 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
   ]);
 
   // --- Effects ---
+  // 스트림을 분석용 비디오에 연결
   useEffect(() => {
-    // 스트림을 분석용 비디오에 연결
     const video = analysisVideoRef.current;
-    if (stream && video) {
-      video.srcObject = stream;
-      video.play().catch((e) => console.error("분석용 비디오 재생 실패", e));
-    }
-  }, [stream]);
+    if (!stream || !video) return;
+
+    // 1. 스트림을 비디오 소스에 할당
+    video.srcObject = stream;
+
+    // 2. 비디오가 데이터를 로드하고 재생 준비가 되면 실행될 핸들러
+    const handleCanPlay = () => {
+      // 3. 재생을 시도하고, 에러를 잡습니다.
+      video.play().catch((err) => {
+        // AbortError는 흔하게 발생하며, 무시해도 안전합니다.
+        if (err.name !== "AbortError") {
+          console.error("분석용 비디오 재생 실패:", err);
+        }
+      });
+    };
+
+    // 4. 비디오가 재생되기 시작하면, 예측 루프를 시작합니다.
+    const handlePlay = () => {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+      predictGestures();
+    };
+
+    // 5. 이벤트 리스너 등록
+    video.addEventListener("canplay", handleCanPlay);
+    video.addEventListener("play", handlePlay);
+
+    // 6. Cleanup 함수: 컴포넌트가 사라질 때 이벤트 리스너를 제거합니다.
+    return () => {
+      video.removeEventListener("canplay", handleCanPlay);
+      video.removeEventListener("play", handlePlay);
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+    };
+  }, [stream, predictGestures]);
 
   useEffect(() => {
     // 모델이 준비되면 예측 루프 시작

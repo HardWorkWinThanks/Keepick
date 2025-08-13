@@ -25,12 +25,11 @@ type HandleProducerClosedThunk = (data: { producerId: string }) => any;
 
 class SocketApi {
   private socket: Socket | null = null;
-  private dispatch: AppDispatch | null = null;
   private consumeProducerThunk: ConsumeProducerThunk | null = null;
   private handleProducerClosedThunk: HandleProducerClosedThunk | null = null;
 
   public init(
-    dispatch: AppDispatch,
+    dispatch: AppDispatch, // dispatch는 이제 joined_room에서만 사용됩니다.
     consumeProducerThunk: ConsumeProducerThunk,
     handleProducerClosedThunk: HandleProducerClosedThunk
   ) {
@@ -39,13 +38,13 @@ class SocketApi {
       return;
     }
 
-    this.dispatch = dispatch;
     this.consumeProducerThunk = consumeProducerThunk;
     this.handleProducerClosedThunk = handleProducerClosedThunk;
 
     console.log("Connecting to socket server...");
     this.socket = io(SOCKET_SERVER_URL, { transports: ["websocket"] });
-    this.setupEventListeners();
+    // init 시점에 dispatch를 넘겨서 이벤트 리스너를 설정합니다.
+    this.setupEventListeners(dispatch);
   }
 
   // 🛑 헬퍼: 특정 이벤트를 기다리는 Promise를 생성합니다. (비동기 로직용)
@@ -65,10 +64,8 @@ class SocketApi {
       });
     });
   }
-
-  private setupEventListeners() {
-    if (!this.socket || !this.dispatch) return;
-    const dispatch = this.dispatch;
+  private setupEventListeners(dispatch: AppDispatch) {
+    if (!this.socket) return;
 
     this.socket.on("connect", () => {
       console.log("✅ Socket connected:", this.socket?.id);
@@ -85,7 +82,6 @@ class SocketApi {
       dispatch(setError(`Socket connection error: ${err.message}`));
     });
 
-    // --- 비동기 흐름의 시작점 ---
     this.socket.on(
       "joined_room",
       (data: { rtpCapabilities: RtpCapabilities; peers: User[] }) => {
@@ -103,7 +99,6 @@ class SocketApi {
       }
     );
 
-    // --- 서버로부터 일방적으로 받는 이벤트들 ---
     this.socket.on("user_joined", (user: User) => {
       console.log(`👋 User joined: ${user.name}`);
       dispatch(addUser(user));
@@ -121,25 +116,22 @@ class SocketApi {
         this.socket &&
         data.producerSocketId !== this.socket.id
       ) {
-        dispatch(
-          this.consumeProducerThunk({
-            producerId: data.producerId,
-            producerSocketId: data.producerSocketId,
-          })
-        );
+        // 🛑 수정된 부분: dispatch()로 감싸지 않고 주입받은 함수를 직접 호출합니다.
+        this.consumeProducerThunk({
+          producerId: data.producerId,
+          producerSocketId: data.producerSocketId,
+        });
       }
     });
 
     this.socket.on("producer_closed", (data: { producerId: string }) => {
       console.log(`🔌 Producer ${data.producerId} was closed on the server.`);
       if (this.handleProducerClosedThunk) {
-        dispatch(
-          this.handleProducerClosedThunk({ producerId: data.producerId })
-        );
+        // 🛑 수정된 부분: dispatch()로 감싸지 않고 주입받은 함수를 직접 호출합니다.
+        this.handleProducerClosedThunk({ producerId: data.producerId });
       }
     });
   }
-
   // --- Public Methods (Fire-and-Forget 방식) ---
 
   public getSocketId = () => this.socket?.id || null;

@@ -32,6 +32,12 @@ class MediasoupManager {
   private localStream: MediaStream | null = null;
   private remoteStreams = new Map<string, MediaStream>();
   private dispatch: AppDispatch | null = null;
+  private consumptionQueue: {
+    producerId: string;
+    producerSocketId: string;
+    roomId: string;
+  }[] = [];
+  private isConsuming = false;
 
   public init(dispatch: AppDispatch) {
     this.dispatch = dispatch;
@@ -160,30 +166,56 @@ class MediasoupManager {
     producerSocketId: string,
     roomId: string
   ) {
-    if (!this.consumerTransport || !this.device || !this.dispatch)
-      throw new Error("Cannot consume");
+    this.consumptionQueue.push({ producerId, producerSocketId, roomId });
+    this.processConsumptionQueue();
+  }
 
-    const consumerOptions = await socketApi.consume({
-      transportId: this.consumerTransport.id,
-      producerId,
-      rtpCapabilities: this.device.rtpCapabilities,
-      roomId,
-    });
-    const consumer = await this.consumerTransport.consume(consumerOptions);
-    this.consumers.set(producerId, { consumer, socketId: producerSocketId });
-
-    consumer.on("trackended", () => this.closeConsumerForProducer(producerId));
-
-    const { track } = consumer;
-    let stream = this.remoteStreams.get(producerSocketId);
-    if (!stream) {
-      stream = new MediaStream();
-      this.remoteStreams.set(producerSocketId, stream);
+  private async processConsumptionQueue() {
+    // 이미 다른 요청을 처리 중이거나 큐가 비어있으면 아무것도 하지 않음
+    if (this.isConsuming || this.consumptionQueue.length === 0) {
+      return;
     }
-    stream.addTrack(track);
 
-    this.dispatch(addRemotePeer(producerSocketId));
-    console.log(`✅ Consuming ${consumer.kind} from ${producerSocketId}`);
+    this.isConsuming = true;
+    const { producerId, producerSocketId, roomId } =
+      this.consumptionQueue.shift()!;
+
+    try {
+      if (!this.consumerTransport || !this.device || !this.dispatch) {
+        throw new Error("Cannot consume, transport is not ready.");
+      }
+
+      const consumerOptions = await socketApi.consume({
+        transportId: this.consumerTransport.id,
+        producerId,
+        rtpCapabilities: this.device.rtpCapabilities,
+        roomId,
+      });
+
+      // 이 부분이 동시에 실행되지 않도록 보장하는 것이 핵심입니다.
+      const consumer = await this.consumerTransport.consume(consumerOptions);
+
+      this.consumers.set(producerId, { consumer, socketId: producerSocketId });
+      consumer.on("trackended", () =>
+        this.closeConsumerForProducer(producerId)
+      );
+
+      const { track } = consumer;
+      let stream = this.remoteStreams.get(producerSocketId);
+      if (!stream) {
+        stream = new MediaStream();
+        this.remoteStreams.set(producerSocketId, stream);
+      }
+      stream.addTrack(track);
+      this.dispatch(addRemotePeer(producerSocketId));
+      console.log(`✅ Consuming ${consumer.kind} from ${producerSocketId}`);
+    } catch (error) {
+      console.error(`❌ Failed to consume producer ${producerId}:`, error);
+    } finally {
+      // 처리가 끝나면 플래그를 해제하고 다음 요청 처리를 시도합니다.
+      this.isConsuming = false;
+      this.processConsumptionQueue();
+    }
   }
 
   public closeConsumerForProducer(producerId: string) {

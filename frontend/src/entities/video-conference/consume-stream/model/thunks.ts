@@ -3,8 +3,9 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { RootState } from "@/shared/config/store";
 import { mediasoupManager } from "@/shared/api/mediasoupManager";
 
+// 🛑 consume 로직을 담당하는 Thunk (이름 변경 제안: consumeNewProducerThunk)
 export const consumeNewProducerThunk = createAsyncThunk(
-  "webrtc/consumeNewProducer",
+  "session/consumeNewProducer",
   async (
     {
       producerId,
@@ -12,32 +13,26 @@ export const consumeNewProducerThunk = createAsyncThunk(
     }: { producerId: string; producerSocketId: string },
     { getState }
   ) => {
-    const { session } = getState() as RootState;
-    const { roomId } = session;
-
     try {
-      await mediasoupManager.consume(producerId, producerSocketId, roomId);
-    } catch (error: any) {
-      console.error(`❌ Failed to consume producer ${producerId}:`, error);
-      // 실패 시 특정 에러 처리 로직 추가 가능
-      throw new Error(error.message);
+      const state = getState() as RootState;
+      const roomId = state.session.roomId;
+      if (roomId) {
+        await mediasoupManager.consume(producerId, producerSocketId, roomId);
+      }
+    } catch (error) {
+      console.error("Failed to consume new producer:", error);
     }
   }
 );
 
+// 🛑 producer가 닫혔을 때 관련 consumer를 정리하는 Thunk
 export const handleProducerClosedThunk = createAsyncThunk(
-  "webrtc/handleProducerClosed",
-  async ({ producerId }: { producerId: string }, { dispatch, getState }) => {
+  "session/handleProducerClosed",
+  async ({ producerId }: { producerId: string }) => {
     try {
-      console.log(`[Thunk] Handling closed producer: ${producerId}`);
-      // mediasoupManager의 메서드를 Thunk 내부에서 안전하게 호출
       mediasoupManager.closeConsumerForProducer(producerId);
-    } catch (error: any) {
-      console.error(
-        `❌ Failed to handle producer closing for ${producerId}:`,
-        error
-      );
-      throw new Error(error.message);
+    } catch (error) {
+      console.error("Failed to handle producer closed event:", error);
     }
   }
 );

@@ -42,7 +42,7 @@ export const VideoGrid = () => {
     <div className={`grid ${getGridClass(totalStreams)} gap-4 p-4 flex-grow`}>
       {/* 내 비디오 화면 */}
       {localStream && (
-        <GestureRecognizer>
+        <GestureRecognizer stream={localStream}>
           <UserVideoCard
             stream={localStream}
             userName={`${localUserName} (나)`}
