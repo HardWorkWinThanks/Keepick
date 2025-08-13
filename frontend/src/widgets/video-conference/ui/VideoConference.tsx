@@ -11,7 +11,7 @@ import React, {
 import { useSocket } from "@/shared/api/socket/useSocket";
 import { useMediasoup } from "../lib/useMediaSoup";
 import { useVideoSession } from "../model/useVideoSession";
-import { VideoGrid } from "./VideoGrid";
+import { VideoGrid } from "./VideoGrid_b";
 import { ConferenceSidebar } from "./ConferenceSidebar";
 import type { Consumer } from "mediasoup-client/types";
 import type { User } from "@/shared/types/webrtc";

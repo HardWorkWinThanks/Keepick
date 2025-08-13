@@ -1,8 +1,7 @@
-// src/app/groupchat/[groupId]/page.tsx
 import type { Metadata } from "next";
-import { VideoConference } from "@/widgets/video-conference/ui/VideoConference";
+// --- 우리가 만든 클라이언트 페이지 컴포넌트를 import 합니다. ---
+import { ConferenceClientPage } from "./_components/ConferenceClientPage";
 
-// ✅ Promise 타입을 명시적으로 포함한 정확한 타입 정의
 interface PageProps {
   params: Promise<{ groupId: string }>;
 }
@@ -18,10 +17,12 @@ export async function generateMetadata({
   };
 }
 
+// 이 컴포넌트는 서버에서 실행됩니다.
 const GroupChatPage = async ({ params }: PageProps) => {
   const { groupId: roomId } = await params;
 
-  return <VideoConference initialRoomId={roomId} />;
+  // 서버에서 얻은 roomId를 클라이언트 컴포넌트에 prop으로 전달합니다.
+  return <ConferenceClientPage roomId={roomId} />;
 };
 
 export default GroupChatPage;

@@ -19,6 +19,7 @@ export interface TransportOptions {
   iceParameters: IceParameters; // FIX: any -> IceParameters
   iceCandidates: IceCandidate[]; // FIX: any -> IceCandidate[]
   dtlsParameters: DtlsParameters; // FIX: any -> DtlsParameters
+  sctpParameters?: any;
 }
 
 export interface ProducerInfo {
@@ -80,4 +81,6 @@ export interface ConsumerCreatedData {
   producerId: string;
   kind: "audio" | "video";
   rtpParameters: RtpParameters; // FIX: any -> RtpParameters
+  type: string;
+  producerPaused: boolean;
 }

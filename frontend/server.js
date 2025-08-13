@@ -11,8 +11,8 @@ const handle = app.getRequestHandler();
 
 // HTTPS 옵션: 인증서 경로는 동일하지만, 내용은 이제 IP 주소도 포함합니다.
 const httpsOptions = {
-  key: fs.readFileSync(path.resolve(__dirname, "certs/localhost-key.pem")),
-  cert: fs.readFileSync(path.resolve(__dirname, "certs/localhost.pem")),
+  key: fs.readFileSync(path.resolve(__dirname, "certs/server.key")),
+  cert: fs.readFileSync(path.resolve(__dirname, "certs/server.cert")),
 };
 
 const port = 3000;

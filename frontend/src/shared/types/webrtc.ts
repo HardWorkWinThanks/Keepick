@@ -31,3 +31,9 @@ export interface UserExitData {
 export interface ErrorData {
   message: string;
 }
+
+export interface NewProducerInfo {
+  producerId: string;
+  producerSocketId: string;
+  kind: "audio" | "video";
+}

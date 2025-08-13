@@ -44,7 +44,7 @@ export const useSocket = (callbacks?: SocketCallbacks) => {
     console.log("🔌 Connecting to:", SOCKET_SERVER_URL);
 
     const socket = io(SOCKET_SERVER_URL, {
-      path: "/sfu-demo/socket.io/",
+      // path: "/sfu-demo/socket.io/",
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 5,

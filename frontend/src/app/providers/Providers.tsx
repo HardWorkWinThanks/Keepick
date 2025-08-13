@@ -2,13 +2,14 @@
 import StoreProvider from "./StoreProvider";
 import QueryProvider from "./QueryProvider";
 import { AuthInitializer } from "@/features/auth/model/AuthInitializer";
+import { AppInitializer } from "./AppInitializer";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <StoreProvider>
       <QueryProvider>
         <AuthInitializer>
-          {children}
+          <AppInitializer>{children}</AppInitializer>
         </AuthInitializer>
       </QueryProvider>
     </StoreProvider>
