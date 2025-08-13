@@ -5,7 +5,6 @@ dotenv.config();
 const isProduction = process.env.NODE_ENV === "production";
 
 // 상수 정의
-const FRONT_URL = process.env.FRONT_VERCEL_URL
 const BASE_URL = process.env.BASE_URL
 const DEV_URL = process.env.DEV_URL
 const DEV_ORIGIN = process.env.DEV_ORIGIN

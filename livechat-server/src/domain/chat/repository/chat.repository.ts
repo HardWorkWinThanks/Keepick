@@ -31,6 +31,15 @@ export class ChatRepository {
     return this.chatRooms.get(roomId);
   }
 
+  getChatRoomByParticipantId(participantId: string): ChatRoom | undefined {
+    for (const room of this.chatRooms.values()) {
+      if (room.participants.has(participantId)) {
+        return room;
+      }
+    }
+    return undefined;
+  }
+
   deleteChatRoom(roomId: string): boolean {
     return this.chatRooms.delete(roomId);
   }
