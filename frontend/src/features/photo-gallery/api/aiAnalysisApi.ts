@@ -47,7 +47,11 @@ export const createAnalysisStatusSSE = (
   onError: (error: Event) => void,
   onClose: () => void
 ): EventSource => {
-  const url = `/api/groups/${groupId}/photos/analysis/status/${jobId}`
+  // 토큰을 URL 쿼리 파라미터로 전달 (SSE는 헤더 설정 불가)
+  // const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
+  const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/groups/${groupId}/photos/analysis/status/${jobId}`
+  // const url = token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl
+  
   const eventSource = new EventSource(url)
   
   eventSource.onmessage = (event) => {
@@ -61,7 +65,20 @@ export const createAnalysisStatusSSE = (
   }
   
   eventSource.onerror = (event) => {
-    console.error('SSE 연결 오류:', event)
+    console.error('SSE 연결 오류:', {
+      event,
+      readyState: eventSource.readyState,
+      url: eventSource.url
+    })
+    
+    // readyState 상태 정보 추가
+    const stateMessages = {
+      0: 'CONNECTING',
+      1: 'OPEN', 
+      2: 'CLOSED'
+    }
+    console.error(`SSE 상태: ${stateMessages[eventSource.readyState as keyof typeof stateMessages] || 'UNKNOWN'}`)
+    
     onError(event)
   }
   

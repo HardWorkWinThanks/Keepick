@@ -93,7 +93,7 @@ export default function AiServiceModal({ isOpen, onClose, onSimilarPhotosSort }:
                       <span className="text-xs text-gray-500 bg-gray-800 px-2 py-1 rounded">자동</span>
                     </div>
                     <p className="text-gray-400 text-xs font-keepick-primary leading-relaxed ml-6">
-                      같은 인물이 포함된 사진들을 자동으로 분류합니다.
+                      그룹원이 포함된 사진들을 자동으로 분류합니다.
                     </p>
                   </div>
 

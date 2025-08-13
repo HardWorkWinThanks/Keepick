@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from "react"
+import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, SlidersHorizontal, Check, Trash2, X, ChevronUp, ChevronDown, Upload, Loader2 } from "lucide-react"
 import { usePhotoGallery, useMasonryLayout, useDragScroll } from "../model/usePhotoGallery"
@@ -9,7 +10,7 @@ import AiMagicButton from "./AiMagicButton"
 import AiServiceModal from "./AiServiceModal"
 import { uploadGalleryImages } from "../api/galleryUploadApi"
 import { requestAiAnalysis, createAnalysisStatusSSE, AnalysisStatusMessage } from "../api/aiAnalysisApi"
-import { getGroupPhotos, getPhotoTags, parseTagsString, parseMemberNicknamesString } from "../api/galleryPhotosApi"
+import { getGroupPhotos, getGroupOverview, getPhotoTags, parseTagsString, parseMemberNicknamesString, convertToGalleryPhoto, deleteGroupPhotos } from "../api/galleryPhotosApi"
 
 interface PhotoGalleryProps {
   groupId: string
@@ -33,11 +34,12 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     enterSelectionMode,
     exitSelectionMode,
     togglePhotoSelection,
-    deleteSelectedPhotos,
+    deleteSelectedPhotos: deleteSelectedPhotosBase,
     createTimelineAlbum,
     createTierAlbum,
     loadMorePhotos,
     setIsPhotosExpanded,
+    setGalleryData,
   } = usePhotoGallery()
 
   const columns = useMasonryLayout(filteredPhotos, columnCount)
@@ -79,6 +81,33 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     message: ''
   })
   
+  // 초기 갤러리 데이터 로딩 (컴포넌트 마운트 시 한 번만)
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        console.log('갤러리 초기 데이터 로딩 시작...')
+        const overview = await getGroupOverview(parseInt(groupId))
+        
+        // 전체 사진을 갤러리 형식으로 변환
+        const galleryPhotos = overview.allPhotos.list.map(convertToGalleryPhoto)
+        
+        // 갤러리 데이터 설정
+        setGalleryData(galleryPhotos)
+        
+        console.log('갤러리 초기 데이터 로딩 완료:', {
+          allPhotos: overview.allPhotos.list.length,
+          blurredPhotos: overview.blurredPhotos.list.length,
+          similarClusters: overview.similarPhotos.list.length
+        })
+        
+      } catch (error) {
+        console.error('갤러리 초기 데이터 로딩 실패:', error)
+      }
+    }
+    
+    loadInitialData()
+  }, [groupId])
+
   // SSE 연결 정리 (컴포넌트 언마운트 시)
   useEffect(() => {
     return () => {
@@ -186,17 +215,49 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   const refreshGallery = async (): Promise<void> => {
     try {
       console.log('갤러리 새로고침 중...')
-      const photos = await getGroupPhotos(parseInt(groupId), {
-        page: 0,
-        size: 20 // 기본 페이지 크기
-      })
-      console.log('새로운 사진 목록:', photos)
+      const overview = await getGroupOverview(parseInt(groupId))
       
-      // TODO: 기존 갤러리 상태를 업데이트하는 로직 추가
-      // usePhotoGallery 훅에서 새로고침 함수를 제공해야 함
+      // 전체 사진을 갤러리 형식으로 변환
+      const galleryPhotos = overview.allPhotos.list.map(convertToGalleryPhoto)
+      
+      // 갤러리 데이터 설정
+      setGalleryData(galleryPhotos)
+      
+      console.log('갤러리 새로고침 완료:', galleryPhotos.length + '장')
       
     } catch (error) {
       console.error('갤러리 새로고침 실패:', error)
+    }
+  }
+
+  // 선택된 사진들 삭제 (실제 API 사용)
+  const deleteSelectedPhotos = async () => {
+    if (selectedPhotos.length === 0) return
+    
+    try {
+      console.log('사진 삭제 요청:', selectedPhotos)
+      
+      // API로 사진 삭제 요청
+      const deleteResult = await deleteGroupPhotos(parseInt(groupId), selectedPhotos)
+      
+      console.log('삭제 결과:', deleteResult)
+      
+      // 성공적으로 삭제된 사진들만 UI에서 제거
+      if (deleteResult.deletedPhotoIds.length > 0) {
+        // 로컬 상태 업데이트 (삭제된 사진만 제거)
+        deleteSelectedPhotosBase() // 기존 로직 사용하여 UI 업데이트
+        
+        console.log(`${deleteResult.deletedPhotoIds.length}장 삭제 완료`)
+      }
+      
+      // 삭제되지 않은 사진이 있으면 알림
+      if (deleteResult.unDeletedPhotoIds.length > 0) {
+        alert(`${deleteResult.unDeletedPhotoIds.length}장의 사진을 삭제할 수 없습니다.`)
+      }
+      
+    } catch (error) {
+      console.error('사진 삭제 실패:', error)
+      alert('사진 삭제에 실패했습니다. 다시 시도해주세요.')
     }
   }
 
@@ -519,6 +580,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                       className="relative overflow-hidden cursor-pointer group"
                       style={{
                         aspectRatio: photo.aspectRatio,
+                        position: 'relative',
                       }}
                       onMouseEnter={() => {
                         // 마우스 호버 시 태그 정보 미리 로드
@@ -533,13 +595,18 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                         }
                       }}
                     >
-                      <img
+                      <Image
                         src={photo.src || "/placeholder.svg"}
                         alt={photo.title}
-                        className={`w-full h-full object-cover transition-all duration-500 ${
+                        fill
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+                        className={`object-cover transition-all duration-500 ${
                           isSelectionMode ? "group-hover:scale-105" : "group-hover:scale-110"
                         } ${selectedPhotos.includes(photo.id) ? "brightness-75" : ""}`}
-                        loading="lazy"
+                        quality={85}
+                        priority={photoIndex < 8}
+                        placeholder="blur"
+                        blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                         draggable={false}
                       />
 
@@ -773,10 +840,15 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                                 transition={{ duration: 0.3, delay: index * 0.05 }}
                                 className="relative overflow-hidden rounded cursor-pointer group aspect-square"
                               >
-                                <img
+                                <Image
                                   src={photo.src || "/placeholder.svg"}
                                   alt={photo.title}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  fill
+                                  sizes="12.5vw"
+                                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                  quality={75}
+                                  placeholder="blur"
+                                  blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                                   draggable={false}
                                 />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
@@ -832,11 +904,16 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                         const photo = selectedPhotoData.find((p) => p.id === photoId)
                         if (!photo) return null
                         return (
-                          <div key={photoId} className="w-10 h-10 flex-shrink-0 rounded overflow-hidden">
-                            <img
+                          <div key={photoId} className="w-10 h-10 flex-shrink-0 rounded overflow-hidden relative">
+                            <Image
                               src={photo.src || "/placeholder.svg"}
                               alt={photo.title}
-                              className="w-full h-full object-cover"
+                              fill
+                              sizes="40px"
+                              className="object-cover"
+                              quality={60}
+                              placeholder="blur"
+                              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                               draggable={false}
                             />
                           </div>

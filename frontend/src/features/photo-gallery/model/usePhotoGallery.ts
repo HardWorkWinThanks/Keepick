@@ -267,6 +267,12 @@ export function usePhotoGallery() {
     exitSelectionMode()
   }
 
+  // 갤러리 데이터 설정 (외부에서 호출)
+  const setGalleryData = (photos: GalleryPhoto[]) => {
+    setAllPhotos(photos)
+    setHasMore(false) // overview는 페이지네이션 없음
+  }
+
   // 더 많은 사진 로드 (실제 API 구현 필요)
   const loadMorePhotos = () => {
     setLoading(true)
@@ -311,5 +317,6 @@ export function usePhotoGallery() {
     createTierAlbum,
     loadMorePhotos,
     setIsPhotosExpanded,
+    setGalleryData,
   }
 }
