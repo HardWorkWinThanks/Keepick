@@ -54,15 +54,29 @@ export const createAnalysisStatusSSE = (
   
   const eventSource = new EventSource(url)
   
+  // 기본 메시지 리스너
   eventSource.onmessage = (event) => {
     try {
+      console.log('SSE 기본 메시지:', event.data)
       const data: AnalysisStatusMessage = JSON.parse(event.data)
+      console.log('SSE 파싱된 데이터:', data)
       onMessage(data)
     } catch (error) {
-      console.error('SSE 메시지 파싱 오류:', error)
-      onError(event)
+      console.error('SSE 메시지 파싱 오류:', error, 'Raw data:', event.data)
     }
   }
+  
+  // job-status 이벤트 전용 리스너 추가
+  eventSource.addEventListener('job-status', (event) => {
+    try {
+      console.log('SSE job-status 이벤트:', event.data)
+      const data: AnalysisStatusMessage = JSON.parse(event.data)
+      console.log('SSE job-status 파싱된 데이터:', data)
+      onMessage(data)
+    } catch (error) {
+      console.error('SSE job-status 파싱 오류:', error, 'Raw data:', event.data)
+    }
+  })
   
   eventSource.onerror = (event) => {
     console.error('SSE 연결 오류:', {
@@ -79,7 +93,16 @@ export const createAnalysisStatusSSE = (
     }
     console.error(`SSE 상태: ${stateMessages[eventSource.readyState as keyof typeof stateMessages] || 'UNKNOWN'}`)
     
-    onError(event)
+    // 연결 상태에 따른 처리
+    if (eventSource.readyState === 0) { // CONNECTING
+      console.log('SSE 연결 중 일시적 오류 (무시)')
+      // CONNECTING 상태의 오류는 무시 (재연결 시도)
+    } else if (eventSource.readyState === 2) { // CLOSED
+      console.log('SSE 연결이 정상적으로 종료됨')
+    } else {
+      // OPEN 상태에서의 오류만 실제 오류로 처리
+      onError(event)
+    }
   }
   
   eventSource.onopen = () => {

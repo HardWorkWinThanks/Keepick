@@ -75,14 +75,17 @@ export interface DeletePhotosResponse {
 }
 
 /**
- * 그룹 초기화면 로딩 (전체사진, 흐린사진, 유사사진 묶음)
+ * 그룹 초기화면 로딩 (전체사진, 흐린사진, 유사사진 묶음) - 전체 사진에서 더보기 시에도 사용
  */
 export const getGroupOverview = async (
-  groupId: number
+  groupId: number,
+  size?: number
 ): Promise<GroupOverviewResponse> => {
-  const response = await apiClient.get<ApiResponse<GroupOverviewResponse>>(
-    `/api/groups/${groupId}/photos/overview`
-  )
+  const url = size 
+    ? `/api/groups/${groupId}/photos/overview?size=${size}`
+    : `/api/groups/${groupId}/photos/overview`
+    
+  const response = await apiClient.get<ApiResponse<GroupOverviewResponse>>(url)
   
   return response.data.data
 }
@@ -165,6 +168,20 @@ export const getGroupBlurredPhotos = async (
 }
 
 /**
+ * 그룹 유사사진 클러스터 조회
+ */
+export const getGroupSimilarPhotos = async (
+  groupId: number,
+  filters: PhotoFilterRequest = {}
+): Promise<SimilarPhotoListResponse> => {
+  const response = await apiClient.get<ApiResponse<SimilarPhotoListResponse>>(
+    `/api/groups/${groupId}/similar`
+  )
+  
+  return response.data.data
+}
+
+/**
  * 그룹 사진 삭제
  */
 export const deleteGroupPhotos = async (
@@ -187,6 +204,33 @@ export const deleteGroupPhotos = async (
 export const convertToGalleryPhoto = (photoInfo: PhotoInfo): any => {
   const aspectRatio = photoInfo.width / photoInfo.height
   
+  // 날짜 파싱 안전 처리 (S3 업로드 시 추출된 메타데이터 사용)
+  const formatPhotoDate = (takenAt: string): string => {
+    try {
+      if (!takenAt) {
+        console.warn(`사진 ${photoInfo.photoId}: takenAt 정보가 없습니다`)
+        return "날짜 정보 없음"
+      }
+      
+      const date = new Date(takenAt)
+      
+      // 유효한 날짜인지 확인
+      if (isNaN(date.getTime())) {
+        console.warn(`사진 ${photoInfo.photoId}: 유효하지 않은 날짜 형식 - ${takenAt}`)
+        return "날짜 형식 오류"
+      }
+      
+      return date.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+    } catch (error) {
+      console.error(`사진 ${photoInfo.photoId} 날짜 파싱 오류:`, error)
+      return "날짜 파싱 오류"
+    }
+  }
+  
   return {
     id: photoInfo.photoId,
     src: photoInfo.thumbnailUrl, // 썸네일 URL 사용
@@ -196,11 +240,8 @@ export const convertToGalleryPhoto = (photoInfo: PhotoInfo): any => {
     aspectRatio,
     width: photoInfo.width,
     height: photoInfo.height,
-    date: new Date(photoInfo.takenAt).toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }),
+    date: formatPhotoDate(photoInfo.takenAt), // S3 메타데이터에서 추출된 촬영 일시 사용
+    originalTakenAt: photoInfo.takenAt, // 원본 ISO 날짜 정보도 보존
     tags: [], // 초기에는 빈 배열, 별도 API로 로드
   }
 }

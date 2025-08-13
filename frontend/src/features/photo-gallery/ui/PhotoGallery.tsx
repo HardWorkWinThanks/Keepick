@@ -10,7 +10,7 @@ import AiMagicButton from "./AiMagicButton"
 import AiServiceModal from "./AiServiceModal"
 import { uploadGalleryImages } from "../api/galleryUploadApi"
 import { requestAiAnalysis, createAnalysisStatusSSE, AnalysisStatusMessage } from "../api/aiAnalysisApi"
-import { getGroupPhotos, getGroupOverview, getPhotoTags, parseTagsString, parseMemberNicknamesString, convertToGalleryPhoto, deleteGroupPhotos, getGroupBlurredPhotos } from "../api/galleryPhotosApi"
+import { getGroupPhotos, getGroupOverview, getPhotoTags, parseTagsString, parseMemberNicknamesString, convertToGalleryPhoto, deleteGroupPhotos, getGroupBlurredPhotos, getGroupSimilarPhotos } from "../api/galleryPhotosApi"
 
 interface PhotoGalleryProps {
   groupId: string
@@ -26,21 +26,27 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     loading,
     hasMore,
     columnCount,
-    isSelectionMode,
+    isSelectionMode: baseSelectionMode,
     selectedPhotos,
     isPhotosExpanded,
     toggleTag,
     clearAllTags,
-    enterSelectionMode,
-    exitSelectionMode,
+    enterSelectionMode: enterBaseSelectionMode,
+    exitSelectionMode: exitBaseSelectionMode,
     togglePhotoSelection,
     deleteSelectedPhotos: deleteSelectedPhotosBase,
     createTimelineAlbum,
     createTierAlbum,
-    loadMorePhotos,
+    loadMorePhotos: loadMorePhotosBase,
     setIsPhotosExpanded,
     setGalleryData,
   } = usePhotoGallery()
+  
+  // 선택 모드 타입 상태 (앨범 생성 또는 사진 삭제)
+  const [selectionType, setSelectionType] = useState<'album' | 'delete' | null>(null)
+  const isSelectionMode = selectionType !== null
+  const isAlbumMode = selectionType === 'album'
+  const isDeleteMode = selectionType === 'delete'
 
   // 갤러리 뷰 모드 (전체/흐린사진/유사사진)
   const [viewMode, setViewMode] = useState<'all' | 'blurred' | 'similar'>('all')
@@ -49,13 +55,18 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   const [blurredPhotos, setBlurredPhotos] = useState<any[]>([])
   const [blurredPhotosLoading, setBlurredPhotosLoading] = useState(false)
   
+  // 유사사진 데이터
+  const [similarPhotoClusters, setSimilarPhotoClusters] = useState<any[]>([])
+  const [similarPhotosLoading, setSimilarPhotosLoading] = useState(false)
+  
   // 뷰 모드에 따른 표시할 사진 결정
   const displayPhotos = (() => {
     switch (viewMode) {
       case 'blurred':
         return blurredPhotos
       case 'similar':
-        return [] // TODO: 유사사진 구현 후 업데이트
+        // 유사사진은 클러스터별로 처리하므로 빈 배열 반환
+        return []
       default:
         return filteredPhotos
     }
@@ -70,6 +81,9 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   
   // AI 서비스 모달 상태 관리
   const [isAiModalOpen, setIsAiModalOpen] = useState(false)
+  
+  // 삭제 경고 모달 상태 관리
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   
   // 파일 업로드를 위한 ref
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -95,6 +109,11 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     if (mode === 'blurred' && blurredPhotos.length === 0) {
       loadBlurredPhotos()
     }
+    
+    // 유사사진 모드로 전환 시 데이터 로드
+    if (mode === 'similar' && similarPhotoClusters.length === 0) {
+      loadSimilarPhotos()
+    }
   }
   
   // 업로드 상태 관리
@@ -114,12 +133,20 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     message: ''
   })
   
+  // 전체 사진 개수 상태 (페이징 정보에서 가져옴)
+  const [totalPhotosCount, setTotalPhotosCount] = useState(0)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMorePhotos, setHasMorePhotos] = useState(false)
+  const [currentSize, setCurrentSize] = useState(20) // 현재 로드된 사진 수 (디폴트 20장)
+  const defaultPageSize = 20 // 기본 페이지 사이즈 (20, 40, 60, 80...)
+  
   // 초기 갤러리 데이터 로딩 (컴포넌트 마운트 시 한 번만)
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        console.log('갤러리 초기 데이터 로딩 시작...')
-        const overview = await getGroupOverview(parseInt(groupId))
+        console.log('갤러리 초기 데이터 로딩 시작... (디폴트 사이즈 20)')
+        const overview = await getGroupOverview(parseInt(groupId), defaultPageSize)
         
         // 전체 사진을 갤러리 형식으로 변환
         const galleryPhotos = overview.allPhotos.list.map(convertToGalleryPhoto)
@@ -127,8 +154,16 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
         // 갤러리 데이터 설정
         setGalleryData(galleryPhotos)
         
+        // 전체 사진 개수와 페이징 정보 설정
+        setTotalPhotosCount(overview.allPhotos.pageInfo.totalElement)
+        setCurrentPage(overview.allPhotos.pageInfo.page)
+        setHasMorePhotos(overview.allPhotos.pageInfo.hasNext)
+        setCurrentSize(overview.allPhotos.pageInfo.size) // 현재 로드된 사진 수 저장
+        
         console.log('갤러리 초기 데이터 로딩 완료:', {
           allPhotos: overview.allPhotos.list.length,
+          totalPhotos: overview.allPhotos.pageInfo.totalElement,
+          hasNext: overview.allPhotos.pageInfo.hasNext,
           blurredPhotos: overview.blurredPhotos.list.length,
           similarClusters: overview.similarPhotos.list.length
         })
@@ -140,6 +175,44 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     
     loadInitialData()
   }, [groupId])
+
+  // 더 많은 사진 로드 (누적적으로 사이즈 증가: 20 -> 40 -> 60 -> 80...)
+  const loadMorePhotos = async () => {
+    if (isLoadingMore) return
+    
+    setIsLoadingMore(true)
+    try {
+      const nextSize = currentSize + defaultPageSize // 현재 사이즈에 기본 사이즈만큼 추가
+      console.log(`추가 사진 로딩 시작... (사이즈 ${currentSize} -> ${nextSize})`)
+      
+      // getGroupOverview API를 다음 사이즈로 요청하여 더 많은 사진 가져오기
+      const overview = await getGroupOverview(parseInt(groupId), nextSize)
+      
+      // 전체 사진을 갤러리 형식으로 변환
+      const galleryPhotos = overview.allPhotos.list.map(convertToGalleryPhoto)
+      
+      // 갤러리 데이터 교체 (더 많은 사진으로 교체)
+      setGalleryData(galleryPhotos)
+      
+      // 전체 사진 개수와 페이징 정보 업데이트
+      setTotalPhotosCount(overview.allPhotos.pageInfo.totalElement)
+      setCurrentPage(overview.allPhotos.pageInfo.page)
+      setHasMorePhotos(overview.allPhotos.pageInfo.hasNext)
+      setCurrentSize(nextSize) // 새로운 사이즈 저장
+      
+      console.log(`추가 사진 로딩 완료 (사이즈 ${nextSize}):`, {
+        loadedPhotos: galleryPhotos.length,
+        totalPhotos: overview.allPhotos.pageInfo.totalElement,
+        hasNext: overview.allPhotos.pageInfo.hasNext,
+        currentSize: nextSize
+      })
+      
+    } catch (error) {
+      console.error('추가 사진 로딩 실패:', error)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }
 
   // SSE 연결 정리 (컴포넌트 언마운트 시)
   useEffect(() => {
@@ -191,8 +264,11 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
           // 상태에 따른 처리
           if (data.jobStatus === 'COMPLETED') {
             console.log('AI 분석 완료')
-            eventSource.close()
-            resolve()
+            // 연결을 닫기 전에 약간의 지연을 줌
+            setTimeout(() => {
+              eventSource.close()
+              resolve()
+            }, 100)
           } else if (data.jobStatus === 'FAILED') {
             console.error('AI 분석 실패')
             eventSource.close()
@@ -247,8 +323,8 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   // 갤러리 새로고침
   const refreshGallery = async (): Promise<void> => {
     try {
-      console.log('갤러리 새로고침 중...')
-      const overview = await getGroupOverview(parseInt(groupId))
+      console.log('갤러리 새로고침 중... (현재 사이즈 유지)')
+      const overview = await getGroupOverview(parseInt(groupId), currentSize)
       
       // 전체 사진을 갤러리 형식으로 변환
       const galleryPhotos = overview.allPhotos.list.map(convertToGalleryPhoto)
@@ -256,7 +332,16 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
       // 갤러리 데이터 설정
       setGalleryData(galleryPhotos)
       
-      console.log('갤러리 새로고침 완료:', galleryPhotos.length + '장')
+      // 전체 사진 개수와 페이징 정보 업데이트
+      setTotalPhotosCount(overview.allPhotos.pageInfo.totalElement)
+      setCurrentPage(overview.allPhotos.pageInfo.page)
+      setHasMorePhotos(overview.allPhotos.pageInfo.hasNext)
+      
+      console.log('갤러리 새로고침 완료:', {
+        currentPhotos: galleryPhotos.length,
+        totalPhotos: overview.allPhotos.pageInfo.totalElement,
+        hasNext: overview.allPhotos.pageInfo.hasNext
+      })
       
     } catch (error) {
       console.error('갤러리 새로고침 실패:', error)
@@ -282,6 +367,48 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     }
   }
 
+  // 유사사진 로드
+  const loadSimilarPhotos = async (): Promise<void> => {
+    try {
+      setSimilarPhotosLoading(true)
+      console.log('유사사진 로딩 중...')
+      
+      const similarData = await getGroupSimilarPhotos(parseInt(groupId))
+      
+      setSimilarPhotoClusters(similarData.list)
+      console.log('유사사진 로딩 완료:', similarData.list.length + '개 클러스터')
+      
+    } catch (error) {
+      console.error('유사사진 로딩 실패:', error)
+    } finally {
+      setSimilarPhotosLoading(false)
+    }
+  }
+
+  // 앨범 생성 모드 진입
+  const enterAlbumMode = () => {
+    setSelectionType('album')
+    enterBaseSelectionMode()
+  }
+  
+  // 사진 삭제 모드 진입
+  const enterDeleteMode = () => {
+    setSelectionType('delete')
+    enterBaseSelectionMode()
+  }
+  
+  // 선택 모드 종료
+  const exitSelectionMode = () => {
+    setSelectionType(null)
+    exitBaseSelectionMode()
+  }
+  
+  // 삭제 확인 모달 열기 (삭제 모드에서 사진 선택 후)
+  const handleDeleteConfirm = () => {
+    if (selectedPhotos.length === 0) return
+    setIsDeleteModalOpen(true)
+  }
+  
   // 선택된 사진들 삭제 (실제 API 사용)
   const deleteSelectedPhotos = async () => {
     if (selectedPhotos.length === 0) return
@@ -299,6 +426,16 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
         // 로컬 상태 업데이트 (삭제된 사진만 제거)
         deleteSelectedPhotosBase() // 기존 로직 사용하여 UI 업데이트
         
+        // 갤러리 데이터 새로고침으로 서버와 동기화
+        await refreshGallery()
+        
+        // 뷰 모드에 따라 추가 데이터 새로고침
+        if (viewMode === 'blurred') {
+          await loadBlurredPhotos()
+        } else if (viewMode === 'similar') {
+          await loadSimilarPhotos()
+        }
+        
         console.log(`${deleteResult.deletedPhotoIds.length}장 삭제 완료`)
       }
       
@@ -310,6 +447,8 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     } catch (error) {
       console.error('사진 삭제 실패:', error)
       alert('사진 삭제에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setIsDeleteModalOpen(false)
     }
   }
 
@@ -424,213 +563,186 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     <div className="min-h-screen bg-[#111111] text-white">
       {/* Main Content */}
       <main className="px-4 md:px-8" style={{ paddingBottom: isSelectionMode ? "100px" : "0" }}>
-        {/* Gallery Tabs */}
+        {/* Gallery Tabs & Controls */}
         <div className="max-w-7xl mx-auto pt-8 pb-4">
-          <div className="flex items-center gap-1 border-b border-gray-800">
-            <button 
-              onClick={() => handleViewModeChange('all')}
-              className={`px-4 py-2 text-sm font-keepick-primary transition-all duration-300 relative ${
-                viewMode === 'all' 
-                  ? 'text-white' 
-                  : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              전체 ({filteredPhotos.length})
-              {viewMode === 'all' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FE7A25]" />
-              )}
-            </button>
-            <button 
-              onClick={() => handleViewModeChange('blurred')}
-              className={`px-4 py-2 text-sm font-keepick-primary transition-all duration-300 relative ${
-                viewMode === 'blurred' 
-                  ? 'text-white' 
-                  : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              흐린사진 ({blurredPhotos.length})
-              {viewMode === 'blurred' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FE7A25]" />
-              )}
-            </button>
-            <button 
-              onClick={() => handleViewModeChange('similar')}
-              className={`px-4 py-2 text-sm font-keepick-primary transition-all duration-300 relative ${
-                viewMode === 'similar' 
-                  ? 'text-white' 
-                  : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              유사사진 (0개 그룹)
-              {viewMode === 'similar' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FE7A25]" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Controls Section */}
-        <div className="max-w-7xl mx-auto py-4">
-          <div className="flex items-start justify-between gap-8">
-            {/* Left: Tag Filters (전체 모드일 때만 표시) */}
-            {viewMode === 'all' && (
-              <div className="flex-1">
-                <div className="flex items-center gap-4 mb-4">
-                  <h3 className="font-keepick-primary text-sm text-gray-400 tracking-wider">
-                    태그별 분류
-                    {realTimeTags.length > 0 && (
-                      <span className="ml-2 text-xs text-[#FE7A25]">
-                        +{realTimeTags.length}개 AI 태그
-                      </span>
-                    )}
-                  </h3>
-                  {selectedTags.length > 0 && (
-                    <button
-                      onClick={clearAllTags}
-                      className="text-xs text-[#FE7A25] hover:text-orange-400 transition-colors font-keepick-primary"
-                    >
-                      전체 해제
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {/* 기존 태그와 실시간 태그 결합 */}
-                  {Array.from(new Set([...allTags, ...realTimeTags])).sort().map((tag) => {
-                    const isRealTimeTag = realTimeTags.includes(tag)
-                    return (
-                      <motion.button
-                        key={tag}
-                        onClick={() => toggleTag(tag)}
-                        className={`px-3 py-1.5 text-xs font-keepick-primary tracking-wide transition-all duration-300 relative ${ 
-                          selectedTags.includes(tag)
-                            ? "bg-white text-black shadow-lg"
-                            : isRealTimeTag
-                            ? "bg-[#FE7A25]/20 text-[#FE7A25] border border-[#FE7A25]/50 hover:bg-[#FE7A25]/30"
-                            : "bg-gray-900 text-gray-300 border border-gray-700 hover:border-gray-500 hover:text-white"
-                        }`}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        {tag}
-                        {/* 실시간 태그 표시 */}
-                        {isRealTimeTag && !selectedTags.includes(tag) && (
-                          <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#FE7A25] rounded-full"></span>
-                        )}
-                      </motion.button>
-                    )
-                  })}
-                </div>
-
-                {selectedTags.length > 0 && (
-                  <p className="text-xs text-gray-500 mt-3 font-keepick-primary">
-                    {selectedTags.length}개 태그 선택됨 • {filteredPhotos.length}장의 사진
-                  </p>
+          <div className="flex items-center justify-between border-b border-gray-800">
+            {/* Left: Tabs */}
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => handleViewModeChange('all')}
+                disabled={isSelectionMode}
+                className={`px-4 py-2 text-sm font-keepick-primary transition-all duration-300 relative ${
+                  isSelectionMode
+                    ? 'text-gray-600 cursor-not-allowed'
+                    : viewMode === 'all' 
+                      ? 'text-white' 
+                      : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                전체 ({totalPhotosCount})
+                {viewMode === 'all' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FE7A25]" />
                 )}
-              </div>
-            )}
+              </button>
+              <button 
+                onClick={() => handleViewModeChange('blurred')}
+                disabled={isSelectionMode}
+                className={`px-4 py-2 text-sm font-keepick-primary transition-all duration-300 relative ${
+                  isSelectionMode
+                    ? 'text-gray-600 cursor-not-allowed'
+                    : viewMode === 'blurred' 
+                      ? 'text-white' 
+                      : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                흐린사진 ({blurredPhotos.length})
+                {viewMode === 'blurred' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FE7A25]" />
+                )}
+              </button>
+              <button 
+                onClick={() => handleViewModeChange('similar')}
+                disabled={isSelectionMode}
+                className={`px-4 py-2 text-sm font-keepick-primary transition-all duration-300 relative ${
+                  isSelectionMode
+                    ? 'text-gray-600 cursor-not-allowed'
+                    : viewMode === 'similar' 
+                      ? 'text-white' 
+                      : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                유사사진 ({similarPhotoClusters.length}개 그룹)
+                {viewMode === 'similar' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FE7A25]" />
+                )}
+              </button>
+            </div>
 
-            {/* 흐린사진/유사사진 모드일 때 빈 공간 */}
-            {viewMode !== 'all' && <div className="flex-1"></div>}
+            {/* Right: Control Buttons */}
+            <div className="flex items-center gap-3 pb-2">
+              {/* Album Mode Button - 같은 자리에서 텍스트만 변경 */}
+              <button
+                onClick={isAlbumMode ? exitSelectionMode : enterAlbumMode}
+                disabled={isDeleteMode}
+                className={`px-6 py-2 bg-transparent border-2 font-keepick-heavy text-sm tracking-wider transition-all duration-300 ${
+                  isDeleteMode
+                    ? "border-gray-600 text-gray-600 cursor-not-allowed"
+                    : isAlbumMode 
+                      ? "border-gray-600 text-gray-300 hover:text-white hover:border-gray-400"
+                      : "border-[#FE7A25] text-white hover:bg-[#FE7A25]/10"
+                }`}
+              >
+                {isAlbumMode ? "취소" : "앨범 만들기"}
+              </button>
 
-            {/* Right: Controls */}
-            <div className="flex flex-col items-end gap-3 w-32">
-              {/* Selection Mode Button - Fixed height container */}
-              <div className="h-10 flex items-center">
-                <AnimatePresence mode="wait">
-                  {!isSelectionMode ? (
-                    <motion.button
-                      key="keep-button"
-                      onClick={enterSelectionMode}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
-                      className="px-6 py-2 bg-transparent border-2 border-[#FE7A25] text-white font-keepick-heavy text-sm tracking-wider transition-all duration-300 hover:bg-[#FE7A25]/10"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      앨범 만들기
-                    </motion.button>
-                  ) : (
-                    <motion.button
-                      key="exit-button"
-                      onClick={exitSelectionMode}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
-                      className="px-4 py-2 border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 font-keepick-primary text-sm transition-colors"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <X size={16} />
-                    </motion.button>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Sort Button */}
-              {/* <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 font-keepick-primary">정렬</span>
-                <button className="p-2 border border-gray-700 hover:border-gray-500 transition-colors">
-                  <SlidersHorizontal size={16} className="text-gray-400" />
-                </button>
-              </div> */}
-
-              {/* AI & Upload Buttons Row */}
-              <div className="flex items-start gap-3">
-                {/* AI Magic Button */}
+              {/* AI Magic Button */}
+              <div className={isSelectionMode ? "pointer-events-none opacity-50" : ""}>
                 <AiMagicButton onAiServiceClick={handleAiServiceClick} />
-
-                {/* Upload Button */}
-                <div className="flex flex-col items-center gap-2">
-                  <button 
-                    onClick={handleUploadClick}
-                    className="px-6 py-2 bg-transparent border-2 border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 font-keepick-primary text-sm tracking-wider transition-all duration-300 flex items-center justify-center"
-                  >
-                    <Upload size={16} />
-                  </button>
-                  <span className="text-xs text-gray-400 font-keepick-primary">업로드</span>
-                  {/* 숨겨진 파일 input */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                </div>
               </div>
 
-              {/* Delete Button (Selection Mode Only) - Fixed position */}
-              <div className="h-10 flex items-center">
-                <AnimatePresence>
-                  {isSelectionMode && selectedPhotos.length > 0 && (
-                    <motion.button
-                      onClick={deleteSelectedPhotos}
-                      className="p-2 border border-red-600 text-red-400 hover:bg-red-600 hover:text-white transition-colors"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <Trash2 size={16} />
-                    </motion.button>
-                  )}
-                </AnimatePresence>
-              </div>
+              {/* Upload Button */}
+              <button 
+                onClick={handleUploadClick}
+                disabled={isSelectionMode}
+                className={`px-6 py-2 bg-transparent border-2 font-keepick-primary text-sm tracking-wider transition-all duration-300 flex items-center justify-center ${
+                  isSelectionMode
+                    ? "border-gray-600 text-gray-600 cursor-not-allowed"
+                    : "border-gray-700 text-gray-400 hover:text-white hover:border-gray-500"
+                }`}
+              >
+                <Upload size={16} />
+              </button>
+              
+              {/* Delete Mode Button - 같은 자리에서 텍스트만 변경 */}
+              <button 
+                onClick={isDeleteMode ? exitSelectionMode : enterDeleteMode}
+                disabled={isAlbumMode}
+                className={`px-6 py-2 bg-transparent border-2 font-keepick-heavy text-sm tracking-wider transition-all duration-300 flex items-center justify-center ${
+                  isAlbumMode
+                    ? 'border-gray-600 text-gray-600 cursor-not-allowed'
+                    : isDeleteMode
+                      ? "border-gray-600 text-gray-300 hover:text-white hover:border-gray-400"
+                      : 'border-red-600 text-red-400 hover:text-white hover:border-red-500 hover:bg-red-600/10'
+                }`}
+              >
+                {isDeleteMode ? "취소" : <Trash2 size={16} />}
+              </button>
+              
+              {/* 숨겨진 파일 input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
             </div>
           </div>
         </div>
 
+        {/* Tag Filters Section (전체 모드일 때만 표시) */}
+        {viewMode === 'all' && (
+          <div className={`max-w-7xl mx-auto py-4 ${isSelectionMode ? 'pointer-events-none opacity-50' : ''}`}>
+            <div className="flex items-center gap-4 mb-4">
+              <h3 className="font-keepick-primary text-sm text-gray-400 tracking-wider">
+                태그별 분류
+                {realTimeTags.length > 0 && (
+                  <span className="ml-2 text-xs text-[#FE7A25]">
+                    +{realTimeTags.length}개 AI 태그
+                  </span>
+                )}
+              </h3>
+              {selectedTags.length > 0 && (
+                <button
+                  onClick={clearAllTags}
+                  className="text-xs text-[#FE7A25] hover:text-orange-400 transition-colors font-keepick-primary"
+                >
+                  전체 해제
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {/* 기존 태그와 실시간 태그 결합 */}
+              {Array.from(new Set([...allTags, ...realTimeTags])).sort().map((tag) => {
+                const isRealTimeTag = realTimeTags.includes(tag)
+                return (
+                  <motion.button
+                    key={tag}
+                    onClick={() => toggleTag(tag)}
+                    className={`px-3 py-1.5 text-xs font-keepick-primary tracking-wide transition-all duration-300 relative ${ 
+                      selectedTags.includes(tag)
+                        ? "bg-white text-black shadow-lg"
+                        : isRealTimeTag
+                        ? "bg-[#FE7A25]/20 text-[#FE7A25] border border-[#FE7A25]/50 hover:bg-[#FE7A25]/30"
+                        : "bg-gray-900 text-gray-300 border border-gray-700 hover:border-gray-500 hover:text-white"
+                    }`}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {tag}
+                    {/* 실시간 태그 표시 */}
+                    {isRealTimeTag && !selectedTags.includes(tag) && (
+                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#FE7A25] rounded-full"></span>
+                    )}
+                  </motion.button>
+                )
+              })}
+            </div>
+
+            {selectedTags.length > 0 && (
+              <p className="text-xs text-gray-500 mt-3 font-keepick-primary">
+                {selectedTags.length}개 태그 선택됨 • {filteredPhotos.length}장의 사진
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Masonry Grid */}
         <div className="max-w-7xl mx-auto">
           {/* 빈 갤러리 상태 */}
-          {displayPhotos.length === 0 && !loading && !blurredPhotosLoading && (
+          {displayPhotos.length === 0 && similarPhotoClusters.length === 0 && !loading && !blurredPhotosLoading && !similarPhotosLoading && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -662,19 +774,108 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
           )}
 
           {/* 로딩 중 표시 */}
-          {(blurredPhotosLoading) && (
+          {(blurredPhotosLoading || similarPhotosLoading) && (
             <div className="flex justify-center py-16">
               <div className="flex items-center gap-3">
                 <div className="animate-spin w-6 h-6 border-2 border-[#FE7A25] border-t-transparent rounded-full"></div>
                 <span className="text-gray-400 font-keepick-primary">
-                  {viewMode === 'blurred' ? '흐린사진 로딩 중...' : '로딩 중...'}
+                  {viewMode === 'blurred' ? '흐린사진 로딩 중...' : 
+                   viewMode === 'similar' ? '유사사진 로딩 중...' : 
+                   '로딩 중...'}
                 </span>
               </div>
             </div>
           )}
 
+          {/* 유사사진 클러스터 뷰 */}
+          {viewMode === 'similar' && similarPhotoClusters.length > 0 && !similarPhotosLoading && (
+            <div className="space-y-8">
+              {similarPhotoClusters.map((cluster, index) => (
+                <motion.div
+                  key={cluster.clusterId}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="border border-gray-700 rounded-lg p-6 bg-gray-900/30"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-keepick-heavy text-white">
+                      유사사진 그룹 {index + 1}
+                    </h3>
+                    <span className="text-sm text-gray-400 font-keepick-primary">
+                      {cluster.photoCount}장
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {cluster.photos.map((photo: any, photoIndex: number) => {
+                      const galleryPhoto = convertToGalleryPhoto(photo)
+                      return (
+                        <motion.div
+                          key={photo.photoId}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3, delay: photoIndex * 0.05 }}
+                          className="relative aspect-square overflow-hidden rounded cursor-pointer group"
+                          onClick={() => {
+                            if (isSelectionMode) {
+                              togglePhotoSelection(photo.photoId)
+                            } else {
+                              openPhotoModal({ 
+                                id: photo.photoId, 
+                                src: photo.thumbnailUrl, 
+                                name: `사진 #${photo.photoId}` 
+                              })
+                            }
+                          }}
+                        >
+                          <Image
+                            src={photo.thumbnailUrl || "/placeholder.svg"}
+                            alt={`사진 #${photo.photoId}`}
+                            fill
+                            sizes="200px"
+                            className="object-cover group-hover:scale-110 transition-transform duration-300"
+                            quality={75}
+                            placeholder="blur"
+                            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                            draggable={false}
+                          />
+                          
+                          {/* 선택 오버레이 - 모드에 따른 테마 변경 */}
+                          {isSelectionMode && (
+                            <div
+                              className={`absolute inset-0 border-4 transition-all duration-300 ${
+                                selectedPhotos.includes(photo.photoId)
+                                  ? isDeleteMode 
+                                    ? "border-red-500 bg-red-500/20"
+                                    : "border-[#FE7A25] bg-[#FE7A25]/20"
+                                  : isDeleteMode
+                                    ? "border-transparent hover:border-red-500/50"
+                                    : "border-transparent hover:border-[#FE7A25]/50"
+                              }`}
+                            >
+                              {selectedPhotos.includes(photo.photoId) && (
+                                <div className={`absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center ${
+                                  isDeleteMode ? "bg-red-500" : "bg-[#FE7A25]"
+                                }`}>
+                                  <Check size={14} className="text-white" />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          <div className="absolute inset-0 border border-white/5 group-hover:border-white/20 transition-colors duration-300" />
+                        </motion.div>
+                      )
+                    })}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
           {/* 사진이 있을 때만 표시 */}
-          {displayPhotos.length > 0 && !blurredPhotosLoading && (
+          {displayPhotos.length > 0 && !blurredPhotosLoading && !similarPhotosLoading && (
             <AnimatePresence mode="wait">
               <motion.div
                 key={selectedTags.join(",")}
@@ -729,17 +930,23 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                         draggable={false}
                       />
 
-                      {/* Selection Overlay */}
+                      {/* Selection Overlay - 모드에 따른 테마 변경 */}
                       {isSelectionMode && (
                         <div
                           className={`absolute inset-0 border-4 transition-all duration-300 ${
                             selectedPhotos.includes(photo.id)
-                              ? "border-[#FE7A25] bg-[#FE7A25]/20"
-                              : "border-transparent hover:border-[#FE7A25]/50"
+                              ? isDeleteMode 
+                                ? "border-red-500 bg-red-500/20"
+                                : "border-[#FE7A25] bg-[#FE7A25]/20"
+                              : isDeleteMode
+                                ? "border-transparent hover:border-red-500/50"
+                                : "border-transparent hover:border-[#FE7A25]/50"
                           }`}
                         >
                           {selectedPhotos.includes(photo.id) && (
-                            <div className="absolute top-2 right-2 w-6 h-6 bg-[#FE7A25] rounded-full flex items-center justify-center">
+                            <div className={`absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center ${
+                              isDeleteMode ? "bg-red-500" : "bg-[#FE7A25]"
+                            }`}>
                               <Check size={14} className="text-white" />
                             </div>
                           )}
@@ -800,7 +1007,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
           )}
 
           {/* Load More Button - 전체 모드에서만 표시 */}
-          {hasMore && viewMode === 'all' && displayPhotos.length > 0 && !isSelectionMode && (
+          {hasMorePhotos && viewMode === 'all' && displayPhotos.length > 0 && !isSelectionMode && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -809,10 +1016,14 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
             >
               <button
                 onClick={loadMorePhotos}
-                disabled={loading}
-                className="border border-white/30 px-12 py-4 font-keepick-primary text-sm tracking-wider hover:bg-white hover:text-black transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isLoadingMore || isSelectionMode}
+                className={`border px-12 py-4 font-keepick-primary text-sm tracking-wider transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isSelectionMode 
+                    ? "border-gray-600 text-gray-600" 
+                    : "border-white/30 hover:bg-white hover:text-black"
+                }`}
               >
-                {loading ? "로딩 중..." : "더 보기"}
+                {isLoadingMore ? "로딩 중..." : "더 보기"}
               </button>
             </motion.div>
           )}
@@ -823,7 +1034,12 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
               <p className="font-keepick-primary text-gray-400 text-lg mb-4">선택한 태그에 해당하는 사진이 없습니다</p>
               <button
                 onClick={clearAllTags}
-                className="font-keepick-primary text-[#FE7A25] hover:text-orange-400 transition-colors underline underline-offset-4"
+                disabled={isSelectionMode}
+                className={`font-keepick-primary transition-colors underline underline-offset-4 ${
+                  isSelectionMode 
+                    ? "text-gray-600 cursor-not-allowed"
+                    : "text-[#FE7A25] hover:text-orange-400"
+                }`}
               >
                 모든 사진 보기
               </button>
@@ -916,7 +1132,11 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                 ease: "easeInOut",
               },
             }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#FE7A25]/20 to-[#1a1a1a]/98 backdrop-blur-lg border-t-4 border-[#FE7A25] shadow-2xl shadow-[#FE7A25]/30"
+            className={`fixed bottom-0 left-0 right-0 z-50 backdrop-blur-lg border-t-4 shadow-2xl ${
+              isDeleteMode 
+                ? "bg-gradient-to-t from-red-500/20 to-[#1a1a1a]/98 border-red-500 shadow-red-500/30"
+                : "bg-gradient-to-t from-[#FE7A25]/20 to-[#1a1a1a]/98 border-[#FE7A25] shadow-[#FE7A25]/30"
+            }`}
           >
             <div className="max-w-7xl mx-auto px-8">
               {/* Expanded Photos Section */}
@@ -937,9 +1157,15 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                     className="overflow-hidden border-b border-[#FE7A25]/20"
                   >
                     <div className="py-4 h-full">
+                      { isDeleteMode ? 
+                      <p className="font-keepick-primary text-xm text-gray-400 mb-3">
+                        선택한 사진들을 갤러리에서 삭제할 수 있습니다. 
+                      </p>
+                      : 
                       <p className="font-keepick-primary text-xm text-gray-400 mb-3">
                         선택한 사진들로 앨범을 생성할 수 있습니다. 
                       </p>
+                      }
 
                       <div
                         className="h-[calc(100%-2rem)] overflow-y-auto scrollbar-hide"
@@ -1059,34 +1285,54 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                     )}
                   </div>
 
-                  {/* Right: Action Buttons */}
+                  {/* Right: Action Buttons - 모드에 따라 다른 버튼 표시 */}
                   <div className="flex items-center gap-3">
-                    <motion.button
-                      onClick={createTimelineAlbum}
-                      disabled={selectedPhotos.length === 0}
-                      className={`px-4 py-3 bg-transparent border-2 border-[#FE7A25] font-keepick-heavy text-sm tracking-wide transition-all duration-300 whitespace-nowrap ${
-                        selectedPhotos.length === 0
-                          ? "text-gray-500 border-gray-600 cursor-not-allowed"
-                          : "text-white hover:bg-[#FE7A25]/20 hover:border-[#FE7A25] hover:shadow-lg hover:shadow-[#FE7A25]/20"
-                      }`}
-                      whileHover={selectedPhotos.length > 0 ? { scale: 1.05 } : {}}
-                      whileTap={selectedPhotos.length > 0 ? { scale: 0.95 } : {}}
-                    >
-                      타임라인 앨범
-                    </motion.button>
-                    <motion.button
-                      onClick={createTierAlbum}
-                      disabled={selectedPhotos.length === 0}
-                      className={`px-4 py-3 bg-transparent border-2 border-[#FE7A25] font-keepick-heavy text-sm tracking-wide transition-all duration-300 whitespace-nowrap ${
-                        selectedPhotos.length === 0
-                          ? "text-gray-500 border-gray-600 cursor-not-allowed"
-                          : "text-white hover:bg-[#FE7A25]/20 hover:border-[#FE7A25] hover:shadow-lg hover:shadow-[#FE7A25]/20"
-                      }`}
-                      whileHover={selectedPhotos.length > 0 ? { scale: 1.05 } : {}}
-                      whileTap={selectedPhotos.length > 0 ? { scale: 0.95 } : {}}
-                    >
-                      티어 앨범
-                    </motion.button>
+                    {isDeleteMode ? (
+                      /* 삭제 모드: 삭제 버튼 */
+                      <motion.button
+                        onClick={handleDeleteConfirm}
+                        disabled={selectedPhotos.length === 0}
+                        className={`px-4 py-3 bg-transparent border-2 border-red-500 font-keepick-heavy text-sm tracking-wide transition-all duration-300 whitespace-nowrap ${
+                          selectedPhotos.length === 0
+                            ? "text-gray-500 border-gray-600 cursor-not-allowed"
+                            : "text-white hover:bg-red-500/20 hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20"
+                        }`}
+                        whileHover={selectedPhotos.length > 0 ? { scale: 1.05 } : {}}
+                        whileTap={selectedPhotos.length > 0 ? { scale: 0.95 } : {}}
+                      >
+                        {selectedPhotos.length}개의 사진 삭제하기
+                      </motion.button>
+                    ) : (
+                      /* 앨범 모드: 앨범 생성 버튼들 */
+                      <>
+                        <motion.button
+                          onClick={createTimelineAlbum}
+                          disabled={selectedPhotos.length === 0}
+                          className={`px-4 py-3 bg-transparent border-2 border-[#FE7A25] font-keepick-heavy text-sm tracking-wide transition-all duration-300 whitespace-nowrap ${
+                            selectedPhotos.length === 0
+                              ? "text-gray-500 border-gray-600 cursor-not-allowed"
+                              : "text-white hover:bg-[#FE7A25]/20 hover:border-[#FE7A25] hover:shadow-lg hover:shadow-[#FE7A25]/20"
+                          }`}
+                          whileHover={selectedPhotos.length > 0 ? { scale: 1.05 } : {}}
+                          whileTap={selectedPhotos.length > 0 ? { scale: 0.95 } : {}}
+                        >
+                          타임라인 앨범
+                        </motion.button>
+                        <motion.button
+                          onClick={createTierAlbum}
+                          disabled={selectedPhotos.length === 0}
+                          className={`px-4 py-3 bg-transparent border-2 border-[#FE7A25] font-keepick-heavy text-sm tracking-wide transition-all duration-300 whitespace-nowrap ${
+                            selectedPhotos.length === 0
+                              ? "text-gray-500 border-gray-600 cursor-not-allowed"
+                              : "text-white hover:bg-[#FE7A25]/20 hover:border-[#FE7A25] hover:shadow-lg hover:shadow-[#FE7A25]/20"
+                          }`}
+                          whileHover={selectedPhotos.length > 0 ? { scale: 1.05 } : {}}
+                          whileTap={selectedPhotos.length > 0 ? { scale: 0.95 } : {}}
+                        >
+                          티어 앨범
+                        </motion.button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1108,6 +1354,77 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
         onClose={() => setIsAiModalOpen(false)}
         onSimilarPhotosSort={handleSimilarPhotosSort}
       />
+      
+      {/* 삭제 확인 모달 */}
+      <AnimatePresence>
+        {isDeleteModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            onClick={() => setIsDeleteModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#1a1a1a] border border-gray-700 rounded-lg p-6 max-w-md mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                  <Trash2 size={24} className="text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-white font-keepick-heavy text-lg">사진 삭제</h3>
+                  <p className="text-gray-400 font-keepick-primary text-sm">선택한 사진을 삭제하시겠습니까?</p>
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-gray-300 font-keepick-primary text-sm mb-2">
+                  <span className="text-[#FE7A25] font-medium">{selectedPhotos.length}장</span>의 사진이 영구적으로 삭제됩니다.
+                </p>
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-3">
+                  <div className="flex items-start gap-2">
+                    <svg className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <div>
+                      <p className="text-amber-300 font-keepick-primary text-xs font-medium mb-1">
+                        삭제 제한 안내
+                      </p>
+                      <p className="text-amber-200 font-keepick-primary text-xs leading-relaxed">
+                        앨범에 포함된 사진은 삭제할 수 없습니다.<br />
+                        해당 사진들은 자동으로 제외되며, 삭제 가능한 사진만 처리됩니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-gray-500 font-keepick-primary text-xs">
+                  이 작업은 되돌릴 수 없습니다.
+                </p>
+              </div>
+              
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  className="px-4 py-2 border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 font-keepick-primary text-sm transition-colors rounded"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={deleteSelectedPhotos}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-keepick-primary text-sm transition-colors rounded"
+                >
+                  삭제하기
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

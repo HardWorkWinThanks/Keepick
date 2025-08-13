@@ -58,7 +58,7 @@ export default function AiMagicButton({ onAiServiceClick }: AiMagicButtonProps) 
           </motion.div>
         </div>
       </motion.button>
-      <span className="text-xs text-gray-400 font-keepick-primary">AI</span>
+      {/* <span className="text-xs text-gray-400 font-keepick-primary">AI</span> */}
     </div>
   )
 }
