@@ -71,7 +71,8 @@ public class SecurityConfig {
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/api-docs",
-                        "/.well-known/assetlinks.json")
+                        "/.well-known/assetlinks.json",
+                        "/api/groups/*/photos/analysis/status/*")
                 .permitAll()
                 .anyRequest().authenticated());
 
