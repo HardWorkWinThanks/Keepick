@@ -122,7 +122,7 @@ export const VideoConference: React.FC<VideoConferenceProps> = ({
       if (track) {
         setRemoteStreams((prev) => {
           const newMap = new Map(prev);
-          let stream = newMap.get(producerSocketId) || new MediaStream();
+          const stream = newMap.get(producerSocketId) || new MediaStream();
           stream.addTrack(track);
           newMap.set(producerSocketId, stream);
           return newMap;

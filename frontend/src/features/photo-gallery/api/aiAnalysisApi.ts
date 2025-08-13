@@ -38,6 +38,19 @@ export const requestAiAnalysis = async (
 }
 
 /**
+ * 유사사진 분류 요청 (단독 실행)
+ */
+export const requestSimilarPhotosAnalysis = async (
+  groupId: number
+): Promise<AiAnalysisResponse> => {
+  const response = await apiClient.post<ApiResponse<AiAnalysisResponse>>(
+    `/api/groups/${groupId}/photos/analysis/similarity`
+  )
+  
+  return response.data.data
+}
+
+/**
  * AI 분석 상태 SSE 연결
  */
 export const createAnalysisStatusSSE = (
@@ -79,11 +92,11 @@ export const createAnalysisStatusSSE = (
   })
   
   eventSource.onerror = (event) => {
-    console.error('SSE 연결 오류:', {
-      event,
-      readyState: eventSource.readyState,
-      url: eventSource.url
-    })
+    // console.error('SSE 연결 오류:', {
+    //   event,
+    //   readyState: eventSource.readyState,
+    //   url: eventSource.url
+    // })
     
     // readyState 상태 정보 추가
     const stateMessages = {
@@ -91,7 +104,7 @@ export const createAnalysisStatusSSE = (
       1: 'OPEN', 
       2: 'CLOSED'
     }
-    console.error(`SSE 상태: ${stateMessages[eventSource.readyState as keyof typeof stateMessages] || 'UNKNOWN'}`)
+    // console.error(`SSE 상태: ${stateMessages[eventSource.readyState as keyof typeof stateMessages] || 'UNKNOWN'}`)
     
     // 연결 상태에 따른 처리
     if (eventSource.readyState === 0) { // CONNECTING

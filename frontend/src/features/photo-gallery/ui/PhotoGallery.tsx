@@ -1,16 +1,19 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, SlidersHorizontal, Check, Trash2, X, ChevronUp, ChevronDown, Upload, Loader2 } from "lucide-react"
+import { useQueryClient } from '@tanstack/react-query'
 import { usePhotoGallery, useMasonryLayout, useDragScroll } from "../model/usePhotoGallery"
 import { PhotoModal, usePhotoModal } from "@/features/photos-viewing"
 import AiMagicButton from "./AiMagicButton"
 import AiServiceModal from "./AiServiceModal"
 import { uploadGalleryImages } from "../api/galleryUploadApi"
-import { requestAiAnalysis, createAnalysisStatusSSE, AnalysisStatusMessage } from "../api/aiAnalysisApi"
-import { getGroupPhotos, getGroupOverview, getPhotoTags, parseTagsString, parseMemberNicknamesString, convertToGalleryPhoto, deleteGroupPhotos, getGroupBlurredPhotos, getGroupSimilarPhotos } from "../api/galleryPhotosApi"
+import { requestAiAnalysis, requestSimilarPhotosAnalysis, createAnalysisStatusSSE, AnalysisStatusMessage } from "../api/aiAnalysisApi"
+import { getGroupPhotos, getGroupOverview, getPhotoTags, convertToGalleryPhoto, deleteGroupPhotos } from "../api/galleryPhotosApi"
+import { useBlurredPhotosFlat, useSimilarPhotosFlat } from "../api/queries"
+import { useInfiniteScroll } from "@/shared/lib"
 
 interface PhotoGalleryProps {
   groupId: string
@@ -18,7 +21,11 @@ interface PhotoGalleryProps {
 }
 
 export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
+  // TanStack Query 클라이언트
+  const queryClient = useQueryClient()
+  
   const {
+    allPhotos,
     filteredPhotos,
     selectedPhotoData,
     allTags,
@@ -51,16 +58,18 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   // 갤러리 뷰 모드 (전체/흐린사진/유사사진)
   const [viewMode, setViewMode] = useState<'all' | 'blurred' | 'similar'>('all')
   
-  // 흐린사진 데이터
-  const [blurredPhotos, setBlurredPhotos] = useState<any[]>([])
-  const [blurredPhotosLoading, setBlurredPhotosLoading] = useState(false)
+  // TanStack Query를 사용한 흐린사진 및 유사사진 데이터
+  const blurredQuery = useBlurredPhotosFlat(groupId, viewMode)
+  const similarQuery = useSimilarPhotosFlat(groupId, viewMode)
   
-  // 유사사진 데이터
-  const [similarPhotoClusters, setSimilarPhotoClusters] = useState<any[]>([])
-  const [similarPhotosLoading, setSimilarPhotosLoading] = useState(false)
+  // 쿼리에서 데이터와 로딩 상태 추출
+  const blurredPhotos = blurredQuery.photos
+  const blurredPhotosLoading = blurredQuery.isLoading || blurredQuery.isFetchingNextPage
+  const similarPhotoClusters = similarQuery.clusters
+  const similarPhotosLoading = similarQuery.isLoading || similarQuery.isFetchingNextPage
   
-  // 뷰 모드에 따른 표시할 사진 결정
-  const displayPhotos = (() => {
+  // 뷰 모드에 따른 표시할 사진 결정 (useMemo로 메모이제이션)
+  const displayPhotos = useMemo(() => {
     switch (viewMode) {
       case 'blurred':
         return blurredPhotos
@@ -70,7 +79,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
       default:
         return filteredPhotos
     }
-  })()
+  }, [viewMode, blurredPhotos, filteredPhotos])
 
   const smallPreviewDrag = useDragScroll()
   const expandedPreviewDrag = useDragScroll()
@@ -88,8 +97,8 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   // 파일 업로드를 위한 ref
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  // SSE 연결 관리
-  const [sseConnection, setSseConnection] = useState<EventSource | null>(null)
+  // SSE 연결 관리 (ref로 변경하여 리렌더링 방지)
+  const sseConnectionRef = useRef<EventSource | null>(null)
   
   // 사진 태그 정보 캐시
   const [photoTagsCache, setPhotoTagsCache] = useState<Record<number, { tags: string[], members: string[] }>>({})
@@ -105,15 +114,8 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
       clearAllTags()
     }
     
-    // 흐린사진 모드로 전환 시 데이터 로드
-    if (mode === 'blurred' && blurredPhotos.length === 0) {
-      loadBlurredPhotos()
-    }
-    
-    // 유사사진 모드로 전환 시 데이터 로드
-    if (mode === 'similar' && similarPhotoClusters.length === 0) {
-      loadSimilarPhotos()
-    }
+    // TanStack Query가 자동으로 데이터를 관리하므로 수동 로딩 불필요
+    // 뷰 모드 변경 시 쿼리는 enabled 조건에 따라 자동 실행됨
   }
   
   // 업로드 상태 관리
@@ -141,17 +143,26 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   const [currentSize, setCurrentSize] = useState(20) // 현재 로드된 사진 수 (디폴트 20장)
   const defaultPageSize = 20 // 기본 페이지 사이즈 (20, 40, 60, 80...)
   
+  // 초기 로딩 플래그
+  const hasInitialLoadedRef = useRef(false)
+
   // 초기 갤러리 데이터 로딩 (컴포넌트 마운트 시 한 번만)
   useEffect(() => {
+    // groupId가 변경되면 초기 로딩 플래그 리셋
+    hasInitialLoadedRef.current = false
+    
+    if (hasInitialLoadedRef.current) return // 이미 로딩했으면 중복 실행 방지
+    
     const loadInitialData = async () => {
       try {
+        hasInitialLoadedRef.current = true // 로딩 시작 표시
         console.log('갤러리 초기 데이터 로딩 시작... (디폴트 사이즈 20)')
         const overview = await getGroupOverview(parseInt(groupId), defaultPageSize)
         
         // 전체 사진을 갤러리 형식으로 변환
         const galleryPhotos = overview.allPhotos.list.map(convertToGalleryPhoto)
         
-        // 갤러리 데이터 설정
+        // 갤러리 데이터 설정 (초기 로딩 시에만)
         setGalleryData(galleryPhotos)
         
         // 전체 사진 개수와 페이징 정보 설정
@@ -174,7 +185,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     }
     
     loadInitialData()
-  }, [groupId])
+  }, [groupId]) // setGalleryData는 usePhotoGallery에서 안정적으로 제공되므로 의존성에서 제외
 
   // 더 많은 사진 로드 (누적적으로 사이즈 증가: 20 -> 40 -> 60 -> 80...)
   const loadMorePhotos = async () => {
@@ -214,34 +225,127 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     }
   }
 
+  // 무한 스크롤 적용
+  useInfiniteScroll({
+    hasNextPage: viewMode === 'all' ? hasMorePhotos : 
+                viewMode === 'blurred' ? blurredQuery.hasNextPage : 
+                viewMode === 'similar' ? similarQuery.hasNextPage : false,
+    fetchNextPage: () => {
+      if (viewMode === 'all') {
+        loadMorePhotos()
+      } else if (viewMode === 'blurred') {
+        blurredQuery.fetchNextPage()
+      } else if (viewMode === 'similar') {
+        similarQuery.fetchNextPage()
+      }
+    },
+    isFetching: viewMode === 'all' ? isLoadingMore : 
+               viewMode === 'blurred' ? blurredQuery.isFetchingNextPage : 
+               viewMode === 'similar' ? similarQuery.isFetchingNextPage : false,
+  })
+
   // SSE 연결 정리 (컴포넌트 언마운트 시)
   useEffect(() => {
     return () => {
-      if (sseConnection) {
+      if (sseConnectionRef.current) {
         console.log('SSE 연결 정리')
-        sseConnection.close()
+        sseConnectionRef.current.close()
+        sseConnectionRef.current = null
       }
     }
-  }, [sseConnection])
+  }, [])
   
   // AI 버튼 클릭 핸들러
   const handleAiServiceClick = () => {
     setIsAiModalOpen(true)
   }
   
-  // 유사한 사진 분류 핸들러 (임시)
-  const handleSimilarPhotosSort = () => {
-    console.log("유사한 사진 분류 실행")
-    setIsAiModalOpen(false)
-    // TODO: 실제 API 연결
+  // 유사한 사진 분류 핸들러
+  const handleSimilarPhotosSort = async () => {
+    try {
+      setIsAiModalOpen(false)
+      
+      // 분석 상태 업데이트
+      setUploadState(prev => ({
+        ...prev,
+        isUploading: true,
+        currentStep: 'processing',
+        progress: 0,
+        message: '유사사진 분석을 요청하고 있습니다.'
+      }))
+
+      console.log('유사사진 분류 시작...')
+      
+      // 유사사진 분석 요청
+      const analysisResult = await requestSimilarPhotosAnalysis(parseInt(groupId))
+      console.log('유사사진 분석 요청 완료:', analysisResult)
+      
+      setUploadState(prev => ({
+        ...prev,
+        currentStep: 'processing',
+        progress: 30,
+        message: 'AI가 사진을 분석하고 있습니다.'
+      }))
+      
+      // SSE 연결 시작
+      await startSSEConnection(parseInt(groupId), analysisResult.jobId)
+      
+      // 분석 완료 후 유사사진 탭으로 이동 및 캐시 새로고침
+      console.log('유사사진 분석 완료! 유사사진 탭으로 이동합니다.')
+      setViewMode('similar')
+      
+      // TanStack Query 캐시 무효화
+      await queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] })
+      
+      setUploadState(prev => ({
+        ...prev,
+        currentStep: 'completed',
+        progress: 100,
+        message: '유사사진 분류가 완료되었습니다!'
+      }))
+      
+      // 3초 후 상태 초기화
+      setTimeout(() => {
+        setUploadState(prev => ({ ...prev, isUploading: false }))
+      }, 3000)
+      
+    } catch (error) {
+      console.error('유사사진 분류 실패:', error)
+      
+      // 에러 타입에 따른 메시지 처리
+      let errorMessage = '유사사진 분류에 실패했습니다.'
+      if (error instanceof Error) {
+        if (error.message.includes('network')) {
+          errorMessage = '네트워크 연결을 확인해주세요.'
+        } else if (error.message.includes('timeout')) {
+          errorMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요.'
+        } else if (error.message.includes('unauthorized')) {
+          errorMessage = '권한이 없습니다. 다시 로그인해주세요.'
+        }
+      }
+      
+      setUploadState(prev => ({
+        ...prev,
+        currentStep: 'completed',
+        progress: 0,
+        message: errorMessage
+      }))
+      
+      // 에러 알림 표시
+      alert(errorMessage)
+      
+      setTimeout(() => {
+        setUploadState(prev => ({ ...prev, isUploading: false }))
+      }, 5000) // 에러 시 더 오래 표시
+    }
   }
   
   // SSE 연결 시작
   const startSSEConnection = (groupId: number, jobId: string): Promise<void> => {
     return new Promise((resolve, reject) => {
       // 기존 연결이 있으면 종료
-      if (sseConnection) {
-        sseConnection.close()
+      if (sseConnectionRef.current) {
+        sseConnectionRef.current.close()
       }
       
       const eventSource = createAnalysisStatusSSE(
@@ -279,17 +383,17 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
         // onError: SSE 연결 오류 시
         (error: Event) => {
           console.error('SSE 연결 오류:', error)
-          setSseConnection(null)
+          sseConnectionRef.current = null
           reject(new Error('SSE 연결 오류'))
         },
         // onClose: SSE 연결 종료 시
         () => {
           console.log('SSE 연결 종료')
-          setSseConnection(null)
+          sseConnectionRef.current = null
         }
       )
       
-      setSseConnection(eventSource)
+      sseConnectionRef.current = eventSource
     })
   }
   
@@ -300,8 +404,19 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     
     try {
       const photoTags = await getPhotoTags(parseInt(groupId), photoId)
-      const tags = parseTagsString(photoTags.tags)
-      const members = parseMemberNicknamesString(photoTags.memberNicknames)
+      
+      // 디버깅: 실제 데이터 타입과 값 확인
+      console.log('🔍 PhotoTags 디버깅:', {
+        photoId,
+        rawTags: photoTags.tags,
+        rawTagsType: typeof photoTags.tags,
+        rawMemberNicknames: photoTags.memberNicknames,
+        rawMemberNicknamesType: typeof photoTags.memberNicknames,
+        fullResponse: photoTags
+      })
+      
+      const tags = photoTags.tags
+      const members = photoTags.memberNicknames
       
       // 캐시 업데이트
       setPhotoTagsCache(prev => ({
@@ -348,42 +463,8 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     }
   }
 
-  // 흐린사진 로드
-  const loadBlurredPhotos = async (): Promise<void> => {
-    try {
-      setBlurredPhotosLoading(true)
-      console.log('흐린사진 로딩 중...')
-      
-      const blurredData = await getGroupBlurredPhotos(parseInt(groupId))
-      const blurredGalleryPhotos = blurredData.list.map(convertToGalleryPhoto)
-      
-      setBlurredPhotos(blurredGalleryPhotos)
-      console.log('흐린사진 로딩 완료:', blurredGalleryPhotos.length + '장')
-      
-    } catch (error) {
-      console.error('흐린사진 로딩 실패:', error)
-    } finally {
-      setBlurredPhotosLoading(false)
-    }
-  }
-
-  // 유사사진 로드
-  const loadSimilarPhotos = async (): Promise<void> => {
-    try {
-      setSimilarPhotosLoading(true)
-      console.log('유사사진 로딩 중...')
-      
-      const similarData = await getGroupSimilarPhotos(parseInt(groupId))
-      
-      setSimilarPhotoClusters(similarData.list)
-      console.log('유사사진 로딩 완료:', similarData.list.length + '개 클러스터')
-      
-    } catch (error) {
-      console.error('유사사진 로딩 실패:', error)
-    } finally {
-      setSimilarPhotosLoading(false)
-    }
-  }
+  // TanStack Query를 사용하므로 수동 로딩 함수들은 제거됨
+  // 데이터는 useBlurredPhotosFlat, useSimilarPhotosFlat 훅에서 자동 관리
 
   // 앨범 생성 모드 진입
   const enterAlbumMode = () => {
@@ -429,12 +510,11 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
         // 갤러리 데이터 새로고침으로 서버와 동기화
         await refreshGallery()
         
-        // 뷰 모드에 따라 추가 데이터 새로고침
-        if (viewMode === 'blurred') {
-          await loadBlurredPhotos()
-        } else if (viewMode === 'similar') {
-          await loadSimilarPhotos()
-        }
+        // TanStack Query 캐시 무효화로 모든 관련 데이터 새로고침
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['blurred-photos', groupId] }),
+          queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] })
+        ])
         
         console.log(`${deleteResult.deletedPhotoIds.length}장 삭제 완료`)
       }
@@ -519,8 +599,12 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
       // SSE 연결 시작
       await startSSEConnection(parseInt(groupId), aiResult.jobId)
       
-      // 갤러리 새로고침
+      // 갤러리 새로고침 및 캐시 무효화
       await refreshGallery()
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['blurred-photos', groupId] }),
+        queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] })
+      ])
       
       // 완료 상태로 설정
       setUploadState(prev => ({
@@ -1006,27 +1090,6 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
           </AnimatePresence>
           )}
 
-          {/* Load More Button - 전체 모드에서만 표시 */}
-          {hasMorePhotos && viewMode === 'all' && displayPhotos.length > 0 && !isSelectionMode && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="flex justify-center mt-16 mb-8"
-            >
-              <button
-                onClick={loadMorePhotos}
-                disabled={isLoadingMore || isSelectionMode}
-                className={`border px-12 py-4 font-keepick-primary text-sm tracking-wider transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  isSelectionMode 
-                    ? "border-gray-600 text-gray-600" 
-                    : "border-white/30 hover:bg-white hover:text-black"
-                }`}
-              >
-                {isLoadingMore ? "로딩 중..." : "더 보기"}
-              </button>
-            </motion.div>
-          )}
 
           {/* No Results - 전체 모드에서 태그 필터링 결과가 없을 때만 표시 */}
           {viewMode === 'all' && filteredPhotos.length === 0 && selectedTags.length > 0 && allPhotos.length > 0 && (

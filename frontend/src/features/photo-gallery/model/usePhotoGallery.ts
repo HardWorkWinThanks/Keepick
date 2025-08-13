@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import type { GalleryPhoto, PhotoTag, PhotoFilter, PhotoSelection } from "@/entities/photo"
 
 // 임시 더미 데이터 - 실제 데이터로 교체하기 위해 주석처리
@@ -94,12 +94,10 @@ const generatePhotos = (startIndex: number, count: number): GalleryPhoto[] => {
 }
 */
 
-// Masonry 레이아웃 훅
+// Masonry 레이아웃 훅 (useMemo로 변경하여 무한 루프 방지)
 export const useMasonryLayout = (photos: GalleryPhoto[], columnCount: number) => {
-  const [columns, setColumns] = useState<GalleryPhoto[][]>([])
-
-  useEffect(() => {
-    if (photos.length === 0) return
+  const columns = useMemo(() => {
+    if (photos.length === 0) return []
 
     const columnHeights = new Array(columnCount).fill(0)
     const newColumns: GalleryPhoto[][] = Array.from({ length: columnCount }, () => [])
@@ -110,7 +108,7 @@ export const useMasonryLayout = (photos: GalleryPhoto[], columnCount: number) =>
       columnHeights[shortestColumnIndex] += photo.height + 16
     })
 
-    setColumns(newColumns)
+    return newColumns
   }, [photos, columnCount])
 
   return columns
@@ -166,7 +164,6 @@ export const useDragScroll = () => {
 export function usePhotoGallery() {
   // 실제 데이터 사용을 위해 빈 배열로 초기화
   const [allPhotos, setAllPhotos] = useState<GalleryPhoto[]>([])
-  const [filteredPhotos, setFilteredPhotos] = useState<GalleryPhoto[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -177,8 +174,10 @@ export function usePhotoGallery() {
   const [selectedPhotos, setSelectedPhotos] = useState<number[]>([])
   const [isPhotosExpanded, setIsPhotosExpanded] = useState(false)
 
-  // 모든 태그 추출
-  const allTags = Array.from(new Set(allPhotos.flatMap((photo) => photo.tags))).sort()
+  // 모든 태그 추출 (메모이제이션으로 리렌더링 최적화)
+  const allTags = useMemo(() => {
+    return Array.from(new Set(allPhotos.flatMap((photo) => photo.tags))).sort()
+  }, [allPhotos])
 
   // 선택된 사진들의 실제 데이터
   const selectedPhotoData = useMemo(() => {
@@ -200,15 +199,14 @@ export function usePhotoGallery() {
     return () => window.removeEventListener("resize", updateColumnCount)
   }, [])
 
-  // 태그 필터링
-  useEffect(() => {
+  // 태그 필터링 (useMemo로 변경하여 무한 루프 방지)
+  const filteredPhotos = useMemo(() => {
     if (selectedTags.length === 0) {
-      setFilteredPhotos(allPhotos)
+      return allPhotos
     } else {
-      const filtered = allPhotos.filter((photo) => 
+      return allPhotos.filter((photo) => 
         selectedTags.some((tag) => photo.tags.includes(tag))
       )
-      setFilteredPhotos(filtered)
     }
   }, [selectedTags, allPhotos])
 
@@ -267,11 +265,11 @@ export function usePhotoGallery() {
     exitSelectionMode()
   }
 
-  // 갤러리 데이터 설정 (외부에서 호출)
-  const setGalleryData = (photos: GalleryPhoto[]) => {
+  // 갤러리 데이터 설정 (외부에서 호출) - useCallback으로 메모이제이션
+  const setGalleryData = useCallback((photos: GalleryPhoto[]) => {
     setAllPhotos(photos)
     setHasMore(false) // overview는 페이지네이션 없음
-  }
+  }, [])
 
   // 더 많은 사진 로드 (실제 API 구현 필요)
   const loadMorePhotos = () => {

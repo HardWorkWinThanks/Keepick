@@ -8,3 +8,6 @@ export {
 } from './error-handler'
 
 export type { AppError, ApiErrorResponse } from './error-handler'
+
+// Infinite Scroll
+export { useInfiniteScroll } from './useInfiniteScroll'
