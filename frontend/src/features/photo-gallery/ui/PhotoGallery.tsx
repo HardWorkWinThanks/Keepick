@@ -10,7 +10,7 @@ import AiMagicButton from "./AiMagicButton"
 import AiServiceModal from "./AiServiceModal"
 import { uploadGalleryImages } from "../api/galleryUploadApi"
 import { requestAiAnalysis, createAnalysisStatusSSE, AnalysisStatusMessage } from "../api/aiAnalysisApi"
-import { getGroupPhotos, getGroupOverview, getPhotoTags, parseTagsString, parseMemberNicknamesString, convertToGalleryPhoto, deleteGroupPhotos } from "../api/galleryPhotosApi"
+import { getGroupPhotos, getGroupOverview, getPhotoTags, parseTagsString, parseMemberNicknamesString, convertToGalleryPhoto, deleteGroupPhotos, getGroupBlurredPhotos } from "../api/galleryPhotosApi"
 
 interface PhotoGalleryProps {
   groupId: string
@@ -42,9 +42,28 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     setGalleryData,
   } = usePhotoGallery()
 
-  const columns = useMasonryLayout(filteredPhotos, columnCount)
+  // 갤러리 뷰 모드 (전체/흐린사진/유사사진)
+  const [viewMode, setViewMode] = useState<'all' | 'blurred' | 'similar'>('all')
+  
+  // 흐린사진 데이터
+  const [blurredPhotos, setBlurredPhotos] = useState<any[]>([])
+  const [blurredPhotosLoading, setBlurredPhotosLoading] = useState(false)
+  
+  // 뷰 모드에 따른 표시할 사진 결정
+  const displayPhotos = (() => {
+    switch (viewMode) {
+      case 'blurred':
+        return blurredPhotos
+      case 'similar':
+        return [] // TODO: 유사사진 구현 후 업데이트
+      default:
+        return filteredPhotos
+    }
+  })()
+
   const smallPreviewDrag = useDragScroll()
   const expandedPreviewDrag = useDragScroll()
+  const columns = useMasonryLayout(displayPhotos, columnCount)
   
   // 사진 모달을 위한 상태 관리
   const { photo: selectedPhoto, isOpen: isPhotoModalOpen, openModal: openPhotoModal, closeModal: closePhotoModal } = usePhotoModal()
@@ -63,6 +82,20 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   
   // 실시간 태그 목록 (API에서 수집)
   const [realTimeTags, setRealTimeTags] = useState<string[]>([])
+  
+  // 뷰 모드 변경 핸들러
+  const handleViewModeChange = (mode: 'all' | 'blurred' | 'similar') => {
+    setViewMode(mode)
+    // 전체 모드가 아닐 때는 태그 필터 초기화
+    if (mode !== 'all') {
+      clearAllTags()
+    }
+    
+    // 흐린사진 모드로 전환 시 데이터 로드
+    if (mode === 'blurred' && blurredPhotos.length === 0) {
+      loadBlurredPhotos()
+    }
+  }
   
   // 업로드 상태 관리
   const [uploadState, setUploadState] = useState<{
@@ -230,6 +263,25 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     }
   }
 
+  // 흐린사진 로드
+  const loadBlurredPhotos = async (): Promise<void> => {
+    try {
+      setBlurredPhotosLoading(true)
+      console.log('흐린사진 로딩 중...')
+      
+      const blurredData = await getGroupBlurredPhotos(parseInt(groupId))
+      const blurredGalleryPhotos = blurredData.list.map(convertToGalleryPhoto)
+      
+      setBlurredPhotos(blurredGalleryPhotos)
+      console.log('흐린사진 로딩 완료:', blurredGalleryPhotos.length + '장')
+      
+    } catch (error) {
+      console.error('흐린사진 로딩 실패:', error)
+    } finally {
+      setBlurredPhotosLoading(false)
+    }
+  }
+
   // 선택된 사진들 삭제 (실제 API 사용)
   const deleteSelectedPhotos = async () => {
     if (selectedPhotos.length === 0) return
@@ -372,64 +424,114 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     <div className="min-h-screen bg-[#111111] text-white">
       {/* Main Content */}
       <main className="px-4 md:px-8" style={{ paddingBottom: isSelectionMode ? "100px" : "0" }}>
+        {/* Gallery Tabs */}
+        <div className="max-w-7xl mx-auto pt-8 pb-4">
+          <div className="flex items-center gap-1 border-b border-gray-800">
+            <button 
+              onClick={() => handleViewModeChange('all')}
+              className={`px-4 py-2 text-sm font-keepick-primary transition-all duration-300 relative ${
+                viewMode === 'all' 
+                  ? 'text-white' 
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              전체 ({filteredPhotos.length})
+              {viewMode === 'all' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FE7A25]" />
+              )}
+            </button>
+            <button 
+              onClick={() => handleViewModeChange('blurred')}
+              className={`px-4 py-2 text-sm font-keepick-primary transition-all duration-300 relative ${
+                viewMode === 'blurred' 
+                  ? 'text-white' 
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              흐린사진 ({blurredPhotos.length})
+              {viewMode === 'blurred' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FE7A25]" />
+              )}
+            </button>
+            <button 
+              onClick={() => handleViewModeChange('similar')}
+              className={`px-4 py-2 text-sm font-keepick-primary transition-all duration-300 relative ${
+                viewMode === 'similar' 
+                  ? 'text-white' 
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              유사사진 (0개 그룹)
+              {viewMode === 'similar' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FE7A25]" />
+              )}
+            </button>
+          </div>
+        </div>
+
         {/* Controls Section */}
-        <div className="max-w-7xl mx-auto py-8">
+        <div className="max-w-7xl mx-auto py-4">
           <div className="flex items-start justify-between gap-8">
-            {/* Left: Tag Filters */}
-            <div className="flex-1">
-              <div className="flex items-center gap-4 mb-4">
-                <h3 className="font-keepick-primary text-sm text-gray-400 tracking-wider">
-                  태그별 분류
-                  {realTimeTags.length > 0 && (
-                    <span className="ml-2 text-xs text-[#FE7A25]">
-                      +{realTimeTags.length}개 AI 태그
-                    </span>
+            {/* Left: Tag Filters (전체 모드일 때만 표시) */}
+            {viewMode === 'all' && (
+              <div className="flex-1">
+                <div className="flex items-center gap-4 mb-4">
+                  <h3 className="font-keepick-primary text-sm text-gray-400 tracking-wider">
+                    태그별 분류
+                    {realTimeTags.length > 0 && (
+                      <span className="ml-2 text-xs text-[#FE7A25]">
+                        +{realTimeTags.length}개 AI 태그
+                      </span>
+                    )}
+                  </h3>
+                  {selectedTags.length > 0 && (
+                    <button
+                      onClick={clearAllTags}
+                      className="text-xs text-[#FE7A25] hover:text-orange-400 transition-colors font-keepick-primary"
+                    >
+                      전체 해제
+                    </button>
                   )}
-                </h3>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {/* 기존 태그와 실시간 태그 결합 */}
+                  {Array.from(new Set([...allTags, ...realTimeTags])).sort().map((tag) => {
+                    const isRealTimeTag = realTimeTags.includes(tag)
+                    return (
+                      <motion.button
+                        key={tag}
+                        onClick={() => toggleTag(tag)}
+                        className={`px-3 py-1.5 text-xs font-keepick-primary tracking-wide transition-all duration-300 relative ${ 
+                          selectedTags.includes(tag)
+                            ? "bg-white text-black shadow-lg"
+                            : isRealTimeTag
+                            ? "bg-[#FE7A25]/20 text-[#FE7A25] border border-[#FE7A25]/50 hover:bg-[#FE7A25]/30"
+                            : "bg-gray-900 text-gray-300 border border-gray-700 hover:border-gray-500 hover:text-white"
+                        }`}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        {tag}
+                        {/* 실시간 태그 표시 */}
+                        {isRealTimeTag && !selectedTags.includes(tag) && (
+                          <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#FE7A25] rounded-full"></span>
+                        )}
+                      </motion.button>
+                    )
+                  })}
+                </div>
+
                 {selectedTags.length > 0 && (
-                  <button
-                    onClick={clearAllTags}
-                    className="text-xs text-[#FE7A25] hover:text-orange-400 transition-colors font-keepick-primary"
-                  >
-                    전체 해제
-                  </button>
+                  <p className="text-xs text-gray-500 mt-3 font-keepick-primary">
+                    {selectedTags.length}개 태그 선택됨 • {filteredPhotos.length}장의 사진
+                  </p>
                 )}
               </div>
+            )}
 
-              <div className="flex flex-wrap gap-2">
-                {/* 기존 태그와 실시간 태그 결합 */}
-                {Array.from(new Set([...allTags, ...realTimeTags])).sort().map((tag) => {
-                  const isRealTimeTag = realTimeTags.includes(tag)
-                  return (
-                    <motion.button
-                      key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className={`px-3 py-1.5 text-xs font-keepick-primary tracking-wide transition-all duration-300 relative ${ 
-                        selectedTags.includes(tag)
-                          ? "bg-white text-black shadow-lg"
-                          : isRealTimeTag
-                          ? "bg-[#FE7A25]/20 text-[#FE7A25] border border-[#FE7A25]/50 hover:bg-[#FE7A25]/30"
-                          : "bg-gray-900 text-gray-300 border border-gray-700 hover:border-gray-500 hover:text-white"
-                      }`}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      {tag}
-                      {/* 실시간 태그 표시 */}
-                      {isRealTimeTag && !selectedTags.includes(tag) && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#FE7A25] rounded-full"></span>
-                      )}
-                    </motion.button>
-                  )
-                })}
-              </div>
-
-              {selectedTags.length > 0 && (
-                <p className="text-xs text-gray-500 mt-3 font-keepick-primary">
-                  {selectedTags.length}개 태그 선택됨 • {filteredPhotos.length}장의 사진
-                </p>
-              )}
-            </div>
+            {/* 흐린사진/유사사진 모드일 때 빈 공간 */}
+            {viewMode !== 'all' && <div className="flex-1"></div>}
 
             {/* Right: Controls */}
             <div className="flex flex-col items-end gap-3 w-32">
@@ -528,7 +630,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
         {/* Masonry Grid */}
         <div className="max-w-7xl mx-auto">
           {/* 빈 갤러리 상태 */}
-          {filteredPhotos.length === 0 && !loading && (
+          {displayPhotos.length === 0 && !loading && !blurredPhotosLoading && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -539,23 +641,40 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                   <Upload size={40} className="text-gray-500" />
                 </div>
                 <h3 className="text-2xl font-keepick-heavy text-gray-300 mb-3">
-                  갤러리가 비었습니다
+                  {viewMode === 'blurred' ? '흐린사진이 없습니다' : 
+                   viewMode === 'similar' ? '유사사진이 없습니다' : 
+                   '갤러리가 비었습니다'}
                 </h3>
                 <p className="text-gray-500 font-keepick-primary text-lg mb-8">
-                  이미지를 업로드해주세요
+                  {viewMode === 'all' ? '이미지를 업로드해주세요' : 
+                   'AI 분석을 통해 자동으로 분류됩니다'}
                 </p>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-8 py-3 bg-[#FE7A25] text-white font-keepick-primary rounded hover:bg-[#e66a20] transition-colors"
-                >
-                  첫 번째 사진 업로드하기
-                </button>
+                {viewMode === 'all' && (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-8 py-3 bg-[#FE7A25] text-white font-keepick-primary rounded hover:bg-[#e66a20] transition-colors"
+                  >
+                    첫 번째 사진 업로드하기
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
 
+          {/* 로딩 중 표시 */}
+          {(blurredPhotosLoading) && (
+            <div className="flex justify-center py-16">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin w-6 h-6 border-2 border-[#FE7A25] border-t-transparent rounded-full"></div>
+                <span className="text-gray-400 font-keepick-primary">
+                  {viewMode === 'blurred' ? '흐린사진 로딩 중...' : '로딩 중...'}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* 사진이 있을 때만 표시 */}
-          {filteredPhotos.length > 0 && (
+          {displayPhotos.length > 0 && !blurredPhotosLoading && (
             <AnimatePresence mode="wait">
               <motion.div
                 key={selectedTags.join(",")}
@@ -680,8 +799,8 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
           </AnimatePresence>
           )}
 
-          {/* Load More Button - 사진이 있을 때만 표시 */}
-          {hasMore && filteredPhotos.length > 0 && !isSelectionMode && (
+          {/* Load More Button - 전체 모드에서만 표시 */}
+          {hasMore && viewMode === 'all' && displayPhotos.length > 0 && !isSelectionMode && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -698,8 +817,8 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
             </motion.div>
           )}
 
-          {/* No Results - 태그 필터링 결과가 없을 때만 표시 */}
-          {filteredPhotos.length === 0 && selectedTags.length > 0 && allPhotos.length > 0 && (
+          {/* No Results - 전체 모드에서 태그 필터링 결과가 없을 때만 표시 */}
+          {viewMode === 'all' && filteredPhotos.length === 0 && selectedTags.length > 0 && allPhotos.length > 0 && (
             <div className="text-center py-16">
               <p className="font-keepick-primary text-gray-400 text-lg mb-4">선택한 태그에 해당하는 사진이 없습니다</p>
               <button

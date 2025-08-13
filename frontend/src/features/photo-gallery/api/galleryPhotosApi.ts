@@ -151,6 +151,20 @@ export const parseMemberNicknamesString = (nicknamesString: string): string[] =>
 }
 
 /**
+ * 그룹 흐린사진 조회
+ */
+export const getGroupBlurredPhotos = async (
+  groupId: number,
+  filters: PhotoFilterRequest = {}
+): Promise<PhotoListResponse> => {
+  const response = await apiClient.get<ApiResponse<PhotoListResponse>>(
+    `/api/groups/${groupId}/blurred`
+  )
+  
+  return response.data.data
+}
+
+/**
  * 그룹 사진 삭제
  */
 export const deleteGroupPhotos = async (
