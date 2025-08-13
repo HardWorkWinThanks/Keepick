@@ -97,4 +97,11 @@ public class PhotoController {
         return ApiResponse.ok(GroupPhotoDeleteResponse.from(request.getPhotoIds(), result));
     }
 
+    @Operation(summary = "그룹의 모든 태그 조회 API", description = "그룹 갤러리 사진에 포함되는 모든 태그를 조회합니다.")
+    @GetMapping("/groups/{groupId}/photos/tags")
+    public ApiResponse<GroupPhotoAllTagResponse> getGroupPhotoAllTags(@PathVariable Long groupId) {
+        GroupPhotoTagDto result = groupPhotoService.getGroupPhotoAllTags(groupId);
+        return ApiResponse.ok(GroupPhotoAllTagResponse.from(result));
+    }
+
 }
