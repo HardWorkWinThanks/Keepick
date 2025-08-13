@@ -23,6 +23,7 @@ import com.ssafy.keepick.member.application.MemberService;
 import com.ssafy.keepick.member.controller.request.MemberUpdateRequest;
 import com.ssafy.keepick.member.controller.response.MemberInfoResponse;
 import com.ssafy.keepick.member.controller.response.MemberSearchResponse;
+import com.ssafy.keepick.member.controller.response.NicknameCheckResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 @ExtendWith(MockitoExtension.class)
@@ -271,5 +272,101 @@ class MemberControllerTest extends BaseTest {
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.INVALID_PARAMETER);
 
+    }
+    
+    @Test
+    @DisplayName("닉네임 중복검사 API 성공 - 사용 가능한 닉네임")
+    void checkNicknameAvailability_Success_Available() {
+        // given
+        String nickname = "새로운닉네임";
+        given(memberService.checkNicknameAvailability(nickname)).willReturn(true);
+
+        // when
+        ApiResponse<NicknameCheckResponse> response = memberController.checkNicknameAvailability(nickname);
+
+        // then
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getData()).isNotNull();
+        assertThat(response.getData().getNickname()).isEqualTo(nickname);
+        assertThat(response.getData().isAvailable()).isTrue();
+        verify(memberService).checkNicknameAvailability(nickname);
+    }
+    
+    @Test
+    @DisplayName("닉네임 중복검사 API 성공 - 이미 사용 중인 닉네임")
+    void checkNicknameAvailability_Success_NotAvailable() {
+        // given
+        String nickname = "기존닉네임";
+        given(memberService.checkNicknameAvailability(nickname)).willReturn(false);
+
+        // when
+        ApiResponse<NicknameCheckResponse> response = memberController.checkNicknameAvailability(nickname);
+
+        // then
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getData()).isNotNull();
+        assertThat(response.getData().getNickname()).isEqualTo(nickname);
+        assertThat(response.getData().isAvailable()).isFalse();
+        verify(memberService).checkNicknameAvailability(nickname);
+    }
+    
+    @Test
+    @DisplayName("닉네임 중복검사 API - null 닉네임 예외 처리")
+    void checkNicknameAvailability_NullNickname_ThrowsException() {
+        // given
+        String nickname = null;
+
+        // when & then
+        assertThatThrownBy(() -> memberController.checkNicknameAvailability(nickname))
+                .isInstanceOf(BaseException.class)
+                .hasMessage("닉네임은 필수입니다.")
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVALID_PARAMETER);
+    }
+    
+    @Test
+    @DisplayName("닉네임 중복검사 API - 빈 문자열 닉네임 예외 처리")
+    void checkNicknameAvailability_EmptyNickname_ThrowsException() {
+        // given
+        String nickname = "";
+
+        // when & then
+        assertThatThrownBy(() -> memberController.checkNicknameAvailability(nickname))
+                .isInstanceOf(BaseException.class)
+                .hasMessage("닉네임은 필수입니다.")
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVALID_PARAMETER);
+    }
+    
+    @Test
+    @DisplayName("닉네임 중복검사 API - 공백만 있는 닉네임 예외 처리")
+    void checkNicknameAvailability_BlankNickname_ThrowsException() {
+        // given
+        String nickname = "   ";
+
+        // when & then
+        assertThatThrownBy(() -> memberController.checkNicknameAvailability(nickname))
+                .isInstanceOf(BaseException.class)
+                .hasMessage("닉네임은 필수입니다.")
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVALID_PARAMETER);
+    }
+    
+    @Test
+    @DisplayName("닉네임 중복검사 API - 서비스에서 예외 발생시 처리")
+    void checkNicknameAvailability_ServiceException_ThrowsException() {
+        // given
+        String nickname = "테스트닉네임";
+        given(memberService.checkNicknameAvailability(nickname))
+                .willThrow(new BaseException(ErrorCode.INTERNAL_SERVER_ERROR));
+
+        // when & then
+        assertThatThrownBy(() -> memberController.checkNicknameAvailability(nickname))
+                .isInstanceOf(BaseException.class)
+                .hasMessage("서버 내부 오류입니다.")
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INTERNAL_SERVER_ERROR);
+
+        verify(memberService).checkNicknameAvailability(nickname);
     }
 }

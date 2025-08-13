@@ -25,7 +25,7 @@ public class HighlightScreenshotSaveResponse {
     @Schema(description = "하이라이트 스크린샷 URL", example = "http://highlight.com")
     private String photoUrl;
 
-    @Schema(description = "하이라이트 타입 (예: LAUGH, SURPRISE, SERIOUS)", example = "101")
+    @Schema(description = "하이라이트 타입 (예: LAUGH, SURPRISE, SERIOUS)", example = "LAUGH")
     private String type;
 
     @Schema(description = "하이라이트 촬영 시각", example = "2025-08-01")

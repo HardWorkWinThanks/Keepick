@@ -32,7 +32,7 @@ public class HighlightAlbumResponse {
     @Schema(description = "하이라이트 앨범에 포함된 사진 개수", example = "4")
     private int photoCount;
 
-    @Schema(description = "하이라이트 타입별 사진 목록")
+    @Schema(description = "하이라이트 타입별 사진 목록 (타입 예: LAUGH, SURPRISE, SERIOUS)")
     private Map<HighlightType, List<HighlightScreenshotSaveResponse>> photos;
 
     public static HighlightAlbumResponse from(HighlightAlbumDto album) {
