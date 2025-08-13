@@ -4,12 +4,14 @@ import { useEffect, useRef, useState, useCallback, ReactNode } from "react";
 import * as tf from "@tensorflow/tfjs";
 import { HandLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import { useAppSelector } from "@/shared/hooks/redux";
+import { socketApi } from "@/shared/api/socketApi";
 import { CpuChipIcon, EyeIcon, PowerIcon } from "@heroicons/react/24/solid";
 
 // --- 설정 상수 ---
 const SEQUENCE_LENGTH = 30;
 const CONFIDENCE_THRESHOLD = 0.92;
 const GESTURE_COOLDOWN = 3000;
+const BROADCAST_COOLDOWN = 1000; // 브로드캐스트 쿨다운 (네트워크 부하 방지)
 
 const STATIC_LABELS = [
   "bad",
@@ -60,11 +62,15 @@ const GestureDisplayCard: React.FC<{
   title: string;
   state: GestureState;
   position: "top-left" | "top-right";
-}> = ({ title, state, position }) => {
+  isRemote?: boolean;
+  userName?: string;
+}> = ({ title, state, position, isRemote = false, userName }) => {
   const styles: React.CSSProperties = {
     position: "absolute",
     zIndex: 20,
-    backgroundColor: "rgba(17, 24, 39, 0.7)",
+    backgroundColor: isRemote
+      ? "rgba(34, 197, 94, 0.7)"
+      : "rgba(17, 24, 39, 0.7)",
     backdropFilter: "blur(4px)",
     color: "white",
     padding: "8px 16px",
@@ -74,20 +80,47 @@ const GestureDisplayCard: React.FC<{
     alignItems: "center",
     gap: "12px",
     animation: "pop-in 0.3s ease-out forwards",
-    border: "1px solid rgba(255, 255, 255, 0.1)",
+    border: isRemote
+      ? "1px solid rgba(34, 197, 94, 0.3)"
+      : "1px solid rgba(255, 255, 255, 0.1)",
     top: "10px",
   };
   if (position === "top-left") styles.left = "10px";
   else styles.right = "10px";
+
   return (
     <div style={styles}>
       <div className="flex-shrink-0 text-teal-400">{state.statusIcon}</div>
       <div>
-        <div className="text-xs text-gray-400">{title}</div>
+        <div className="text-xs text-gray-400">
+          {title} {isRemote && userName && `(${userName})`}
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-2xl">{state.emoji}</span>
           <span className="font-semibold">{state.label}</span>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// 원격 제스처 이펙트 표시 컴포넌트
+const RemoteGestureEffect: React.FC<{
+  effect: string;
+  emoji: string;
+  userName: string;
+  onComplete: () => void;
+}> = ({ effect, emoji, userName, onComplete }) => {
+  useEffect(() => {
+    const timer = setTimeout(onComplete, 2000);
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+
+  return (
+    <div className="remote-gesture-effect">
+      <div className="text-6xl mb-2">{emoji}</div>
+      <div className="text-sm text-white bg-black/50 px-2 py-1 rounded">
+        {userName}의 {effect}
       </div>
     </div>
   );
@@ -158,6 +191,148 @@ const useAiModels = () => {
   };
 };
 
+/** 원격 제스처 수신 및 관리 훅 */
+const useRemoteGestures = () => {
+  const [remoteGestures, setRemoteGestures] = useState<{
+    [userId: string]: {
+      static?: GestureState & { userName: string };
+      dynamic?: GestureState & { userName: string };
+    };
+  }>({});
+  const [remoteEffects, setRemoteEffects] = useState<
+    Array<{
+      id: string;
+      effect: string;
+      emoji: string;
+      userName: string;
+    }>
+  >([]);
+
+  useEffect(() => {
+    // 원격 정적 제스처 수신
+    const handleRemoteStaticGesture = (event: CustomEvent) => {
+      const { userId, userName, label, emoji } = event.detail;
+      console.log(
+        `🤲 [REMOTE] Static gesture from ${userName}: ${label} ${emoji}`
+      );
+
+      setRemoteGestures((prev) => ({
+        ...prev,
+        [userId]: {
+          ...prev[userId],
+          static: {
+            label,
+            emoji,
+            statusIcon: <EyeIcon className="w-5 h-5" />,
+            userName,
+          },
+        },
+      }));
+
+      // 3초 후 자동 제거
+      setTimeout(() => {
+        setRemoteGestures((prev) => {
+          const updated = { ...prev };
+          if (updated[userId]) {
+            delete updated[userId].static;
+            if (!updated[userId].dynamic) {
+              delete updated[userId];
+            }
+          }
+          return updated;
+        });
+      }, 3000);
+    };
+
+    // 원격 동적 제스처 수신
+    const handleRemoteDynamicGesture = (event: CustomEvent) => {
+      const { userId, userName, label, emoji } = event.detail;
+      console.log(
+        `🌊 [REMOTE] Dynamic gesture from ${userName}: ${label} ${emoji}`
+      );
+
+      setRemoteGestures((prev) => ({
+        ...prev,
+        [userId]: {
+          ...prev[userId],
+          dynamic: {
+            label,
+            emoji,
+            statusIcon: <EyeIcon className="w-5 h-5" />,
+            userName,
+          },
+        },
+      }));
+
+      // 3초 후 자동 제거
+      setTimeout(() => {
+        setRemoteGestures((prev) => {
+          const updated = { ...prev };
+          if (updated[userId]) {
+            delete updated[userId].dynamic;
+            if (!updated[userId].static) {
+              delete updated[userId];
+            }
+          }
+          return updated;
+        });
+      }, 3000);
+    };
+
+    // 원격 제스처 이펙트 수신
+    const handleRemoteGestureEffect = (event: CustomEvent) => {
+      const { userId, userName, effect, emoji } = event.detail;
+      console.log(`✨ [REMOTE] Effect from ${userName}: ${effect} ${emoji}`);
+
+      const effectId = `${userId}-${Date.now()}`;
+      setRemoteEffects((prev) => [
+        ...prev,
+        {
+          id: effectId,
+          effect,
+          emoji,
+          userName,
+        },
+      ]);
+    };
+
+    // 이벤트 리스너 등록
+    window.addEventListener(
+      "gestureStaticReceived",
+      handleRemoteStaticGesture as EventListener
+    );
+    window.addEventListener(
+      "gestureDynamicReceived",
+      handleRemoteDynamicGesture as EventListener
+    );
+    window.addEventListener(
+      "gestureEffectReceived",
+      handleRemoteGestureEffect as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "gestureStaticReceived",
+        handleRemoteStaticGesture as EventListener
+      );
+      window.removeEventListener(
+        "gestureDynamicReceived",
+        handleRemoteDynamicGesture as EventListener
+      );
+      window.removeEventListener(
+        "gestureEffectReceived",
+        handleRemoteGestureEffect as EventListener
+      );
+    };
+  }, []);
+
+  const removeEffect = useCallback((effectId: string) => {
+    setRemoteEffects((prev) => prev.filter((effect) => effect.id !== effectId));
+  }, []);
+
+  return { remoteGestures, remoteEffects, removeEffect };
+};
+
 // ====================================================================
 // 메인 피처 컴포넌트
 // ====================================================================
@@ -170,9 +345,14 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
   const animationFrameId = useRef<number | null>(null);
   const sequenceRef = useRef<number[][]>([]);
   const lastEffectTimeRef = useRef<number>(0);
+  const lastStaticBroadcastRef = useRef<number>(0);
+  const lastDynamicBroadcastRef = useRef<number>(0);
+
   const { isStaticGestureOn, isDynamicGestureOn } = useAppSelector(
     (state) => state.gesture
   );
+  const { roomId, userName } = useAppSelector((state) => state.session);
+
   const [staticGesture, setStaticGesture] = useState<GestureState>({
     label: "모델 로딩 중...",
     emoji: "⌛",
@@ -189,7 +369,76 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
   const { handLandmarker, staticModel, dynamicModel, allModelsLoaded, error } =
     useAiModels();
 
-  // --- 예측 로직 ---
+  // --- 원격 제스처 관리 ---
+  const { remoteGestures, remoteEffects, removeEffect } = useRemoteGestures();
+
+  // --- 제스처 브로드캐스트 함수 (서버에 맞게 수정) ---
+  const broadcastStaticGesture = useCallback(
+    (label: string, emoji: string, confidence: number = 1.0) => {
+      const now = Date.now();
+      if (now - lastStaticBroadcastRef.current < BROADCAST_COOLDOWN) return;
+
+      lastStaticBroadcastRef.current = now;
+
+      if (roomId && userName) {
+        console.log(`🤲 [BROADCAST] Static gesture: ${label} ${emoji}`);
+        socketApi.broadcastStaticGesture({
+          roomId,
+          gestureType: "static",
+          label,
+          emoji,
+          confidence,
+          timestamp: now,
+          userId: socketApi.getSocketId() || "unknown",
+          userName,
+        });
+      }
+    },
+    [roomId, userName]
+  );
+
+  const broadcastDynamicGesture = useCallback(
+    (label: string, emoji: string, confidence: number = 1.0) => {
+      const now = Date.now();
+      if (now - lastDynamicBroadcastRef.current < BROADCAST_COOLDOWN) return;
+
+      lastDynamicBroadcastRef.current = now;
+
+      if (roomId && userName) {
+        console.log(`🌊 [BROADCAST] Dynamic gesture: ${label} ${emoji}`);
+        socketApi.broadcastDynamicGesture({
+          roomId,
+          gestureType: "dynamic",
+          label,
+          emoji,
+          confidence,
+          timestamp: now,
+          userId: socketApi.getSocketId() || "unknown",
+          userName,
+        });
+      }
+    },
+    [roomId, userName]
+  );
+
+  const broadcastGestureEffect = useCallback(
+    (effect: string, emoji: string) => {
+      if (roomId && userName) {
+        console.log(`✨ [BROADCAST] Gesture effect: ${effect} ${emoji}`);
+        socketApi.broadcastGestureEffect({
+          roomId,
+          effect,
+          emoji,
+          timestamp: Date.now(),
+          userId: socketApi.getSocketId() || "unknown",
+          userName,
+          duration: 2000,
+        });
+      }
+    },
+    [roomId, userName]
+  );
+
   const predictGestures = useCallback(() => {
     const video = analysisVideoRef.current;
     if (!allModelsLoaded || !video || video.readyState < 2) {
@@ -216,15 +465,23 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
           const prediction = staticModel!.predict(
             tf.tensor2d([keypoints], [1, 63])
           ) as tf.Tensor;
-          const label = STATIC_LABELS[prediction.argMax(-1).dataSync()[0]];
+          const labelIndex = prediction.argMax(-1).dataSync()[0];
+          const confidence = Math.max(...prediction.dataSync());
+          const label = STATIC_LABELS[labelIndex];
           const [emoji, ...text] = (KOREAN_STATIC_LABELS[label] || label).split(
             " "
           );
+
           setStaticGesture({
             label: text.join(" "),
             emoji,
             statusIcon: <EyeIcon className="w-5 h-5" />,
           });
+
+          // 높은 신뢰도일 때만 브로드캐스트
+          if (confidence > 0.8 && label !== "none") {
+            broadcastStaticGesture(text.join(" "), emoji, confidence);
+          }
         });
       }
 
@@ -237,23 +494,30 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
               tf.tensor3d([sequenceRef.current], [1, SEQUENCE_LENGTH, 63])
             ) as tf.Tensor;
             const confidence = Math.max(...prediction.dataSync());
+            const labelIndex = prediction.argMax(-1).dataSync()[0];
             let label = "none";
+
             if (confidence >= CONFIDENCE_THRESHOLD) {
-              label = DYNAMIC_LABELS[prediction.argMax(-1).dataSync()[0]];
+              label = DYNAMIC_LABELS[labelIndex];
               const currentTime = Date.now();
+
               if (
                 label !== "none" &&
                 label !== "nono" &&
                 currentTime - lastEffectTimeRef.current > GESTURE_COOLDOWN
               ) {
                 lastEffectTimeRef.current = currentTime;
-                const emoji = (KOREAN_DYNAMIC_LABELS[label] || "").split(
-                  " "
-                )[0];
+                const [emoji] = (KOREAN_DYNAMIC_LABELS[label] || "").split(" ");
+
+                // 로컬 이펙트 표시
                 setVisualEffect(emoji);
                 setTimeout(() => setVisualEffect(null), 2000);
+
+                // 원격 참여자들에게 이펙트 브로드캐스트
+                broadcastGestureEffect(label, emoji);
               }
             }
+
             const [emoji, ...text] = (
               KOREAN_DYNAMIC_LABELS[label] || label
             ).split(" ");
@@ -262,6 +526,11 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
               emoji,
               statusIcon: <EyeIcon className="w-5 h-5" />,
             });
+
+            // 동적 제스처도 브로드캐스트 (이펙트와 별개)
+            if (confidence > 0.7 && label !== "none") {
+              broadcastDynamicGesture(text.join(" "), emoji, confidence);
+            }
           });
         }
       }
@@ -277,6 +546,9 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
     dynamicModel,
     isStaticGestureOn,
     isDynamicGestureOn,
+    broadcastStaticGesture,
+    broadcastDynamicGesture,
+    broadcastGestureEffect,
   ]);
 
   // --- Effects ---
@@ -285,21 +557,16 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
     const video = analysisVideoRef.current;
     if (!stream || !video) return;
 
-    // 1. 스트림을 비디오 소스에 할당
     video.srcObject = stream;
 
-    // 2. 비디오가 데이터를 로드하고 재생 준비가 되면 실행될 핸들러
     const handleCanPlay = () => {
-      // 3. 재생을 시도하고, 에러를 잡습니다.
       video.play().catch((err) => {
-        // AbortError는 흔하게 발생하며, 무시해도 안전합니다.
         if (err.name !== "AbortError") {
           console.error("분석용 비디오 재생 실패:", err);
         }
       });
     };
 
-    // 4. 비디오가 재생되기 시작하면, 예측 루프를 시작합니다.
     const handlePlay = () => {
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);
@@ -307,11 +574,9 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
       predictGestures();
     };
 
-    // 5. 이벤트 리스너 등록
     video.addEventListener("canplay", handleCanPlay);
     video.addEventListener("play", handlePlay);
 
-    // 6. Cleanup 함수: 컴포넌트가 사라질 때 이벤트 리스너를 제거합니다.
     return () => {
       video.removeEventListener("canplay", handleCanPlay);
       video.removeEventListener("play", handlePlay);
@@ -322,7 +587,6 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
   }, [stream, predictGestures]);
 
   useEffect(() => {
-    // 모델이 준비되면 예측 루프 시작
     if (allModelsLoaded && stream) {
       predictGestures();
     }
@@ -333,7 +597,6 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
   }, [allModelsLoaded, stream, predictGestures]);
 
   useEffect(() => {
-    // 모델 로딩 상태 및 제스처 활성화 여부에 따라 UI 업데이트
     const updateGestureState = (
       isActive: boolean,
       setGesture: (s: GestureState) => void,
@@ -368,18 +631,32 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
     );
   }, [isStaticGestureOn, isDynamicGestureOn, allModelsLoaded, error]);
 
+  // 제스처 상태 변경 시 로깅만 (서버에 상태 이벤트가 없음)
+  useEffect(() => {
+    if (roomId && userName) {
+      console.log(
+        `⚙️ [INFO] Gesture status changed: static=${isStaticGestureOn}, dynamic=${isDynamicGestureOn}`
+      );
+      // 서버에 제스처 상태 전송 기능이 없으므로 로컬에서만 관리
+    }
+  }, [isStaticGestureOn, isDynamicGestureOn, roomId, userName]);
+
+  // 원격 제스처 표시를 위한 렌더링 데이터 준비
+  const remoteGesturesList = Object.entries(remoteGestures);
+
   return (
     <div className="relative w-full h-full">
       {children}
+
+      {/* 분석용 숨겨진 비디오 */}
       <video
         ref={analysisVideoRef}
         style={{ display: "none" }}
         muted
         playsInline
       />
-      {visualEffect && (
-        <div className="visual-effect-corner">{visualEffect}</div>
-      )}
+
+      {/* 로컬 제스처 표시 */}
       <GestureDisplayCard
         title="정적 제스처"
         state={staticGesture}
@@ -390,7 +667,96 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
         state={dynamicGesture}
         position="top-right"
       />
-      <style>{`@keyframes pop-in{0%{transform:scale(.8);opacity:0}100%{transform:scale(1);opacity:1}}.animate-pop-in{animation:pop-in .3s ease-out forwards}@keyframes fade-in-out-corner{0%,100%{opacity:0;transform:scale(.5)}10%,90%{opacity:1;transform:scale(1)}}.visual-effect-corner{position:absolute;bottom:5%;right:5%;font-size:5rem;text-shadow:0 0 15px rgba(0,0,0,.6);z-index:10;animation:fade-in-out-corner 2s ease-in-out forwards}`}</style>
+
+      {/* 원격 제스처 표시 (최대 2개씩) */}
+      {remoteGesturesList.slice(0, 2).map(([userId, gestures], index) => (
+        <div key={userId}>
+          {gestures.static && (
+            <GestureDisplayCard
+              title="원격 정적"
+              state={gestures.static}
+              position={index === 0 ? "top-left" : "top-right"}
+              isRemote={true}
+              userName={gestures.static.userName}
+            />
+          )}
+          {gestures.dynamic && (
+            <GestureDisplayCard
+              title="원격 동적"
+              state={gestures.dynamic}
+              position={index === 0 ? "top-left" : "top-right"}
+              isRemote={true}
+              userName={gestures.dynamic.userName}
+            />
+          )}
+        </div>
+      ))}
+
+      {/* 로컬 비주얼 이펙트 */}
+      {visualEffect && (
+        <div className="visual-effect-corner">{visualEffect}</div>
+      )}
+
+      {/* 원격 제스처 이펙트들 */}
+      {remoteEffects.map((effect) => (
+        <RemoteGestureEffect
+          key={effect.id}
+          effect={effect.effect}
+          emoji={effect.emoji}
+          userName={effect.userName}
+          onComplete={() => removeEffect(effect.id)}
+        />
+      ))}
+
+      {/* 스타일 정의 */}
+      <style>{`
+        @keyframes pop-in {
+          0% {
+            transform: scale(.8);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        
+        .animate-pop-in {
+          animation: pop-in .3s ease-out forwards;
+        }
+        
+        @keyframes fade-in-out-corner {
+          0%, 100% {
+            opacity: 0;
+            transform: scale(.5);
+          }
+          10%, 90% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        
+        .visual-effect-corner {
+          position: absolute;
+          bottom: 5%;
+          right: 5%;
+          font-size: 5rem;
+          text-shadow: 0 0 15px rgba(0,0,0,.6);
+          z-index: 10;
+          animation: fade-in-out-corner 2s ease-in-out forwards;
+        }
+
+        .remote-gesture-effect {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          text-align: center;
+          z-index: 15;
+          animation: fade-in-out-corner 2s ease-in-out forwards;
+          text-shadow: 0 0 15px rgba(0,0,0,.6);
+        }
+      `}</style>
     </div>
   );
 };

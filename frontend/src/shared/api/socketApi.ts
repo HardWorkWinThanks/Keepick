@@ -1,4 +1,4 @@
-// src/shared/api/socketApi.ts (채팅 기능 추가 버전)
+// src/shared/api/socketApi.ts (제스처 브로드캐스팅 추가)
 
 import { io, Socket } from "socket.io-client";
 import { AppDispatch } from "@/shared/config/store";
@@ -23,6 +23,35 @@ type ConsumeProducerThunk = (data: {
   producerSocketId: string;
 }) => any;
 type HandleProducerClosedThunk = (data: { producerId: string }) => any;
+
+// 제스처 관련 타입 정의
+export interface GestureData {
+  roomId: string;
+  gestureType: "static" | "dynamic";
+  label: string;
+  emoji: string;
+  confidence?: number;
+  timestamp: number;
+  userId: string;
+  userName: string;
+}
+
+export interface GestureEffectData {
+  roomId: string;
+  effect: string;
+  emoji: string;
+  timestamp: number;
+  userId: string;
+  userName: string;
+  duration?: number;
+}
+
+export interface GestureStatusData {
+  roomId: string;
+  userName: string;
+  staticGestureEnabled: boolean;
+  dynamicGestureEnabled: boolean;
+}
 
 class SocketApi {
   private socket: Socket | null = null;
@@ -141,37 +170,77 @@ class SocketApi {
       }
     });
 
-    // 🆕 채팅 관련 이벤트 리스너 추가
-    this.socket.on("chat_message_received", (data: any) => {
-      console.log("💬 Chat message received:", data);
-      if (data.senderId !== this.socket?.id) {
-        chatSocketHandler.handleReceivedMessage(data);
-      }
+    // 💬 채팅 관련 이벤트 리스너
+    this.socket.on("chat_new_message", (data: any) => {
+      console.log("💬 [CLIENT] Received chat_new_message:", data);
+      chatSocketHandler.handleReceivedMessage(data);
+    });
+
+    this.socket.on("chat_message_sent", (data: any) => {
+      console.log("💬 [CLIENT] Received chat_message_sent:", data);
+      chatSocketHandler.handleMessageSent(data);
+    });
+
+    this.socket.on("chat_messages_history", (data: any) => {
+      console.log("💬 [CLIENT] Received chat_messages_history:", data);
+      chatSocketHandler.handleMessageHistory(data);
     });
 
     this.socket.on(
       "chat_user_joined",
-      (data: { userId: string; userName: string }) => {
-        console.log("👋 User joined chat:", data);
-        chatSocketHandler.handleUserJoined(data.userName);
+      (data: { participant: { name: string } }) => {
+        console.log("💬 [CLIENT] Received chat_user_joined:", data);
+        chatSocketHandler.handleUserJoined(data.participant.name);
       }
     );
 
-    this.socket.on(
-      "chat_user_left",
-      (data: { userId: string; userName: string }) => {
-        console.log("👋 User left chat:", data);
-        chatSocketHandler.handleUserLeft(data.userName);
-      }
-    );
+    this.socket.on("chat_user_left", (data: { participantName: string }) => {
+      console.log("💬 [CLIENT] Received chat_user_left:", data);
+      chatSocketHandler.handleUserLeft(data.participantName);
+    });
 
-    // 🆕 화면 공유 관련 이벤트 리스너 추가
+    this.socket.on("chat_user_typing", (data: any) => {
+      console.log("💬 [CLIENT] Received chat_user_typing:", data);
+      chatSocketHandler.handleUserTyping(data);
+    });
+
+    this.socket.on("chat_error", (data: any) => {
+      console.log("💬 [CLIENT] Received chat_error:", data);
+      chatSocketHandler.handleChatError(data);
+    });
+
+    this.socket.on("chat_joined", (data: any) => {
+      console.log("💬 [CLIENT] Successfully joined chat:", data);
+    });
+
+    this.socket.on("chat_left", (data: any) => {
+      console.log("💬 [CLIENT] Successfully left chat:", data);
+    });
+
+    // 🤲 제스처 관련 이벤트 리스너 추가 (서버에 맞게 수정)
+    this.socket.on("gesture_detected", (data: any) => {
+      console.log("🤲 [CLIENT] ✅ Received gesture_detected:", data);
+
+      // 제스처 타입에 따라 적절한 커스텀 이벤트 발생
+      if (data.gestureType === "static") {
+        window.dispatchEvent(
+          new CustomEvent("gestureStaticReceived", { detail: data })
+        );
+      } else if (data.gestureType === "dynamic") {
+        window.dispatchEvent(
+          new CustomEvent("gestureDynamicReceived", { detail: data })
+        );
+      } else if (data.effect) {
+        window.dispatchEvent(
+          new CustomEvent("gestureEffectReceived", { detail: data })
+        );
+      }
+    });
+
+    // 🖥️ 화면 공유 관련 이벤트 리스너
     this.socket.on("screen_share_started", (data: any) => {
       console.log("🖥️ Screen share started:", data);
-      // screenShareManager에서 처리하도록 이벤트 전달
       if (data.peerId !== this.socket?.id) {
-        // 다른 사용자의 화면 공유 시작 처리
-        // 이 부분은 ConferenceClientPage에서 처리하도록 이벤트 발생
         window.dispatchEvent(
           new CustomEvent("screenShareStarted", { detail: data })
         );
@@ -180,7 +249,6 @@ class SocketApi {
 
     this.socket.on("screen_share_stopped", (data: any) => {
       console.log("🖥️ Screen share stopped:", data);
-      // 화면 공유 중지 처리
       window.dispatchEvent(
         new CustomEvent("screenShareStopped", { detail: data })
       );
@@ -188,7 +256,6 @@ class SocketApi {
 
     this.socket.on("active_screen_shares", (data: any) => {
       console.log("🖥️ Active screen shares:", data);
-      // 활성 화면 공유 목록 처리
       window.dispatchEvent(
         new CustomEvent("activeScreenShares", { detail: data })
       );
@@ -203,6 +270,7 @@ class SocketApi {
       console.error(`Cannot emit event '${event}': Socket not initialized.`);
       return;
     }
+    console.log(`📡 [CLIENT] Emitting ${event}:`, args[0]);
     this.socket.emit(event, ...args);
   }
 
@@ -214,7 +282,7 @@ class SocketApi {
     dtlsParameters: any;
   }) => this.emit("connect_transport", data);
 
-  // 🆕 채팅 관련 메서드 추가 (서버 API에 맞게)
+  // 💬 채팅 관련 메서드
   public sendChatMessage = (data: {
     roomId: string;
     content: string;
@@ -227,7 +295,79 @@ class SocketApi {
     this.emit("chat_join", data);
   };
 
-  // 🆕 화면 공유 관련 메서드 추가
+  public leaveChat = (data?: { roomId: string }) => {
+    this.emit("chat_leave", data);
+  };
+
+  public sendTypingStatus = (data: { roomId: string; isTyping: boolean }) => {
+    this.emit("chat_typing", data);
+  };
+
+  // 🤲 제스처 관련 메서드 추가 (서버에 맞게 통합)
+  public broadcastGesture = (data: {
+    roomId: string;
+    gestureType: "static" | "dynamic" | "effect";
+    label?: string;
+    emoji: string;
+    effect?: string;
+    confidence?: number;
+    timestamp: number;
+    userId: string;
+    userName: string;
+    duration?: number;
+  }) => {
+    console.log(`🤲 [BROADCAST] Gesture: ${data.gestureType} - ${data.emoji}`);
+    this.emit("gesture_detect", data);
+  };
+
+  // 편의 메서드들 (기존 인터페이스 유지)
+  public broadcastStaticGesture = (data: GestureData) => {
+    this.broadcastGesture({
+      roomId: data.roomId,
+      gestureType: "static",
+      label: data.label,
+      emoji: data.emoji,
+      confidence: data.confidence,
+      timestamp: data.timestamp,
+      userId: data.userId,
+      userName: data.userName,
+    });
+  };
+
+  public broadcastDynamicGesture = (data: GestureData) => {
+    this.broadcastGesture({
+      roomId: data.roomId,
+      gestureType: "dynamic",
+      label: data.label,
+      emoji: data.emoji,
+      confidence: data.confidence,
+      timestamp: data.timestamp,
+      userId: data.userId,
+      userName: data.userName,
+    });
+  };
+
+  public broadcastGestureEffect = (data: GestureEffectData) => {
+    this.broadcastGesture({
+      roomId: data.roomId,
+      gestureType: "effect",
+      emoji: data.emoji,
+      effect: data.effect,
+      timestamp: data.timestamp,
+      userId: data.userId,
+      userName: data.userName,
+      duration: data.duration,
+    });
+  };
+
+  public broadcastGestureStatus = (data: GestureStatusData) => {
+    // 서버에 제스처 상태 이벤트가 없으므로 로그만 출력
+    console.log(
+      `⚙️ [INFO] Gesture status: static=${data.staticGestureEnabled}, dynamic=${data.dynamicGestureEnabled}`
+    );
+  };
+
+  // 🖥️ 화면 공유 관련 메서드
   public startScreenShare = (data: {
     roomId: string;
     peerId: string;
@@ -258,10 +398,6 @@ class SocketApi {
 
   public getActiveScreenShares = (data: { roomId: string }) => {
     this.emit("get_active_screen_shares", data);
-  };
-
-  public leaveChat = (data?: { roomId: string }) => {
-    this.emit("chat_leave", data);
   };
 
   // 기존 비동기 메서드들...

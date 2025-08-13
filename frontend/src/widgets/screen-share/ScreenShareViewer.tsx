@@ -198,7 +198,8 @@ const ScreenShareVideo = ({
       stream = screenShareManager.getLocalScreenStream();
     } else {
       // 원격 화면 공유 스트림
-      stream = screenShareManager.getRemoteScreenStream(screenShare.peerId);
+      stream =
+        screenShareManager.getRemoteScreenStream(screenShare.peerId) ?? null;
     }
 
     if (stream && videoRef.current) {

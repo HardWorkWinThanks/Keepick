@@ -70,9 +70,7 @@ export const UserVideoCard = ({
         autoPlay
         playsInline
         muted={isMuted}
-        className={`w-full h-full object-cover transition-opacity duration-300 ${
-          hasVideo ? "opacity-100" : "opacity-0"
-        }`}
+        className={`w-full h-full object-cover transition-opacity duration-300`}
       />
 
       {/* 비디오 없을 때 아바타 */}

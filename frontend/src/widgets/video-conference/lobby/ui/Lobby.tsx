@@ -199,25 +199,27 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
 
   return (
     <div className="min-h-screen bg-[#222222] flex items-center justify-center p-4 font-body">
-      <div className="w-full max-w-4xl">
-        {/* 헤더 */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-[#FFFFFF] font-header mb-2">
+      <div className="w-full max-w-2xl">
+        {/* 헤더 - 더 간결하게 */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-[#FFFFFF] font-header mb-2">
             회의 준비
           </h1>
-          <p className="text-[#A0A0A5] text-lg">
+          <p className="text-[#A0A0A5]">
             카메라와 마이크를 확인하고 회의에 참여하세요
           </p>
         </div>
 
-        <div className="bg-[#2C2C2E] rounded-2xl p-8 shadow-2xl animate-scale-in">
-          {/* 비디오 프리뷰 영역 */}
-          <div className="relative w-full h-96 mb-8 bg-[#222222] rounded-xl overflow-hidden">
+        <div className="bg-[#2C2C2E] rounded-2xl p-6 shadow-2xl animate-scale-in">
+          {/* 비디오 프리뷰 영역 - 높이 줄임 */}
+          <div className="relative w-full h-96 mb-6 bg-[#222222] rounded-xl overflow-hidden">
             {isInitializing && (
               <div className="absolute inset-0 flex items-center justify-center bg-[#222222]">
                 <div className="text-center">
-                  <div className="w-12 h-12 border-4 border-[#FE7A25] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-[#A0A0A5]">미디어 장치를 확인 중...</p>
+                  <div className="w-10 h-10 border-4 border-[#FE7A25] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                  <p className="text-[#A0A0A5] text-sm">
+                    미디어 장치를 확인 중...
+                  </p>
                 </div>
               </div>
             )}
@@ -240,21 +242,21 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-[#A0A0A5] bg-[#222222]">
                   {mediaError ? (
                     <>
-                      <ExclamationTriangleIcon className="w-16 h-16 text-[#D22016] mb-4" />
-                      <p className="text-center text-[#D22016] px-4 leading-relaxed">
+                      <ExclamationTriangleIcon className="w-12 h-12 text-[#D22016] mb-3" />
+                      <p className="text-center text-[#D22016] px-4 text-sm leading-relaxed">
                         {mediaError}
                       </p>
                       <button
                         onClick={() => window.location.reload()}
-                        className="mt-4 px-4 py-2 bg-[#FE7A25] hover:bg-[#E06B1F] rounded-lg text-[#222222] font-medium transition-colors"
+                        className="mt-3 px-3 py-1.5 bg-[#FE7A25] hover:bg-[#E06B1F] rounded-lg text-[#222222] text-sm font-medium transition-colors"
                       >
                         다시 시도
                       </button>
                     </>
                   ) : (
                     <>
-                      <VideoCameraSlashIcon className="w-16 h-16 mb-4" />
-                      <p className="text-lg">카메라가 꺼져 있습니다</p>
+                      <VideoCameraSlashIcon className="w-12 h-12 mb-3" />
+                      <p>카메라가 꺼져 있습니다</p>
                     </>
                   )}
                 </div>
@@ -262,14 +264,14 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
 
             {/* 음성 레벨 표시 (마이크 켜져있을 때) */}
             {isMicOn && hasAudioTrack && !mediaError && (
-              <div className="absolute bottom-4 left-4">
-                <div className="flex items-center space-x-2 bg-black/70 rounded-full px-3 py-2 backdrop-blur-sm">
-                  <MicrophoneIcon className="w-4 h-4 text-[#FE7A25]" />
-                  <div className="flex space-x-1">
-                    {[...Array(4)].map((_, i) => (
+              <div className="absolute bottom-3 left-3">
+                <div className="flex items-center space-x-2 bg-black/70 rounded-full px-2 py-1 backdrop-blur-sm">
+                  <MicrophoneIcon className="w-3 h-3 text-[#FE7A25]" />
+                  <div className="flex space-x-0.5">
+                    {[...Array(3)].map((_, i) => (
                       <div
                         key={i}
-                        className="w-1 h-4 bg-[#FE7A25] rounded-full animate-pulse"
+                        className="w-0.5 h-3 bg-[#FE7A25] rounded-full animate-pulse"
                         style={{ animationDelay: `${i * 0.1}s` }}
                       />
                     ))}
@@ -279,61 +281,61 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
             )}
           </div>
 
-          {/* 디바이스 상태 정보 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <div className="flex items-center space-x-3 p-4 bg-[#222222] rounded-lg">
+          {/* 디바이스 상태 정보 - 더 간결하게 */}
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="flex items-center space-x-2 p-3 bg-[#222222] rounded-lg">
               <div
-                className={`p-2 rounded-full ${
+                className={`p-1.5 rounded-full ${
                   hasVideoTrack ? "bg-[#FE7A25]/20" : "bg-[#D22016]/20"
                 }`}
               >
                 <VideoCameraIcon
-                  className={`w-5 h-5 ${
+                  className={`w-4 h-4 ${
                     hasVideoTrack ? "text-[#FE7A25]" : "text-[#D22016]"
                   }`}
                 />
               </div>
-              <div>
-                <p className="text-[#FFFFFF] font-medium">카메라</p>
-                <p className="text-[#A0A0A5] text-sm">
+              <div className="flex-1">
+                <p className="text-[#FFFFFF] font-medium text-sm">카메라</p>
+                <p className="text-[#A0A0A5] text-xs">
                   {hasVideoTrack ? "연결됨" : "연결되지 않음"}
                 </p>
               </div>
               {hasVideoTrack && (
-                <CheckCircleIcon className="w-5 h-5 text-[#FE7A25] ml-auto" />
+                <CheckCircleIcon className="w-4 h-4 text-[#FE7A25]" />
               )}
             </div>
 
-            <div className="flex items-center space-x-3 p-4 bg-[#222222] rounded-lg">
+            <div className="flex items-center space-x-2 p-3 bg-[#222222] rounded-lg">
               <div
-                className={`p-2 rounded-full ${
+                className={`p-1.5 rounded-full ${
                   hasAudioTrack ? "bg-[#FE7A25]/20" : "bg-[#D22016]/20"
                 }`}
               >
                 <MicrophoneIcon
-                  className={`w-5 h-5 ${
+                  className={`w-4 h-4 ${
                     hasAudioTrack ? "text-[#FE7A25]" : "text-[#D22016]"
                   }`}
                 />
               </div>
-              <div>
-                <p className="text-[#FFFFFF] font-medium">마이크</p>
-                <p className="text-[#A0A0A5] text-sm">
+              <div className="flex-1">
+                <p className="text-[#FFFFFF] font-medium text-sm">마이크</p>
+                <p className="text-[#A0A0A5] text-xs">
                   {hasAudioTrack ? "연결됨" : "연결되지 않음"}
                 </p>
               </div>
               {hasAudioTrack && (
-                <CheckCircleIcon className="w-5 h-5 text-[#FE7A25] ml-auto" />
+                <CheckCircleIcon className="w-4 h-4 text-[#FE7A25]" />
               )}
             </div>
           </div>
 
-          {/* 컨트롤 버튼들 */}
-          <div className="flex items-center justify-center space-x-6 mb-8">
+          {/* 컨트롤 버튼들 - 크기 줄임 */}
+          <div className="flex items-center justify-center space-x-4 mb-6">
             <button
               onClick={handleToggleCamera}
               disabled={!localStream || isInitializing}
-              className={`relative p-4 rounded-full transition-all duration-200 transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg ${
+              className={`relative p-3 rounded-full transition-all duration-200 transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg ${
                 isCameraOn && hasVideoTrack
                   ? "bg-[#FE7A25] hover:bg-[#E06B1F]"
                   : "bg-[#D22016] hover:bg-[#D22016]/80"
@@ -341,19 +343,19 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
               aria-label={isCameraOn ? "카메라 끄기" : "카메라 켜기"}
             >
               {isCameraOn && hasVideoTrack ? (
-                <VideoCameraIcon className="w-6 h-6 text-[#222222]" />
+                <VideoCameraIcon className="w-5 h-5 text-[#222222]" />
               ) : (
-                <VideoCameraSlashIcon className="w-6 h-6 text-white" />
+                <VideoCameraSlashIcon className="w-5 h-5 text-white" />
               )}
               {!hasVideoTrack && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#D22016] rounded-full border-2 border-[#2C2C2E]"></div>
+                <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#D22016] rounded-full border-2 border-[#2C2C2E]"></div>
               )}
             </button>
 
             <button
               onClick={handleToggleMic}
               disabled={!localStream || isInitializing}
-              className={`relative p-4 rounded-full transition-all duration-200 transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg ${
+              className={`relative p-3 rounded-full transition-all duration-200 transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg ${
                 isMicOn && hasAudioTrack
                   ? "bg-[#FE7A25] hover:bg-[#E06B1F]"
                   : "bg-[#D22016] hover:bg-[#D22016]/80"
@@ -361,12 +363,12 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
               aria-label={isMicOn ? "마이크 끄기" : "마이크 켜기"}
             >
               {isMicOn && hasAudioTrack ? (
-                <MicrophoneIcon className="w-6 h-6 text-[#222222]" />
+                <MicrophoneIcon className="w-5 h-5 text-[#222222]" />
               ) : (
-                <SpeakerXMarkIcon className="w-6 h-6 text-white" />
+                <SpeakerXMarkIcon className="w-5 h-5 text-white" />
               )}
               {!hasAudioTrack && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#D22016] rounded-full border-2 border-[#2C2C2E]"></div>
+                <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#D22016] rounded-full border-2 border-[#2C2C2E]"></div>
               )}
             </button>
           </div>
@@ -375,11 +377,11 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
           <Button
             onClick={handleJoinClick}
             disabled={!canJoinMeeting}
-            className="w-full py-4 text-xl font-bold bg-[#FCBC34] hover:bg-[#E4A92E] text-[#222222] rounded-xl transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
+            className="w-full py-3 text-lg font-bold bg-[#FCBC34] hover:bg-[#E4A92E] text-[#222222] rounded-xl transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
           >
             {isLoading ? (
               <div className="flex items-center justify-center space-x-2">
-                <div className="w-5 h-5 border-2 border-[#222222] border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-[#222222] border-t-transparent rounded-full animate-spin"></div>
                 <span>입장 중...</span>
               </div>
             ) : isInitializing ? (
@@ -391,17 +393,19 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
 
           {/* 에러 메시지 */}
           {error && (
-            <div className="mt-6 p-4 bg-[#D22016]/10 rounded-lg">
+            <div className="mt-4 p-3 bg-[#D22016]/10 rounded-lg">
               <div className="flex items-center space-x-2">
-                <ExclamationTriangleIcon className="w-5 h-5 text-[#D22016]" />
-                <p className="text-[#D22016]">서버 연결 오류: {error}</p>
+                <ExclamationTriangleIcon className="w-4 h-4 text-[#D22016]" />
+                <p className="text-[#D22016] text-sm">
+                  서버 연결 오류: {error}
+                </p>
               </div>
             </div>
           )}
 
           {/* 도움말 텍스트 */}
-          <div className="mt-6 text-center">
-            <p className="text-[#A0A0A5] text-sm">
+          <div className="mt-4 text-center">
+            <p className="text-[#A0A0A5] text-xs">
               문제가 있나요?{" "}
               <button
                 onClick={() => window.location.reload()}
