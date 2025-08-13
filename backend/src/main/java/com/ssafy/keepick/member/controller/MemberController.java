@@ -82,8 +82,12 @@ public class MemberController implements MemberApiSpec {
     @GetMapping("/check-nickname")
     @Override
     public ApiResponse<NicknameCheckResponse> checkNicknameAvailability(
-        @RequestParam String nickname
+        @RequestParam(required = false) String nickname
     ) {
+        if (nickname == null || nickname.trim().isEmpty()) {
+            throw new BaseException(ErrorCode.INVALID_PARAMETER, "닉네임은 필수입니다.");
+        }
+        
         boolean isAvailable = memberService.checkNicknameAvailability(nickname);
         NicknameCheckResponse response = NicknameCheckResponse.of(nickname, isAvailable);
         return ApiResponse.ok(response);

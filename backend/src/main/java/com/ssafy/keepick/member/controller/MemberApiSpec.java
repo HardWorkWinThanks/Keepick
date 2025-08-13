@@ -344,17 +344,30 @@ public interface MemberApiSpec {
             content = @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(
-                    name = "닉네임 누락",
-                    value = """
-                    {
-                        "status": 400,
-                        "message": "잘못된 요청 파라미터입니다.",
-                        "errorCode": "B004",
-                        "timeStamp": "2025-08-10T15:17:08.797705800"
-                    }
-                    """
-                )
+                examples = {
+                    @ExampleObject(
+                        name = "닉네임 누락",
+                        value = """
+                        {
+                            "status": 400,
+                            "message": "닉네임은 필수입니다.",
+                            "errorCode": "B004",
+                            "timeStamp": "2025-08-10T15:17:08.797705800"
+                        }
+                        """
+                    ),
+                    @ExampleObject(
+                        name = "빈 닉네임",
+                        value = """
+                        {
+                            "status": 400,
+                            "message": "닉네임은 필수입니다.",
+                            "errorCode": "B004",
+                            "timeStamp": "2025-08-10T15:17:08.797705800"
+                        }
+                        """
+                    )
+                }
             )
         )
     })
