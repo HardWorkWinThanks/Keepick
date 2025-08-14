@@ -5,7 +5,7 @@ import { Photo, DragPhotoData } from "@/entities/photo";
 
 export interface DragState {
   isDragging: boolean;
-  draggedPhotoId: string | null;
+  draggedPhotoId: number | null;
   draggedPhotoSource: string | null;
   dragOverTarget: string | null;
   dragOverPosition: number | null;

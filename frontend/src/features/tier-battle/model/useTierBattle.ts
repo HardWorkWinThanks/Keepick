@@ -27,10 +27,10 @@ export function useTierBattle() {
    * @param onPhotoRemoveFromAvailable - (선택) 사진이 'available' 목록에서 왔을 경우, 해당 목록에서 사진을 제거하기 위한 콜백 함수
    */
   const handleBattleDecision = (
-    winnerId: string,
+    winnerId: number,
     tierPhotos: TierData,
     setTierPhotos: React.Dispatch<React.SetStateAction<TierData>>,
-    onPhotoRemoveFromAvailable?: (photoId: string) => void
+    onPhotoRemoveFromAvailable?: (photoId: number) => void
   ) => {
     if (!battleSequence) return;
 
@@ -65,7 +65,7 @@ export function useTierBattle() {
     isNewPhotoWin: boolean,
     tierPhotos: TierData,
     setTierPhotos: React.Dispatch<React.SetStateAction<TierData>>,
-    onPhotoRemoveFromAvailable?: (photoId: string) => void
+    onPhotoRemoveFromAvailable?: (photoId: number) => void
   ) => {
     if (!battleSequence) return;
     const {

@@ -12,7 +12,7 @@ interface TierBattleModalProps {
   isOpen: boolean;
   battleSequence: BattleSequence | null;
   onClose: () => void;
-  onDecision: (winnerId: string) => void;
+  onDecision: (winnerId: number) => void;
   onZoomRequest: (photo: Photo) => void;
 }
 
@@ -23,7 +23,7 @@ export default function TierBattleModal({
   onDecision,
   onZoomRequest,
 }: TierBattleModalProps) {
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<number | null>(null);
 
   useEffect(() => {
     if (isOpen) {

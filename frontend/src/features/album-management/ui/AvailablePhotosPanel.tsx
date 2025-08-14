@@ -8,7 +8,7 @@
     onPhotoClick?: (photo: Photo) => void;
     onDragStart?: (e: React.DragEvent<HTMLDivElement>, photo: Photo, source: string) => void;      
     onDragEnd?: () => void;
-    draggingPhotoId?: string | null;
+    draggingPhotoId?: number | null;
     className?: string;
   }
 

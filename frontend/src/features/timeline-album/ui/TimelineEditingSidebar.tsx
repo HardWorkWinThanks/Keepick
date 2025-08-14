@@ -19,7 +19,7 @@ export function TimelineEditingSidebar({
   availablePhotos,
   onShowAlbumInfoModal
 }: TimelineEditingSidebarProps) {
-  const [draggingPhotoId, setDraggingPhotoId] = useState<string | null>(null)
+  const [draggingPhotoId, setDraggingPhotoId] = useState<number | null>(null)
 
   const handleDragStart = (_: React.DragEvent<HTMLDivElement>, photo: Photo) => {
     setDraggingPhotoId(photo.id)

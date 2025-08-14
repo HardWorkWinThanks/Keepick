@@ -6,7 +6,7 @@ import { profileApi } from "../api/profileApi";
 import { useAppDispatch, useAppSelector } from "@/shared/config/hooks";
 import { updateUser } from "@/entities/user/model/userSlice";
 import { useEffect } from "react";
-import { uploadImage } from "@/features/image-upload/api/imageUploadApi";
+import { uploadProfileImage } from "../api/profileImageApi";
 
 // 프로필 수정 페이지의 상태와 비즈니스 로직을 관리하는 커스텀 훅입니다.
 export function useProfileEdit() {
@@ -96,7 +96,7 @@ export function useProfileEdit() {
         try {
           setLoading(true);
 
-          const { publicUrl } = await uploadImage(file)
+          const { publicUrl } = await uploadProfileImage(file)
 
           const updateData =
             imageType === "profile"

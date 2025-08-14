@@ -1,77 +1,22 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
+import { useSelector, useDispatch } from "react-redux"
+import { useRouter } from "next/navigation"
+import type { RootState } from "@/shared/config/store"
 import type { GalleryPhoto, PhotoTag, PhotoFilter, PhotoSelection } from "@/entities/photo"
+import { 
+  toggleSelectedPhoto, 
+  clearSelectedPhotos, 
+  setIsFromGallery 
+} from "./photoSelectionSlice"
+import { createTimelineAlbum as createTimelineAlbumAPI } from "@/features/timeline-album/api/timelineAlbumApi"
+import { createTierAlbum as createTierAlbumAPI } from "@/features/tier-album/api/tierAlbumApi"
 
-// 임시 더미 데이터 - 나중에 API로 교체
-const dummyTags = [
-  "인물", "풍경", "음식", "동물", "건물", "자연", "가족", "친구", "여행", "일상",
-  "축제", "스포츠", "예술", "꽃", "바다", "산", "도시", "밤", "일출", "일몰",
-  "아이", "어른", "웃음", "행복"
-]
-
-const photoCategories = [
-  { category: "가족", titles: ["가족 여행", "가족 모임", "가족 식사", "가족 나들이", "가족 사진"] },
-  { category: "일상", titles: ["일상의 순간", "평범한 하루", "소소한 행복", "일상 스냅", "생활 속 순간"] },
-  { category: "여행", titles: ["여행지 풍경", "해변 휴가", "산 속 여행", "도시 탐방", "여행 기념품"] },
-  { category: "이벤트", titles: ["생일 파티", "졸업식", "결혼식", "기념일", "축하 행사"] },
-]
-
-const photoAspectRatios = [
-  { ratio: 1, name: "square" },
-  { ratio: 1.33, name: "landscape" },
-  { ratio: 0.75, name: "portrait" },
-  { ratio: 1.5, name: "wide" },
-  { ratio: 0.67, name: "tall" },
-]
-
-// 더미 데이터 생성 함수
-const generatePhotos = (startIndex: number, count: number): GalleryPhoto[] => {
-  const photos: GalleryPhoto[] = []
-  const baseWidth = 300
-
-  for (let i = 0; i < count; i++) {
-    const photoId = startIndex + i + 1
-    const randomCategory = photoCategories[Math.floor(Math.random() * photoCategories.length)]
-    const randomTitle = randomCategory.titles[Math.floor(Math.random() * randomCategory.titles.length)]
-    const randomAspect = photoAspectRatios[Math.floor(Math.random() * photoAspectRatios.length)]
-    
-    const tagCount = Math.floor(Math.random() * 4) + 2
-    const shuffledTags = [...dummyTags].sort(() => 0.5 - Math.random()).slice(0, tagCount)
-    
-    const start = new Date(2020, 0, 1)
-    const end = new Date()
-    const randomDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()))
-    
-    const width = baseWidth
-    const height = Math.round(baseWidth / randomAspect.ratio)
-
-    photos.push({
-      id: photoId,
-      src: `/placeholder.svg?height=${height}&width=${width}&query=${encodeURIComponent(randomTitle)}`,
-      title: `${randomTitle} #${photoId}`,
-      category: randomCategory.category,
-      aspectRatio: randomAspect.ratio,
-      width,
-      height,
-      date: randomDate.toLocaleDateString("ko-KR", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      }),
-      tags: shuffledTags,
-    })
-  }
-
-  return photos
-}
-
-// Masonry 레이아웃 훅
+// Masonry 레이아웃 훅 (useMemo로 변경하여 무한 루프 방지)
 export const useMasonryLayout = (photos: GalleryPhoto[], columnCount: number) => {
-  const [columns, setColumns] = useState<GalleryPhoto[][]>([])
-
-  useEffect(() => {
-    if (photos.length === 0) return
+  const columns = useMemo(() => {
+    if (photos.length === 0) return []
 
     const columnHeights = new Array(columnCount).fill(0)
     const newColumns: GalleryPhoto[][] = Array.from({ length: columnCount }, () => [])
@@ -82,7 +27,7 @@ export const useMasonryLayout = (photos: GalleryPhoto[], columnCount: number) =>
       columnHeights[shortestColumnIndex] += photo.height + 16
     })
 
-    setColumns(newColumns)
+    return newColumns
   }, [photos, columnCount])
 
   return columns
@@ -135,9 +80,14 @@ export const useDragScroll = () => {
   }
 }
 
-export function usePhotoGallery() {
-  const [allPhotos, setAllPhotos] = useState<GalleryPhoto[]>(() => generatePhotos(0, 20))
-  const [filteredPhotos, setFilteredPhotos] = useState<GalleryPhoto[]>(allPhotos)
+export function usePhotoGallery(groupId?: string) {
+  // Redux 상태 사용
+  const dispatch = useDispatch()
+  const router = useRouter()
+  const { selectedPhotos, isFromGallery } = useSelector((state: RootState) => state.photoSelection)
+  
+  // 실제 데이터 사용을 위해 빈 배열로 초기화
+  const [allPhotos, setAllPhotos] = useState<GalleryPhoto[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -145,16 +95,15 @@ export function usePhotoGallery() {
 
   // 선택 모드 관련 상태
   const [isSelectionMode, setIsSelectionMode] = useState(false)
-  const [selectedPhotos, setSelectedPhotos] = useState<number[]>([])
   const [isPhotosExpanded, setIsPhotosExpanded] = useState(false)
 
-  // 모든 태그 추출
-  const allTags = Array.from(new Set(allPhotos.flatMap((photo) => photo.tags))).sort()
+  // 모든 태그 추출 (메모이제이션으로 리렌더링 최적화)
+  const allTags = useMemo(() => {
+    return Array.from(new Set(allPhotos.flatMap((photo) => photo.tags))).sort()
+  }, [allPhotos])
 
-  // 선택된 사진들의 실제 데이터
-  const selectedPhotoData = useMemo(() => {
-    return selectedPhotos.map((id) => allPhotos.find((photo) => photo.id === id)).filter(Boolean) as GalleryPhoto[]
-  }, [selectedPhotos, allPhotos])
+  // Redux에서 이미 GalleryPhoto 배열로 관리되므로 별도 변환 불필요
+  const selectedPhotoData = selectedPhotos
 
   // 반응형 컬럼 수 계산
   useEffect(() => {
@@ -171,15 +120,14 @@ export function usePhotoGallery() {
     return () => window.removeEventListener("resize", updateColumnCount)
   }, [])
 
-  // 태그 필터링
-  useEffect(() => {
+  // 태그 필터링 (useMemo로 변경하여 무한 루프 방지)
+  const filteredPhotos = useMemo(() => {
     if (selectedTags.length === 0) {
-      setFilteredPhotos(allPhotos)
+      return allPhotos
     } else {
-      const filtered = allPhotos.filter((photo) => 
+      return allPhotos.filter((photo) => 
         selectedTags.some((tag) => photo.tags.includes(tag))
       )
-      setFilteredPhotos(filtered)
     }
   }, [selectedTags, allPhotos])
 
@@ -202,45 +150,99 @@ export function usePhotoGallery() {
 
   const exitSelectionMode = () => {
     setIsSelectionMode(false)
-    setSelectedPhotos([])
+    dispatch(clearSelectedPhotos())
     setIsPhotosExpanded(false)
   }
 
-  // 사진 선택 토글
-  const togglePhotoSelection = (photoId: number) => {
+  // 사진 선택 토글 - Redux 사용
+  const togglePhotoSelection = (photo: GalleryPhoto) => {
     if (!isSelectionMode) return
-    setSelectedPhotos((prev) => 
-      prev.includes(photoId) ? prev.filter((id) => id !== photoId) : [...prev, photoId]
-    )
+    dispatch(toggleSelectedPhoto(photo))
   }
 
   // 선택된 사진들 삭제
   const deleteSelectedPhotos = () => {
     if (selectedPhotos.length === 0) return
-    const updatedPhotos = allPhotos.filter((photo) => !selectedPhotos.includes(photo.id))
+    const selectedIds = selectedPhotos.map(photo => photo.id)
+    const updatedPhotos = allPhotos.filter((photo) => !selectedIds.includes(photo.id))
     setAllPhotos(updatedPhotos)
-    setSelectedPhotos([])
+    dispatch(clearSelectedPhotos())
     exitSelectionMode()
   }
 
-  // 앨범 생성 함수들 (임시 구현)
-  const createTimelineAlbum = () => {
-    if (selectedPhotos.length === 0) return
-    console.log("타임라인 앨범 생성:", selectedPhotos)
-    // TODO: API 호출
-    exitSelectionMode()
+  // 앨범 생성 함수들
+  const createTimelineAlbum = async () => {
+    if (selectedPhotos.length === 0 || !groupId) return
+    
+    try {
+      setLoading(true)
+      const photoIds = selectedPhotos.map(photo => photo.id)
+      
+      // 갤러리에서 선택됨을 표시
+      dispatch(setIsFromGallery(true))
+      
+      // API 호출
+      const result = await createTimelineAlbumAPI(parseInt(groupId), photoIds)
+      
+      // 성공시 해당 앨범 페이지로 라우팅
+      router.push(`/group/${groupId}/timeline/${result.albumId}`)
+      
+      // 선택 모드 종료는 라우팅 후 해당 페이지에서 처리
+    } catch (error) {
+      console.error("타임라인 앨범 생성 실패:", error)
+      // 실패시 선택 상태 유지하여 재시도 가능
+      dispatch(setIsFromGallery(false))
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const createTierAlbum = () => {
-    if (selectedPhotos.length === 0) return
-    console.log("티어 앨범 생성:", selectedPhotos)
-    // TODO: API 호출
-    exitSelectionMode()
+  const createTierAlbum = async () => {
+    if (selectedPhotos.length === 0 || !groupId) return
+    
+    try {
+      setLoading(true)
+      const photoIds = selectedPhotos.map(photo => photo.id)
+      
+      // 갤러리에서 선택됨을 표시
+      dispatch(setIsFromGallery(true))
+      
+      // API 호출
+      const tierAlbumId = await createTierAlbumAPI(parseInt(groupId), photoIds)
+      
+      // 성공시 해당 앨범 페이지로 라우팅
+      router.push(`/group/${groupId}/tier/${tierAlbumId}`)
+      
+      // 선택 모드 종료는 라우팅 후 해당 페이지에서 처리
+    } catch (error) {
+      console.error("티어 앨범 생성 실패:", error)
+      // 실패시 선택 상태 유지하여 재시도 가능
+      dispatch(setIsFromGallery(false))
+      
+      // 에러 타입별 사용자 친화적 메시지 (향후 toast 등으로 표시)
+      if (error instanceof Error) {
+        if (error.message.includes("B004")) {
+          console.error("포함할 사진은 최소 1개 이상이어야 합니다.")
+        } else if (error.message.includes("B003")) {
+          console.error("리소스를 찾을 수 없습니다.")
+        }
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // 더 많은 사진 로드
+  // 갤러리 데이터 설정 (외부에서 호출) - useCallback으로 메모이제이션
+  const setGalleryData = useCallback((photos: GalleryPhoto[]) => {
+    setAllPhotos(photos)
+    setHasMore(false) // overview는 페이지네이션 없음
+  }, [])
+
+  // 더 많은 사진 로드 (실제 API 구현 필요)
   const loadMorePhotos = () => {
     setLoading(true)
+    // TODO: 실제 API 호출로 변경
+    /*
     setTimeout(() => {
       const newPhotos = generatePhotos(allPhotos.length, 20)
       setAllPhotos((prev) => [...prev, ...newPhotos])
@@ -249,6 +251,8 @@ export function usePhotoGallery() {
         setHasMore(false)
       }
     }, 1000)
+    */
+    setLoading(false)
   }
 
   return {
@@ -266,6 +270,7 @@ export function usePhotoGallery() {
     isSelectionMode,
     selectedPhotos,
     isPhotosExpanded,
+    isFromGallery,
     
     // 액션
     toggleTag,
@@ -278,5 +283,6 @@ export function usePhotoGallery() {
     createTierAlbum,
     loadMorePhotos,
     setIsPhotosExpanded,
+    setGalleryData,
   }
 }

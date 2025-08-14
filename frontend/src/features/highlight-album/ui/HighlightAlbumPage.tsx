@@ -134,7 +134,7 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
                                 className="relative border-2 rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-all duration-300 hover:shadow-lg bg-gray-900/50"
                                 style={{
                                   borderColor: emotionColors[emotion as keyof typeof emotionColors],
-                                  height: 'calc((100% - 0.5rem))', // 2행에 맞춰 높이 조정
+                                  height: '50%', // 2행에 맞춰 높이 조정             
                                 }}
                                 onClick={() => handleEmotionClick(emotion)}
                                 tabIndex={0}
@@ -148,7 +148,7 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
                                 }}
                               >
                                 <Image
-                                  src={photo || "/dummy/jaewan1.jpg"}
+                                  src={ photo || "/presentation/surprise_018.jpg"}
                                   alt={`${emotion} ${actualIndex + 1}`}
                                   fill
                                   className="object-cover pointer-events-none"

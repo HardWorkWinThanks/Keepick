@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useSelector, useDispatch } from "react-redux"
 import { motion } from "framer-motion"
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
@@ -8,6 +9,8 @@ import { useTierAlbum } from "../model/useTierAlbum"
 import type { TierInfo, TierType } from "../types"
 import { Photo, DragPhotoData } from "@/entities/photo"
 import { TIER_COLORS } from "@/shared/config/tierColors"
+import type { RootState } from "@/shared/config/store"
+import { clearSelectedPhotos, setIsFromGallery } from "@/features/photo-gallery/model/photoSelectionSlice"
 import {
   useAlbumState,
   useAlbumStorage,
@@ -129,6 +132,8 @@ const TiltShineCard: React.FC<TiltShineCardProps> = ({ children, tierColor, clas
 }
 
 export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) {
+  const dispatch = useDispatch()
+  const { selectedPhotos, isFromGallery } = useSelector((state: RootState) => state.photoSelection)
   const [isEditMode, setIsEditMode] = useState(false)
   
   const {
@@ -181,17 +186,31 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
 
   // 편집 모드 토글
   const toggleEditMode = () => {
+    if (isEditMode && isFromGallery) {
+      // 편집 완료 시 선택 상태 초기화
+      dispatch(clearSelectedPhotos())
+      dispatch(setIsFromGallery(false))
+    }
     setIsEditMode(!isEditMode)
   }
+
+  // 갤러리에서 선택된 사진들로 앨범을 생성한 경우 자동으로 편집 모드 진입
+  useEffect(() => {
+    if (isFromGallery && selectedPhotos.length > 0) {
+      setIsEditMode(true)
+      console.log('갤러리에서 선택된 사진들로 티어 앨범 편집 시작:', selectedPhotos)
+    }
+  }, [isFromGallery, selectedPhotos])
 
   // TierAlbumWidget 로직 - 앨범 데이터 로드
   useEffect(() => {
     if (isEditMode) {
       const result = loadAlbumData(`tier_${albumId}`)
-      if (result.success && result.data) {
+      if (result.success && result.data && !isFromGallery) {
+        // 기존 저장된 데이터가 있고 갤러리에서 온 것이 아닌 경우
         setTierPhotos(
           result.data?.tierPhotos as TierData || {
-            S: [{ id: "photo_s1", src: "/dummy/jaewan1.jpg", name: "S급 사진1" }],
+            S: [{ id: 500, src: "/dummy/jaewan1.jpg", name: "S급 사진1" }],
             A: [],
             B: [],
             C: [],
@@ -200,9 +219,19 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
         )
         setAvailablePhotos(result.data.availablePhotos || getDefaultPhotos())
       } else {
+        // 갤러리에서 선택된 사진들을 사용하거나 기본 데이터 설정
+        const photosToUse = isFromGallery && selectedPhotos.length > 0 
+          ? selectedPhotos.map(photo => ({
+              id: photo.id,
+              src: photo.src,
+              name: photo.title || `사진 #${photo.id}`
+            }))
+          : getDefaultPhotos()
+        
+        setAvailablePhotos(photosToUse)
         // 기본 데이터 설정
         setTierPhotos({
-          S: [{ id: "photo_s1", src: "/dummy/jaewan1.jpg", name: "S급 사진1" }],
+          S: [{ id: 501, src: "/dummy/jaewan1.jpg", name: "S급 사진1" }],
           A: [],
           B: [],
           C: [],
