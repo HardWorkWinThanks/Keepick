@@ -63,8 +63,6 @@ export function useAlbumStorage() {
    * const getDefaultPhotos = (): Photo[] => [ 로 나중에 바꾸기.
    */
   const getDefaultPhotos = (): Photo[] => [
-    { id: 10, src: "/dummy/main-dummy10.jpg", name: "사진10" },
-    { id: 11, src: "/dummy/main-dummy11.jpg", name: "사진11" },
     { id: 12, src: "/dummy/main-dummy12.jpg", name: "사진12" },
     { id: 13, src: "/dummy/main-dummy13.jpg", name: "사진13" },
     { id: 14, src: "/dummy/main-dummy14.jpg", name: "사진14" },
@@ -80,6 +78,7 @@ export function useAlbumStorage() {
     { id: 24, src: "/dummy/sea-dummy1.jpg", name: "바다1" },
     { id: 25, src: "/dummy/ugly_00217.jpg", name: "ugly1" },
     { id: 26, src: "/dummy/ugly_074.jpg", name: "ugly2" },
+    { id: 27, src: "/dummy/ugly.jpg", name: "ugly3" },
   ];
 
   // 훅이 제공하는 함수들을 객체 형태로 반환합니다.
