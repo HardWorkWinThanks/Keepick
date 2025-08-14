@@ -86,6 +86,7 @@ public class PhotoServiceTest extends BaseTest {
             List<Long> notInAlbumPhotoIds = List.of(1L);
             given(groupRepository.findById(1L)).willReturn(Optional.of(testGroup));
             given(photoRepository.findPhotoIdNotInAnyAlbum(deleteRequest.getPhotoIds())).willReturn(notInAlbumPhotoIds);
+            given(photoRepository.clearSinglePhotoClusters(1L)).willReturn(0L);
             doNothing().when(photoRepository).softDeleteAllById(anyList());
 
             // when
@@ -128,6 +129,23 @@ public class PhotoServiceTest extends BaseTest {
             assertThat(result).isEmpty();
             verify(groupRepository).findById(1L);
             verify(photoRepository).softDeleteAllById(Collections.emptyList());
+        }
+
+        @Test
+        @DisplayName("사진 삭제 후 클러스터 업데이트 호출 테스트")
+        void deleteGroupPhoto_deleteCluster() {
+            // given
+            List<Long> notInAlbumPhotoIds = List.of(1L);
+            given(groupRepository.findById(1L)).willReturn(Optional.of(testGroup));
+            given(photoRepository.findPhotoIdNotInAnyAlbum(deleteRequest.getPhotoIds())).willReturn(notInAlbumPhotoIds);
+            given(photoRepository.clearSinglePhotoClusters(1L)).willReturn(0L);
+            doNothing().when(photoRepository).softDeleteAllById(anyList());
+
+            // when
+            groupPhotoService.deleteGroupPhoto(1L, deleteRequest);
+
+            // then
+            verify(photoRepository).clearSinglePhotoClusters(1L);
         }
     }
 
