@@ -111,6 +111,9 @@ public class PhotoQueryFactoryImpl implements PhotoQueryFactory {
         return new PageImpl<>(photos, pageable, total != null ? total : 0);
     }
 
+
+    
+
     private BooleanExpression groupIdEq(Long groupId) {
         return photo.group.id.eq(groupId);
     }

@@ -18,4 +18,6 @@ public interface PhotoQueryFactory {
 
     Page<PhotoClusterDto> findSimilarClusters(Long groupId, Pageable pageable);
 
+    long clearSinglePhotoClusters(List<Long> deletePhotoIds);
+
 }

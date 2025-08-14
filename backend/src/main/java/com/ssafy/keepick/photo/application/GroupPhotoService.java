@@ -89,6 +89,10 @@ public class GroupPhotoService {
         List<Long> ids = request.getPhotoIds();
         List<Long> deleteIds = photoRepository.findPhotoIdNotInAnyAlbum(ids);
         photoRepository.softDeleteAllById(deleteIds);
+        
+        // 3. 사진 삭제 후 유사한 그룹이 1개인 사진의 clusterId null로 변경
+        photoRepository.clearSinglePhotoClusters(deleteIds);
+
         return deleteIds.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
     }
 
