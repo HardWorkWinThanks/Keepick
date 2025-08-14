@@ -57,7 +57,7 @@ export default function AppHeader({
       {/* Left side - 로고 */}
       {showLogo && (
         <Link href="/" className="flex items-center hover:scale-105 transition-transform duration-200">
-          <h1 className="text-sm sm:text-lg font-semibold tracking-wider cursor-pointer">
+          <h1 className="text-sm sm:text-lg font-semibold tracking-wider cursor-pointer text-white">
             {logoText}
           </h1>
         </Link>

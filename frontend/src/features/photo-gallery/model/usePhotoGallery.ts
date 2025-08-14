@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { useSelector, useDispatch } from "react-redux"
 import { useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import type { RootState } from "@/shared/config/store"
 import type { GalleryPhoto, PhotoTag, PhotoFilter, PhotoSelection } from "@/entities/photo"
 import { 
@@ -84,6 +85,7 @@ export function usePhotoGallery(groupId?: string) {
   // Redux 상태 사용
   const dispatch = useDispatch()
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { selectedPhotos, isFromGallery } = useSelector((state: RootState) => state.photoSelection)
   
   // 실제 데이터 사용을 위해 빈 배열로 초기화
@@ -183,6 +185,11 @@ export function usePhotoGallery(groupId?: string) {
       
       // API 호출
       const result = await createTimelineAlbumAPI(parseInt(groupId), photoIds)
+      
+      // 타임라인 앨범 목록 쿼리 무효화
+      queryClient.invalidateQueries({ 
+        queryKey: ['timelineAlbums', parseInt(groupId)] 
+      })
       
       // 성공시 해당 앨범 페이지로 라우팅
       router.push(`/group/${groupId}/timeline/${result.albumId}`)

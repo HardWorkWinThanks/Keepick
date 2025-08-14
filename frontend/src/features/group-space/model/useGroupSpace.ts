@@ -1,7 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import type { AlbumType, GroupPhoto } from "@/entities/group"
+import { getTimelineAlbumList, deleteTimelineAlbum, type TimelineAlbumListItem } from "@/features/timeline-album/api/timelineAlbumApi"
 
 export const albumTypes: AlbumType[] = [
   { id: "timeline", name: "TIMELINE ALBUM", subtitle: "타임라인 앨범" },
@@ -21,16 +23,7 @@ export const mainModes = [
 export type MainMode = typeof mainModes[number]["id"]
 
 export const samplePhotos = {
-  timeline: [
-    { id: 1, title: "가족 여행", subtitle: "제주도 여행", image: "/dummy/jeju-dummy1.webp" },
-    { id: 2, title: "생일 파티", subtitle: "아빠 생신", image: "/dummy/main-dummy1.jpg" },
-    { id: 3, title: "크리스마스", subtitle: "2023 크리스마스", image: "/dummy/main-dummy2.jpg" },
-    { id: 4, title: "새해 첫날", subtitle: "2024 새해", image: "/dummy/main-dummy3.jpg" },
-    { id: 5, title: "봄 나들이", subtitle: "벚꽃 구경", image: "/dummy/main-dummy4.jpg" },
-    { id: 6, title: "여름 휴가", subtitle: "바다 여행", image: "/dummy/sea-dummy1.jpg" },
-    { id: 7, title: "가을 단풍", subtitle: "단풍 구경", image: "/dummy/main-dummy5.jpg" },
-    { id: 8, title: "공항에서", subtitle: "출발 전 설렘", image: "/dummy/airport-dummy1.jpg" },
-  ],
+  timeline: [], // 더미 타임라인 앨범 제거
   tier: [
     { id: 1, title: "최고의 순간", subtitle: "S급 추억", image: "/dummy/jeju-dummy2.jpg" },
     { id: 2, title: "특별한 날", subtitle: "A급 기념일", image: "/dummy/main-dummy6.jpg" },
@@ -58,16 +51,79 @@ export const samplePhotos = {
   ],
 }
 
-export function useGroupSpace() {
+export function useGroupSpace(groupId?: number) {
+  const queryClient = useQueryClient()
   const [currentModeIndex, setCurrentModeIndex] = useState(0) // Album/Gallery 모드
   const [currentAlbumIndex, setCurrentAlbumIndex] = useState(0)
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
+  const [deletingAlbumId, setDeletingAlbumId] = useState<number | null>(null)
 
   const currentMode = mainModes[currentModeIndex]
   const currentAlbum = albumTypes[currentAlbumIndex]
-  const currentPhotos = samplePhotos[currentAlbum.id as keyof typeof samplePhotos]
-  const visiblePhotos = currentPhotos.slice(currentPhotoIndex, currentPhotoIndex + 4)
+  
+  // 타임라인 앨범일 때만 API 호출 (12개씩 가져옴)
+  const currentPage = Math.floor(currentPhotoIndex / 12)
+  const { data: timelineData, isLoading } = useQuery({
+    queryKey: ['timelineAlbums', groupId, currentPage],
+    queryFn: () => getTimelineAlbumList(groupId!, currentPage, 12),
+    enabled: !!groupId && currentAlbum.id === 'timeline',
+    staleTime: 5 * 60 * 1000, // 5분간 캐시 유지
+  })
+
+  // 타임라인 앨범 삭제 mutation
+  const deleteAlbumMutation = useMutation({
+    mutationFn: async (albumId: number) => {
+      if (!groupId) throw new Error('Group ID is required')
+      return deleteTimelineAlbum(groupId, albumId)
+    },
+    onMutate: (albumId) => {
+      setDeletingAlbumId(albumId)
+    },
+    onSuccess: () => {
+      // 앨범 목록 쿼리 무효화 - 모든 페이지
+      queryClient.invalidateQueries({ 
+        queryKey: ['timelineAlbums', groupId] 
+      })
+    },
+    onError: (error) => {
+      console.error('앨범 삭제 실패:', error)
+      // TODO: 사용자에게 에러 메시지 표시
+    },
+    onSettled: () => {
+      setDeletingAlbumId(null)
+    }
+  })
+
+  // API 데이터를 GroupPhoto 형식으로 변환
+  const convertToGroupPhotos = (albums: TimelineAlbumListItem[]): GroupPhoto[] => {
+    return albums.map(album => ({
+      id: album.albumId,
+      title: album.name,
+      subtitle: album.description || `${album.photoCount}장의 사진`,
+      image: album.thumbnailUrl || "/placeholder.svg"
+    }))
+  }
+
+  // 현재 앨범에 따라 데이터 결정
+  let currentPhotos: GroupPhoto[]
+  let visiblePhotos: GroupPhoto[]
+  let hasNextPage = false
+  
+  if (currentAlbum.id === 'timeline') {
+    // 타임라인: API에서 12개씩 가져와서 4개씩 슬라이싱
+    currentPhotos = timelineData ? convertToGroupPhotos(timelineData.list) : []
+    const localIndex = currentPhotoIndex % 12 // 현재 페이지 내에서의 인덱스
+    visiblePhotos = currentPhotos.slice(localIndex, localIndex + 4)
+    
+    // 다음 페이지 존재 여부: 현재 페이지에 더 있거나 API에 다음 페이지가 있을 때
+    hasNextPage = localIndex < currentPhotos.length - 4 || (timelineData?.pageInfo.hasNext || false)
+  } else {
+    // 다른 앨범: 전체 데이터에서 4개씩 슬라이싱
+    currentPhotos = samplePhotos[currentAlbum.id as keyof typeof samplePhotos]
+    visiblePhotos = currentPhotos.slice(currentPhotoIndex, currentPhotoIndex + 4)
+    hasNextPage = currentPhotoIndex < currentPhotos.length - 4
+  }
 
   const changeMainMode = (direction: "up" | "down") => {
     if (isAnimating) return
@@ -103,11 +159,41 @@ export function useGroupSpace() {
   }
 
   const navigatePhotos = (direction: "left" | "right") => {
-    if (direction === "left" && currentPhotoIndex > 0) {
-      setCurrentPhotoIndex((prev) => Math.max(0, prev - 4))
-    } else if (direction === "right" && currentPhotoIndex < currentPhotos.length - 4) {
-      setCurrentPhotoIndex((prev) => Math.min(currentPhotos.length - 4, prev + 4))
+    if (currentAlbum.id === 'timeline') {
+      // 타임라인 앨범: 12개 단위로 관리하면서 4개씩 네비게이션
+      if (direction === "left" && currentPhotoIndex > 0) {
+        setCurrentPhotoIndex((prev) => Math.max(0, prev - 4))
+      } else if (direction === "right") {
+        const localIndex = currentPhotoIndex % 12
+        const hasMoreInCurrentPage = localIndex < currentPhotos.length - 4
+        const hasNextAPIPage = timelineData?.pageInfo.hasNext || false
+        
+        if (hasMoreInCurrentPage) {
+          // 현재 페이지에 더 보여줄 것이 있으면 4개 더 진행
+          setCurrentPhotoIndex((prev) => prev + 4)
+        } else if (hasNextAPIPage) {
+          // 현재 페이지를 다 봤고 다음 API 페이지가 있으면 다음 페이지로
+          setCurrentPhotoIndex((prev) => prev + 4)
+        }
+      }
+    } else {
+      // 다른 앨범: 기존 로직
+      if (direction === "left" && currentPhotoIndex > 0) {
+        setCurrentPhotoIndex((prev) => Math.max(0, prev - 4))
+      } else if (direction === "right" && currentPhotoIndex < currentPhotos.length - 4) {
+        setCurrentPhotoIndex((prev) => Math.min(currentPhotos.length - 4, prev + 4))
+      }
     }
+  }
+
+  const switchToGalleryMode = () => {
+    if (isAnimating) return
+    
+    setIsAnimating(true)
+    setCurrentModeIndex(1) // 갤러리 모드로 설정 (인덱스 1)
+    setCurrentPhotoIndex(0)
+    
+    setTimeout(() => setIsAnimating(false), 500)
   }
 
   return {
@@ -117,8 +203,15 @@ export function useGroupSpace() {
     visiblePhotos,
     currentPhotoIndex,
     isAnimating,
+    isLoading: isLoading && currentAlbum.id === 'timeline',
+    hasNextPage,
+    hasPrevPage: currentPhotoIndex > 0,
+    deletingAlbumId,
     changeMainMode,
     changeAlbumType,
     navigatePhotos,
+    switchToGalleryMode,
+    deleteAlbum: deleteAlbumMutation.mutate,
+    isDeletingAlbum: deleteAlbumMutation.isPending,
   }
 }
