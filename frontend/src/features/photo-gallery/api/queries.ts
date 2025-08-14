@@ -11,6 +11,7 @@ export const useBlurredPhotos = (groupId: string, viewMode: string) => {
       getGroupBlurredPhotos(parseInt(groupId), pageParam, 20),
     getNextPageParam: (lastPage) => 
       lastPage.pageInfo.hasNext ? lastPage.pageInfo.page + 1 : undefined,
+    initialPageParam: 0,
     staleTime: 5 * 60 * 1000, // 5분 캐싱
     enabled: !!groupId, // 항상 실행하여 개수 정보 확보
   })
@@ -26,6 +27,7 @@ export const useSimilarPhotos = (groupId: string, viewMode: string) => {
       getGroupSimilarPhotos(parseInt(groupId), pageParam, 20),
     getNextPageParam: (lastPage) => 
       lastPage.pageInfo.hasNext ? lastPage.pageInfo.page + 1 : undefined,
+    initialPageParam: 0,
     staleTime: 5 * 60 * 1000, // 5분 캐싱
     enabled: !!groupId && viewMode === 'similar', // 유사사진 탭 활성화시에만 실행 (수동 분석)
   })
@@ -79,6 +81,7 @@ export const useAllPhotos = (groupId: string, viewMode: string) => {
       const hasNext = lastPage.pageInfo.hasNext
       return hasNext ? currentSize + 20 : undefined
     },
+    initialPageParam: 20,
     staleTime: 5 * 60 * 1000, // 5분 캐싱
     enabled: !!groupId, // groupId가 있으면 항상 실행 (개수 정보 필요)
     // 중복 데이터 제거를 위한 select 함수

@@ -9,9 +9,9 @@ interface TierGridProps {
   tiers: TierConfig[];
   tierPhotos: TierData;
   dragOverPosition: DragOverPosition | null;
-  draggingPhotoId: string | null;
+  draggingPhotoId: number | null;
   onImageClick: (photo: Photo) => void;
-  onReturnToAvailable: (photoId: string, fromTier: string) => void;
+  onReturnToAvailable: (photoId: number, fromTier: string) => void;
   onDragOverTierArea: (e: React.DragEvent, tier: string) => void;
   onDropTierArea: (e: React.DragEvent, targetTier: string) => void;
   onDragOverPosition: (e: React.DragEvent, tier: string, index: number) => void;
@@ -92,7 +92,7 @@ export function TierGrid({
                 >
                   <Image
                     src={photo.src}
-                    alt={photo.name || photo.id}
+                    alt={photo.name || `Photo ${photo.id}`}
                     width={88}
                     height={88}
                     className="rounded-md object-cover cursor-grab w-22 h-22 shadow-md

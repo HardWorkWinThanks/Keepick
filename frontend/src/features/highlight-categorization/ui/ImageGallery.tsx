@@ -27,7 +27,7 @@ export function ImageGallery({ category, onImageClick }: ImageGalleryProps) {
           >
             <Image
               src={image.src}
-              alt={image.id}
+              alt={image.name || `Image ${image.id}`}
               layout="fill"
               objectFit="cover"
               className="transition-transform duration-300 group-hover:scale-105"

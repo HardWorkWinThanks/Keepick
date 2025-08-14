@@ -24,72 +24,34 @@ const generateTimelineData = (albumId: string): TimelineEvent[] => {
 
   ]
 
-  // 기본 4개 섹션 - 원본과 동일한 구조
+  // 기본 3개 섹션 (빈 타임라인 앨범용)
   const baseTimelineSections = [
     {
       id: "1",
-      title: "오전 개발",
-      subtitle: "여유로운 하루를 보내는 중..",
+      title: "",
+      subtitle: "",
       description: "",
-      date: "2025.08.13",
+      date: "",
       photos: [],
-      images: [
-        { src: dummyImages[0], size: "large" as const, position: "main" },
-        { src: dummyImages[1], size: "small" as const, position: "bottom-right" },
-        { src: dummyImages[2], size: "small" as const, position: "bottom-left" },
-      ],
+      images: [],
     },
     {
       id: "2", 
-      title: "맛있는 점심!",
-      subtitle: "밀면 맛도리",
+      title: "",
+      subtitle: "",
       description: "",
-      date: "2025.08.13",
+      date: "",
       photos: [],
-      images: [
-        { src: dummyImages[3], size: "large" as const, position: "main" },
-        { src: dummyImages[4], size: "small" as const, position: "bottom-right" },
-        { src: dummyImages[5], size: "small" as const, position: "bottom-left" },
-      ],
+      images: [],
     },
     {
       id: "3",
-      title: "커피와 한 컷!",
-      subtitle: "개발자들이 죽어있다.", 
+      title: "",
+      subtitle: "",
       description: "",
-      date: "2025.08.13",
+      date: "",
       photos: [],
-      images: [
-        { src: dummyImages[6], size: "large" as const, position: "main" },
-        { src: dummyImages[7], size: "small" as const, position: "bottom-right" },
-        { src: dummyImages[8], size: "small" as const, position: "bottom-left" },
-      ],
-    },
-    {
-      id: "4",
-      title: "점심 산책 중",
-      subtitle: "우(양)산 쓰고 산책중~",
-      description: "",
-      date: "2025.08.13",
-      photos: [],
-      images: [
-        { src: dummyImages[9], size: "large" as const, position: "main" },
-        { src: dummyImages[10], size: "small" as const, position: "bottom-right" },
-        { src: dummyImages[11], size: "small" as const, position: "bottom-left" },
-      ],
-    },
-    {
-      id: "5",
-      title: "자기계발중",
-      subtitle: "마감 5일전인데 프론트를 시작하고 있는 모습이다.",
-      description: "",
-      date: "2025.08.13",
-      photos: [],
-      images: [
-        { src: dummyImages[12], size: "large" as const, position: "main" },
-        { src: dummyImages[13], size: "small" as const, position: "bottom-right" },
-        { src: dummyImages[14], size: "small" as const, position: "bottom-left" },
-      ],
+      images: [],
     }
   ]
 

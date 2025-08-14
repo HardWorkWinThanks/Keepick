@@ -42,9 +42,12 @@ function TimelineImageLayout({
   onImageDragLeave?: () => void;
   isSelectingCoverImage?: boolean;
   onCoverImageSelect?: (photo: Photo) => void;
-  selectedCoverImageId?: string;
+  selectedCoverImageId?: number;
 }) {
-  if (!event.images) return null
+  // 빈 타임라인의 경우 3개의 빈 슬롯 생성
+  const imageSlots = event.images && event.images.length > 0 
+    ? event.images 
+    : [null, null, null] // 3개의 빈 슬롯
 
   const layoutProps = {
     0: { // Section 1: 큰 이미지 왼쪽 상단, 작은 이미지들 오른쪽 하단 겹침
@@ -119,7 +122,7 @@ function TimelineImageLayout({
     const imageContent = (
       <>
         <img
-          src={imageData?.src || "/placeholder.svg"}
+          src={imageData?.src || "/placeholder/photo-placeholder.svg"}
           alt={`${event.title} ${imageIndex === 0 ? 'main' : `detail ${imageIndex}`}`}
           className={`w-full h-full object-cover ${filter}`}
         />
@@ -167,13 +170,13 @@ function TimelineImageLayout({
   return (
     <>
       {/* Main large image */}
-      {createImageDropZone(0, layout.mainClass, event.images[0], layout.filters[0])}
+      {createImageDropZone(0, layout.mainClass, imageSlots[0], layout.filters[0])}
 
       {/* Small image 1 */}
-      {createImageDropZone(1, layout.small1Class, event.images[1], layout.filters[1])}
+      {createImageDropZone(1, layout.small1Class, imageSlots[1], layout.filters[1])}
 
       {/* Small image 2 */}
-      {createImageDropZone(2, layout.small2Class, event.images[2], layout.filters[2])}
+      {createImageDropZone(2, layout.small2Class, imageSlots[2], layout.filters[2])}
     </>
   )
 }
@@ -336,14 +339,14 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
 
   // 더미 데이터를 상위 컴포넌트로 이동
   const dummyPhotos = [
-    { id: "1", src: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop", name: "산 풍경 1" },
-    { id: "2", src: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&h=300&fit=crop", name: "숲 풍경" },
-    { id: "3", src: "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=300&h=300&fit=crop", name: "바다 풍경" },
-    { id: "4", src: "https://images.unsplash.com/photo-1418489098061-ce87b5dc3aee?w=300&h=300&fit=crop", name: "산 풍경 2" },
-    { id: "5", src: "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=300&h=300&fit=crop", name: "호수 풍경" },
-    { id: "6", src: "https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=300&h=300&fit=crop", name: "일출 풍경" },
-    { id: "7", src: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop", name: "구름 풍경" },
-    { id: "8", src: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&h=300&fit=crop", name: "나무 풍경" },
+    { id: 1, src: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop", name: "산 풍경 1" },
+    { id: 2, src: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&h=300&fit=crop", name: "숲 풍경" },
+    { id: 3, src: "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=300&h=300&fit=crop", name: "바다 풍경" },
+    { id: 4, src: "https://images.unsplash.com/photo-1418489098061-ce87b5dc3aee?w=300&h=300&fit=crop", name: "산 풍경 2" },
+    { id: 5, src: "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=300&h=300&fit=crop", name: "호수 풍경" },
+    { id: 6, src: "https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=300&h=300&fit=crop", name: "일출 풍경" },
+    { id: 7, src: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop", name: "구름 풍경" },
+    { id: 8, src: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&h=300&fit=crop", name: "나무 풍경" },
   ]
 
   if (loading) {

@@ -366,16 +366,14 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
   }, [allPhotosQuery.data?.pages])
 
   const blurredPhotosCount = useMemo(() => {
-    // API에서 pageInfo.totalElement 또는 photoCount 사용
-    return blurredQuery.data?.pages?.[0]?.pageInfo?.totalElement || 
-           blurredQuery.data?.pages?.[0]?.photoCount || 0
+    // API에서 pageInfo.totalElement 사용
+    return blurredQuery.data?.pages?.[0]?.pageInfo?.totalElement || 0
   }, [blurredQuery.data?.pages])
 
   const similarClustersCount = useMemo(() => {
     // 유사사진은 수동 분석이므로 데이터가 있을 때만 개수 표시
     if (!similarQuery.data?.pages || similarQuery.data.pages.length === 0) return 0
     return similarQuery.data.pages[0]?.pageInfo?.totalElement || 
-           similarQuery.data.pages[0]?.photoCount ||
            similarQuery.data.pages.reduce((total, page) => total + page.list.length, 0) || 0
   }, [similarQuery.data?.pages])
 
@@ -433,8 +431,9 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     try {
       console.log('사진 삭제 요청:', selectedPhotos)
       
-      // API로 사진 삭제 요청
-      const deleteResult = await deleteGroupPhotos(parseInt(groupId), selectedPhotos)
+      // API로 사진 삭제 요청 (ID만 추출하여 전달)
+      const photoIds = selectedPhotos.map(photo => photo.id)
+      const deleteResult = await deleteGroupPhotos(parseInt(groupId), photoIds)
       
       console.log('삭제 결과:', deleteResult)
       
@@ -875,7 +874,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                                     : "border-transparent hover:border-[#FE7A25]/50"
                               }`}
                             >
-                              {selectedPhotos.includes(photo.photoId) && (
+                              {selectedPhotos.some(selected => selected.id === photo.photoId) && (
                                 <div className={`absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center ${
                                   isDeleteMode ? "bg-red-500" : "bg-[#FE7A25]"
                                 }`}>
@@ -943,7 +942,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
                         className={`object-cover transition-all duration-500 ${
                           isSelectionMode ? "group-hover:scale-105" : "group-hover:scale-110"
-                        } ${selectedPhotos.includes(photo.id) ? "brightness-75" : ""}`}
+                        } ${selectedPhotos.some(selected => selected.id === photo.id) ? "brightness-75" : ""}`}
                         quality={85}
                         priority={photoIndex < 8}
                         placeholder="blur"
@@ -964,7 +963,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                                 : "border-transparent hover:border-[#FE7A25]/50"
                           }`}
                         >
-                          {selectedPhotos.includes(photo.id) && (
+                          {selectedPhotos.some(selected => selected.id === photo.id) && (
                             <div className={`absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center ${
                               isDeleteMode ? "bg-red-500" : "bg-[#FE7A25]"
                             }`}>
@@ -1245,11 +1244,9 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                       onMouseUp={smallPreviewDrag.handleMouseUp}
                       onMouseLeave={smallPreviewDrag.handleMouseLeave}
                     >
-                      {selectedPhotos.slice(0, 8).map((photoId) => {
-                        const photo = selectedPhotoData.find((p) => p.id === photoId)
-                        if (!photo) return null
+                      {selectedPhotos.slice(0, 8).map((photo) => {
                         return (
-                          <div key={photoId} className="w-10 h-10 flex-shrink-0 rounded overflow-hidden relative">
+                          <div key={photo.id} className="w-10 h-10 flex-shrink-0 rounded overflow-hidden relative">
                             <Image
                               src={photo.src || "/placeholder.svg"}
                               alt={photo.title}

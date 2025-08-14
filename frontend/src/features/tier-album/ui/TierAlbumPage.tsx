@@ -210,7 +210,7 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
         // 기존 저장된 데이터가 있고 갤러리에서 온 것이 아닌 경우
         setTierPhotos(
           result.data?.tierPhotos as TierData || {
-            S: [{ id: "photo_s1", src: "/dummy/jaewan1.jpg", name: "S급 사진1" }],
+            S: [{ id: 500, src: "/dummy/jaewan1.jpg", name: "S급 사진1" }],
             A: [],
             B: [],
             C: [],
@@ -222,7 +222,7 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
         // 갤러리에서 선택된 사진들을 사용하거나 기본 데이터 설정
         const photosToUse = isFromGallery && selectedPhotos.length > 0 
           ? selectedPhotos.map(photo => ({
-              id: photo.id.toString(),
+              id: photo.id,
               src: photo.src,
               name: photo.title || `사진 #${photo.id}`
             }))
@@ -231,7 +231,7 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
         setAvailablePhotos(photosToUse)
         // 기본 데이터 설정
         setTierPhotos({
-          S: [{ id: "photo_s1", src: "/dummy/jaewan1.jpg", name: "S급 사진1" }],
+          S: [{ id: 501, src: "/dummy/jaewan1.jpg", name: "S급 사진1" }],
           A: [],
           B: [],
           C: [],

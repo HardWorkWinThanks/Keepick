@@ -63,8 +63,8 @@ export function PhotoModal({ photo, isOpen, onClose }: PhotoModalProps) {
         }}
       >
         <Image
-          src={photo.originalSrc || photo.src} // 원본 이미지 사용하여 더 선명하게
-          alt={photo.name || photo.id}
+          src={photo.src}
+          alt={photo.name || `Photo ${photo.id}`}
           width={2048}
           height={1536}
           className="object-contain rounded-lg shadow-2xl"
