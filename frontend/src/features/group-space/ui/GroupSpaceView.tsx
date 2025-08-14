@@ -58,6 +58,29 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
     };
   }, []);
 
+  // 사이드바에서 썸네일 변경 요청 메시지 수신
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'SWITCH_TO_GALLERY_FOR_THUMBNAIL') {
+        const { groupId } = event.data.data;
+        
+        // 현재 그룹과 메시지의 그룹 ID가 일치할 때만 처리
+        if (groupId === group.groupId.toString()) {
+          console.log('사이드바에서 썸네일 변경 요청 수신 - 갤러리 모드로 전환');
+          switchToGalleryMode();
+          
+          // URL에 썸네일 선택 모드 파라미터 추가
+          const currentUrl = new URL(window.location.href);
+          currentUrl.searchParams.set('mode', 'thumbnail');
+          window.history.replaceState({}, '', currentUrl.toString());
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [group.groupId, switchToGalleryMode]);
+
   return (
     <div className="min-h-screen bg-[#111111] text-white pb-8">
       {/* Album/Gallery Mode Section - 메인 섹션으로 이동, 크기와 색상 조정 */}

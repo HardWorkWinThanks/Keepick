@@ -23,7 +23,7 @@ interface AppLayoutProps {
       id: string
       name: string
       description: string
-      thumbnailImage?: string
+      thumbnailUrl?: string
     }
     forceInitialPinned?: boolean
   }

@@ -5,6 +5,7 @@ import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, SlidersHorizontal, Check, Trash2, X, ChevronUp, ChevronDown, Upload, Loader2 } from "lucide-react"
 import { useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'next/navigation'
 import { usePhotoGallery, useMasonryLayout, useDragScroll } from "../model/usePhotoGallery"
 import { PhotoModal, usePhotoModal } from "@/features/photos-viewing"
 import AiMagicButton from "./AiMagicButton"
@@ -24,6 +25,10 @@ interface PhotoGalleryProps {
 export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = false }: PhotoGalleryProps) {
   // TanStack Query 클라이언트
   const queryClient = useQueryClient()
+  
+  // URL 파라미터 감지 (썸네일 선택 모드)
+  const searchParams = useSearchParams()
+  const isThumbnailSelectionMode = searchParams.get('mode') === 'thumbnail'
   
   const {
     allPhotos,
@@ -501,6 +506,19 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     }
   }
 
+  // 썸네일 선택 모드에서 사진 클릭 핸들러
+  const handleThumbnailSelection = (photo: any) => {
+    console.log('그룹 썸네일 선택:', photo)
+    
+    // 임시로 사이드바의 썸네일을 즉시 변경하기 위해
+    // window.postMessage를 사용해 AppSidebar에 알림
+    const thumbnailUrl = photo.thumbnailUrl || photo.originalUrl || photo.src
+    window.postMessage({
+      type: 'THUMBNAIL_SELECTED',
+      data: { thumbnailUrl, groupId }
+    }, '*')
+  }
+
   // 파일 업로드 핸들러
   const handleUploadClick = () => {
     fileInputRef.current?.click()
@@ -625,7 +643,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
               <button 
                 onClick={() => handleViewModeChange('all')}
                 disabled={isSelectionMode}
-                className={`px-4 py-2 text-sm font-keepick-primary transition-all duration-300 relative ${
+                className={`px-6 py-3 text-base font-keepick-primary transition-all duration-300 relative ${
                   isSelectionMode
                     ? 'text-gray-600 cursor-not-allowed'
                     : viewMode === 'all' 
@@ -641,7 +659,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
               <button 
                 onClick={() => handleViewModeChange('blurred')}
                 disabled={isSelectionMode}
-                className={`px-4 py-2 text-sm font-keepick-primary transition-all duration-300 relative ${
+                className={`px-6 py-3 text-base font-keepick-primary transition-all duration-300 relative ${
                   isSelectionMode
                     ? 'text-gray-600 cursor-not-allowed'
                     : viewMode === 'blurred' 
@@ -657,7 +675,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
               <button 
                 onClick={() => handleViewModeChange('similar')}
                 disabled={isSelectionMode}
-                className={`px-4 py-2 text-sm font-keepick-primary transition-all duration-300 relative ${
+                className={`px-6 py-3 text-base font-keepick-primary transition-all duration-300 relative ${
                   isSelectionMode
                     ? 'text-gray-600 cursor-not-allowed'
                     : viewMode === 'similar' 
@@ -753,7 +771,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
 
         {/* Tag Filters Section (전체 모드일 때만 표시) */}
         {viewMode === 'all' && (
-          <div className={`max-w-7xl mx-auto py-4 ${isSelectionMode ? 'pointer-events-none opacity-50' : ''}`}>
+          <div className={`max-w-7xl mx-auto py-4 ${isSelectionMode && !isThumbnailSelectionMode ? 'pointer-events-none opacity-50' : ''}`}>
             <div className="flex items-center gap-4 mb-4">
               <h3 className="font-keepick-primary text-sm text-gray-400 tracking-wider">
                 태그별 분류
@@ -783,7 +801,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                     onClick={() => toggleTag(tag)}
                     className={`px-3 py-1.5 text-xs font-keepick-primary tracking-wide transition-all duration-300 relative ${ 
                       selectedTags.includes(tag)
-                        ? "bg-white text-black shadow-lg"
+                        ? "bg-[#FE7A25] text-white shadow-lg border border-[#FE7A25]"
                         : isRealTimeTag
                         ? "bg-[#FE7A25]/20 text-[#FE7A25] border border-[#FE7A25]/50 hover:bg-[#FE7A25]/30"
                         : "bg-gray-900 text-gray-300 border border-gray-700 hover:border-gray-500 hover:text-white"
@@ -889,7 +907,10 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                           transition={{ duration: 0.3, delay: photoIndex * 0.05 }}
                           className="relative aspect-square overflow-hidden rounded cursor-pointer group"
                           onClick={() => {
-                            if (isSelectionMode) {
+                            if (isThumbnailSelectionMode) {
+                              // 썸네일 선택 모드일 때는 썸네일로 설정 (테두리 없이)
+                              handleThumbnailSelection(photo)
+                            } else if (isSelectionMode) {
                               togglePhotoSelection(convertToGalleryPhoto(photo))
                             } else {
                               openPhotoModal({ 
@@ -912,7 +933,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                             draggable={false}
                           />
                           
-                          {/* 선택 오버레이 - 모드에 따른 테마 변경 */}
+                          {/* 선택 오버레이 */}
                           {isSelectionMode && (
                             <div
                               className={`absolute inset-0 border-4 transition-all duration-300 ${
@@ -978,7 +999,10 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                         loadPhotoTags(photo.id)
                       }}
                       onClick={() => {
-                        if (isSelectionMode) {
+                        if (isThumbnailSelectionMode) {
+                          // 썸네일 선택 모드일 때는 썸네일로 설정 (테두리 없이)
+                          handleThumbnailSelection(photo)
+                        } else if (isSelectionMode) {
                           togglePhotoSelection(photo)
                         } else {
                           // 선택 모드가 아닐 때는 사진 모달 열기
@@ -1001,7 +1025,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                         draggable={false}
                       />
 
-                      {/* Selection Overlay - 모드에 따른 테마 변경 */}
+                      {/* Selection Overlay */}
                       {isSelectionMode && (
                         <div
                           className={`absolute inset-0 border-4 transition-all duration-300 ${

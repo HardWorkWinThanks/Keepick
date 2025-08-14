@@ -83,7 +83,7 @@ export default function GroupPage({ params }: GroupPageProps) {
           id: groupData.groupId.toString(),
           name: groupData.name,
           description: groupData.description,
-          thumbnailImage: groupData.thumbnailUrl || "/dummy/jeju-dummy1.webp"
+          thumbnailUrl: groupData.thumbnailUrl || "/dummy/jeju-dummy1.webp"
         },
         forceInitialPinned: true
       }}

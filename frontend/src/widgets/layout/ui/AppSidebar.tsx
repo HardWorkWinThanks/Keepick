@@ -3,14 +3,13 @@
 import { useState, useEffect } from "react"
 import { ChevronRight, ChevronDown, Settings, Check, Menu, X } from 'lucide-react'
 import { AnimatePresence, motion } from "framer-motion"
+import { useRouter, usePathname } from "next/navigation"
 import { FriendsTabWidget } from "@/widgets/friends"
 import { useMainGroups } from "@/features/main-integration/model/useMainGroups"
 import { useMainAuth } from "@/features/main-integration/model/useMainAuth"
 import { ScrollArea } from "@/shared/ui/shadcn/scroll-area"
 import { Button } from "@/shared/ui/shadcn/button"
 import { useGroupManagement, CreateGroupModal, LeaveGroupModal, GroupManagementApi, groupQueryKeys } from "@/features/group-management"
-import { PhotoDropZone } from "@/features/photo-drag-drop"
-import { DragPhotoData } from "@/entities/photo"
 import { useQuery } from "@tanstack/react-query"
 import { groupListSelectors, groupFormatters } from "@/entities/group"
 import type { GroupListItem } from "@/entities/group"
@@ -28,7 +27,7 @@ interface AppSidebarProps {
     id: string
     name: string
     description: string
-    thumbnailImage?: string
+    thumbnailUrl?: string
   }
   forceInitialPinned?: boolean
 }
@@ -53,18 +52,38 @@ export default function AppSidebar({
   const [editedGroupDescription, setEditedGroupDescription] = useState(currentGroup?.description || '')
   const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false)
   const [leaveGroupTarget, setLeaveGroupTarget] = useState<GroupListItem | null>(null)
+  const router = useRouter()
+  const pathname = usePathname()
   const createGroupModal = useModal()
   const leaveGroupModal = useModal()
   const { groups, navigateToGroup, isGroupsLoading: mainGroupsLoading } = useMainGroups()
   const { isLoggedIn } = useMainAuth()
   const { updateGroup, useGroupMembers } = useGroupManagement()
   const [isMounted, setIsMounted] = useState(false)
-  const [thumbnailDragOver, setThumbnailDragOver] = useState(false)
+  const [tempThumbnailUrl, setTempThumbnailUrl] = useState<string | null>(null)
 
   // Hydration 완료 후에만 인증 상태 기반 렌더링 적용
   useEffect(() => {
     setIsMounted(true)
   }, [])
+
+  // 갤러리에서 썸네일 선택 메시지 수신
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'THUMBNAIL_SELECTED') {
+        const { thumbnailUrl, groupId: messageGroupId } = event.data.data
+        
+        // 현재 그룹과 메시지의 그룹 ID가 일치할 때만 업데이트
+        if (currentGroup && messageGroupId === currentGroup.id) {
+          console.log('썸네일 임시 변경:', thumbnailUrl)
+          setTempThumbnailUrl(thumbnailUrl)
+        }
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [currentGroup])
   
   // 로그인된 상태에서만 그룹 목록 조회 - enabled 옵션 추가
   const { data: allGroups = [], isLoading: isGroupsLoading } = useQuery({
@@ -107,43 +126,30 @@ export default function AppSidebar({
     setGroupMembersExpanded(!groupMembersExpanded)
   }
 
-  // 그룹 썸네일 드래그&드롭 핸들러
-  const handleThumbnailDrop = async (dragData: DragPhotoData, e: React.DragEvent) => {
-    e.preventDefault()
-    setThumbnailDragOver(false)
+  // 그룹 썸네일 클릭 핸들러 - 갤러리 모드로 전환하고 썸네일 선택 모드 진입
+  const handleThumbnailClick = () => {
+    if (!currentGroup || !isEditingGroup) return
     
-    if (!currentGroup) return
-
-    try {
-      console.log('썸네일 변경 요청:', dragData)
-      
-      // originalUrl을 그룹 썸네일로 사용 (고화질 이미지)
-      const newThumbnailUrl = dragData.originalUrl || dragData.src
-      
-      if (!newThumbnailUrl) {
-        console.error('썸네일 URL을 찾을 수 없습니다.')
-        return
-      }
-      
-      await updateGroup.mutateAsync({
-        groupId: parseInt(currentGroup.id),
-        data: {
-          name: editedGroupName,
-          description: editedGroupDescription,
-          thumbnailUrl: newThumbnailUrl
-        }
-      })
-    } catch (error) {
-      console.error('썸네일 변경 실패:', error)
+    console.log('그룹 썸네일 변경 요청')
+    console.log('현재 경로:', pathname)
+    console.log('현재 그룹 ID:', currentGroup.id)
+    
+    const currentGroupPath = `/group/${currentGroup.id}`
+    
+    // 그룹 페이지에 있는지 확인
+    if (pathname === currentGroupPath) {
+      console.log('그룹 페이지에서 갤러리 모드로 전환 및 썸네일 선택 모드 진입')
+      // GroupSpaceWidget에 갤러리 모드 전환 및 썸네일 선택 모드 진입 메시지 전송
+      window.postMessage({
+        type: 'SWITCH_TO_GALLERY_FOR_THUMBNAIL',
+        data: { groupId: currentGroup.id }
+      }, '*')
+    } else {
+      // 다른 페이지에 있다면 그룹 페이지로 이동하면서 썸네일 모드 활성화
+      console.log('다른 페이지에서 그룹 페이지로 이동')
+      const targetUrl = `${currentGroupPath}?mode=thumbnail`
+      window.location.href = targetUrl
     }
-  }
-
-  const handleThumbnailDragOver = () => {
-    setThumbnailDragOver(true)
-  }
-
-  const handleThumbnailDragLeave = () => {
-    setThumbnailDragOver(false)
   }
 
   const canEditGroup = true // TODO: 그룹 생성자인지 확인하는 로직
@@ -153,25 +159,37 @@ export default function AppSidebar({
       // 저장 로직 - Tanstack Query mutation 사용
       if (currentGroup) {
         try {
+          // tempThumbnailUrl이 있으면 사용, 없으면 기존 썸네일 유지
+          const finalThumbnailUrl = tempThumbnailUrl || currentGroup.thumbnailUrl || ""
+          
           await updateGroup.mutateAsync({
             groupId: parseInt(currentGroup.id),
             data: {
               name: editedGroupName,
               description: editedGroupDescription,
-              thumbnailUrl: currentGroup.thumbnailImage || ""
+              thumbnailUrl: finalThumbnailUrl
             }
           })
           
-          // 성공 시 자동으로 캐시 업데이트되고 토스트 메시지 표시됨
+          // 성공 시 임시 썸네일 상태 초기화
+          setTempThumbnailUrl(null)
         } catch (error) {
           // 에러는 useGroupManagement에서 처리됨
           // Tanstack Query가 자동으로 이전 상태로 롤백
         }
       }
+      
+      // 그룹 편집 모드 종료 시 썸네일 선택 모드도 해제
+      const currentGroupPath = `/group/${currentGroup?.id}`
+      if (pathname === currentGroupPath && router) {
+        // URL에서 mode 파라미터 제거
+        router.replace(currentGroupPath)
+      }
     } else {
       // 편집 모드 진입
       setEditedGroupName(currentGroup?.name || '')
       setEditedGroupDescription(currentGroup?.description || '')
+      setTempThumbnailUrl(null) // 편집 시작 시 임시 썸네일 초기화
     }
     setIsEditingGroup(prev => !prev)
   }
@@ -355,19 +373,14 @@ export default function AppSidebar({
                 <div className="w-full mt-2">
                   <p className="text-xs font-medium text-gray-400 mb-2">그룹 썸네일</p>
                   {isEditingGroup ? (
-                    <PhotoDropZone
-                      onDrop={handleThumbnailDrop}
-                      onDragOver={handleThumbnailDragOver}
-                      onDragLeave={handleThumbnailDragLeave}
-                      isDragOver={thumbnailDragOver}
-                      dropZoneId="group-thumbnail"
-                      className={`aspect-square w-full bg-[#333333] rounded-lg overflow-hidden border relative ${
-                        thumbnailDragOver ? 'border-orange-500 ring-2 ring-orange-500/50' : 'border-orange-500/30'
-                      }`}
+                    <button
+                      onClick={handleThumbnailClick}
+                      className="aspect-square w-full bg-[#333333] rounded-lg overflow-hidden border border-orange-500/30 hover:border-orange-500 transition-all duration-300 relative group cursor-pointer"
                     >
-                      {currentGroup.thumbnailImage ? (
+                      {/* 실제 썸네일 이미지 (tempThumbnailUrl 우선 사용) */}
+                      {(tempThumbnailUrl || currentGroup.thumbnailUrl) ? (
                         <img
-                          src={currentGroup.thumbnailImage}
+                          src={tempThumbnailUrl || currentGroup.thumbnailUrl}
                           alt={`${currentGroup.name} 썸네일`}
                           className="w-full h-full object-cover"
                         />
@@ -376,26 +389,20 @@ export default function AppSidebar({
                           <span className="text-4xl">📸</span>
                         </div>
                       )}
-                      {/* 드래그&드롭 가이드 오버레이 */}
-                      <div className="absolute inset-0 bg-black/70 flex items-center justify-center p-2">
+                      {/* 클릭 안내 오버레이 */}
+                      <div className="absolute inset-0 bg-black/70 flex items-center justify-center p-2 group-hover:bg-black/80 transition-all duration-300">
                         <div className="text-center">
-                          {thumbnailDragOver ? (
-                            <span className="text-orange-400 text-xs font-medium">
-                              여기에 놓으세요!
-                            </span>
-                          ) : (
-                            <span className="text-white text-xs leading-tight">
-                              갤러리에서 마음에 드는 사진을 그룹 썸네일로 드래그&드롭으로 변경할 수 있습니다
-                            </span>
-                          )}
+                          <span className="text-white text-xs leading-tight font-medium">
+                            썸네일을 변경하려면 클릭해주세요! (갤러리 모드로 전환)
+                          </span>
                         </div>
                       </div>
-                    </PhotoDropZone>
+                    </button>
                   ) : (
                     <div className={`aspect-square w-full bg-[#333333] rounded-lg overflow-hidden border border-white/10`}>
-                      {currentGroup.thumbnailImage ? (
+                      {currentGroup.thumbnailUrl ? (
                         <img
-                          src={currentGroup.thumbnailImage}
+                          src={currentGroup.thumbnailUrl}
                           alt={`${currentGroup.name} 썸네일`}
                           className="w-full h-full object-cover"
                         />
