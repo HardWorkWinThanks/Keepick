@@ -111,6 +111,32 @@ public class PhotoQueryFactoryImpl implements PhotoQueryFactory {
         return new PageImpl<>(photos, pageable, total != null ? total : 0);
     }
 
+    @Override
+    public long clearSinglePhotoClusters(Long groupId) {
+        QPhoto photoSub = new QPhoto("photoSub");
+
+        // 사진이 속한 클러스터의 사진 개수가 1개 이하인 경우 클러스터 제거
+        long updatedCount = jpaQueryFactory
+                .update(photo)
+                .set(photo.clusterId, (Long) null)
+                .where(photo.clusterId.in(
+                        JPAExpressions
+                                .select(photoSub.clusterId)
+                                .from(photoSub)
+                                .where(
+                                        photoSub.group.id.eq(groupId),
+                                        photoSub.deletedAt.isNull(),
+                                        photoSub.clusterId.isNotNull()
+                                )
+                                .groupBy(photoSub.clusterId)
+                                .having(photoSub.count().loe(1L))
+                ))
+                .execute();
+
+        return updatedCount;
+    }
+
+
     private BooleanExpression groupIdEq(Long groupId) {
         return photo.group.id.eq(groupId);
     }

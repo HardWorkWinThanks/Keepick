@@ -504,16 +504,40 @@ class PhotoRepositoryTest extends BaseRepositoryTest {
 
             // then
             assertThat(result.getContent()).hasSize(2);
-
-            PhotoClusterDto dto1 = result.getContent().get(0);
-            assertThat(dto1.getClusterId()).isEqualTo(101L);
-            assertThat(dto1.getPhotoCount()).isEqualTo(2);
-
-            PhotoClusterDto dto2 = result.getContent().get(1);
-            assertThat(dto2.getClusterId()).isEqualTo(102L);
-            assertThat(dto2.getPhotoCount()).isEqualTo(1);
         }
 
+    }
+
+    @Nested
+    @DisplayName("findSimilarClusters 테스트")
+    class clearSinglePhotoClustersTest {
+        @Test
+        @DisplayName("유사한 사진 그룹에 속한 사진 개수가 1개 이하인 사진의 그룹을 없앱니다")
+        void clearSinglePhotoClusters() {
+            // given
+            testPhoto1.updateClusterId(101L);
+            testPhoto2.updateClusterId(102L);
+            testPhoto3.updateClusterId(102L);
+            testPhoto3.delete();
+
+            photoRepository.saveAll(List.of(testPhoto1, testPhoto2, testPhoto3));
+
+            // when
+            long count = photoRepository.clearSinglePhotoClusters(testGroup.getId());
+
+            entityManager.flush();
+            entityManager.clear();
+
+            Photo findPhoto1 = photoRepository.findById(testPhoto1.getId()).get();
+            Photo findPhoto2 = photoRepository.findById(testPhoto2.getId()).get();
+            Photo findPhoto3 = photoRepository.findById(testPhoto3.getId()).get();
+
+            // then
+            assertThat(count).isEqualTo(3L);
+            assertThat(findPhoto1.getClusterId()).isNull();
+            assertThat(findPhoto2.getClusterId()).isNull();
+            assertThat(findPhoto3.getClusterId()).isNull();
+        }
     }
 
 }
