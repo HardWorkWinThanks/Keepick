@@ -2,21 +2,20 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { RootState } from "@/shared/config/store";
 import { toggleMic as toggleMicAction } from "@/entities/video-conference/media/model/slice";
+import { mediasoupManager } from "@/shared/api/mediasoupManager";
 
 export const toggleMicThunk = createAsyncThunk(
   "media/toggleMic",
   async (_, { dispatch, getState }) => {
-    const { session } = getState() as RootState;
-    // const stream = session.localStream;
-
-    // if (stream) {
-    //   const audioTrack = stream.getAudioTracks()[0];
-    //   if (audioTrack) {
-    //     // 실제 미디어 스트림의 오디오 트랙을 켜거나 끕니다.
-    //     audioTrack.enabled = !audioTrack.enabled;
-    //     // UI 상태 업데이트를 위해 Redux 액션을 디스패치합니다.
-    //     dispatch(toggleMicAction());
-    //   }
-    // }
+    const { media } = getState() as RootState;
+    const newMicState = !media.isMicOn;
+    
+    console.log(`🎤 [toggleMicThunk] Toggling mic: ${media.isMicOn} -> ${newMicState}`);
+    
+    // mediasoupManager를 통해 실제 오디오 트랙 제어
+    mediasoupManager.toggleTrack("audio", newMicState);
+    
+    // Redux 상태 업데이트
+    dispatch(toggleMicAction());
   }
 );

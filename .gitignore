@@ -17,6 +17,7 @@ desktop.ini
 .env
 .env.*
 !.env.example
+certs/
 
 # 임시 파일 및 아카이브
 *.tmp
