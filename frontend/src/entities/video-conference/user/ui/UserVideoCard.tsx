@@ -1,44 +1,37 @@
 // src/entities/video-conference/user/ui/UserVideoCard.tsx
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect } from "react";
 import { useAppSelector } from "@/shared/hooks/redux";
-import { mediasoupManager } from "@/shared/api/mediasoupManager";
+import { useLocalMediaTrack, useRemoteMediaTrack } from "@/shared/hooks/useMediaTrack";
 import {
   MicrophoneIcon,
-  SpeakerXMarkIcon,
-  VideoCameraSlashIcon,
+  VideoCameraIcon,
 } from "@heroicons/react/24/solid";
 import { motion, AnimatePresence } from "framer-motion";
 
-// useRemoteStream 훅을 import 합니다.
-import { useRemoteStream } from "@/shared/hooks/useRemoteStream";
-
-
 interface UserVideoCardProps {
-  stream?: MediaStream; // 로컬 스트림용 (local-user일 때 사용)
-  socketId?: string; // 원격 유저용 (원격 유저의 ID)
+  socketId?: string; // 원격 유저의 경우 socketId 제공
   userName: string;
-  isMuted?: boolean; // 로컬 유저의 음소거 상태를 나타냄
+  isLocal?: boolean; // 로컬 유저 여부
 }
 
 
-export const UserVideoCard = ({
-  stream,
-  socketId,
-  userName,
-  isMuted = false,
-}: UserVideoCardProps) => {
+export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideoCardProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // ⭐ 변경: useRemoteStream 훅을 사용하여 원격 스트림을 가져옵니다.
-  // socketId가 없는 경우 (로컬 사용자)에는 props로 받은 stream을 사용합니다.
-  const remoteUserStream = useRemoteStream(socketId);
-  const streamToPlay = socketId ? remoteUserStream : stream;
-  
-  // streamToPlay의 유무와 트랙 상태에 따라 hasVideo/hasAudio를 동적으로 설정합니다.
-  const hasVideo = !!streamToPlay?.getVideoTracks().some(t => t.enabled);
-  const hasAudio = !!streamToPlay?.getAudioTracks().some(t => t.enabled);
+  // Hook을 통해 트랙 가져오기
+  const localVideo = useLocalMediaTrack('video');
+  const localAudio = useLocalMediaTrack('audio');
+  const remoteVideo = useRemoteMediaTrack(socketId || '', 'video');
+  const remoteAudio = useRemoteMediaTrack(socketId || '', 'audio');
+
+  // 로컬/원격에 따라 적절한 트랙 선택
+  const videoTrack = isLocal ? localVideo.track : remoteVideo.track;
+  const audioTrack = isLocal ? localAudio.track : remoteAudio.track;
+  const hasVideo = isLocal ? localVideo.enabled : remoteVideo.enabled;
+  const hasAudio = isLocal ? localAudio.enabled : remoteAudio.enabled;
+  const isMuted = isLocal ? localAudio.muted : false; // 원격은 항상 muted
 
 
   const activeReactions = useAppSelector(
@@ -47,59 +40,39 @@ export const UserVideoCard = ({
   const currentCardUserId = socketId || "local-user";
   const activeReaction = activeReactions[currentCardUserId];
 
-
-  // ⭐ 변경: 스트림 상태 관리를 위한 복잡한 useEffect 블록이 제거되었습니다.
-  // 이 역할은 이제 useRemoteStream 훅이 담당합니다.
-
-
-  // [기존과 동일] state로 관리되는 스트림을 video 엘리먼트에 연결하는 useEffect
+  // 비디오 트랙을 video 엘리먼트에 연결
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !streamToPlay) {
-      if (video) video.srcObject = null; // 스트림이 없으면 srcObject 해제
-      return;
-    }
+    if (!video) return;
 
-    console.log(`🎥 [UserVideoCard] ${userName} - 새로운 스트림으로 srcObject 설정 중. 트랙 수: ${streamToPlay.getTracks().length}`);
-    video.srcObject = streamToPlay;
-    video.muted = true; // 브라우저 자동 재생 정책을 위해 필수
-    // video.autoplay = true;
-    video.load(); // ⭐ 참고: 이전 대화에서 제안된 video.load()는 필요시 여기에 추가해주세요.
-
-
-    const handleCanPlay = () => {
-      console.log(`✅ [UserVideoCard] ${userName} - canplay 이벤트 발생. 비디오 재생 시도.`);
+    if (videoTrack) {
+      // 새로운 스트림 생성하여 연결
+      const stream = new MediaStream([videoTrack]);
+      video.srcObject = stream;
+      video.muted = true; // 브라우저 정책상 필수
+      
+      console.log(`🎥 [UserVideoCard] ${userName} - 비디오 트랙 연결됨`);
+      
       video.play().catch(error => {
-        if (error.name !== 'AbortError') { // 사용자가 직접 일시정지한 경우 외의 에러
+        if (error.name !== 'AbortError') {
           console.error(`❌ [UserVideoCard] ${userName} - 자동 재생 실패:`, error);
         }
       });
-    };
-
-    const handleLoadedMetadata = () => {
-      console.log(`📺 [UserVideoCard] ${userName} - 메타데이터 로드 완료:`, {
-          videoWidth: video.videoWidth,
-          videoHeight: video.videoHeight
-      });
-    };
-
-    video.addEventListener('canplay', handleCanPlay);
-    video.addEventListener('loadedmetadata', handleLoadedMetadata);
-
+    } else {
+      video.srcObject = null;
+      console.log(`🎥 [UserVideoCard] ${userName} - 비디오 트랙 없음`);
+    }
 
     return () => {
-      video.removeEventListener('canplay', handleCanPlay);
-      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      
       if (video.srcObject) {
+        const stream = video.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
         video.srcObject = null;
       }
     };
-  }, [streamToPlay, userName]);
+  }, [videoTrack, userName]);
 
 
-  const isLocalCard = isMuted; // isMuted prop은 로컬 카드일 때만 true로 가정 (UI 목적)
-  // hasAudio는 실제 오디오 트랙 유무를 나타내며, isMuted는 로컬 사용자의 음소거 버튼 상태를 나타냄
   const isSpeaking = hasAudio && !isMuted;
 
 
@@ -110,9 +83,7 @@ export const UserVideoCard = ({
         ref={videoRef}
         autoPlay
         playsInline
-        // 원격 비디오는 브라우저 자동 재생 정책 때문에 항상 muted로 시작하는 것이 좋습니다.
-        // isMuted는 로컬 유저 카드에서만 의미있는 값으로 사용됩니다.
-        muted={isMuted || !!socketId} 
+        muted 
         className={`w-full h-full object-cover`}
       />
 
@@ -143,7 +114,7 @@ export const UserVideoCard = ({
 
       {/* 반응 오버레이 */}
       <AnimatePresence>
-        {activeReaction && !isLocalCard && (
+        {activeReaction && !isLocal && (
           <motion.div
             key="dynamic-reaction"
             className="absolute inset-0 flex flex-col items-center justify-center gap-4 pointer-events-none z-20"
@@ -172,19 +143,18 @@ export const UserVideoCard = ({
         <div className="flex items-center justify-between">
           <span className="text-white font-medium truncate">{userName}</span>
           <div className="flex items-center space-x-2">
-            {hasAudio && (
+            {hasAudio ? (
               <div className="p-1 bg-[#4ade80]/20 rounded-full">
                 <MicrophoneIcon className="w-4 h-4 text-[#4ade80]" />
               </div>
-            )}
-            {!hasAudio && (
+            ) : (
               <div className="p-1 bg-[#D22016]/20 rounded-full">
-                <SpeakerXMarkIcon className="w-4 h-4 text-[#D22016]" />
+                <MicrophoneIcon className="w-4 h-4 text-[#D22016] opacity-50" />
               </div>
             )}
             {!hasVideo && (
               <div className="p-1 bg-[#D22016]/20 rounded-full">
-                <VideoCameraSlashIcon className="w-4 h-4 text-[#D22016]" />
+                <VideoCameraIcon className="w-4 h-4 text-[#D22016] opacity-50" />
               </div>
             )}
           </div>

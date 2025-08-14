@@ -3,14 +3,6 @@
 
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/shared/hooks/redux";
-import {
-  joinRoomThunk,
-  leaveRoomThunk,
-} from "@/entities/video-conference/session/model/thunks";
-import {
-  consumeNewProducerThunk,
-  handleProducerClosedThunk,
-} from "@/entities/video-conference/consume-stream/model/thunks";
 import { ConferenceLayout } from "@/widgets/video-conference/ConferenceLayout";
 import { Lobby } from "@/widgets/video-conference/lobby/ui/Lobby";
 import { socketApi } from "@/shared/api/socketApi";
@@ -28,16 +20,21 @@ export const ConferenceClientPage = ({ roomId }: ConferenceClientPageProps) => {
   const isJoining = useAppSelector(
     (state) => state.session.status === "pending"
   );
-  const isDeviceLoaded = useAppSelector((state) => state.webrtc.isDeviceLoaded);
+  const isDeviceLoaded = useAppSelector((state) => state.media.device.loaded);
 
   useEffect(() => {
-    // 소켓 및 매니저들 초기화
-    socketApi.init(
-      dispatch,
-      (params) => dispatch(consumeNewProducerThunk(params)),
-      (params) => dispatch(handleProducerClosedThunk(params))
-    );
-    mediasoupManager.init(dispatch);
+    // 새로운 MediaSoup 구조로 초기화
+    const initializeMediaSoup = async () => {
+      try {
+        await mediasoupManager.init(dispatch);
+        socketApi.init(dispatch);
+        console.log("✅ MediaSoup and Socket initialized");
+      } catch (error) {
+        console.error("❌ Failed to initialize:", error);
+      }
+    };
+
+    initializeMediaSoup();
 
     // 화면 공유 이벤트 리스너 등록
     const handleScreenShareStarted = (event: CustomEvent) => {
@@ -89,28 +86,29 @@ export const ConferenceClientPage = ({ roomId }: ConferenceClientPageProps) => {
     // 컴포넌트 언마운트 시 방 나가기 처리
     return () => {
       if (isInRoom) {
-        dispatch(leaveRoomThunk());
+        mediasoupManager.cleanup();
+        socketApi.leaveRoom();
         chatSocketHandler.leaveChat();
         screenShareManager.cleanup();
       }
     };
   }, [dispatch, isInRoom]);
 
-  // [수정] onJoin 핸들러가 userName을 받도록 시그니처 변경
-  const handleJoin = (stream: MediaStream, userName: string) => {
+  // 새로운 구조: Lobby에서 받은 스트림 없이 직접 미디어 시작
+  const handleJoin = async (stream: MediaStream, userName: string) => {
     if (roomId) {
-      // 1. Lobby에서 받아온 스트림을 mediasoupManager에 저장
-      mediasoupManager.setLocalStream(stream);
+      try {
+        console.log(`🚀 Joining room: ${roomId}, user: ${userName}`);
+        
+        // 1. 채팅 핸들러 설정
+        chatSocketHandler.setRoomInfo(roomId, userName);
 
-      // 2. [제거] 임시 사용자 이름 생성 로직 제거
-      // const tempUserName = `User_${Math.random().toString(36).substring(7)}`;
-
-      // 3. [수정] 채팅 핸들러에 전달받은 userName 설정
-      chatSocketHandler.setRoomInfo(roomId, userName);
-
-      // 4. [수정] Thunk에 전달받은 userName 사용
-      console.log(`[1] Thunk 출발! roomId: ${roomId}, userName: ${userName}`);
-      dispatch(joinRoomThunk({ roomId, userName: userName }));
+        // 2. 방 입장 요청 (새로운 구조에서는 socketApi가 MediaSoup 초기화 처리)
+        socketApi.joinRoom({ roomId, userName });
+        
+      } catch (error) {
+        console.error("❌ Failed to join room:", error);
+      }
     }
   };
 

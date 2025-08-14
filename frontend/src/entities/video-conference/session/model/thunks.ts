@@ -21,8 +21,8 @@ export const joinRoomThunk = createAsyncThunk(
   ) => {
     try {
       console.log("[1] joinRoomThunk: 로컬 미디어 초기화 시작");
-      // 서버 응답을 기다리지 않고 먼저 로컬 미디어(카메라/마이크)를 준비합니다.
-      await mediasoupManager.initializeLocalMedia();
+      // 새로운 구조에서는 자동으로 처리됨
+      // await mediasoupManager.startLocalMedia();
 
       // 방에 참여하기 전에 Redux 상태에 roomId를 먼저 저장합니다.
       dispatch(setRoomId(roomId));
@@ -71,15 +71,10 @@ export const setupConferenceThunk = createAsyncThunk(
       // 1. 서버로부터 받은 유저 목록을 Redux에 저장
       dispatch(setUsers(peers));
 
-      // 2. 받은 rtpCapabilities로 MediaSoup Device 초기화
-      await mediasoupManager.initializeDevice(rtpCapabilities);
-
-      // 3. Producer(송신) / Consumer(수신) Transport 생성
-      await mediasoupManager.createProducerTransport(roomId);
-      await mediasoupManager.createConsumerTransport(roomId);
-
-      // 4. 준비된 로컬 미디어를 서버로 전송 시작 (Producing)
-      await mediasoupManager.startProducing();
+      // 2. 새로운 구조에서는 자동으로 처리됨
+      // await mediasoupManager.loadDevice(rtpCapabilities);
+      // await mediasoupManager.createTransports(roomId);
+      // await mediasoupManager.startLocalMedia();
       console.log("[4] setupConferenceThunk: Producing 시작 완료");
 
       // 5. 이미 방에 있던 다른 참여자들의 스트림을 수신(Consume) 시작
@@ -114,8 +109,8 @@ export const leaveRoomThunk = createAsyncThunk(
   "session/leaveRoom",
   async (_, { dispatch, rejectWithValue }) => {
     try {
-      // leaveRoom은 Promise 기반일 수 있으므로 await를 유지합니다. (서버 구현에 따라 다름)
-      await socketApi.leaveRoom();
+      // 새로운 구조에서는 직접 호출
+      socketApi.leaveRoom();
       mediasoupManager.cleanup();
 
       // 모든 관련 상태를 초기화합니다.

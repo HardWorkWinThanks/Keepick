@@ -3,9 +3,10 @@
 import { io, Socket } from "socket.io-client";
 import { AppDispatch } from "@/shared/config/store";
 import { RtpCapabilities } from "mediasoup-client/types";
-import { User, NewProducerInfo } from "@/shared/types/webrtc";
+import { User, NewProducerInfo, PeerWithProducers } from "@/shared/types/webrtc";
 import { SOCKET_SERVER_URL } from "@/shared/config";
 import { chatSocketHandler } from "@/entities/chat/model/socketEvents";
+import { mediaTrackManager } from "./mediaTrackManager";
 
 // --- Action & Thunk Imports ---
 import {
@@ -15,14 +16,9 @@ import {
   setError,
   setInRoom,
 } from "@/entities/video-conference/session/model/slice";
-import { setupConferenceThunk } from "@/entities/video-conference/session/model/thunks";
+import { mediasoupManager } from "./mediasoupManager";
 
-// Thunk 타입 정의
-type ConsumeProducerThunk = (data: {
-  producerId: string;
-  producerSocketId: string;
-}) => any;
-type HandleProducerClosedThunk = (data: { producerId: string }) => any;
+// MediaSoup Manager 통합
 
 // 제스처 관련 타입 정의
 export interface GestureData {
@@ -55,21 +51,13 @@ export interface GestureStatusData {
 
 class SocketApi {
   private socket: Socket | null = null;
-  private consumeProducerThunk: ConsumeProducerThunk | null = null;
-  private handleProducerClosedThunk: HandleProducerClosedThunk | null = null;
+  private mediasoupInitialized: boolean = false;
 
-  public init(
-    dispatch: AppDispatch,
-    consumeProducerThunk: ConsumeProducerThunk,
-    handleProducerClosedThunk: HandleProducerClosedThunk
-  ) {
+  public init(dispatch: AppDispatch) {
     if (this.socket) {
       console.log("Socket already initialized. Skipping.");
       return;
     }
-
-    this.consumeProducerThunk = consumeProducerThunk;
-    this.handleProducerClosedThunk = handleProducerClosedThunk;
 
     console.log("Connecting to socket server...");
     this.socket = io(SOCKET_SERVER_URL, { transports: ["websocket"] });
@@ -116,18 +104,13 @@ class SocketApi {
 
     this.socket.on(
       "joined_room",
-      (data: { rtpCapabilities: RtpCapabilities; peers: User[] }) => {
-        console.log(
-          "✅ [SocketAPI] 'joined_room' event received. Dispatching setupConferenceThunk.",
-          data
-        );
+      (data: { rtpCapabilities: RtpCapabilities; peers: PeerWithProducers[] }) => {
+        console.log("✅ [SocketAPI] 'joined_room' event received.", data);
+        
+        // MediaSoup 초기화 시작 (기존 Producer 정보 포함)
+        this.initializeMediasoupWithProducers(data.rtpCapabilities, data.peers, dispatch);
+        
         dispatch(setInRoom(true));
-        dispatch(
-          setupConferenceThunk({
-            rtpCapabilities: data.rtpCapabilities,
-            peers: data.peers,
-          })
-        );
         // 회의실 입장 시스템 메시지
         chatSocketHandler.handleRoomJoined();
       }
@@ -136,6 +119,7 @@ class SocketApi {
     this.socket.on("user_joined", (user: User) => {
       console.log(`👋 User joined: ${user.name}`);
       dispatch(addUser(user));
+      mediasoupManager.addPeer(user.id, user.name);
       // 사용자 입장 시스템 메시지
       chatSocketHandler.handleUserJoined(user.name);
     });
@@ -143,6 +127,7 @@ class SocketApi {
     this.socket.on("user_left", (data: { id: string; name?: string }) => {
       console.log(`👋 User left: ${data.id}`);
       dispatch(removeUser(data.id));
+      mediasoupManager.removePeer(data.id);
       // 사용자 퇴장 시스템 메시지
       if (data.name) {
         chatSocketHandler.handleUserLeft(data.name);
@@ -151,23 +136,21 @@ class SocketApi {
 
     this.socket.on("new_producer", (data: NewProducerInfo) => {
       console.log("🎬 New producer available:", data);
-      if (
-        this.consumeProducerThunk &&
-        this.socket &&
-        data.producerSocketId !== this.socket.id
-      ) {
-        this.consumeProducerThunk({
-          producerId: data.producerId,
-          producerSocketId: data.producerSocketId,
-        });
-      }
+      
+      // MediaSoup Manager를 통해 Consumer 생성
+      mediasoupManager.consumeProducer({
+        producerId: data.producerId,
+        producerSocketId: data.producerSocketId,
+      }).catch(error => {
+        console.error("Failed to consume new producer:", error);
+      });
     });
+
+    // Note: Producer 정보는 joined_room 이벤트에서 자동으로 처리됨
 
     this.socket.on("producer_closed", (data: { producerId: string }) => {
       console.log(`🔌 Producer ${data.producerId} was closed on the server.`);
-      if (this.handleProducerClosedThunk) {
-        this.handleProducerClosedThunk({ producerId: data.producerId });
-      }
+      mediasoupManager.handleProducerClosed(data.producerId);
     });
 
     // 💬 채팅 관련 이벤트 리스너
@@ -262,6 +245,110 @@ class SocketApi {
     });
   }
 
+  // MediaSoup 초기화 로직 (기존 Producer 정보 포함)
+  private async initializeMediasoupWithProducers(rtpCapabilities: RtpCapabilities, peers: PeerWithProducers[], dispatch: AppDispatch) {
+    // 이미 초기화된 경우 스킵
+    if (this.mediasoupInitialized) {
+      console.log("⚠️ MediaSoup already initialized, skipping...");
+      return;
+    }
+
+    try {
+      // 1. Device 로드
+      await mediasoupManager.loadDevice(rtpCapabilities);
+      
+      // 2. Transport 생성
+      const roomId = this.getCurrentRoomId();
+      await mediasoupManager.createTransports(roomId);
+      
+      // 3. 로컬 미디어 시작
+      await mediasoupManager.startLocalMedia();
+      
+      // 4. 기존 피어들 추가
+      peers.forEach(peer => {
+        mediasoupManager.addPeer(peer.id, peer.name);
+      });
+      
+      // 5. 기존 Producer들을 consume (핵심!)
+      for (const peer of peers) {
+        console.log(`🎭 Processing ${peer.producers.length} producers from ${peer.name}:`);
+        for (const producer of peer.producers) {
+          console.log(`🔄 Consuming existing producer: ${producer.producerId} (${producer.kind}) from ${peer.id}`);
+          try {
+            await mediasoupManager.consumeProducer({
+              producerId: producer.producerId,
+              producerSocketId: peer.id,
+            });
+          } catch (error) {
+            console.error(`❌ Failed to consume producer ${producer.producerId}:`, error);
+          }
+        }
+      }
+      
+      this.mediasoupInitialized = true;
+      console.log("✅ MediaSoup initialization completed with existing producers");
+      
+    } catch (error) {
+      console.error("❌ MediaSoup initialization failed:", error);
+      dispatch(setError(`MediaSoup initialization failed: ${error}`));
+    }
+  }
+
+  // 기존 MediaSoup 초기화 로직 (하위 호환성)
+  private async initializeMediasoup(rtpCapabilities: RtpCapabilities, peers: User[], dispatch: AppDispatch) {
+    // 이미 초기화된 경우 스킵
+    if (this.mediasoupInitialized) {
+      console.log("⚠️ MediaSoup already initialized, skipping...");
+      return;
+    }
+
+    try {
+      // 1. Device 로드
+      await mediasoupManager.loadDevice(rtpCapabilities);
+      
+      // 2. Transport 생성
+      const roomId = this.getCurrentRoomId(); // 현재 방 ID 가져오기
+      await mediasoupManager.createTransports(roomId);
+      
+      // 3. 로컬 미디어 시작
+      await mediasoupManager.startLocalMedia();
+      
+      // 4. 기존 피어들 추가
+      peers.forEach(peer => {
+        mediasoupManager.addPeer(peer.id, peer.name);
+      });
+      
+      // Note: 기존 Producer 정보는 joined_room 이벤트에서 이미 처리됨
+      
+      this.mediasoupInitialized = true;
+      console.log("✅ MediaSoup initialization completed");
+      
+    } catch (error) {
+      console.error("❌ MediaSoup initialization failed:", error);
+      dispatch(setError(`MediaSoup initialization failed: ${error}`));
+    }
+  }
+
+  // 현재 방 ID 가져오기 (간단한 구현)
+  private getCurrentRoomId(): string {
+    // URL에서 roomId 추출하거나 상태에서 가져오기
+    const path = window.location.pathname;
+    const matches = path.match(/\/groupchat\/([^\/]+)/);
+    const roomId = matches ? matches[1] : '';
+    console.log(`🔍 [getCurrentRoomId] path: ${path}, extracted roomId: ${roomId}`);
+    return roomId;
+  }
+
+  // Note: 서버 수정이 필요한 부분
+  // 서버에서 get_existing_producers 이벤트를 처리해야 함
+
+  // 방 나가기 시 정리
+  public leaveRoom = () => {
+    mediasoupManager.cleanup();
+    this.mediasoupInitialized = false; // 초기화 상태 리셋
+    this.emit("leave_room");
+  };
+
   // 기존 메서드들...
   public getSocketId = () => this.socket?.id || null;
 
@@ -276,7 +363,6 @@ class SocketApi {
 
   public joinRoom = (data: { roomId: string; userName: string }) =>
     this.emit("join_room", data);
-  public leaveRoom = () => this.emit("leave_room");
   public connectTransport = (data: {
     transportId: string;
     dtlsParameters: any;
@@ -402,6 +488,7 @@ class SocketApi {
 
   // 기존 비동기 메서드들...
   public async createProducerTransport(roomId: string): Promise<any> {
+    console.log(`🔌 [createProducerTransport] Emitting create_producer_transport with roomId: ${roomId}`);
     this.emit("create_producer_transport", { roomId });
     return this.waitForEvent("producer_transport_created");
   }

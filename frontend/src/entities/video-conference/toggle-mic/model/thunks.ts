@@ -8,14 +8,14 @@ export const toggleMicThunk = createAsyncThunk(
   "media/toggleMic",
   async (_, { dispatch, getState }) => {
     const { media } = getState() as RootState;
-    const newMicState = !media.isMicOn;
+    const currentEnabled = media.local.tracks.audio?.enabled ?? false;
     
-    console.log(`🎤 [toggleMicThunk] Toggling mic: ${media.isMicOn} -> ${newMicState}`);
+    console.log(`🎤 [toggleMicThunk] Toggling mic: ${currentEnabled} -> ${!currentEnabled}`);
     
-    // mediasoupManager를 통해 실제 오디오 트랙 제어
-    mediasoupManager.toggleTrack("audio", newMicState);
+    // 새로운 구조에서는 mediasoupManager의 toggleLocalTrack 사용
+    mediasoupManager.toggleLocalTrack("audio");
     
-    // Redux 상태 업데이트
-    dispatch(toggleMicAction());
+    // Redux 상태는 MediaTrackManager에서 자동으로 업데이트됨
+    // dispatch(toggleMicAction());
   }
 );

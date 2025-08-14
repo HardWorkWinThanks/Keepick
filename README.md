@@ -3,7 +3,7 @@
 ## 👥 팀 구성
 
 - **Backend**: 김하은, 권수현, 박재완
-- **Mobile**: 최재웅
+- **Android**: 최재웅
 - **Frontend**: 주재현
 - **AI**: 김연주
 
@@ -17,4 +17,4 @@
 
 ## 📋 Pull Request 템플릿
 
-📌 [PR Template 보기](./docs/pr-template.md)
+📌 [PR Template 보기](./.gitlab/merge_request_templates/pr-template.md)

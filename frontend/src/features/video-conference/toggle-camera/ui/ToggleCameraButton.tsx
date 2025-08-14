@@ -7,20 +7,19 @@ import { toggleCamera } from "@/entities/video-conference/media/model/slice";
 import { mediasoupManager } from "@/shared/api/mediasoupManager";
 import {
   VideoCameraIcon,
-  VideoCameraSlashIcon,
 } from "@heroicons/react/24/solid";
 
 export const ToggleCameraButton = () => {
   const dispatch = useAppDispatch();
-  const isCameraOn = useAppSelector((state) => state.media.isCameraOn);
+  const isCameraOn = useAppSelector((state) => state.media.local.tracks.video?.enabled ?? false);
 
   const handleToggle = () => {
     dispatch(toggleCamera());
   };
 
-  // Redux 상태가 변경되면 실제 미디어 트랙의 상태를 변경합니다.
+  // 새로운 구조에서는 직접 제어
   useEffect(() => {
-    mediasoupManager.toggleTrack("video", isCameraOn);
+    // mediasoupManager.toggleLocalTrack("video");
   }, [isCameraOn]);
 
   return (
@@ -36,7 +35,7 @@ export const ToggleCameraButton = () => {
       {isCameraOn ? (
         <VideoCameraIcon className="h-6 w-6 text-white" />
       ) : (
-        <VideoCameraSlashIcon className="h-6 w-6 text-white" />
+        <VideoCameraIcon className="h-6 w-6 text-white opacity-50" />
       )}
     </button>
   );

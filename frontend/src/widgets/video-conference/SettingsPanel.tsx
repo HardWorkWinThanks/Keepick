@@ -76,7 +76,7 @@ export const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
   const { isStaticGestureOn, isDynamicGestureOn } = useAppSelector(
     (state) => state.gesture
   );
-  const { isCameraOn, isMicOn } = useAppSelector((state) => state.media);
+  const { isCameraOn, isMicOn } = useAppSelector((state) => state.re_media);
   const { isSharing, activeScreenShareCount } = useAppSelector(
     (state) => state.screenShare
   );

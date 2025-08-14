@@ -7,7 +7,7 @@ import { Button } from "@/shared/ui/shadcn/button";
 
 export const ToggleMicButton = () => {
   const dispatch = useAppDispatch();
-  const { isMicOn } = useAppSelector((state) => state.media);
+  const { isMicOn } = useAppSelector((state) => state.re_media);
 
   const handleToggle = () => {
     dispatch(toggleMicThunk());
