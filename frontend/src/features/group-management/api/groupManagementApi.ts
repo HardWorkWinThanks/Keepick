@@ -13,6 +13,8 @@ interface GroupListResponse {
 
 interface CreateGroupRequest {
   name: string;
+  description?: string;
+  groupThumbnailUrl?: string;
 }
 
 interface CreateGroupResponse {
@@ -61,7 +63,7 @@ export const GroupManagementApi = {
       const apiGroups = response.data.data.filter(
         (group) => group.invitationStatus === "ACCEPTED"
       );
-      // API 그룹과 더미 그룹을 합쳐서 반환
+
       return apiGroups;
   },
 

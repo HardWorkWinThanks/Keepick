@@ -148,12 +148,19 @@ export function usePhotoGallery(groupId?: string) {
   // 선택 모드 관리
   const enterSelectionMode = () => {
     setIsSelectionMode(true)
+    // 선택 모드 진입 시 기존 선택 사진들 초기화
+    dispatch(clearSelectedPhotos())
   }
 
   const exitSelectionMode = () => {
+    console.log('usePhotoGallery.exitSelectionMode 호출 - 기본 선택 상태 초기화')
+    console.log('초기화 전 상태:', { isSelectionMode, selectedPhotosCount: selectedPhotos.length, isPhotosExpanded })
+    
     setIsSelectionMode(false)
     dispatch(clearSelectedPhotos())
     setIsPhotosExpanded(false)
+    
+    console.log('usePhotoGallery.exitSelectionMode 완료 - 모든 기본 상태 초기화됨')
   }
 
   // 사진 선택 토글 - Redux 사용

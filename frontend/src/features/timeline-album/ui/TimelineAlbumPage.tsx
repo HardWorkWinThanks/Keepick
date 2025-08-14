@@ -8,6 +8,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useTimelineAlbum } from "../model/useTimelineAlbum"
 import { TimelineEditingSidebar } from "./TimelineEditingSidebar"
+import { AlbumInfoModal } from "./AlbumInfoModal"
 import { PhotoDropZone } from "@/features/photo-drag-drop"
 import type { RootState } from "@/shared/config/store"
 import type { TimelineSection, TimelineAlbum } from "@/entities/album"
@@ -44,7 +45,7 @@ function TimelineSectionLayout({
 }) {
   // 섹션의 사진들 (최대 3개)
   const photos = section.photos || []
-  const imageSlots = [...photos]
+  const imageSlots: (Photo | null)[] = [...photos]
   while (imageSlots.length < 3) {
     imageSlots.push(null)
   }
@@ -84,13 +85,13 @@ function TimelineSectionLayout({
       } bg-[#222222]/50 rounded-sm border border-white/10`
     }
 
-    const dropZoneProps = isEditMode ? {
+    const dropZoneProps = {
       onDrop: (dragData: DragPhotoData, e: React.DragEvent) => onImageDrop?.(imageIndex, dragData),
       onDragOver: () => onImageDragOver?.(imageIndex),
       onDragLeave: onImageDragLeave,
       isDragOver: dragOverImageIndex === imageIndex,
       dropZoneId: `section-${section.id}-image-${imageIndex}`
-    } : {}
+    }
 
     const motionProps = {
       initial: { opacity: 0, scale: 0.9, rotate: index % 2 === 0 ? -2 : 2 },
@@ -270,6 +271,8 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
   } = useTimelineAlbum(groupId, albumId)
 
   const [isEditMode, setIsEditMode] = useState(false)
+  const [isAlbumInfoModalOpen, setIsAlbumInfoModalOpen] = useState(false)
+  const [isSelectingCoverImage, setIsSelectingCoverImage] = useState(false)
   const [dragOverImage, setDragOverImage] = useState<{ sectionIndex: number; imageIndex: number } | null>(null)
   const [editedSections, setEditedSections] = useState<TimelineSection[]>([])
   const [editedAlbumInfo, setEditedAlbumInfo] = useState({
@@ -277,13 +280,15 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     description: '',
     startDate: '',
     endDate: '',
-    thumbnailId: 0
+    thumbnailId: 0,
+    coverImage: null as Photo | null
   })
 
-  // 갤러리에서 선택된 사진들로 앨범을 생성한 경우 자동으로 편집 모드 진입
+  // 갤러리에서 선택된 사진들로 앨범을 생성한 경우 자동으로 편집 모드 진입 + 앨범 정보 모달 자동 오픈
   useEffect(() => {
     if (isFromGallery && selectedPhotos.length > 0) {
       setIsEditMode(true)
+      setIsAlbumInfoModalOpen(true) // 앨범 정보 모달 자동 오픈
       console.log('갤러리에서 선택된 사진들로 타임라인 앨범 편집 시작:', selectedPhotos)
     }
   }, [isFromGallery, selectedPhotos])
@@ -291,13 +296,27 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
   // 타임라인 앨범 데이터가 로드되면 편집 상태 초기화
   useEffect(() => {
     if (timelineAlbum) {
-      setEditedSections([...timelineAlbum.sections])
+      // 빈 앨범인 경우 기본 빈 섹션 하나 추가
+      const initialSections = timelineAlbum.sections.length > 0 
+        ? [...timelineAlbum.sections] 
+        : [{
+            id: Date.now(),
+            name: '',
+            description: '',
+            startDate: '',
+            endDate: '',
+            photoIds: [],
+            photos: []
+          }]
+      
+      setEditedSections(initialSections)
       setEditedAlbumInfo({
         name: timelineAlbum.name,
         description: timelineAlbum.description,
         startDate: timelineAlbum.startDate,
         endDate: timelineAlbum.endDate,
-        thumbnailId: 0 // TODO: thumbnailId 계산 로직 필요
+        thumbnailId: 0, // TODO: thumbnailId 계산 로직 필요
+        coverImage: null // TODO: 커버 이미지 로직 필요
       })
     }
   }, [timelineAlbum])
@@ -399,14 +418,14 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
         }
 
         // 새로운 photos 배열 생성 (최대 3개)
-        const newPhotos = [...targetSection.photos]
+        const newPhotos: (Photo | null)[] = [...targetSection.photos]
         const newPhotoIds = [...targetSection.photoIds]
         
         // 해당 인덱스에 사진 배치
         newPhotos[imageIndex] = {
           id: draggedPhoto.id,
           src: draggedPhoto.src,
-          name: draggedPhoto.name || `Photo ${draggedPhoto.id}`
+          name: draggedPhoto.title || `Photo ${draggedPhoto.id}`
         }
         newPhotoIds[imageIndex] = draggedPhoto.id
 
@@ -414,7 +433,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
         while (newPhotos.length < 3) newPhotos.push(null)
         while (newPhotoIds.length < 3) newPhotoIds.push(0)
 
-        targetSection.photos = newPhotos.slice(0, 3)
+        targetSection.photos = newPhotos.slice(0, 3).filter((photo): photo is Photo => photo !== null)
         targetSection.photoIds = newPhotoIds.slice(0, 3).filter(id => id !== 0)
       }
       
@@ -430,6 +449,24 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
 
   const handleImageDragLeave = () => {
     setDragOverImage(null)
+  }
+
+  // 앨범 정보 모달 핸들러들
+  const handleAlbumInfoChange = (field: string, value: string | Photo | null) => {
+    if (field === 'coverImage') {
+      setEditedAlbumInfo(prev => ({ ...prev, coverImage: value as Photo | null }))
+    } else {
+      setEditedAlbumInfo(prev => ({ ...prev, [field]: value }))
+    }
+  }
+
+  const handleCoverImageSelect = (photo: Photo) => {
+    setEditedAlbumInfo(prev => ({ ...prev, coverImage: photo }))
+    setIsSelectingCoverImage(false)
+  }
+
+  const handleToggleCoverImageSelection = () => {
+    setIsSelectingCoverImage(!isSelectingCoverImage)
   }
 
   if (loading) {
@@ -568,9 +605,25 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
         }}
         availablePhotos={isFromGallery && selectedPhotos.length > 0 ? selectedPhotos : []}
         onShowAlbumInfoModal={() => {
-          // TODO: 앨범 정보 모달 표시
-          console.log('Show album info modal')
+          setIsAlbumInfoModalOpen(true)
         }}
+      />
+
+      {/* Album Info Modal */}
+      <AlbumInfoModal
+        isOpen={isAlbumInfoModalOpen}
+        onClose={() => setIsAlbumInfoModalOpen(false)}
+        albumInfo={{
+          title: editedAlbumInfo.name,
+          startDate: editedAlbumInfo.startDate,
+          endDate: editedAlbumInfo.endDate,
+          description: editedAlbumInfo.description,
+          coverImage: editedAlbumInfo.coverImage
+        }}
+        onAlbumInfoChange={handleAlbumInfoChange}
+        onCoverImageSelect={handleCoverImageSelect}
+        isSelectingCoverImage={isSelectingCoverImage}
+        onToggleCoverImageSelection={handleToggleCoverImageSelection}
       />
     </div>
   )

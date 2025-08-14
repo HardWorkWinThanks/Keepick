@@ -9,6 +9,8 @@ import { useMainAuth } from "@/features/main-integration/model/useMainAuth"
 import { ScrollArea } from "@/shared/ui/shadcn/scroll-area"
 import { Button } from "@/shared/ui/shadcn/button"
 import { useGroupManagement, CreateGroupModal, LeaveGroupModal, GroupManagementApi, groupQueryKeys } from "@/features/group-management"
+import { PhotoDropZone } from "@/features/photo-drag-drop"
+import { DragPhotoData } from "@/entities/photo"
 import { useQuery } from "@tanstack/react-query"
 import { groupListSelectors, groupFormatters } from "@/entities/group"
 import type { GroupListItem } from "@/entities/group"
@@ -45,7 +47,7 @@ export default function AppSidebar({
   const [expandedGroups, setExpandedGroups] = useState<number[]>([])
   const [groupsSectionExpanded, setGroupsSectionExpanded] = useState(true)
   const [friendsSectionExpanded, setFriendsSectionExpanded] = useState(false) // 초기값을 false로 변경
-  const [groupMembersExpanded, setGroupMembersExpanded] = useState(false) // 그룹원 드롭다운 상태 추가
+  const [groupMembersExpanded, setGroupMembersExpanded] = useState(true) // 그룹원 드롭다운 항상 열림
   const [isEditingGroup, setIsEditingGroup] = useState(false)
   const [editedGroupName, setEditedGroupName] = useState(currentGroup?.name || '')
   const [editedGroupDescription, setEditedGroupDescription] = useState(currentGroup?.description || '')
@@ -57,6 +59,7 @@ export default function AppSidebar({
   const { isLoggedIn } = useMainAuth()
   const { updateGroup, useGroupMembers } = useGroupManagement()
   const [isMounted, setIsMounted] = useState(false)
+  const [thumbnailDragOver, setThumbnailDragOver] = useState(false)
 
   // Hydration 완료 후에만 인증 상태 기반 렌더링 적용
   useEffect(() => {
@@ -104,6 +107,45 @@ export default function AppSidebar({
     setGroupMembersExpanded(!groupMembersExpanded)
   }
 
+  // 그룹 썸네일 드래그&드롭 핸들러
+  const handleThumbnailDrop = async (dragData: DragPhotoData, e: React.DragEvent) => {
+    e.preventDefault()
+    setThumbnailDragOver(false)
+    
+    if (!currentGroup) return
+
+    try {
+      console.log('썸네일 변경 요청:', dragData)
+      
+      // originalUrl을 그룹 썸네일로 사용 (고화질 이미지)
+      const newThumbnailUrl = dragData.originalUrl || dragData.src
+      
+      if (!newThumbnailUrl) {
+        console.error('썸네일 URL을 찾을 수 없습니다.')
+        return
+      }
+      
+      await updateGroup.mutateAsync({
+        groupId: parseInt(currentGroup.id),
+        data: {
+          name: editedGroupName,
+          description: editedGroupDescription,
+          thumbnailUrl: newThumbnailUrl
+        }
+      })
+    } catch (error) {
+      console.error('썸네일 변경 실패:', error)
+    }
+  }
+
+  const handleThumbnailDragOver = () => {
+    setThumbnailDragOver(true)
+  }
+
+  const handleThumbnailDragLeave = () => {
+    setThumbnailDragOver(false)
+  }
+
   const canEditGroup = true // TODO: 그룹 생성자인지 확인하는 로직
 
   const toggleEditGroup = async () => {
@@ -143,25 +185,6 @@ export default function AppSidebar({
 
   return (
     <>
-      {/* Left Edge Hover Zone - 화면 왼쪽 가장자리 */}
-      <div 
-        className="fixed left-0 top-0 z-30"
-        style={{
-          width: '20px',
-          height: '100vh',
-        }}
-        onMouseEnter={() => setSidebarHovered(true)}
-      />
-
-      {/* Hamburger Button Area Hover Zone */}
-      <div 
-        className="fixed left-0 top-20 z-30"
-        style={{
-          width: '80px',
-          height: '80px',
-        }}
-        onMouseEnter={() => setSidebarHovered(true)}
-      />
 
       {/* Sidebar Toggle Button - 헤더 바로 아래 좌측 위치, 사이드바 고정시 우측 이동 */}
       <Button
@@ -229,7 +252,29 @@ export default function AppSidebar({
                   </button>
                   
                   {isGroupDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                    <div 
+                      className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto"
+                      style={{
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: 'rgba(156, 163, 175, 0.3) transparent'
+                      }}
+                    >
+                      <style jsx>{`
+                        div::-webkit-scrollbar {
+                          width: 6px;
+                        }
+                        div::-webkit-scrollbar-track {
+                          background: transparent;
+                          border-radius: 3px;
+                        }
+                        div::-webkit-scrollbar-thumb {
+                          background: rgba(156, 163, 175, 0.3);
+                          border-radius: 3px;
+                        }
+                        div::-webkit-scrollbar-thumb:hover {
+                          background: rgba(156, 163, 175, 0.5);
+                        }
+                      `}</style>
                       {myGroups.map((group) => (
                         <button
                           key={group.groupId}
@@ -309,28 +354,58 @@ export default function AppSidebar({
                 {/* 그룹 썸네일 */}
                 <div className="w-full mt-2">
                   <p className="text-xs font-medium text-gray-400 mb-2">그룹 썸네일</p>
-                  <div className={`aspect-square w-full bg-[#333333] rounded-lg overflow-hidden border ${
-                    isEditingGroup ? 'border-orange-500/30' : 'border-white/10'
-                  }`}>
-                    {currentGroup.thumbnailImage ? (
-                      <img
-                        src={currentGroup.thumbnailImage}
-                        alt={`${currentGroup.name} 썸네일`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-500">
-                        <span className="text-4xl">📸</span>
-                      </div>
-                    )}
-                    {isEditingGroup && (
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                          <span className="text-white text-xs">썸네일 수정 준비중</span>
+                  {isEditingGroup ? (
+                    <PhotoDropZone
+                      onDrop={handleThumbnailDrop}
+                      onDragOver={handleThumbnailDragOver}
+                      onDragLeave={handleThumbnailDragLeave}
+                      isDragOver={thumbnailDragOver}
+                      dropZoneId="group-thumbnail"
+                      className={`aspect-square w-full bg-[#333333] rounded-lg overflow-hidden border relative ${
+                        thumbnailDragOver ? 'border-orange-500 ring-2 ring-orange-500/50' : 'border-orange-500/30'
+                      }`}
+                    >
+                      {currentGroup.thumbnailImage ? (
+                        <img
+                          src={currentGroup.thumbnailImage}
+                          alt={`${currentGroup.name} 썸네일`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500">
+                          <span className="text-4xl">📸</span>
+                        </div>
+                      )}
+                      {/* 드래그&드롭 가이드 오버레이 */}
+                      <div className="absolute inset-0 bg-black/70 flex items-center justify-center p-2">
+                        <div className="text-center">
+                          {thumbnailDragOver ? (
+                            <span className="text-orange-400 text-xs font-medium">
+                              여기에 놓으세요!
+                            </span>
+                          ) : (
+                            <span className="text-white text-xs leading-tight">
+                              갤러리에서 마음에 드는 사진을 그룹 썸네일로 드래그&드롭으로 변경할 수 있습니다
+                            </span>
+                          )}
                         </div>
                       </div>
-                    )}
-                  </div>
+                    </PhotoDropZone>
+                  ) : (
+                    <div className={`aspect-square w-full bg-[#333333] rounded-lg overflow-hidden border border-white/10`}>
+                      {currentGroup.thumbnailImage ? (
+                        <img
+                          src={currentGroup.thumbnailImage}
+                          alt={`${currentGroup.name} 썸네일`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500">
+                          <span className="text-4xl">📸</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 {/* 그룹 설명 */}
@@ -423,7 +498,28 @@ export default function AppSidebar({
                               <div className="text-xs text-gray-500">로딩 중...</div>
                             </div>
                           ) : (
-                            <div className="space-y-2">
+                            <div 
+                              className="space-y-2"
+                              style={{
+                                maxHeight: groupMembers.length > 6 ? '144px' : 'auto', // 6명 * 24px(height) = 144px
+                                overflowY: groupMembers.length > 6 ? 'auto' : 'visible'
+                              }}
+                            >
+                              <style jsx>{`
+                                div::-webkit-scrollbar {
+                                  width: 4px;
+                                }
+                                div::-webkit-scrollbar-track {
+                                  background: transparent;
+                                }
+                                div::-webkit-scrollbar-thumb {
+                                  background: rgba(156, 163, 175, 0.3);
+                                  border-radius: 2px;
+                                }
+                                div::-webkit-scrollbar-thumb:hover {
+                                  background: rgba(156, 163, 175, 0.5);
+                                }
+                              `}</style>
                               {groupMembers.map((member, index) => (
                                 <div key={member.memberId || `member-${index}`} className="flex items-center gap-2 p-1">
                                   <div className="w-6 h-6 bg-gray-700 rounded-full flex items-center justify-center text-xs">

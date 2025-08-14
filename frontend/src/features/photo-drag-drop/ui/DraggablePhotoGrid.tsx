@@ -36,6 +36,8 @@ export function DraggablePhotoGrid({
     const dragData: DragPhotoData = {
       photoId: photo.id,
       source: sourceId,
+      src: photo.src, // 사진 URL 추가 (썸네일용)
+      originalUrl: (photo as any).originalUrl, // 원본 URL 추가 (그룹 썸네일 변경용)
     };
     e.dataTransfer.setData("text/plain", JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = "move";

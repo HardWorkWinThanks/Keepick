@@ -65,7 +65,12 @@ export default function AppHeader({
 
       {/* Center Button - 조건부 표시 */}
       {showCenterButton && onSpillPhotos && (
-        <div className="absolute left-1/2 transform -translate-x-1/2">
+        <div 
+          className="absolute transform -translate-x-1/2 transition-all duration-300"
+          style={{
+            left: sidebarPinned ? 'calc(50% + 120px)' : '50%' // 사이드바 열림에 따라 중앙 조정 (사이드바 너비 240px의 절반)
+          }}
+        >
           <button
             onClick={onSpillPhotos}
             className="text-2xl sm:text-3xl font-bold transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer select-none"

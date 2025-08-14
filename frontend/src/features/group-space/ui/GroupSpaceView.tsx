@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   ChevronUp,
   ChevronDown,
@@ -21,6 +22,9 @@ interface GroupSpaceViewProps {
 
 export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
   const router = useRouter();
+  // 앨범 생성 버튼 클릭 여부를 추적하는 상태
+  const [isFromAlbumCreateButton, setIsFromAlbumCreateButton] = useState(false);
+  
   const {
     currentMode,
     currentAlbum,
@@ -39,6 +43,20 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
     deleteAlbum,
     isDeletingAlbum,
   } = useGroupSpace(group.groupId);
+
+  // 앨범 모드로 전환하거나 컴포넌트가 언마운트될 때 플래그 리셋
+  useEffect(() => {
+    if (currentMode.id === "album") {
+      setIsFromAlbumCreateButton(false);
+    }
+  }, [currentMode.id]);
+
+  // 컴포넌트 언마운트 시 정리
+  useEffect(() => {
+    return () => {
+      setIsFromAlbumCreateButton(false);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#111111] text-white pb-8">
@@ -91,6 +109,7 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                 size="md"
                 onClick={() => {
                   console.log('타임라인 앨범 생성 버튼 클릭 - 갤러리 모드로 전환')
+                  setIsFromAlbumCreateButton(true) // 앨범 생성 버튼 클릭 플래그 설정
                   switchToGalleryMode()
                 }}
               >
@@ -149,7 +168,7 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                   </button>
 
                   {/* Photos Grid */}
-                  <div className="mx-16">
+                  <div className="mx-4 sm:mx-8 lg:mx-12">
                     <AnimatePresence mode="wait">
                       <motion.div
                         key={`${currentAlbum.id}-${currentPhotoIndex}`}
@@ -157,11 +176,11 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: -50, opacity: 0 }}
                         transition={{ duration: 0.5, ease: "easeInOut" }}
-                        className="grid grid-cols-4 gap-4 w-full relative"
+                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 w-full relative"
                       >
                         {/* 로딩 상태 */}
                         {isLoading && (
-                          <div className="col-span-4 flex items-center justify-center py-16">
+                          <div className="col-span-full flex items-center justify-center py-16">
                             <div className="text-center">
                               <div className="w-8 h-8 border-2 border-[#FE7A25] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                               <h2 className="text-xl font-keepick-primary font-bold tracking-wider text-white/60">
@@ -173,7 +192,7 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
 
                         {/* 앨범이 비어있을 때 배경 메시지 */}
                         {!isLoading && visiblePhotos.length === 0 && (
-                          <div className="col-span-4 flex items-center justify-center py-16">
+                          <div className="col-span-full flex items-center justify-center py-16">
                             <div className="text-center">
                               <h2 className="text-4xl md:text-5xl lg:text-6xl font-keepick-primary font-bold tracking-wider text-white/30 mb-4">
                                 NO ALBUMS
@@ -216,7 +235,7 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                             }}
                           >
                             <div 
-                              className="relative aspect-[4/5] overflow-hidden bg-[#222222]/50 rounded-sm w-full border border-white/10"
+                              className="relative aspect-[3/4] overflow-hidden bg-[#222222]/50 rounded-sm w-full border border-white/10"
                               onClick={() => {
                                 // 앨범 타입에 따라 다른 라우트로 이동
                                 if (currentAlbum.id === "timeline") {
@@ -236,8 +255,8 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                               }}
                             >
                               <Image
-                                src={photo.image || "/placeholder.svg"}
-                                alt={photo.title}
+                                src={photo.image || "/placeholder/photo-placeholder.svg"}
+                                alt={photo.title || '앨범 제목을 작성해주세요'}
                                 fill
                                 sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
                                 className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -270,10 +289,10 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
 
                             <div className="mt-6 space-y-2">
                               <h3 className="text-lg font-medium text-white/90 group-hover:text-[#FE7A25] transition-colors">
-                                {photo.title}
+                                {photo.title || '앨범 제목을 작성해주세요'}
                               </h3>
                               <p className="text-base text-white/60 uppercase tracking-wider">
-                                {photo.subtitle}
+                                {photo.subtitle || '앨범 설명을 작성해주세요'}
                               </p>
                             </div>
                           </motion.div>
@@ -350,7 +369,10 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.2, duration: 0.3 }}
                 >
-                  <PhotoGallery groupId={group.groupId.toString()} />
+                  <PhotoGallery 
+                    groupId={group.groupId.toString()} 
+                    autoEnterAlbumMode={isFromAlbumCreateButton}
+                  />
                 </motion.div>
               </div>
             </motion.div>

@@ -18,9 +18,10 @@ import { useInfiniteScroll } from "@/shared/lib"
 interface PhotoGalleryProps {
   groupId: string
   onBack?: () => void
+  autoEnterAlbumMode?: boolean // 자동으로 앨범 모드에 진입
 }
 
-export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
+export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = false }: PhotoGalleryProps) {
   // TanStack Query 클라이언트
   const queryClient = useQueryClient()
   
@@ -49,9 +50,10 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
 
   // 선택 모드 타입 상태 (앨범 생성 또는 사진 삭제)
   const [selectionType, setSelectionType] = useState<'album' | 'delete' | null>(null)
-  const isSelectionMode = selectionType !== null
-  const isAlbumMode = selectionType === 'album'
-  const isDeleteMode = selectionType === 'delete'
+  // usePhotoGallery의 baseSelectionMode를 기본 선택 모드 상태로 사용
+  const isSelectionMode = baseSelectionMode
+  const isAlbumMode = selectionType === 'album' && baseSelectionMode
+  const isDeleteMode = selectionType === 'delete' && baseSelectionMode
 
   // 갤러리 뷰 모드 (전체/흐린사진/유사사진)
   const [viewMode, setViewMode] = useState<'all' | 'blurred' | 'similar'>('all')
@@ -166,6 +168,26 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                viewMode === 'blurred' ? blurredQuery.isFetchingNextPage : 
                viewMode === 'similar' ? similarQuery.isFetchingNextPage : false,
   })
+
+  // 자동으로 앨범 모드에 진입
+  useEffect(() => {
+    if (autoEnterAlbumMode && selectionType === null) {
+      console.log('그룹스페이스에서 앨범 만들기 버튼으로 진입 - 자동으로 앨범 선택 모드 활성화')
+      setSelectionType('album')
+      enterBaseSelectionMode()
+    }
+  }, [autoEnterAlbumMode, selectionType])
+
+  // 컴포넌트가 다시 마운트될 때 (다른 화면에서 돌아올 때) 선택모드 해제
+  useEffect(() => {
+    return () => {
+      // 컴포넌트 언마운트 시 선택모드 해제 (다른 화면으로 전환 시)
+      if (isSelectionMode) {
+        console.log('갤러리에서 다른 화면으로 전환 - 선택모드 해제')
+        exitSelectionMode()
+      }
+    }
+  }, [])
 
   // SSE 연결 정리 (컴포넌트 언마운트 시)
   useEffect(() => {
@@ -330,15 +352,15 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
     try {
       const photoTags = await getPhotoTags(parseInt(groupId), photoId)
       
-      // 디버깅: 실제 데이터 타입과 값 확인
-      console.log('🔍 PhotoTags 디버깅:', {
-        photoId,
-        rawTags: photoTags.tags,
-        rawTagsType: typeof photoTags.tags,
-        rawMemberNicknames: photoTags.memberNicknames,
-        rawMemberNicknamesType: typeof photoTags.memberNicknames,
-        fullResponse: photoTags
-      })
+      // // 디버깅: 실제 데이터 타입과 값 확인
+      // console.log('🔍 PhotoTags 디버깅:', {
+      //   photoId,
+      //   rawTags: photoTags.tags,
+      //   rawTagsType: typeof photoTags.tags,
+      //   rawMemberNicknames: photoTags.memberNicknames,
+      //   rawMemberNicknamesType: typeof photoTags.memberNicknames,
+      //   fullResponse: photoTags
+      // })
       
       const tags = photoTags.tags
       const members = photoTags.memberNicknames
@@ -402,20 +424,33 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
 
   // 앨범 생성 모드 진입
   const enterAlbumMode = () => {
-    setSelectionType('album')
-    enterBaseSelectionMode()
+    console.log('앨범 모드 진입 - 두 상태 동기화')
+    enterBaseSelectionMode() // usePhotoGallery 상태 먼저 활성화
+    setSelectionType('album') // PhotoGallery 타입 설정
   }
   
   // 사진 삭제 모드 진입
   const enterDeleteMode = () => {
-    setSelectionType('delete')
-    enterBaseSelectionMode()
+    console.log('삭제 모드 진입 - 두 상태 동기화')
+    enterBaseSelectionMode() // usePhotoGallery 상태 먼저 활성화
+    setSelectionType('delete') // PhotoGallery 타입 설정
   }
   
-  // 선택 모드 종료
+  // 선택 모드 종료 - 모든 선택 관련 상태 완전 초기화
   const exitSelectionMode = () => {
+    console.log('선택 모드 종료 시작 - 모든 상태 초기화')
+    console.log('종료 전 상태:', { selectionType, baseSelectionMode, isAlbumMode, isDeleteMode })
+    
+    // 1. PhotoGallery 타입 상태 먼저 초기화
     setSelectionType(null)
+    
+    // 2. usePhotoGallery 기본 선택 모드 상태 초기화
     exitBaseSelectionMode()
+    
+    // 3. 모든 모달 및 추가 상태 강제 초기화
+    setIsDeleteModalOpen(false)
+    
+    console.log('선택 모드 종료 완료 - 모든 상태가 초기화됨')
   }
   
   // 삭제 확인 모달 열기 (삭제 모드에서 사진 선택 후)
@@ -641,7 +676,15 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
             <div className="flex items-center gap-3 pb-2">
               {/* Album Mode Button - 같은 자리에서 텍스트만 변경 */}
               <button
-                onClick={isAlbumMode ? exitSelectionMode : enterAlbumMode}
+                onClick={() => {
+                  if (isAlbumMode) {
+                    console.log('앨범 모드 취소 버튼 클릭 - 선택 모드 종료 시작')
+                    exitSelectionMode()
+                  } else {
+                    console.log('앨범 만들기 버튼 클릭 - 앨범 모드 진입')
+                    enterAlbumMode()
+                  }
+                }}
                 disabled={isDeleteMode}
                 className={`px-6 py-2 bg-transparent border-2 font-keepick-heavy text-sm tracking-wider transition-all duration-300 ${
                   isDeleteMode
@@ -674,7 +717,15 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
               
               {/* Delete Mode Button - 같은 자리에서 텍스트만 변경 */}
               <button 
-                onClick={isDeleteMode ? exitSelectionMode : enterDeleteMode}
+                onClick={() => {
+                  if (isDeleteMode) {
+                    console.log('삭제 모드 취소 버튼 클릭 - 선택 모드 종료 시작')
+                    exitSelectionMode()
+                  } else {
+                    console.log('삭제 모드 버튼 클릭 - 삭제 모드 진입')
+                    enterDeleteMode()
+                  }
+                }}
                 disabled={isAlbumMode}
                 className={`px-6 py-2 bg-transparent border-2 font-keepick-heavy text-sm tracking-wider transition-all duration-300 flex items-center justify-center ${
                   isAlbumMode
@@ -843,14 +894,14 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                             } else {
                               openPhotoModal({ 
                                 id: photo.photoId, 
-                                src: photo.thumbnailUrl, 
+                                src: photo.originalUrl, 
                                 name: `사진 #${photo.photoId}` 
                               })
                             }
                           }}
                         >
                           <Image
-                            src={photo.thumbnailUrl || "/placeholder.svg"}
+                            src={photo.originalUrl || "/placeholder.svg"}
                             alt={`사진 #${photo.photoId}`}
                             fill
                             sizes="200px"
@@ -1185,7 +1236,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                                 className="relative overflow-hidden rounded cursor-pointer group aspect-square"
                               >
                                 <Image
-                                  src={photo.src || "/placeholder.svg"}
+                                  src={photo.thumbnailUrl || "/placeholder.svg"}
                                   alt={photo.title}
                                   fill
                                   sizes="12.5vw"
@@ -1248,7 +1299,7 @@ export default function PhotoGallery({ groupId, onBack }: PhotoGalleryProps) {
                         return (
                           <div key={photo.id} className="w-10 h-10 flex-shrink-0 rounded overflow-hidden relative">
                             <Image
-                              src={photo.src || "/placeholder.svg"}
+                              src={photo.thumbnailUrl || "/placeholder.svg"}
                               alt={photo.title}
                               fill
                               sizes="40px"

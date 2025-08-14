@@ -35,7 +35,7 @@ export default function GroupPage({ params }: GroupPageProps) {
           showCreateGroupButton: true,
           showGroupsSection: false,
           showFriendsSection: true,
-          forceInitialPinned: false
+          forceInitialPinned: true
         }}
       >
         <div className="min-h-screen bg-[#222222] flex items-center justify-center">
@@ -53,7 +53,7 @@ export default function GroupPage({ params }: GroupPageProps) {
           showCreateGroupButton: true,
           showGroupsSection: false,
           showFriendsSection: true,
-          forceInitialPinned: false
+          forceInitialPinned: true
         }}
       >
         <div className="min-h-screen bg-[#222222] flex items-center justify-center">
@@ -85,7 +85,7 @@ export default function GroupPage({ params }: GroupPageProps) {
           description: groupData.description,
           thumbnailImage: groupData.thumbnailUrl || "/dummy/jeju-dummy1.webp"
         },
-        forceInitialPinned: false
+        forceInitialPinned: true
       }}
     >
       <GroupSpaceWidget 

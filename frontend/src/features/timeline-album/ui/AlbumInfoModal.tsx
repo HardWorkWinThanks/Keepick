@@ -86,8 +86,12 @@ export function AlbumInfoModal({
                         />
                       </div>
                     ) : (
-                      <div className="w-20 h-20 bg-gray-700 rounded-lg flex items-center justify-center">
-                        <span className="text-gray-500 text-sm">없음</span>
+                      <div className="w-20 h-20 bg-gray-700 rounded-lg overflow-hidden flex items-center justify-center">
+                        <img
+                          src="/placeholder/photo-placeholder.svg"
+                          alt="대표 이미지 없음"
+                          className="w-12 h-12 opacity-50"
+                        />
                       </div>
                     )}
                     <button
@@ -116,7 +120,7 @@ export function AlbumInfoModal({
                   <p className="text-sm font-medium text-gray-300 mb-2">앨범 제목</p>
                   <input
                     type="text"
-                    value={albumInfo.title}
+                    value={albumInfo.title || ''}
                     onChange={(e) => onAlbumInfoChange('title', e.target.value)}
                     className="w-full bg-gray-800 text-white px-3 py-2 rounded border border-orange-500/30 focus:border-orange-500 focus:outline-none"
                     placeholder="앨범 제목을 입력하세요"
@@ -130,7 +134,7 @@ export function AlbumInfoModal({
                     <p className="text-sm font-medium text-gray-300 mb-2">시작 날짜</p>
                     <input
                       type="text"
-                      value={albumInfo.startDate}
+                      value={albumInfo.startDate || ''}
                       onChange={(e) => onAlbumInfoChange('startDate', e.target.value)}
                       className="w-full bg-gray-800 text-gray-300 px-3 py-2 rounded border border-orange-500/30 focus:border-orange-500 focus:outline-none"
                       placeholder="YYYY.MM.DD"
@@ -141,7 +145,7 @@ export function AlbumInfoModal({
                     <p className="text-sm font-medium text-gray-300 mb-2">끝 날짜</p>
                     <input
                       type="text"
-                      value={albumInfo.endDate}
+                      value={albumInfo.endDate || ''}
                       onChange={(e) => onAlbumInfoChange('endDate', e.target.value)}
                       className="w-full bg-gray-800 text-gray-300 px-3 py-2 rounded border border-orange-500/30 focus:border-orange-500 focus:outline-none"
                       placeholder="YYYY.MM.DD"
@@ -154,7 +158,7 @@ export function AlbumInfoModal({
                 <div>
                   <p className="text-sm font-medium text-gray-300 mb-2">앨범 설명</p>
                   <textarea
-                    value={albumInfo.description}
+                    value={albumInfo.description || ''}
                     onChange={(e) => {
                       if (e.target.value.length <= 100) {
                         onAlbumInfoChange('description', e.target.value)
@@ -162,17 +166,17 @@ export function AlbumInfoModal({
                     }}
                     className="w-full bg-gray-800 text-gray-300 px-3 py-2 rounded border border-orange-500/30 focus:border-orange-500 focus:outline-none resize-none"
                     rows={3}
-                    placeholder="앨범 설명을 입력하세요 (최대 100자)"
+                    placeholder="앨범 설명을 작성해주세요 (최대 100자)"
                     maxLength={100}
                     disabled={isSelectingCoverImage}
                   />
                   <div className="flex justify-between items-center mt-1">
                     <span className="text-xs text-gray-500">
-                      {albumInfo.description.length}/100자
+                      {(albumInfo.description || '').length}/100자
                     </span>
-                    {albumInfo.description.length > 80 && (
+                    {(albumInfo.description || '').length > 80 && (
                       <span className="text-xs text-orange-400">
-                        {100 - albumInfo.description.length}자 남음
+                        {100 - (albumInfo.description || '').length}자 남음
                       </span>
                     )}
                   </div>

@@ -219,8 +219,9 @@ export const convertToGalleryPhoto = (photoInfo: PhotoInfo): any => {
 
   return {
     id: photoInfo.photoId,
-    src: photoInfo.thumbnailUrl, // 썸네일 URL 사용
-    originalSrc: photoInfo.originalUrl, // 원본 URL 저장
+    src: photoInfo.originalUrl, // 원본 고화질 URL 사용 (갤러리 메인 표시용)
+    originalUrl: photoInfo.originalUrl, // 원본 URL 저장
+    thumbnailUrl: photoInfo.thumbnailUrl, // 썸네일 저화질 URL (선택목록용)
     title: `사진 #${photoInfo.photoId}`,
     category: "일반", // 기본 카테고리
     aspectRatio,
