@@ -115,22 +115,28 @@ public class PhotoQueryFactoryImpl implements PhotoQueryFactory {
     public long clearSinglePhotoClusters(Long groupId) {
         QPhoto photoSub = new QPhoto("photoSub");
 
-        // 사진이 속한 클러스터의 사진 개수가 1개 이하인 경우 클러스터 제거
+        // 1. 삭제 대상 사진들이 속한 clusterId 중 count <= 1인 것 조회
+        List<Long> targetClusterIds = jpaQueryFactory
+                .select(photo.clusterId)
+                .from(photo)
+                .where(
+                        groupIdEq(groupId),
+                        notDeleted(),
+                        clustered()
+                )
+                .groupBy(photo.clusterId)
+                .having(photo.count().loe(1))
+                .fetch();
+
+        if (targetClusterIds.isEmpty()) {
+            return 0L;
+        }
+
+        // 2. 해당 clusterId를 가진 사진들의 clusterId를 null로 변경
         long updatedCount = jpaQueryFactory
                 .update(photo)
                 .set(photo.clusterId, (Long) null)
-                .where(photo.clusterId.in(
-                        JPAExpressions
-                                .select(photoSub.clusterId)
-                                .from(photoSub)
-                                .where(
-                                        photoSub.group.id.eq(groupId),
-                                        photoSub.deletedAt.isNull(),
-                                        photoSub.clusterId.isNotNull()
-                                )
-                                .groupBy(photoSub.clusterId)
-                                .having(photoSub.count().loe(1L))
-                ))
+                .where(photo.clusterId.in(targetClusterIds))
                 .execute();
 
         return updatedCount;
