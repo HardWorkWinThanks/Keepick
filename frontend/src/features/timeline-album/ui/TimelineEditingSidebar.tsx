@@ -144,22 +144,22 @@ export function TimelineEditingSidebar({
                     <textarea
                       value={albumInfo?.description || ''}
                       onChange={(e) => {
-                        if (e.target.value.length <= 100) {
+                        if (e.target.value.length <= 30) {
                           onAlbumInfoUpdate({ description: e.target.value })
                         }
                       }}
                       className="w-full bg-gray-800 text-gray-300 px-3 py-2 rounded border border-[#FE7A25]/30 focus:border-[#FE7A25] focus:outline-none resize-none"
-                      rows={3}
-                      placeholder="앨범 설명을 작성해주세요 (최대 100자)"
-                      maxLength={100}
+                      rows={2}
+                      placeholder="앨범 설명을 작성해주세요 (최대 30자)"
+                      maxLength={30}
                     />
                     <div className="flex justify-between items-center mt-1">
                       <span className="text-xs text-gray-500">
-                        {(albumInfo?.description || '').length}/100자
+                        {(albumInfo?.description || '').length}/30자
                       </span>
-                      {(albumInfo?.description || '').length > 80 && (
+                      {(albumInfo?.description || '').length > 25 && (
                         <span className="text-xs text-orange-400">
-                          {100 - (albumInfo?.description || '').length}자 남음
+                          {30 - (albumInfo?.description || '').length}자 남음
                         </span>
                       )}
                     </div>

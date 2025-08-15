@@ -82,9 +82,9 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
   }, [group.groupId, switchToGalleryMode]);
 
   return (
-    <div className="min-h-screen bg-[#111111] text-white pb-8">
-      {/* Album/Gallery Mode Section - 메인 섹션으로 이동, 크기와 색상 조정 */}
-      <div className="px-8 pt-6 pb-4 pl-20">
+    <div className="bg-[#111111] text-white flex flex-col min-h-0" style={{ height: 'calc(100vh - 90px)' }}>
+      {/* Album/Gallery Mode Section - 헤더 영역 */}
+      <div className="px-8 py-6 pl-20 flex-shrink-0">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
             <AnimatePresence mode="wait">
@@ -129,12 +129,13 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
             >
               <InteractiveHoverButton
                 variant="ghost"
-                size="md"
+                size="lg"
                 onClick={() => {
                   console.log('타임라인 앨범 생성 버튼 클릭 - 갤러리 모드로 전환')
                   setIsFromAlbumCreateButton(true) // 앨범 생성 버튼 클릭 플래그 설정
                   switchToGalleryMode()
                 }}
+                className="text-lg px-8 py-4"
               >
                 CREATE NEW ALBUM
               </InteractiveHoverButton>
@@ -144,8 +145,11 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
         </div>
       </div>
 
-      {/* Main Content - 고정 레이아웃 구조 */}
-      <div className="relative flex flex-col min-h-[80vh]">
+      {/* 상단 여백 - 헤더와 그리드 사이 */}
+      <div style={{ flex: '1 1 0', minHeight: 0 }}></div>
+
+      {/* Main Content - 그리드 영역 */}
+      <div className="relative flex-shrink-0">
         <AnimatePresence mode="wait">
           {currentMode.id === "album" ? (
             <motion.div
@@ -159,39 +163,45 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                 opacity: { duration: 0.3 },
                 scale: { duration: 0.4 },
               }}
-              className="flex-1"
+              className="flex-shrink-0"
             >
-              {/* 상단 앨범 갤러리 섹션 - 고정 높이 */}
-              <div className="h-[45vh] flex items-center justify-center px-4 py-6 relative">
-                <div className="relative w-full max-w-6xl">
-                  {/* Left Navigation Button */}
+              {/* 상단 앨범 갤러리 섹션 - 완전 분리된 구조 */}
+              <div className="relative w-full flex items-center justify-center">
+                {/* Left Navigation Button - 완전히 독립된 위치 */}
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 z-20">
                   <button
                     onClick={() => navigatePhotos("left")}
                     disabled={!hasPrevPage}
-                    className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center transition-all duration-300 ${
+                    className={`w-16 h-16 flex items-center justify-center transition-all duration-300 ${
                       !hasPrevPage
-                        ? "opacity-30 cursor-not-allowed"
-                        : "hover:bg-white/10 text-[#FE7A25]"
+                        ? "opacity-30 cursor-not-allowed text-gray-600"
+                        : "text-white hover:text-[#FE7A25] hover:scale-110"
                     }`}
                   >
-                    <ChevronLeft size={28} />
+                    <ChevronLeft size={32} />
                   </button>
+                </div>
 
-                  {/* Right Navigation Button */}
+                {/* Right Navigation Button - 완전히 독립된 위치 */}
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20">
                   <button
                     onClick={() => navigatePhotos("right")}
                     disabled={!hasNextPage}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center transition-all duration-300 ${
+                    className={`w-16 h-16 flex items-center justify-center transition-all duration-300 ${
                       !hasNextPage
-                        ? "opacity-30 cursor-not-allowed"
-                        : "hover:bg-white/10 text-[#FE7A25]"
+                        ? "opacity-30 cursor-not-allowed text-gray-600"
+                        : "text-white hover:text-[#FE7A25] hover:scale-110"
                     }`}
                   >
-                    <ChevronRight size={28} />
+                    <ChevronRight size={32} />
                   </button>
+                </div>
+
+                {/* 그리드 컨테이너 - 화면 크기에 따른 동적 조정 */}
+                <div className="relative w-full max-w-none mx-24 2xl:mx-32">
 
                   {/* Photos Grid */}
-                  <div className="mx-4 sm:mx-8 lg:mx-12">
+                  <div className="mx-1 lg:mx-2">
                     <AnimatePresence mode="wait">
                       <motion.div
                         key={`${currentAlbum.id}-${currentPhotoIndex}`}
@@ -199,7 +209,7 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: -50, opacity: 0 }}
                         transition={{ duration: 0.5, ease: "easeInOut" }}
-                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 w-full relative"
+                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8 xl:gap-12 2xl:gap-16 w-full relative"
                       >
                         {/* 로딩 상태 */}
                         {isLoading && (
@@ -286,6 +296,16 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                                 priority={index < 4}
                               />
                               
+                              {/* 호버시 제목과 설명 오버레이 */}
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
+                                <h3 className="text-lg font-medium text-white mb-2 leading-tight">
+                                  {photo.title && photo.title.trim() ? photo.title : '앨범 제목을 작성해주세요'}
+                                </h3>
+                                <p className="text-sm text-white/80 uppercase tracking-wide leading-tight">
+                                  {photo.subtitle && photo.subtitle.trim() ? photo.subtitle : '앨범 설명을 작성해주세요'}
+                                </p>
+                              </div>
+                              
                               {/* 삭제 버튼 - 타임라인 앨범에만 표시 */}
                               {currentAlbum.id === "timeline" && (
                                 <button
@@ -296,7 +316,7 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                                     }
                                   }}
                                   disabled={deletingAlbumId === photo.id || isDeletingAlbum}
-                                  className={`absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 ${
+                                  className={`absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 z-20 ${
                                     deletingAlbumId === photo.id ? 'animate-pulse' : ''
                                   }`}
                                   title="앨범 삭제"
@@ -309,65 +329,10 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                                 </button>
                               )}
                             </div>
-
-                            <div className="mt-6 space-y-2">
-                              <h3 className="text-lg font-medium text-white/90 group-hover:text-[#FE7A25] transition-colors">
-                                {photo.title && photo.title.trim() ? photo.title : '앨범 제목을 작성해주세요'}
-                              </h3>
-                              <p className="text-base text-white/60 uppercase tracking-wider">
-                                {photo.subtitle && photo.subtitle.trim() ? photo.subtitle : '앨범 설명을 작성해주세요'}
-                              </p>
-                            </div>
                           </motion.div>
                         ))}
                       </motion.div>
                     </AnimatePresence>
-                  </div>
-                </div>
-              </div>
-
-              {/* 하단 앨범 타입 표시 섹션 - 고정 위치 */}
-              <div className="h-[35vh] flex items-center justify-end px-8 pb-8">
-                <div className="flex items-start gap-4">
-                  {/* Album Type Text - 고정 위치 */}
-                  <div className="text-right">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={currentAlbum.id}
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: -20, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="flex flex-col items-end"
-                      >
-                        {/* 영어 메인 제목 */}
-                        <h2 className="text-6xl md:text-7xl lg:text-8xl font-keepick-heavy tracking-wider text-[#FE7A25] leading-none">
-                          {currentAlbum.name}
-                        </h2>
-                        {/* 한글 부제목 */}
-                        <p className="text-lg md:text-xl lg:text-2xl font-keepick-primary font-medium text-[#F5E7C6] mt-2 tracking-wide">
-                          {currentAlbum.subtitle}
-                        </p>
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
-
-                  {/* Navigation Arrows - 고정 위치 */}
-                  <div className="flex flex-col gap-2 mt-2 ml-4">
-                    <button
-                      onClick={() => changeAlbumType("up")}
-                      disabled={isAnimating}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-white/10 transition-all duration-300 disabled:opacity-50 text-[#FE7A25]"
-                    >
-                      <ChevronUp size={16} />
-                    </button>
-                    <button
-                      onClick={() => changeAlbumType("down")}
-                      disabled={isAnimating}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-white/10 transition-all duration-300 disabled:opacity-50 text-[#FE7A25]"
-                    >
-                      <ChevronDown size={16} />
-                    </button>
                   </div>
                 </div>
               </div>
@@ -384,9 +349,10 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                 opacity: { duration: 0.3 },
                 scale: { duration: 0.4 },
               }}
+              className="flex-shrink-0"
             >
               {/* Gallery Mode - PhotoGallery 컴포넌트 */}
-              <div className="flex-1">
+              <div className="flex flex-col">
                 <motion.div
                   initial={{ scale: 0.95, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -402,6 +368,57 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
           )}
         </AnimatePresence>
       </div>
+
+      {/* 하단 여백 - 그리드와 푸터 사이 */}
+      <div style={{ flex: '1 1 0', minHeight: 0 }}></div>
+
+      {/* 하단 앨범 타입 표시 섹션 - 푸터 영역 */}
+      {currentMode.id === "album" && (
+        <div className="flex-shrink-0 flex items-center justify-end px-8 py-1 bg-[#111111] z-10">
+          <div className="flex items-start gap-4">
+            {/* Album Type Text - 고정 위치 */}
+            <div className="text-right">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentAlbum.id}
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -20, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="flex flex-col items-end"
+                >
+                  {/* 영어 메인 제목 */}
+                  <h2 className="text-6xl md:text-7xl lg:text-8xl font-keepick-heavy tracking-wider text-[#FE7A25] leading-none">
+                    {currentAlbum.name}
+                  </h2>
+                  {/* 한글 부제목 */}
+                  <p className="text-lg md:text-xl lg:text-2xl font-keepick-primary font-medium text-[#F5E7C6] mt-0 tracking-wide">
+                    {currentAlbum.subtitle}
+                  </p>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Navigation Arrows - 고정 위치 */}
+            <div className="flex flex-col gap-2 mt-2 ml-4">
+              <button
+                onClick={() => changeAlbumType("up")}
+                disabled={isAnimating}
+                className="w-8 h-8 flex items-center justify-center hover:bg-white/10 transition-all duration-300 disabled:opacity-50 text-[#FE7A25]"
+              >
+                <ChevronUp size={16} />
+              </button>
+              <button
+                onClick={() => changeAlbumType("down")}
+                disabled={isAnimating}
+                className="w-8 h-8 flex items-center justify-center hover:bg-white/10 transition-all duration-300 disabled:opacity-50 text-[#FE7A25]"
+              >
+                <ChevronDown size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
