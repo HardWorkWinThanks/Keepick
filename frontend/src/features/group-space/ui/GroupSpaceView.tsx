@@ -296,8 +296,14 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                                 priority={index < 4}
                               />
                               
-                              {/* 호버시 제목과 설명 오버레이 */}
+                              {/* 호버시 제목, 설명, 날짜 오버레이 */}
                               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
+                                {/* 날짜 정보 (타임라인 앨범에만 표시) */}
+                                {currentAlbum.id === "timeline" && photo.startDate && photo.endDate && (
+                                  <p className="text-xs text-[#FE7A25] font-medium mb-1 tracking-wide">
+                                    {photo.startDate} ~ {photo.endDate}
+                                  </p>
+                                )}
                                 <h3 className="text-lg font-medium text-white mb-2 leading-tight">
                                   {photo.title && photo.title.trim() ? photo.title : '앨범 제목을 작성해주세요'}
                                 </h3>

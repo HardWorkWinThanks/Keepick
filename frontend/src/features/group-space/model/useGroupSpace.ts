@@ -105,7 +105,9 @@ export function useGroupSpace(groupId?: number) {
         id: album.albumId,
         title: album.name,
         subtitle: album.description || `${album.photoCount}장의 사진`,
-        image: album.originalUrl || album.thumbnailUrl || "/placeholder.svg"
+        image: album.originalUrl || album.thumbnailUrl || "/placeholder.svg",
+        startDate: album.startDate,
+        endDate: album.endDate
       }
       
       console.log(`📝 앨범 ${album.albumId} 변환:`, {

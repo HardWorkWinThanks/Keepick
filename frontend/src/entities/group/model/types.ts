@@ -43,4 +43,6 @@ export interface GroupPhoto {
   title: string;
   subtitle: string;
   image: string;
+  startDate?: string;
+  endDate?: string;
 }

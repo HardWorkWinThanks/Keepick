@@ -176,11 +176,14 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                viewMode === 'similar' ? similarQuery.isFetchingNextPage : false,
   })
 
-  // 자동으로 갤러리 모드로 전환 (선택모드는 활성화하지 않음)
+  // 자동으로 갤러리 모드로 전환하고 선택모드 활성화
   useEffect(() => {
     if (autoEnterAlbumMode) {
-      console.log('그룹스페이스에서 앨범 만들기 버튼으로 진입 - 갤러리 모드로 전환')
-      // 갤러리 모드로만 전환, 선택모드는 활성화하지 않음
+      console.log('그룹스페이스에서 앨범 만들기 버튼으로 진입 - 갤러리 모드로 전환하고 선택모드 활성화')
+      // 갤러리 모드로 전환하고 선택모드도 활성화
+      enterBaseSelectionMode()
+      // 앨범 모드로 설정
+      setSelectionType('album')
       
       // 10초 후 자동으로 가이드 해제 (사용자가 버튼을 클릭하지 않은 경우)
       const timer = setTimeout(() => {
@@ -714,8 +717,8 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                   }
                 }}
                 disabled={isDeleteMode}
-                // 그룹스페이스에서 진입했을 때 강조 애니메이션
-                animate={showAlbumGuide && !isAlbumMode ? {
+                // 그룹스페이스에서 진입했을 때 강조 애니메이션 (선택모드가 이미 활성화된 경우 제외)
+                animate={showAlbumGuide && !isAlbumMode && !baseSelectionMode ? {
                   scale: [1, 1.05, 1],
                   boxShadow: [
                     "0 0 0 0 rgba(254, 122, 37, 0)",
@@ -723,7 +726,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                     "0 0 0 0 rgba(254, 122, 37, 0)"
                   ]
                 } : {}}
-                transition={showAlbumGuide && !isAlbumMode ? {
+                transition={showAlbumGuide && !isAlbumMode && !baseSelectionMode ? {
                   duration: 2,
                   repeat: 3,
                   repeatDelay: 0.5

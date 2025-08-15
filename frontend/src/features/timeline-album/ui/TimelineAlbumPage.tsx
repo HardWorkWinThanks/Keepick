@@ -309,9 +309,11 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
   const [hasProcessedGalleryMode, setHasProcessedGalleryMode] = useState(false) // 갤러리 모드 처리 완룼 플래그
   const titleInputRef = useRef<HTMLInputElement>(null) // 제목 입력 필드 참조
 
-  // 갤러리에서 선택된 사진들로 앨범을 생성한 경우 자동으로 편집 모드 진입
+  // 빈 앨범 감지로 새로 만든 앨범에서 자동으로 편집 모드 진입 (더 확실한 방법)
   useEffect(() => {
-    if (isFromGallery && selectedPhotos.length > 0 && !hasProcessedGalleryMode) {
+    // 앨범 제목이 비어있으면 새로 만든 앨범으로 간주하고 편집모드 자동 진입
+    if (albumInfo && !albumInfo.name?.trim() && !isEditMode && !hasProcessedGalleryMode) {
+      console.log('빈 앨범 감지 - 편집모드 자동 활성화')
       startEditing()
       setHasProcessedGalleryMode(true)
       
@@ -320,7 +322,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
         titleInputRef.current?.focus()
       }, 500)
     }
-  }, [isFromGallery, selectedPhotos, hasProcessedGalleryMode, startEditing])
+  }, [albumInfo, isEditMode, hasProcessedGalleryMode, startEditing])
 
   const handleEditModeToggle = () => {
     if (isEditMode) {
