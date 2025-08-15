@@ -12,6 +12,7 @@ import {
   addRemoteScreenShare,
   removeRemoteScreenShare,
 } from "@/entities/screen-share/model/slice";
+import { socketManager } from "./socket/socketManager";
 
 class ScreenShareManager {
   private dispatch: AppDispatch | null = null;
@@ -88,7 +89,8 @@ class ScreenShareManager {
     }
 
     // 🔒 중복 화면 공유 방지
-    const existingScreenTrack = mediaTrackManager.getLocalScreenTrack(peerId);
+    const screenSharePeerId = `${peerId}_screen`;
+    const existingScreenTrack = mediaTrackManager.getLocalScreenTrack(screenSharePeerId);
     if (existingScreenTrack) {
       console.warn("⚠️ Screen share already active, stopping previous one...");
       await this.stopScreenShare(actualRoomId, peerId);
@@ -106,15 +108,19 @@ class ScreenShareManager {
       this.dispatch(startScreenShareRequest());
       console.log(`🚀 Starting screen share for ${peerName} (${peerId})`);
 
-      // 화면 캡처
+      // 화면 캡처 - 더 높은 해상도와 품질 설정
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
-          width: { ideal: 1920, max: 1920 },
-          height: { ideal: 1080, max: 1080 },
-          frameRate: { ideal: 30, max: 30 },
+          width: { ideal: 1920, max: 2560 },    // 더 높은 최대 해상도
+          height: { ideal: 1080, max: 1440 },   // 더 높은 최대 해상도
+          frameRate: { ideal: 30, max: 60 },    // 더 높은 프레임레이트
         },
-        audio: false,
-      });
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 48000,                    // 높은 샘플레이트
+        },
+      } as any);
 
       this.localStream = stream;
       const videoTrack = stream.getVideoTracks()[0];
@@ -130,8 +136,9 @@ class ScreenShareManager {
         this.stopScreenShare(actualRoomId, peerId);
       };
 
-      // 🆕 MediaTrackManager를 통해 Producer 생성
-      const trackId = await mediaTrackManager.addScreenShareTrack(videoTrack, peerId, peerName);
+      // 🆕 MediaTrackManager를 통해 Producer 생성 - 화면 공유 전용 peerId 사용
+      const screenSharePeerId = `${peerId}_screen`;
+      const trackId = await mediaTrackManager.addScreenShareTrack(videoTrack, screenSharePeerId, peerName);
       
       console.log("🖥️ Screen share track created:", {
         trackId,
@@ -184,8 +191,29 @@ class ScreenShareManager {
       this.dispatch(stopScreenShareRequest());
       console.log(`🛑 Stopping screen share for ${peerId}`);
 
-      // 🆕 MediaTrackManager를 통해 트랙 제거
-      mediaTrackManager.removeLocalTrackByType(peerId, 'screen');
+      // 🆕 서버에 화면 공유 종료 알림
+      const screenSharePeerId = `${peerId}_screen`;
+      const screenTrack = mediaTrackManager.getLocalScreenTrack(screenSharePeerId);
+      
+      if (screenTrack?.producer) {
+        // 서버에 화면 공유 중지 이벤트 전송
+        const socket = socketManager.getSocket();
+        if (socket) {
+          socket.emit('stop_screen_share', {
+            roomId,
+            peerId,
+            producerId: screenTrack.producer.id,
+          });
+          console.log(`📤 Sent stop_screen_share to server:`, {
+            roomId,
+            peerId,
+            producerId: screenTrack.producer.id,
+          });
+        }
+      }
+
+      // MediaTrackManager를 통해 트랙 제거
+      mediaTrackManager.removeLocalTrackByType(screenSharePeerId, 'screen');
 
       // 로컬 스트림 정리
       if (this.localStream) {

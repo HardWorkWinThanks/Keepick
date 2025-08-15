@@ -8,7 +8,8 @@ export const useLocalMediaTrack = (kind: 'audio' | 'video') => {
   const trackInfo = useAppSelector(state => state.media.local.tracks[kind]);
   
   const track = useMemo(() => {
-    return trackInfo ? mediaTrackManager.getLocalTrack(kind) : null;
+    // 🆕 카메라 전용 메서드 사용 (화면 공유와 완전 분리)
+    return trackInfo ? mediaTrackManager.getLocalCameraTrack(kind) : null;
   }, [trackInfo?.trackId, kind]);
 
   // 디버깅을 위한 로그 제거 (필요시 활성화)
@@ -94,6 +95,24 @@ export const useLocalMediaControls = () => {
     toggleAudio,
     toggleVideo,
     hasLocalMedia: audioTrack.hasTrack || videoTrack.hasTrack,
+  };
+};
+
+// 🆕 화면 공유 전용 Hook
+export const useLocalScreenShareTrack = () => {
+  const screenShareState = useAppSelector(state => state.screenShare);
+  
+  const screenTrack = useMemo(() => {
+    // 화면 공유가 활성화된 경우에만 트랙 반환
+    return screenShareState.isSharing ? mediaTrackManager.getLocalScreenShareTrack() : null;
+  }, [screenShareState.isSharing]);
+  
+  return {
+    track: screenTrack,
+    isSharing: screenShareState.isSharing,
+    isLoading: screenShareState.isLoading,
+    error: screenShareState.error,
+    hasScreenTrack: !!screenTrack,
   };
 };
 

@@ -108,12 +108,29 @@ class MediaTrackManager {
       // 화면 공유인 경우 더 높은 품질 설정
       if (trackType === "screen") {
         produceOptions.encodings = [
-          { maxBitrate: 3000000, rid: "high" },
-          { maxBitrate: 1500000, rid: "medium", scaleResolutionDownBy: 2 },
-          { maxBitrate: 600000, rid: "low", scaleResolutionDownBy: 4 },
+          { 
+            maxBitrate: 5000000,  // 5 Mbps
+            rid: "high",
+            maxFramerate: 30,
+            scaleResolutionDownBy: 1
+          },
+          { 
+            maxBitrate: 3000000,  // 3 Mbps  
+            rid: "medium", 
+            scaleResolutionDownBy: 1.5,
+            maxFramerate: 25
+          },
+          { 
+            maxBitrate: 1500000,  // 1.5 Mbps
+            rid: "low", 
+            scaleResolutionDownBy: 2,
+            maxFramerate: 20
+          },
         ];
         produceOptions.codecOptions = {
-          videoGoogleStartBitrate: 1000,
+          videoGoogleStartBitrate: 2000,  // 시작 비트레이트 증가
+          videoGoogleMaxBitrate: 5000000,  // 최대 비트레이트 설정
+          videoGoogleMinBitrate: 500000,   // 최소 비트레이트 설정
         };
       }
 
@@ -132,21 +149,25 @@ class MediaTrackManager {
       this.localTracks.set(trackId, trackInfo);
       this.producerMap.set(producer.id, trackId);
 
-      // Redux 상태 업데이트 (메타데이터만)
-      this.dispatch(
-        setLocalTrack({
-          kind: processedTrack.kind as "audio" | "video",
-          track: {
-            trackId,
-            producerId: producer.id,
-            peerId,
+      // Redux 상태 업데이트 (카메라 트랙만, 화면 공유 트랙 제외)
+      if (trackType === "camera") {
+        this.dispatch(
+          setLocalTrack({
             kind: processedTrack.kind as "audio" | "video",
-            enabled: processedTrack.enabled,
-            muted: processedTrack.kind === "audio" ? processedTrack.muted : undefined,
-            // trackType는 MediaTrackState에 없으므로 제거
-          },
-        })
-      );
+            track: {
+              trackId,
+              producerId: producer.id,
+              peerId,
+              kind: processedTrack.kind as "audio" | "video",
+              enabled: processedTrack.enabled,
+              muted: processedTrack.kind === "audio" ? processedTrack.muted : undefined,
+            },
+          })
+        );
+        console.log(`🔄 Redux updated for camera ${processedTrack.kind} track:`, trackId);
+      } else {
+        console.log(`🚫 Skipping Redux update for ${trackType} track:`, trackId);
+      }
 
       console.log(`✅ Local ${trackType} ${processedTrack.kind} track added:`, trackId);
 
@@ -188,9 +209,30 @@ class MediaTrackManager {
       throw new Error("Transport or dispatch not initialized");
     }
 
+    // 🔒 중복 Consumer 생성 방지 - Producer ID 기반 강력한 체크
+    const existingTrackByProducer = this.getTrackByProducerId(producerId);
+    if (existingTrackByProducer) {
+      console.warn(`⚠️ Consumer already exists for producer ${producerId}, reusing existing track:`, existingTrackByProducer.trackId);
+      return existingTrackByProducer.trackId;
+    }
+
+    // 🔒 추가 중복 체크 - socketId + kind + trackType 조합
+    const existingTrack = this.getRemoteTrack(socketId, kind, trackType);
+    if (existingTrack) {
+      // 기존 트랙이 있다면 해당 trackId 반환
+      for (const [trackId, trackInfo] of this.remoteTracks) {
+        if (trackInfo.track === existingTrack) {
+          console.warn(`⚠️ Remote ${trackType} ${kind} track already exists for ${socketId}, reusing:`, trackId);
+          return trackId;
+        }
+      }
+    }
+
     const trackId = `${trackType}_remote_${socketId}_${kind}_${Date.now()}`;
 
     try {
+      console.log(`🔍 Creating new consumer for producer ${producerId} (${trackType} ${kind})`);
+      
       // Consumer 생성 (socketApi를 통해 서버와 협상)
       const consumerData = await this.createConsumer(producerId, rtpCapabilities);
       const consumer = await this.recvTransport.consume({
@@ -250,11 +292,39 @@ class MediaTrackManager {
     }
   }
 
+  // 🆕 카메라 트랙 전용 메서드들
+  getLocalCameraTrack(kind: "audio" | "video"): MediaStreamTrack | null {
+    for (const trackInfo of this.localTracks.values()) {
+      if (trackInfo.peerId === "local" && trackInfo.trackType === "camera" && trackInfo.kind === kind) {
+        return trackInfo.track;
+      }
+    }
+    return null;
+  }
+
+  getLocalCameraTrackInfo(kind: "audio" | "video"): TrackInfo | null {
+    for (const trackInfo of this.localTracks.values()) {
+      if (trackInfo.peerId === "local" && trackInfo.trackType === "camera" && trackInfo.kind === kind) {
+        return trackInfo;
+      }
+    }
+    return null;
+  }
+
   // 🆕 화면 공유 트랙 찾기
   getLocalScreenTrack(peerId: string): TrackInfo | null {
     for (const trackInfo of this.localTracks.values()) {
       if (trackInfo.peerId === peerId && trackInfo.trackType === "screen") {
         return trackInfo;
+      }
+    }
+    return null;
+  }
+
+  getLocalScreenShareTrack(): MediaStreamTrack | null {
+    for (const trackInfo of this.localTracks.values()) {
+      if (trackInfo.trackType === "screen" && trackInfo.kind === "video") {
+        return trackInfo.track;
       }
     }
     return null;
@@ -271,12 +341,17 @@ class MediaTrackManager {
 
   // 🆕 트랙 타입별 제거
   removeLocalTrackByType(peerId: string, trackType: "camera" | "screen"): void {
-    const trackToRemove = Array.from(this.localTracks.values()).find(
+    const tracksToRemove = Array.from(this.localTracks.values()).filter(
       (track) => track.peerId === peerId && track.trackType === trackType
     );
 
-    if (trackToRemove) {
-      this.removeLocalTrack(trackToRemove.trackId);
+    tracksToRemove.forEach((track) => {
+      console.log(`🗑️ Removing ${trackType} track for ${peerId}:`, track.trackId);
+      this.removeLocalTrack(track.trackId);
+    });
+
+    if (tracksToRemove.length === 0) {
+      console.warn(`⚠️ No ${trackType} tracks found for peerId: ${peerId}`);
     }
   }
 
@@ -297,12 +372,18 @@ class MediaTrackManager {
 
     trackInfo.track.enabled = enabled;
 
-    this.dispatch(
-      updateLocalTrack({
-        kind: trackInfo.kind,
-        updates: { enabled },
-      })
-    );
+    // Redux 상태 업데이트 (카메라 트랙만)
+    if (trackInfo.trackType === "camera") {
+      this.dispatch(
+        updateLocalTrack({
+          kind: trackInfo.kind,
+          updates: { enabled },
+        })
+      );
+      console.log(`🔄 Redux updated camera ${trackInfo.kind} track enabled: ${enabled}`);
+    } else {
+      console.log(`🚫 Skipping Redux update for ${trackInfo.trackType} track enabled: ${enabled}`);
+    }
 
     console.log(
       `🔄 Local ${trackInfo.trackType} ${trackInfo.kind} track ${enabled ? "enabled" : "disabled"}`
@@ -327,15 +408,21 @@ class MediaTrackManager {
       trackInfo.track.stop();
       trackInfo.track = newTrack;
 
-      this.dispatch(
-        updateLocalTrack({
-          kind: trackInfo.kind,
-          updates: {
-            enabled: newTrack.enabled,
-            muted: newTrack.kind === "audio" ? newTrack.muted : undefined,
-          },
-        })
-      );
+      // Redux 상태 업데이트 (카메라 트랙만)
+      if (trackInfo.trackType === "camera") {
+        this.dispatch(
+          updateLocalTrack({
+            kind: trackInfo.kind,
+            updates: {
+              enabled: newTrack.enabled,
+              muted: newTrack.kind === "audio" ? newTrack.muted : undefined,
+            },
+          })
+        );
+        console.log(`🔄 Redux updated camera ${trackInfo.kind} track after replacement`);
+      } else {
+        console.log(`🚫 Skipping Redux update for ${trackInfo.trackType} track replacement`);
+      }
 
       console.log(`🔄 Local ${trackInfo.trackType} ${trackInfo.kind} track replaced:`, trackId);
     } catch (error) {
@@ -358,8 +445,13 @@ class MediaTrackManager {
     trackInfo.track.stop();
     this.localTracks.delete(trackId);
 
-    // Redux 상태 업데이트
-    this.dispatch(removeLocalTrack(trackInfo.kind));
+    // Redux 상태 업데이트 (카메라 트랙만, 화면 공유 트랙 제외)
+    if (trackInfo.trackType === "camera") {
+      this.dispatch(removeLocalTrack(trackInfo.kind));
+      console.log(`🔄 Redux removed camera ${trackInfo.kind} track:`, trackId);
+    } else {
+      console.log(`🚫 Skipping Redux removal for ${trackInfo.trackType} track:`, trackId);
+    }
 
     console.log(`🗑️ Local ${trackInfo.trackType} ${trackInfo.kind} track removed:`, trackId);
   }
@@ -388,13 +480,22 @@ class MediaTrackManager {
   // 트랙 가져오기 (컴포넌트에서 사용)
   getLocalTrack(
     kind: "audio" | "video",
-    trackType: "camera" | "screen" = "camera"
+    trackType: "camera" | "screen" = "camera",
+    peerId: string = "local"  // 🆕 기본값을 "local"로 설정
   ): MediaStreamTrack | null {
     for (const trackInfo of this.localTracks.values()) {
+      // peerId는 이제 필수값 (기본값 "local")
+      if (trackInfo.peerId !== peerId) {
+        continue;
+      }
+      
       if (trackInfo.kind === kind && trackInfo.trackType === trackType) {
+        console.log(`🎯 Found ${trackType} ${kind} track for peerId: ${peerId}`, trackInfo.trackId);
         return trackInfo.track;
       }
     }
+    
+    console.warn(`⚠️ No ${trackType} ${kind} track found for peerId: ${peerId}`);
     return null;
   }
 
@@ -436,9 +537,29 @@ class MediaTrackManager {
     return this.localTracks.get(trackId) || this.remoteTracks.get(trackId) || null;
   }
 
-  hasRemoteProducer(producerId: string, socketId: string, kind: "audio" | "video"): boolean {
+  hasRemoteProducer(producerId: string, socketId: string, kind: "audio" | "video", trackType?: "camera" | "screen"): boolean {
+    // Producer ID로 먼저 체크 (가장 정확한 방법)
+    const trackByProducerId = this.getTrackByProducerId(producerId);
+    if (trackByProducerId) {
+      console.log(`🔍 Found existing track for producer ${producerId}:`, trackByProducerId.trackId);
+      return true;
+    }
+
+    // Consumer가 있는지 체크 (원격 트랙의 경우)
+    const remoteTrackId = this.remoteProducerMap.get(producerId);
+    if (remoteTrackId && this.remoteTracks.has(remoteTrackId)) {
+      console.log(`🔍 Found existing consumer for producer ${producerId}:`, remoteTrackId);
+      return true;
+    }
+
+    // 기존 로직 (socketId + kind + trackType 기반) - 최종 fallback
     for (const trackInfo of this.remoteTracks.values()) {
-      if (trackInfo.peerId === socketId && trackInfo.kind === kind) {
+      const matchesSocket = trackInfo.peerId === socketId;
+      const matchesKind = trackInfo.kind === kind;
+      const matchesTrackType = !trackType || trackInfo.trackType === trackType;
+      
+      if (matchesSocket && matchesKind && matchesTrackType) {
+        console.log(`🔍 Found existing ${trackInfo.trackType} ${kind} track for ${socketId}:`, trackInfo.trackId);
         return true;
       }
     }

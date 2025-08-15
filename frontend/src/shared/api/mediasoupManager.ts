@@ -139,18 +139,21 @@ class MediasoupManager {
   public async consumeProducer(data: {
     producerId: string;
     producerSocketId: string;
+    kind?: "audio" | "video";  // 🆕 kind 정보 추가
     appData?: any;
   }): Promise<void> {
     if (!this.device || !this.dispatch) {
       throw new Error("Device not initialized");
     }
 
-    const { producerId, producerSocketId, appData } = data;
+    const { producerId, producerSocketId, kind, appData } = data;
 
-    // 🔒 중복 Consumer 생성 방지 - Producer ID 기반 체크
+    console.log(`🔍 Attempting to consume producer: ${producerId} (${kind || "unknown"}) from ${producerSocketId}`);
+
+    // 🔒 중복 Consumer 생성 방지 - Producer ID 기반 강력한 체크
     const existingTrackInfo = mediaTrackManager.getTrackByProducerId(producerId);
     if (existingTrackInfo) {
-      console.warn(`⚠️ Producer ${producerId} seems to be already consumed, ignoring...`);
+      console.warn(`⚠️ Producer ${producerId} already consumed as ${existingTrackInfo.trackType} ${existingTrackInfo.kind}, ignoring...`);
       return;
     }
 
@@ -160,12 +163,24 @@ class MediasoupManager {
       return;
     }
 
+    // 🔒 Socket ID + Kind 기반 정확한 중복 체크
+    const isScreenShare = appData?.type === "screenshare" || appData?.type === "screen";
+    const trackType = isScreenShare ? "screen" : "camera";
+    
+    // kind가 있는 경우에만 정확한 중복 체크 수행
+    if (kind) {
+      const hasExistingTrack = mediaTrackManager.hasRemoteProducer(producerId, producerSocketId, kind, trackType);
+      if (hasExistingTrack) {
+        console.warn(`⚠️ Remote ${trackType} ${kind} track already exists for socket ${producerSocketId}, ignoring producer ${producerId}...`);
+        return;
+      }
+    }
+
     // 진행 중인 작업으로 마킹
     this.consumingProducers.add(producerId);
 
     try {
-      // 🆕 화면 공유인지 감지 (appData 또는 서버에서 전달된 정보로 판단)
-      const isScreenShare = appData?.type === "screenshare" || appData?.type === "screen";
+      // 🆕 화면 공유인지 감지 (이미 위에서 정의됨)
       console.log(
         `🔍 Consuming producer: ${producerId} (${
           isScreenShare ? "screen share" : "camera"
@@ -197,9 +212,9 @@ class MediasoupManager {
         await mediaTrackManager.addRemoteTrack(
           producerId,
           producerSocketId,
-          consumer.kind as "audio" | "video",
+          kind || (consumer.kind as "audio" | "video"), // 🆕 원래 kind 정보 우선 사용
           this.device.rtpCapabilities,
-          "camera" // 일반 카메라 트랙
+          trackType // 화면 공유 vs 카메라 구분
         );
 
         // Consumer resume
@@ -292,17 +307,16 @@ class MediasoupManager {
 
   // 로컬 트랙 토글
   public toggleLocalTrack(kind: "audio" | "video"): void {
-    const track = mediaTrackManager.getLocalTrack(kind, "camera");
-    if (track) {
+    // 🆕 카메라 전용 메서드 사용 (화면 공유와 완전 분리)
+    const track = mediaTrackManager.getLocalCameraTrack(kind);
+    const trackInfo = mediaTrackManager.getLocalCameraTrackInfo(kind);
+    
+    if (track && trackInfo) {
       const newEnabled = !track.enabled;
-      // trackId 찾기
-      for (const [trackId, trackInfo] of mediaTrackManager["localTracks"]) {
-        if (trackInfo.track === track) {
-          mediaTrackManager.enableLocalTrack(trackId, newEnabled);
-          break;
-        }
-      }
-      console.log(`🔄 Local ${kind} ${newEnabled ? "enabled" : "disabled"}`);
+      mediaTrackManager.enableLocalTrack(trackInfo.trackId, newEnabled);
+      console.log(`🔄 Local camera ${kind} ${newEnabled ? "enabled" : "disabled"}`);
+    } else {
+      console.warn(`⚠️ Local camera ${kind} track not found`);
     }
   }
 
@@ -317,16 +331,13 @@ class MediasoupManager {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       const newTrack = stream.getTracks()[0];
 
-      // 기존 트랙을 새 트랙으로 교체
-      // trackId 찾기
-      const existingTrack = mediaTrackManager.getLocalTrack(kind, "camera");
-      if (existingTrack) {
-        for (const [trackId, trackInfo] of mediaTrackManager["localTracks"]) {
-          if (trackInfo.track === existingTrack && trackInfo.trackType === "camera") {
-            await mediaTrackManager.replaceLocalTrack(trackId, newTrack);
-            break;
-          }
-        }
+      // 🆕 카메라 전용 메서드로 기존 트랙 교체
+      const existingTrackInfo = mediaTrackManager.getLocalCameraTrackInfo(kind);
+      if (existingTrackInfo) {
+        await mediaTrackManager.replaceLocalTrack(existingTrackInfo.trackId, newTrack);
+        console.log(`🔄 Camera ${kind} device changed successfully`);
+      } else {
+        console.warn(`⚠️ No existing camera ${kind} track to replace`);
       }
 
       console.log(`🔄 ${kind} device changed to:`, deviceId);

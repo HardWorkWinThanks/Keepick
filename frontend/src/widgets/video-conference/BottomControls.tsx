@@ -34,7 +34,7 @@ export const BottomControls = () => {
           <div className="w-px h-8 bg-[#424245]" />
 
           {/* 화면 공유 */}
-          <ScreenShareButton roomId={roomId || ""} />
+          <ScreenShareButton roomId={roomId} />
 
           {/* 채팅 */}
           <button
@@ -72,10 +72,7 @@ export const BottomControls = () => {
       </div>
 
       {/* 설정 패널 */}
-      <SettingsPanel
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-      />
+      <SettingsPanel isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </>
   );
 };

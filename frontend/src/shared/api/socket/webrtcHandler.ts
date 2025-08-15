@@ -32,6 +32,7 @@ class WebRTCHandler {
   private socket: Socket | null = null;
   private dispatch: AppDispatch | null = null;
   private mediasoupInitialized: boolean = false;
+  private processingProducers = new Set<string>(); // 🆕 처리 중인 Producer 추적
 
   public initialize(socket: Socket, dispatch: AppDispatch) {
     this.socket = socket;
@@ -64,17 +65,48 @@ class WebRTCHandler {
 
     this.socket.on("new_producer", (data: NewProducerInfo) => {
       console.log("🎬 [WebRTCHandler] New producer available:", data);
+      
+      // 🔒 이미 처리 중인 Producer인지 확인
+      if (this.processingProducers.has(data.producerId)) {
+        console.warn(`⚠️ Producer ${data.producerId} is already being processed, ignoring duplicate event`);
+        return;
+      }
+
+      // 처리 중으로 마킹
+      this.processingProducers.add(data.producerId);
+
       mediasoupManager
         .consumeProducer({
           producerId: data.producerId,
           producerSocketId: data.producerSocketId,
+          kind: data.kind,  // 🆕 kind 정보 전달
           appData: data.appData,
         })
-        .catch((error) => console.error("Failed to consume new producer:", error));
+        .then(() => {
+          console.log(`✅ Successfully processed producer ${data.producerId}`);
+        })
+        .catch((error) => {
+          console.error(`❌ Failed to consume producer ${data.producerId}:`, error);
+        })
+        .finally(() => {
+          // 처리 완료 후 제거
+          this.processingProducers.delete(data.producerId);
+        });
     });
 
     this.socket.on("producer_closed", (data: ProducerClosedData) => {
       console.log(`🔌 [WebRTCHandler] Producer ${data.producerId} was closed.`);
+      mediasoupManager.handleProducerClosed(data.producerId);
+    });
+
+    // 🆕 화면 공유 종료 이벤트 핸들러 추가
+    this.socket.on("screen_share_stopped", (data: any) => {
+      console.log(`🖥️ [WebRTCHandler] Screen share stopped: ${data.producerId} from ${data.peerId}`);
+      
+      // ScreenShareManager를 통해 원격 화면 공유 제거
+      screenShareManager.removeRemoteScreenShare(data.producerId, data.peerId);
+      
+      // MediasoupManager를 통해서도 Producer 정리
       mediasoupManager.handleProducerClosed(data.producerId);
     });
 
@@ -122,6 +154,7 @@ class WebRTCHandler {
           await mediasoupManager.consumeProducer({
             producerId: producer.producerId,
             producerSocketId: peer.id,
+            kind: producer.kind,  // 🆕 kind 정보 전달
             appData: undefined, // PeerWithProducers doesn't include appData
           });
         }
