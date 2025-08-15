@@ -5,19 +5,27 @@ import { motion } from "framer-motion"
 import { ScrollArea } from "@/shared/ui/shadcn/scroll-area"
 import { DraggablePhotoGrid, PhotoDropZone } from "@/features/photo-drag-drop"
 import type { Photo, DragPhotoData } from "@/entities/photo"
+import Image from "next/image"
 
 interface TimelineEditingSidebarProps {
   isOpen: boolean
   onClose: () => void
-  availablePhotos: Photo[]
   onShowAlbumInfoModal: () => void
+  onCoverImageDrop?: (dragData: DragPhotoData) => void
+  onSectionPhotoRemove?: (dragData: DragPhotoData) => void // 섹션에서 사진 제거
+  // 하이브리드 방식으로 데이터 props로 전달
+  availablePhotos: Photo[]
+  coverImage: Photo | null
 }
 
 export function TimelineEditingSidebar({ 
   isOpen, 
   onClose, 
+  onShowAlbumInfoModal,
+  onCoverImageDrop,
+  onSectionPhotoRemove,
   availablePhotos,
-  onShowAlbumInfoModal
+  coverImage
 }: TimelineEditingSidebarProps) {
   const [draggingPhotoId, setDraggingPhotoId] = useState<number | null>(null)
 
@@ -65,6 +73,52 @@ export function TimelineEditingSidebar({
                 </div>
               </button>
             </div>
+
+            {/* 대표 이미지 섹션 */}
+            {(onCoverImageDrop || coverImage) && (
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-300 mb-3">대표 이미지</h3>
+                <PhotoDropZone
+                  onDrop={(dragData, e) => onCoverImageDrop?.(dragData)}
+                  dropZoneId="cover-image-drop"
+                  className="relative w-full aspect-[4/3] bg-[#333333]/50 border-2 border-dashed border-gray-600 rounded-lg overflow-hidden hover:border-[#FE7A25] transition-colors"
+                >
+                  {coverImage ? (
+                    <Image
+                      src={coverImage.originalUrl || coverImage.src || "/placeholder/photo-placeholder.svg"}
+                      alt="대표 이미지"
+                      fill
+                      sizes="280px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center text-gray-400">
+                        <div className="text-xl mb-1">📷</div>
+                        <div className="font-keepick-primary text-xs">
+                          대표 이미지 선택
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </PhotoDropZone>
+              </div>
+            )}
+
+            {/* 섹션에서 제거할 사진 드롭존 */}
+            {onSectionPhotoRemove && (
+              <div className="mb-6">
+                <PhotoDropZone
+                  onDrop={(dragData, e) => onSectionPhotoRemove?.(dragData)}
+                  dropZoneId="sidebar-photos-return"
+                  className="min-h-[50px] border-2 border-dashed border-gray-600/50 rounded-lg p-3 hover:border-[#FE7A25]/50 transition-colors"
+                >
+                  <div className="text-center text-gray-500 font-keepick-primary text-xs">
+                    섹션에서 사진을 여기로 드래그하여 제거
+                  </div>
+                </PhotoDropZone>
+              </div>
+            )}
           </div>
 
           {/* Photos Grid */}
@@ -75,15 +129,24 @@ export function TimelineEditingSidebar({
             </div>
             
             <ScrollArea className="flex-1">
-              <DraggablePhotoGrid
-                photos={availablePhotos}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                draggingPhotoId={draggingPhotoId}
-                sourceId="gallery"
-                gridClassName="grid grid-cols-3 gap-3 pr-2"
-                photoClassName="w-full h-auto object-cover rounded-md shadow-sm aspect-square hover:scale-105 transition-transform cursor-grab"
-              />
+              {availablePhotos.length > 0 ? (
+                <DraggablePhotoGrid
+                  photos={availablePhotos}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  draggingPhotoId={draggingPhotoId}
+                  sourceId="gallery"
+                  gridClassName="grid grid-cols-3 gap-3 pr-2"
+                  photoClassName="w-full h-auto object-cover rounded-md shadow-sm aspect-square hover:scale-105 transition-transform cursor-grab"
+                />
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <div className="text-4xl mb-4">📸</div>
+                  <div className="font-keepick-primary text-sm">
+                    사용 가능한 사진이 없습니다
+                  </div>
+                </div>
+              )}
             </ScrollArea>
           </div>
 

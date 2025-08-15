@@ -1,7 +1,9 @@
 // 사진 엔티티의 기본 데이터 구조
 export interface Photo {
   id: number; // 사진 고유 ID
-  src: string; // 이미지 URL
+  src: string; // 이미지 URL (기본 표시용)
+  thumbnailUrl?: string; // 썸네일 저화질 URL (사이드바용)
+  originalUrl?: string; // 원본 고화질 URL (섹션 표시용)
   name?: string; // 사진 이름 (선택 사항)
 }
 
@@ -9,8 +11,10 @@ export interface Photo {
 export interface DragPhotoData {
   photoId: number; // 드래그하는 사진의 ID
   source: string | "available"; // 사진의 출처 (어떤 앨범 뷰 또는 'available' 목록)
-  src?: string; // 사진의 실제 URL (썸네일 변경 등에 사용)
-  originalUrl?: string; // 원본 고화질 이미지 URL (그룹 썸네일 변경 등에 사용)
+  src?: string; // 사진의 기본 URL
+  thumbnailUrl?: string; // 썸네일 저화질 URL
+  originalUrl?: string; // 원본 고화질 이미지 URL (드롭 시 섹션에 사용)
+  name?: string; // 사진 이름
 }
 
 // 갤러리용 확장된 사진 타입

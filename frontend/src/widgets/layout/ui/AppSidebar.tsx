@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { ChevronRight, ChevronDown, Settings, Check, Menu, X } from 'lucide-react'
 import { AnimatePresence, motion } from "framer-motion"
 import { useRouter, usePathname } from "next/navigation"
+import Image from "next/image"
 import { FriendsTabWidget } from "@/widgets/friends"
 import { useMainGroups } from "@/features/main-integration/model/useMainGroups"
 import { useMainAuth } from "@/features/main-integration/model/useMainAuth"
@@ -379,10 +380,12 @@ export default function AppSidebar({
                     >
                       {/* 실제 썸네일 이미지 (tempThumbnailUrl 우선 사용) */}
                       {(tempThumbnailUrl || currentGroup.thumbnailUrl) ? (
-                        <img
-                          src={tempThumbnailUrl || currentGroup.thumbnailUrl}
+                        <Image
+                          src={tempThumbnailUrl || currentGroup.thumbnailUrl || "/placeholder/photo-placeholder.svg"}
                           alt={`${currentGroup.name} 썸네일`}
-                          className="w-full h-full object-cover"
+                          fill
+                          sizes="240px"
+                          className="object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-500">
@@ -399,12 +402,14 @@ export default function AppSidebar({
                       </div>
                     </button>
                   ) : (
-                    <div className={`aspect-square w-full bg-[#333333] rounded-lg overflow-hidden border border-white/10`}>
+                    <div className={`aspect-square w-full bg-[#333333] rounded-lg overflow-hidden border border-white/10 relative`}>
                       {currentGroup.thumbnailUrl ? (
-                        <img
-                          src={currentGroup.thumbnailUrl}
+                        <Image
+                          src={currentGroup.thumbnailUrl || "/placeholder/photo-placeholder.svg"}
                           alt={`${currentGroup.name} 썸네일`}
-                          className="w-full h-full object-cover"
+                          fill
+                          sizes="240px"
+                          className="object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-500">
@@ -529,12 +534,14 @@ export default function AppSidebar({
                               `}</style>
                               {groupMembers.map((member, index) => (
                                 <div key={member.memberId || `member-${index}`} className="flex items-center gap-2 p-1">
-                                  <div className="w-6 h-6 bg-gray-700 rounded-full flex items-center justify-center text-xs">
+                                  <div className="w-6 h-6 bg-gray-700 rounded-full flex items-center justify-center text-xs relative overflow-hidden">
                                     {(member.profileUrl || member.profileImageUrl) ? (
-                                      <img 
+                                      <Image 
                                         src={member.profileUrl || member.profileImageUrl || ''} 
                                         alt={member.nickname || member.name}
-                                        className="w-full h-full rounded-full object-cover"
+                                        fill
+                                        sizes="24px"
+                                        className="object-cover"
                                       />
                                     ) : (
                                       <span className="text-gray-400">
@@ -609,11 +616,15 @@ export default function AppSidebar({
                           >
                             <div className="flex items-center gap-2">
                               {group.thumbnailUrl && (
-                                <img
-                                  src={group.thumbnailUrl}
-                                  alt={`${group.name} 썸네일`}
-                                  className="w-4 h-4 rounded-full object-cover"
-                                />
+                                <div className="w-4 h-4 relative rounded-full overflow-hidden">
+                                  <Image
+                                    src={group.thumbnailUrl || "/placeholder/photo-placeholder.svg"}
+                                    alt={`${group.name} 썸네일`}
+                                    fill
+                                    sizes="16px"
+                                    className="object-cover"
+                                  />
+                                </div>
                               )}
                               <span>{group.name}</span>
                             </div>

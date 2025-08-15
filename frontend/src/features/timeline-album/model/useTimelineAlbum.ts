@@ -28,6 +28,11 @@ export function useTimelineAlbum(groupId: string, albumId: string) {
       queryClient.invalidateQueries({
         queryKey: ['timeline-album', groupId, albumId]
       })
+      
+      // 그룹스페이스 앨범 목록도 무효화하여 업데이트된 앨범 정보 반영
+      queryClient.invalidateQueries({
+        queryKey: ['timelineAlbums', groupId]
+      })
     },
   })
 

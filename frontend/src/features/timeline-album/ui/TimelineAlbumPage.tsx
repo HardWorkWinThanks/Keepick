@@ -6,12 +6,11 @@ import { motion } from "framer-motion"
 import { ArrowLeft, Edit, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { useTimelineAlbum } from "../model/useTimelineAlbum"
+import { useTimelineEditor, EditingSection } from "../model/useTimelineEditor"
 import { TimelineEditingSidebar } from "./TimelineEditingSidebar"
 import { AlbumInfoModal } from "./AlbumInfoModal"
 import { PhotoDropZone } from "@/features/photo-drag-drop"
 import type { RootState } from "@/shared/config/store"
-import type { TimelineSection, TimelineAlbum } from "@/entities/album"
 import type { DragPhotoData } from "@/entities/photo"
 import { Photo } from "@/entities/photo"
 import { clearSelectedPhotos, setIsFromGallery } from "@/features/photo-gallery/model/photoSelectionSlice"
@@ -33,22 +32,26 @@ function TimelineSectionLayout({
   onSectionUpdate,
   onSectionDelete
 }: { 
-  section: TimelineSection
+  section: EditingSection
   index: number
   isEditMode?: boolean
   onImageDrop?: (imageIndex: number, dragData: DragPhotoData) => void
   dragOverImageIndex?: number | null
   onImageDragOver?: (imageIndex: number) => void
   onImageDragLeave?: () => void
-  onSectionUpdate?: (sectionId: number, field: string, value: string) => void
-  onSectionDelete?: (sectionId: number) => void
+  onSectionUpdate?: (sectionIndex: number, field: string, value: string) => void
+  onSectionDelete?: (sectionIndex: number) => void
 }) {
-  // 섹션의 사진들 (최대 3개)
+  // 섹션의 사진들 (최대 3개, 인덱스 보존)
   const photos = section.photos || []
+  console.log(`🖼️ 섹션 ${section.id} 사진들:`, photos)
+  
   const imageSlots: (Photo | null)[] = [...photos]
   while (imageSlots.length < 3) {
     imageSlots.push(null)
   }
+  
+  console.log(`🖼️ 섹션 ${section.id} imageSlots:`, imageSlots)
 
   const layoutProps = {
     0: { // Section 1: 큰 이미지 왼쪽 상단, 작은 이미지들 오른쪽 하단 겹침
@@ -82,7 +85,9 @@ function TimelineSectionLayout({
     const baseProps = {
       className: `${className} ${
         isEditMode && dragOverImageIndex === imageIndex ? 'ring-2 ring-[#FE7A25]' : ''
-      } bg-[#222222]/50 rounded-sm border border-white/10`
+      } bg-[#222222]/50 rounded-sm border border-white/10 ${
+        photo && isEditMode ? 'cursor-grab active:cursor-grabbing' : ''
+      }`
     }
 
     const dropZoneProps = {
@@ -100,11 +105,13 @@ function TimelineSectionLayout({
       viewport: { once: true }
     }
 
+    console.log(`🖼️ 섹션 ${section.id} 이미지 ${imageIndex}:`, photo)
+    
     const imageContent = (
       <>
         {photo ? (
           <Image
-            src={photo.src || "/placeholder/photo-placeholder.svg"}
+            src={photo.originalUrl || photo.src || "/placeholder/photo-placeholder.svg"}
             alt={`${section.name} ${imageIndex === 0 ? 'main' : `detail ${imageIndex}`}`}
             fill
             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
@@ -133,6 +140,23 @@ function TimelineSectionLayout({
           key={`section-${section.id}-image-${imageIndex}`} 
           {...baseProps} 
           {...dropZoneProps}
+          // 섹션의 사진을 드래그 가능하게 만들기
+          draggable={!!photo}
+          onDragStart={(e) => {
+            if (photo) {
+              const dragData: DragPhotoData = {
+                photoId: photo.id,
+                source: `section-${index}-${imageIndex}`, // sectionIndex 사용
+                src: photo.src,
+                thumbnailUrl: photo.thumbnailUrl,
+                originalUrl: photo.originalUrl,
+                name: photo.name
+              }
+              e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
+              e.dataTransfer.effectAllowed = 'move'
+              console.log('섹션에서 드래그 시작:', dragData)
+            }
+          }}
         >
           {imageContent}
         </PhotoDropZone>
@@ -162,7 +186,7 @@ function TimelineSectionLayout({
       {/* 섹션 삭제 버튼 */}
       {isEditMode && onSectionDelete && (
         <button
-          onClick={() => onSectionDelete(section.id)}
+          onClick={() => onSectionDelete(index)} // sectionIndex 전달
           className="absolute top-4 right-4 z-50 p-2 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors duration-200"
           title="섹션 삭제"
         >
@@ -181,62 +205,65 @@ function TimelineSectionLayout({
               <div className="flex gap-2 items-center">
                 <input
                   type="date"
-                  value={section.startDate}
-                  onChange={(e) => onSectionUpdate?.(section.id, 'startDate', e.target.value)}
-                  className="text-[#FE7A25] font-keepick-primary text-sm tracking-wider bg-transparent border border-[#FE7A25]/30 rounded px-2 py-1 focus:border-[#FE7A25] focus:outline-none"
+                  value={section.startDate || ''}
+                  onChange={(e) => onSectionUpdate?.(index, 'startDate', e.target.value)}
+                  className="text-[#FE7A25] font-keepick-primary text-sm tracking-wider bg-transparent border border-[#FE7A25]/30 rounded px-2 py-1 focus:border-[#FE7A25] focus:outline-none [color-scheme:dark]"
                 />
                 <span className="text-[#FE7A25] font-keepick-primary text-sm">~</span>
                 <input
                   type="date"
-                  value={section.endDate}
-                  onChange={(e) => onSectionUpdate?.(section.id, 'endDate', e.target.value)}
-                  className="text-[#FE7A25] font-keepick-primary text-sm tracking-wider bg-transparent border border-[#FE7A25]/30 rounded px-2 py-1 focus:border-[#FE7A25] focus:outline-none"
+                  value={section.endDate || ''}
+                  onChange={(e) => onSectionUpdate?.(index, 'endDate', e.target.value)}
+                  className="text-[#FE7A25] font-keepick-primary text-sm tracking-wider bg-transparent border border-[#FE7A25]/30 rounded px-2 py-1 focus:border-[#FE7A25] focus:outline-none [color-scheme:dark]"
                 />
               </div>
             ) : (
-              section.startDate && section.endDate && (
-                <div className="text-[#FE7A25] font-keepick-primary text-sm tracking-wider">
-                  {section.startDate} ~ {section.endDate}
-                </div>
-              )
+              <div className="text-[#FE7A25] font-keepick-primary text-sm tracking-wider">
+                {section.startDate && section.endDate ? 
+                  `${section.startDate} ~ ${section.endDate}` : 
+                  "날짜를 입력하세요"
+                }
+              </div>
             )}
 
             {/* 섹션 제목 */}
             {isEditMode ? (
               <textarea
                 value={section.name}
-                onChange={(e) => onSectionUpdate?.(section.id, 'name', e.target.value)}
+                onChange={(e) => onSectionUpdate?.(index, 'name', e.target.value)}
                 className="font-keepick-heavy text-4xl md:text-5xl lg:text-6xl leading-tight tracking-wide bg-transparent border border-white/30 rounded px-3 py-2 focus:border-white focus:outline-none text-white resize-none overflow-hidden w-full"
                 placeholder="섹션 제목을 입력하세요"
                 rows={Math.max(2, section.name.split('\n').length)}
                 style={{ height: 'auto', minHeight: '120px' }}
               />
             ) : (
-              section.name && (
-                <h2 className="font-keepick-heavy text-4xl md:text-5xl lg:text-6xl leading-tight tracking-wide">
-                  {section.name.split("\n").map((line, i) => (
+              <h2 className="font-keepick-heavy text-4xl md:text-5xl lg:text-6xl leading-tight tracking-wide">
+                {section.name ? 
+                  section.name.split("\n").map((line, i) => (
                     <div key={i}>{line}</div>
-                  ))}
-                </h2>
-              )
+                  )) : 
+                  <div className="text-gray-500">섹션 제목을 입력하세요</div>
+                }
+              </h2>
             )}
 
             {/* 섹션 설명 */}
             {isEditMode ? (
               <textarea
                 value={section.description}
-                onChange={(e) => onSectionUpdate?.(section.id, 'description', e.target.value)}
+                onChange={(e) => onSectionUpdate?.(index, 'description', e.target.value)}
                 className="font-keepick-primary text-gray-300 leading-relaxed text-base md:text-lg bg-transparent border border-gray-500/30 rounded px-3 py-2 focus:border-gray-400 focus:outline-none resize-none overflow-hidden"
                 placeholder="섹션 설명을 입력하세요"
                 rows={Math.max(3, Math.ceil(section.description.length / 40) + section.description.split('\n').length)}
                 style={{ width: '100%', maxWidth: '28rem', height: 'auto', minHeight: '80px' }}
               />
             ) : (
-              section.description && (
-                <p className="font-keepick-primary text-gray-300 leading-relaxed text-base md:text-lg max-w-md">
-                  {section.description}
-                </p>
-              )
+              <p className="font-keepick-primary leading-relaxed text-base md:text-lg max-w-md">
+                {section.description ? 
+                  <span className="text-gray-300">{section.description}</span> : 
+                  <span className="text-gray-500">섹션 설명을 입력하세요</span>
+                }
+              </p>
             )}
           </div>
 
@@ -262,64 +289,39 @@ function TimelineSectionLayout({
 export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPageProps) {
   const dispatch = useDispatch()
   const { selectedPhotos, isFromGallery } = useSelector((state: RootState) => state.photoSelection)
-  const { 
-    timelineAlbum, 
-    timelineSections, 
-    loading, 
-    updateTimelineAlbum, 
-    isUpdating 
-  } = useTimelineAlbum(groupId, albumId)
+  
+  // 새로운 하이브리드 에디터 훅 사용
+  const {
+    isEditMode,
+    loading,
+    isUpdating,
+    albumInfo,
+    sections,
+    availablePhotos,
+    startEditing,
+    cancelEditing,
+    save,
+    moveSidebarToSection,
+    moveSectionToSidebar,
+    setCoverImage,
+    updateSection,
+    addSection,
+    deleteSection,
+    updateAlbumInfo
+  } = useTimelineEditor(groupId, albumId)
 
-  const [isEditMode, setIsEditMode] = useState(false)
   const [isAlbumInfoModalOpen, setIsAlbumInfoModalOpen] = useState(false)
   const [isSelectingCoverImage, setIsSelectingCoverImage] = useState(false)
   const [dragOverImage, setDragOverImage] = useState<{ sectionIndex: number; imageIndex: number } | null>(null)
-  const [editedSections, setEditedSections] = useState<TimelineSection[]>([])
-  const [editedAlbumInfo, setEditedAlbumInfo] = useState({
-    name: '',
-    description: '',
-    startDate: '',
-    endDate: '',
-    thumbnailId: 0,
-    coverImage: null as Photo | null
-  })
 
   // 갤러리에서 선택된 사진들로 앨범을 생성한 경우 자동으로 편집 모드 진입 + 앨범 정보 모달 자동 오픈
   useEffect(() => {
     if (isFromGallery && selectedPhotos.length > 0) {
-      setIsEditMode(true)
+      startEditing()
       setIsAlbumInfoModalOpen(true) // 앨범 정보 모달 자동 오픈
       console.log('갤러리에서 선택된 사진들로 타임라인 앨범 편집 시작:', selectedPhotos)
     }
-  }, [isFromGallery, selectedPhotos])
-
-  // 타임라인 앨범 데이터가 로드되면 편집 상태 초기화
-  useEffect(() => {
-    if (timelineAlbum) {
-      // 빈 앨범인 경우 기본 빈 섹션 하나 추가
-      const initialSections = timelineAlbum.sections.length > 0 
-        ? [...timelineAlbum.sections] 
-        : [{
-            id: Date.now(),
-            name: '',
-            description: '',
-            startDate: '',
-            endDate: '',
-            photoIds: [],
-            photos: []
-          }]
-      
-      setEditedSections(initialSections)
-      setEditedAlbumInfo({
-        name: timelineAlbum.name,
-        description: timelineAlbum.description,
-        startDate: timelineAlbum.startDate,
-        endDate: timelineAlbum.endDate,
-        thumbnailId: 0, // TODO: thumbnailId 계산 로직 필요
-        coverImage: null // TODO: 커버 이미지 로직 필요
-      })
-    }
-  }, [timelineAlbum])
+  }, [isFromGallery, selectedPhotos, startEditing])
 
   const handleEditModeToggle = () => {
     if (isEditMode) {
@@ -327,119 +329,44 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       handleSave()
     } else {
       // 편집 모드 진입
-      setIsEditMode(true)
+      startEditing()
     }
   }
 
-  const handleSave = () => {
-    if (!timelineAlbum) return
-
-    updateTimelineAlbum({
-      name: editedAlbumInfo.name,
-      description: editedAlbumInfo.description,
-      thumbnailId: editedAlbumInfo.thumbnailId,
-      startDate: editedAlbumInfo.startDate,
-      endDate: editedAlbumInfo.endDate,
-      sections: editedSections.map(section => ({
-        id: section.id,
-        name: section.name,
-        description: section.description,
-        startDate: section.startDate,
-        endDate: section.endDate,
-        photoIds: section.photoIds
-      }))
-    })
-
-    setIsEditMode(false)
-    
-    // 편집 완료 시 선택 상태 초기화
-    if (isFromGallery) {
-      dispatch(clearSelectedPhotos())
-      dispatch(setIsFromGallery(false))
+  const handleSave = async () => {
+    try {
+      await save()
+      
+      // 편집 완료 시 갤러리 상태 정리
+      if (isFromGallery) {
+        dispatch(clearSelectedPhotos())
+        dispatch(setIsFromGallery(false))
+      }
+    } catch (error) {
+      console.error('앨범 저장 실패:', error)
     }
   }
 
-  const handleSectionUpdate = (sectionId: number, field: string, value: string) => {
-    setEditedSections(prev => 
-      prev.map(section => 
-        section.id === sectionId 
-          ? { ...section, [field]: value }
-          : section
-      )
-    )
+  const handleSectionUpdate = (sectionIndex: number, field: string, value: string) => {
+    updateSection(sectionIndex, field, value)
   }
 
   const handleAddSection = () => {
-    const newSection: TimelineSection = {
-      id: Date.now(), // 임시 ID
-      name: '',
-      description: '',
-      startDate: '',
-      endDate: '',
-      photoIds: [],
-      photos: []
-    }
-    setEditedSections(prev => [...prev, newSection])
+    addSection()
   }
 
-  const handleDeleteSection = (sectionId: number) => {
-    setEditedSections(prev => prev.filter(section => section.id !== sectionId))
+  const handleDeleteSection = (sectionIndex: number) => {
+    deleteSection(sectionIndex)
   }
 
   const handleImageDrop = (sectionIndex: number, imageIndex: number, dragData: DragPhotoData) => {
-    console.log('Image dropped:', { sectionIndex, imageIndex, dragData })
+    console.log('🎯 하이브리드: 사진 드롭:', { sectionIndex, imageIndex, dragData })
     
-    // 사용 가능한 사진 목록 정의 (갤러리에서 온 경우 selectedPhotos, 아니면 빈 배열)
-    const availablePhotos = isFromGallery ? selectedPhotos : []
-    
-    // 드래그된 사진을 사이드바나 갤러리에서 찾기
-    const draggedPhoto = selectedPhotos.find(photo => photo.id === dragData.photoId) || 
-                        availablePhotos.find(photo => photo.id === dragData.photoId)
-    
-    if (!draggedPhoto) {
-      console.warn('드래그된 사진을 찾을 수 없습니다:', dragData.photoId)
-      return
+    // 갤러리에서 섹션으로 이동
+    if (dragData.source === 'gallery') {
+      moveSidebarToSection(dragData.photoId, sectionIndex, imageIndex)
     }
-
-    // 해당 섹션의 이미지 배열 업데이트
-    setEditedSections(prev => {
-      const newSections = [...prev]
-      const targetSection = newSections[sectionIndex]
-      
-      if (targetSection) {
-        // photos 배열이 없으면 초기화
-        if (!targetSection.photos) {
-          targetSection.photos = []
-        }
-        
-        // photoIds 배열이 없으면 초기화
-        if (!targetSection.photoIds) {
-          targetSection.photoIds = []
-        }
-
-        // 새로운 photos 배열 생성 (최대 3개)
-        const newPhotos: (Photo | null)[] = [...targetSection.photos]
-        const newPhotoIds = [...targetSection.photoIds]
-        
-        // 해당 인덱스에 사진 배치
-        newPhotos[imageIndex] = {
-          id: draggedPhoto.id,
-          src: draggedPhoto.src,
-          name: draggedPhoto.title || `Photo ${draggedPhoto.id}`
-        }
-        newPhotoIds[imageIndex] = draggedPhoto.id
-
-        // 배열 길이를 3개로 맞춤
-        while (newPhotos.length < 3) newPhotos.push(null)
-        while (newPhotoIds.length < 3) newPhotoIds.push(0)
-
-        targetSection.photos = newPhotos.slice(0, 3).filter((photo): photo is Photo => photo !== null)
-        targetSection.photoIds = newPhotoIds.slice(0, 3).filter(id => id !== 0)
-      }
-      
-      return newSections
-    })
-
+    
     setDragOverImage(null)
   }
 
@@ -451,17 +378,42 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     setDragOverImage(null)
   }
 
+  // 섹션에서 사진 제거 핸들러
+  const handleSectionPhotoRemove = (dragData: DragPhotoData) => {
+    console.log('🗑️ 하이브리드: 섹션에서 사진 제거:', dragData)
+    
+    // source에서 섹션 정보 파싱 (section-{sectionIndex}-{imageIndex})
+    const sourceMatch = dragData.source.match(/section-(\\d+)-(\\d+)/)
+    if (!sourceMatch) {
+      console.warn('❌ 잘못된 source 형식:', dragData.source)
+      return
+    }
+    
+    const sectionIndex = parseInt(sourceMatch[1])
+    const imageIndex = parseInt(sourceMatch[2])
+    console.log('🗑️ 파싱된 정보:', { sectionIndex, imageIndex })
+    
+    // 하이브리드 방식으로 섹션에서 갤러리로 이동
+    moveSectionToSidebar(sectionIndex, imageIndex)
+  }
+
   // 앨범 정보 모달 핸들러들
   const handleAlbumInfoChange = (field: string, value: string | Photo | null) => {
     if (field === 'coverImage') {
-      setEditedAlbumInfo(prev => ({ ...prev, coverImage: value as Photo | null }))
+      const photo = value as Photo | null
+      if (photo) {
+        setCoverImage(photo.id, photo)
+      }
+    } else if (field === 'title') {
+      // 모달에서는 'title'이지만 내부적으로는 'name' 필드 사용
+      updateAlbumInfo({ name: value as string })
     } else {
-      setEditedAlbumInfo(prev => ({ ...prev, [field]: value }))
+      updateAlbumInfo({ [field]: value })
     }
   }
 
   const handleCoverImageSelect = (photo: Photo) => {
-    setEditedAlbumInfo(prev => ({ ...prev, coverImage: photo }))
+    setCoverImage(photo.id, photo)
     setIsSelectingCoverImage(false)
   }
 
@@ -480,7 +432,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     )
   }
 
-  if (!timelineAlbum) {
+  if (!albumInfo) {
     return (
       <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center">
         <div className="text-center">
@@ -507,7 +459,9 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
             <span className="font-keepick-primary text-sm">돌아가기</span>
           </Link>
           <div className="text-center">
-            <h1 className="font-keepick-heavy text-xl tracking-wider">{timelineAlbum.name}</h1>
+            <h1 className="font-keepick-heavy text-xl tracking-wider">
+              {albumInfo.name}
+            </h1>
           </div>
           <div className="flex gap-2">
             {/* 섹션 추가 버튼 */}
@@ -556,9 +510,9 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
           isEditMode ? 'ml-[320px]' : 'ml-0'
         }`}
       >
-        {editedSections.map((section, index) => (
+        {sections.map((section, index) => (
           <TimelineSectionLayout
-            key={section.id}
+            key={`section-${section.id}-${index}`}
             section={section}
             index={index}
             isEditMode={isEditMode}
@@ -567,7 +521,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
             onImageDragOver={(imageIndex) => handleImageDragOver(index, imageIndex)}
             onImageDragLeave={handleImageDragLeave}
             onSectionUpdate={handleSectionUpdate}
-            onSectionDelete={editedSections.length > 1 ? handleDeleteSection : undefined}
+            onSectionDelete={sections.length > 1 ? handleDeleteSection : undefined}
           />
         ))}
       </main>
@@ -579,8 +533,12 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
         }`}
       >
         <div className="max-w-7xl mx-auto px-8 text-center">
-          <h2 className="font-keepick-heavy text-3xl md:text-4xl mb-4 tracking-wider">{timelineAlbum.name}</h2>
-          <p className="font-keepick-primary text-gray-400 text-sm tracking-wider">{timelineAlbum.description}</p>
+          <h2 className="font-keepick-heavy text-3xl md:text-4xl mb-4 tracking-wider">
+            {albumInfo.name}
+          </h2>
+          <p className="font-keepick-primary text-gray-400 text-sm tracking-wider">
+            {albumInfo.description}
+          </p>
           <div className="mt-8 flex justify-center gap-8 text-sm font-keepick-primary text-gray-500">
             <Link href={`/group/${groupId}`} className="hover:text-white transition-colors">
               홈
@@ -596,17 +554,40 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       <TimelineEditingSidebar 
         isOpen={isEditMode} 
         onClose={() => {
-          setIsEditMode(false)
-          // 편집 취소 시 선택 상태 초기화
+          cancelEditing()
+          // 편집 취소 시에도 갤러리 상태 정리
           if (isFromGallery) {
             dispatch(clearSelectedPhotos())
             dispatch(setIsFromGallery(false))
           }
         }}
-        availablePhotos={isFromGallery && selectedPhotos.length > 0 ? selectedPhotos : []}
         onShowAlbumInfoModal={() => {
           setIsAlbumInfoModalOpen(true)
         }}
+        onCoverImageDrop={(dragData) => {
+          console.log('🖼️ 하이브리드: 대표이미지 드롭:', dragData)
+          
+          // DragPhotoData를 Photo로 변환
+          const photo: Photo = {
+            id: dragData.photoId,
+            src: dragData.originalUrl || dragData.src || '/placeholder/photo-placeholder.svg',
+            thumbnailUrl: dragData.thumbnailUrl,
+            originalUrl: dragData.originalUrl,
+            name: dragData.name || `사진 #${dragData.photoId}`
+          }
+          
+          // 대표이미지로 설정
+          setCoverImage(dragData.photoId, photo)
+          
+          // 섹션에서 온 사진인 경우 섹션에서도 제거
+          if (dragData.source.startsWith('section-')) {
+            handleSectionPhotoRemove(dragData)
+          }
+        }}
+        onSectionPhotoRemove={handleSectionPhotoRemove}
+        // 하이브리드 방식으로 데이터 전달
+        availablePhotos={availablePhotos}
+        coverImage={albumInfo.coverImage}
       />
 
       {/* Album Info Modal */}
@@ -614,11 +595,11 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
         isOpen={isAlbumInfoModalOpen}
         onClose={() => setIsAlbumInfoModalOpen(false)}
         albumInfo={{
-          title: editedAlbumInfo.name,
-          startDate: editedAlbumInfo.startDate,
-          endDate: editedAlbumInfo.endDate,
-          description: editedAlbumInfo.description,
-          coverImage: editedAlbumInfo.coverImage
+          title: albumInfo.name,
+          startDate: albumInfo.startDate,
+          endDate: albumInfo.endDate,
+          description: albumInfo.description,
+          coverImage: albumInfo.coverImage
         }}
         onAlbumInfoChange={handleAlbumInfoChange}
         onCoverImageSelect={handleCoverImageSelect}

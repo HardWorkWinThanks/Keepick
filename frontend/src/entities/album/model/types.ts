@@ -8,7 +8,7 @@ export interface TimelineSection {
   startDate: string; // 시작 날짜 (YYYY-MM-DD)
   endDate: string; // 종료 날짜 (YYYY-MM-DD)
   photoIds: number[]; // 해당 섹션에 속한 사진 ID 목록
-  photos?: Photo[]; // 실제 사진 데이터 (UI에서 사용)
+  photos?: (Photo | null)[]; // 실제 사진 데이터 (UI에서 사용, 인덱스 보존을 위해 null 허용)
 }
 
 // 타임라인 앨범
@@ -22,6 +22,7 @@ export interface TimelineAlbum {
   endDate: string; // YYYY-MM-DD
   photoCount: number;
   sections: TimelineSection[];
+  unusedPhotos: Photo[]; // 앨범 생성 시 선택했지만 섹션에 사용하지 않은 사진들
   createdAt: string; // ISO 날짜
   updatedAt: string; // ISO 날짜
 }

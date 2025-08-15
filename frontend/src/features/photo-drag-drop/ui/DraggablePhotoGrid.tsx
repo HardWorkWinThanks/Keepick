@@ -50,16 +50,16 @@ export function DraggablePhotoGrid({
 
   return (
     <div className={gridClassName}>
-      {photos.map((photo) => (
+      {photos.map((photo, index) => (
         <div
-          key={photo.id}
+          key={photo.id ? `photo-${photo.id}` : `photo-${index}`}
           draggable
           onDragStart={(e) => handleDragStart(e, photo)}
           onDragEnd={handleDragEnd}
           onClick={() => onPhotoClick?.(photo)}
           className={`cursor-grab ${draggingPhotoId === photo.id ? "opacity-40" : ""}`}>
           <Image
-            src={photo.src}
+            src={photo.src || '/placeholder/photo-placeholder.svg'}
             alt={photo.name || `Photo ${photo.id}`}
             width={88}
             height={88}

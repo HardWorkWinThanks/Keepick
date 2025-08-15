@@ -23,6 +23,8 @@ interface PhotoGalleryProps {
 }
 
 export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = false }: PhotoGalleryProps) {
+  // autoEnterAlbumMode를 로컬 상태로 관리하여 사용자 액션 후 해제 가능하게 함
+  const [showAlbumGuide, setShowAlbumGuide] = useState(autoEnterAlbumMode)
   // TanStack Query 클라이언트
   const queryClient = useQueryClient()
   
@@ -174,14 +176,20 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                viewMode === 'similar' ? similarQuery.isFetchingNextPage : false,
   })
 
-  // 자동으로 앨범 모드에 진입
+  // 자동으로 갤러리 모드로 전환 (선택모드는 활성화하지 않음)
   useEffect(() => {
-    if (autoEnterAlbumMode && selectionType === null) {
-      console.log('그룹스페이스에서 앨범 만들기 버튼으로 진입 - 자동으로 앨범 선택 모드 활성화')
-      setSelectionType('album')
-      enterBaseSelectionMode()
+    if (autoEnterAlbumMode) {
+      console.log('그룹스페이스에서 앨범 만들기 버튼으로 진입 - 갤러리 모드로 전환')
+      // 갤러리 모드로만 전환, 선택모드는 활성화하지 않음
+      
+      // 10초 후 자동으로 가이드 해제 (사용자가 버튼을 클릭하지 않은 경우)
+      const timer = setTimeout(() => {
+        setShowAlbumGuide(false)
+      }, 10000)
+      
+      return () => clearTimeout(timer)
     }
-  }, [autoEnterAlbumMode, selectionType])
+  }, [autoEnterAlbumMode])
 
   // 컴포넌트가 다시 마운트될 때 (다른 화면에서 돌아올 때) 선택모드 해제
   useEffect(() => {
@@ -432,6 +440,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     console.log('앨범 모드 진입 - 두 상태 동기화')
     enterBaseSelectionMode() // usePhotoGallery 상태 먼저 활성화
     setSelectionType('album') // PhotoGallery 타입 설정
+    setShowAlbumGuide(false) // 가이드 메시지 해제
   }
   
   // 사진 삭제 모드 진입
@@ -690,10 +699,11 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
               </button>
             </div>
 
+
             {/* Right: Control Buttons */}
             <div className="flex items-center gap-3 pb-2">
               {/* Album Mode Button - 같은 자리에서 텍스트만 변경 */}
-              <button
+              <motion.button
                 onClick={() => {
                   if (isAlbumMode) {
                     console.log('앨범 모드 취소 버튼 클릭 - 선택 모드 종료 시작')
@@ -704,16 +714,55 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                   }
                 }}
                 disabled={isDeleteMode}
+                // 그룹스페이스에서 진입했을 때 강조 애니메이션
+                animate={showAlbumGuide && !isAlbumMode ? {
+                  scale: [1, 1.05, 1],
+                  boxShadow: [
+                    "0 0 0 0 rgba(254, 122, 37, 0)",
+                    "0 0 0 4px rgba(254, 122, 37, 0.3)",
+                    "0 0 0 0 rgba(254, 122, 37, 0)"
+                  ]
+                } : {}}
+                transition={showAlbumGuide && !isAlbumMode ? {
+                  duration: 2,
+                  repeat: 3,
+                  repeatDelay: 0.5
+                } : {}}
+                whileHover={{
+                  scale: isDeleteMode ? 1 : 1.02,
+                  transition: { duration: 0.2 }
+                }}
+                whileTap={{
+                  scale: isDeleteMode ? 1 : 0.98,
+                  transition: { duration: 0.1 }
+                }}
                 className={`px-6 py-2 bg-transparent border-2 font-keepick-heavy text-sm tracking-wider transition-all duration-300 ${
                   isDeleteMode
                     ? "border-gray-600 text-gray-600 cursor-not-allowed"
                     : isAlbumMode 
                       ? "border-gray-600 text-gray-300 hover:text-white hover:border-gray-400"
-                      : "border-[#FE7A25] text-white hover:bg-[#FE7A25]/10"
-                }`}
+                      : showAlbumGuide
+                        ? "border-[#FE7A25] text-white bg-gradient-to-r from-[#FE7A25]/10 to-[#FF6B35]/10 shadow-lg shadow-[#FE7A25]/20"
+                        : "border-[#FE7A25] text-white hover:bg-[#FE7A25]/10"
+                } ${showAlbumGuide && !isAlbumMode ? 'relative overflow-hidden' : ''}`}
               >
+                {showAlbumGuide && !isAlbumMode && (
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                    animate={{
+                      x: ['-100%', '100%'],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: 2,
+                      repeatDelay: 1,
+                      ease: "easeInOut"
+                    }}
+                    style={{ skewX: -20 }}
+                  />
+                )}
                 {isAlbumMode ? "취소" : "앨범 만들기"}
-              </button>
+              </motion.button>
 
               {/* AI Magic Button */}
               <div className={isSelectionMode ? "pointer-events-none opacity-50" : ""}>
