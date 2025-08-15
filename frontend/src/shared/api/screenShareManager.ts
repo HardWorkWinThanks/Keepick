@@ -13,6 +13,9 @@ import {
   removeRemoteScreenShare,
 } from "@/entities/screen-share/model/slice";
 import { mediasoupManager } from "./mediasoupManager";
+import { DuplicateValidator, TrackMaps, duplicateValidator } from "./managers/DuplicateValidator";
+import { UserFeedbackManager, userFeedbackManager } from "./managers/UserFeedbackManager";
+import { RecoveryManager, recoveryManager } from "./managers/RecoveryManager";
 
 class ScreenShareManager {
   private dispatch: AppDispatch | null = null;
@@ -266,41 +269,21 @@ class ScreenShareManager {
         `🔍 Consuming screen share from ${producerPeerName} (${producerPeerId}), producerId: ${producerId}`
       );
 
-      // 🔒 중복 Consumer 생성 방지 - Producer ID 기반 강력한 체크
-      const existingTrackByProducer = mediaTrackManager.getTrackByProducerId(producerId);
-      if (existingTrackByProducer) {
-        console.log(
-          `⚠️ Screen share consumer already exists for producer ${producerId}, skipping...`
-        );
+      // 🔒 중복 체크 (새로운 매니저 활용)
+      const validation = this.validateScreenShareDuplicates(producerId, producerPeerId);
+      if (validation.isDuplicate) {
+        console.log(`[SKIP] ${validation.reason} for screen share producer ${producerId}`);
         this.cancelStreamCleanup(producerPeerId);
-        return;
-      }
-
-      // 추가 중복 체크 - peerId 기반
-      const existingTrack = mediaTrackManager.getRemoteScreenTrack(producerPeerId);
-      if (existingTrack) {
-        console.log(`⚠️ Screen share consumer already exists for ${producerPeerId}, skipping...`);
-        this.cancelStreamCleanup(producerPeerId);
-        return;
-      }
-
-      // 이미 해당 peerId의 스트림이 존재하는지 확인
-      if (this.remoteStreams.has(producerPeerId)) {
-        console.log(`⚠️ Stream already exists for ${producerPeerId}, checking validity...`);
-
-        const existingStream = this.remoteStreams.get(producerPeerId);
-        if (existingStream && existingStream.active) {
-          this.cancelStreamCleanup(producerPeerId);
+        
+        // 기존 스트림이 유효한 경우 재사용
+        if (validation.hasValidStream) {
           console.log(`✅ Valid stream exists, reusing for ${producerPeerId}`);
           return;
-        } else {
-          console.log(`🧹 Removing inactive stream for ${producerPeerId}`);
-          this.remoteStreams.delete(producerPeerId);
         }
       }
 
       // 🆕 MediaTrackManager를 통해 Consumer 생성
-      const trackId = await mediaTrackManager.addRemoteTrack(
+      const trackId = await mediaTrackManager.consumeAndAddRemoteTrack(
         producerId,
         producerPeerId,
         "video",
@@ -351,6 +334,28 @@ class ScreenShareManager {
       });
     } catch (error) {
       console.error(`❌ Screen share consumption failed: ${producerPeerId}`, error);
+      
+      // 복구 시도 (재시도 가능한 에러인 경우)
+      if (recoveryManager.shouldRetryError(error, producerId)) {
+        console.log(`🔄 Attempting screen share recovery for producer ${producerId}`);
+        userFeedbackManager.notifyRecoveryProgress(producerId, 1, 3);
+        
+        try {
+          // 상태 정리 후 재시도
+          await this.cleanupFailedScreenShare(producerPeerId);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+          
+          // 재귀 호출로 재시도
+          await this.consumeScreenShare(roomId, producerId, producerPeerId, producerPeerName);
+          userFeedbackManager.notifyRecoverySuccess(producerId);
+          return;
+        } catch (retryError) {
+          console.error(`❌ Screen share recovery failed:`, retryError);
+          userFeedbackManager.notifyRecoveryFailed(producerId, error);
+        }
+      }
+      
+      userFeedbackManager.notifyOperationFailed(producerId, error);
       throw error;
     }
   }
@@ -392,6 +397,19 @@ class ScreenShareManager {
     }
   }
 
+  // 사용자 피드백 통합
+  private notifyScreenShareStart(peerId: string, producerId: string): void {
+    userFeedbackManager.notifyOperationStart(producerId, 'screen share');
+  }
+
+  private notifyScreenShareSuccess(peerId: string, producerId: string): void {
+    userFeedbackManager.notifyOperationSuccess(producerId, 'screen share');
+  }
+
+  private notifyScreenShareFailed(peerId: string, producerId: string, error: any): void {
+    userFeedbackManager.notifyOperationFailed(producerId, error);
+  }
+
   // 스트림 정리 스케줄링
   private scheduleStreamCleanup(peerId: string, producerId: string): void {
     // 기존 타이머 정리
@@ -418,6 +436,70 @@ class ScreenShareManager {
       this.streamCleanupTimers.delete(peerId);
       console.log(`⏹️ Canceled cleanup for ${peerId}`);
     }
+  }
+
+  // 화면 공유 전용 중복 검증 로직
+  private validateScreenShareDuplicates(
+    producerId: string, 
+    producerPeerId: string
+  ): {
+    isDuplicate: boolean;
+    reason?: string;
+    hasValidStream?: boolean;
+  } {
+    // 1. Producer ID 기반 중복 체크
+    const existingTrackByProducer = mediaTrackManager.getTrackByProducerId(producerId);
+    if (existingTrackByProducer) {
+      return {
+        isDuplicate: true,
+        reason: `Screen share consumer already exists for producer ${producerId}`
+      };
+    }
+
+    // 2. peerId 기반 중복 체크  
+    const existingTrack = mediaTrackManager.getRemoteScreenTrack(producerPeerId);
+    if (existingTrack) {
+      return {
+        isDuplicate: true,
+        reason: `Screen share consumer already exists for peer ${producerPeerId}`
+      };
+    }
+
+    // 3. 스트림 레벨 중복 체크
+    if (this.remoteStreams.has(producerPeerId)) {
+      const existingStream = this.remoteStreams.get(producerPeerId);
+      if (existingStream && existingStream.active) {
+        return {
+          isDuplicate: true,
+          reason: `Valid stream already exists for ${producerPeerId}`,
+          hasValidStream: true
+        };
+      } else {
+        // 비활성 스트림 정리
+        console.log(`🧹 Removing inactive stream for ${producerPeerId}`);
+        this.remoteStreams.delete(producerPeerId);
+      }
+    }
+
+    return { isDuplicate: false };
+  }
+
+  // 실패한 화면 공유 정리
+  private async cleanupFailedScreenShare(producerPeerId: string): Promise<void> {
+    console.log(`🧹 Cleaning up failed screen share for ${producerPeerId}`);
+    
+    // 스트림 정리
+    const stream = this.remoteStreams.get(producerPeerId);
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      this.remoteStreams.delete(producerPeerId);
+    }
+    
+    // 정리 타이머 취소
+    this.cancelStreamCleanup(producerPeerId);
+    
+    // MediaTrackManager에서 트랙 정리
+    mediaTrackManager.removeRemoteTrackByType(producerPeerId, "screen");
   }
 
   // 정리
