@@ -243,6 +243,67 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     })
   }, [syncPhotoIds])
 
+  // 섹션 내/섹션 간 이미지 위치 교환 (자연스러운 스왑)
+  const moveWithinOrBetweenSections = useCallback((
+    fromSectionIndex: number, 
+    fromImageIndex: number, 
+    toSectionIndex: number, 
+    toImageIndex: number
+  ) => {
+    setEditingState(prev => {
+      if (!prev) return prev
+      
+      // 같은 위치면 아무것도 하지 않음
+      if (fromSectionIndex === toSectionIndex && fromImageIndex === toImageIndex) {
+        return prev
+      }
+
+      const newSections = [...prev.sections]
+      
+      if (fromSectionIndex === toSectionIndex) {
+        // 같은 섹션 내에서 위치 교환
+        const section = { ...newSections[fromSectionIndex] }
+        section.photos = [...section.photos]
+        
+        const photoA = section.photos[fromImageIndex]
+        const photoB = section.photos[toImageIndex]
+        
+        // 위치 교환
+        section.photos[fromImageIndex] = photoB
+        section.photos[toImageIndex] = photoA
+        
+        // photoIds 동기화
+        section.photoIds = syncPhotoIds(section.photos)
+        newSections[fromSectionIndex] = section
+      } else {
+        // 다른 섹션 간 위치 교환
+        const fromSection = { ...newSections[fromSectionIndex] }
+        const toSection = { ...newSections[toSectionIndex] }
+        fromSection.photos = [...fromSection.photos]
+        toSection.photos = [...toSection.photos]
+        
+        const photoA = fromSection.photos[fromImageIndex]
+        const photoB = toSection.photos[toImageIndex]
+        
+        // 위치 교환
+        fromSection.photos[fromImageIndex] = photoB
+        toSection.photos[toImageIndex] = photoA
+        
+        // photoIds 동기화
+        fromSection.photoIds = syncPhotoIds(fromSection.photos)
+        toSection.photoIds = syncPhotoIds(toSection.photos)
+        
+        newSections[fromSectionIndex] = fromSection
+        newSections[toSectionIndex] = toSection
+      }
+
+      return {
+        ...prev,
+        sections: newSections
+      }
+    })
+  }, [syncPhotoIds])
+
   // 대표이미지 설정
   const setCoverImage = useCallback((photoId: number, photo: Photo) => {
     setEditingState(prev => {
@@ -412,6 +473,7 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     // 편집 액션들
     moveSidebarToSection,
     moveSectionToSidebar,
+    moveWithinOrBetweenSections,
     setCoverImage,
     updateSection,
     addSection,

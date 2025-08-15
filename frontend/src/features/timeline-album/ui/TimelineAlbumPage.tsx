@@ -181,7 +181,7 @@ function TimelineSectionLayout({
       {isEditMode && onSectionDelete && (
         <button
           onClick={() => onSectionDelete(index)} // sectionIndex 전달
-          className="absolute top-4 right-4 z-50 p-2 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors duration-200"
+          className="absolute top-8 right-8 z-50 p-2 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors duration-200"
           title="섹션 삭제"
         >
           <Trash2 size={16} className="text-white" />
@@ -297,6 +297,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     save,
     moveSidebarToSection,
     moveSectionToSidebar,
+    moveWithinOrBetweenSections,
     setCoverImage,
     updateSection,
     addSection,
@@ -384,6 +385,15 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     // 갤러리에서 섹션으로 이동
     if (dragData.source === 'gallery') {
       moveSidebarToSection(dragData.photoId, sectionIndex, imageIndex)
+    }
+    // 섹션 내/섹션 간 이동
+    else if (dragData.source.startsWith('section-')) {
+      const sourceMatch = dragData.source.match(/section-(\d+)-(\d+)/)
+      if (sourceMatch) {
+        const fromSectionIndex = parseInt(sourceMatch[1])
+        const fromImageIndex = parseInt(sourceMatch[2])
+        moveWithinOrBetweenSections(fromSectionIndex, fromImageIndex, sectionIndex, imageIndex)
+      }
     }
     
     setDragOverImage(null)
@@ -480,12 +490,12 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
             {isEditMode && (
               <button
                 onClick={handleCancelEditing}
-                className="group relative p-px rounded-xl overflow-hidden bg-gray-600 transition-all duration-300 transform hover:scale-105 hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600"
+                className="group relative p-px rounded-xl overflow-hidden bg-gray-700 transition-all duration-300 transform hover:scale-105 hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600"
                 title="편집 취소"
               >
-                <div className="bg-[#111111] rounded-[11px] px-4 py-2">
+                <div className="bg-[#111111] rounded-[11px] px-5 py-2.5">
                   <div className="flex items-center gap-2 text-white">
-                    <span className="font-keepick-primary text-sm">취소</span>
+                    <span className="font-keepick-primary text-sm tracking-wide">취소</span>
                   </div>
                 </div>
               </button>
@@ -495,13 +505,13 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
             {isEditMode && (
               <button
                 onClick={handleAddSection}
-                className="group relative p-px rounded-xl overflow-hidden bg-green-600 transition-all duration-300 transform hover:scale-105"
+                className="group relative p-px rounded-xl overflow-hidden bg-gray-700 transition-all duration-300 transform hover:scale-105 hover:bg-gradient-to-r hover:from-green-500 hover:to-emerald-600"
                 title="섹션 추가"
               >
-                <div className="bg-[#111111] rounded-[11px] px-4 py-2">
+                <div className="bg-[#111111] rounded-[11px] px-5 py-2.5">
                   <div className="flex items-center gap-2 text-white">
                     <Plus size={16} />
-                    <span className="font-keepick-primary text-sm">섹션 추가</span>
+                    <span className="font-keepick-primary text-sm tracking-wide">섹션 추가</span>
                   </div>
                 </div>
               </button>

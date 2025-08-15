@@ -74,7 +74,7 @@ export function TimelineEditingSidebar({
             <div className="mb-6 space-y-4">
               {/* 앨범 제목 */}
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">📝 앨범 제목 (필수)</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">앨범 제목 (필수)</label>
                 <input
                   ref={titleInputRef}
                   type="text"
@@ -84,13 +84,13 @@ export function TimelineEditingSidebar({
                   placeholder="앨범 제목을 입력하세요"
                 />
                 {(!albumInfo?.name || albumInfo.name.trim() === '') && (
-                  <p className="text-red-400 text-xs mt-1">⚠️ 제목을 입력해주세요</p>
+                  <p className="text-red-400 text-xs mt-1">제목을 입력해주세요</p>
                 )}
               </div>
 
               {/* 날짜 범위 */}
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">📅 날짜 범위</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">날짜 범위</label>
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     type="date"
@@ -109,7 +109,7 @@ export function TimelineEditingSidebar({
 
               {/* 앨범 설명 */}
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">📄 앨범 설명</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">앨범 설명</label>
                 <textarea
                   value={albumInfo?.description || ''}
                   onChange={(e) => {
@@ -232,7 +232,6 @@ export function TimelineEditingSidebar({
                 ) : (
                   <div className="h-full flex items-center justify-center">
                     <div className="text-center text-gray-500">
-                      <div className="text-4xl mb-4">📸</div>
                       <div className="font-keepick-primary text-sm">
                         사용 가능한 사진이 없습니다
                       </div>
