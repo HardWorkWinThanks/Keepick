@@ -2,8 +2,10 @@ package com.ssafy.keepick.global.config;
 
 import com.ssafy.keepick.auth.application.CustomOAuth2MemberService;
 import com.ssafy.keepick.global.security.filter.JWTFilter;
+import com.ssafy.keepick.global.security.filter.OAuth2StateFilter;
 import com.ssafy.keepick.global.security.handler.CustomAuthenticationEntryPoint;
 import com.ssafy.keepick.global.security.handler.CustomSuccessHandler;
+import com.ssafy.keepick.global.security.resolver.OriginAwareAuthorizationRequestResolver;
 import com.ssafy.keepick.global.security.util.JWTUtil;
 
 import jakarta.servlet.DispatcherType;
@@ -31,6 +33,8 @@ public class SecurityConfig {
     private final CustomSuccessHandler customSuccessHandler;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final JWTUtil jwtUtil;
+    private final OAuth2StateFilter oauth2StateFilter;
+    private final OriginAwareAuthorizationRequestResolver originAwareAuthorizationRequestResolver;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -44,6 +48,11 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable());
 
+        // OAuth2 state 파라미터 필터 등록 (OAuth2 인증 리다이렉트 필터보다 앞에 배치)
+        // 주의: OriginAwareAuthorizationRequestResolver가 state를 완전히 제어하므로 필터는 로깅용으로만 사용
+        // http.addFilterBefore(oauth2StateFilter, 
+        //         org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter.class);
+        
         // JWT 인증 필터 등록 (OAuth2 인증 필터 이후에 실행)
         http.addFilterAfter(new JWTFilter(jwtUtil), OAuth2LoginAuthenticationFilter.class);
 
@@ -52,7 +61,10 @@ public class SecurityConfig {
 
         // OAuth2 소셜 로그인 설정
         http.oauth2Login(oauth2 -> oauth2
-                .authorizationEndpoint(config -> config.baseUri("/api/oauth2/authorization"))
+                .authorizationEndpoint(config -> config
+                        .baseUri("/api/oauth2/authorization")        // 프론트와 일치
+                        .authorizationRequestResolver(originAwareAuthorizationRequestResolver)  // ★ 커스텀 Resolver로 교체
+                )
                 .redirectionEndpoint(config -> config.baseUri("/api/login/oauth2/code/*"))
                 .userInfoEndpoint(config -> config.userService(customOAuth2MemberService))
                 .successHandler(customSuccessHandler) // 로그인 성공 시 JWT 발급 등 처리

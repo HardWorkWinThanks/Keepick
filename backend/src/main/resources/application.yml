@@ -1,3 +1,6 @@
+server:
+  forward-headers-strategy: framework
+
 spring:
   datasource:
     url: ${DB_PATH}
@@ -90,8 +93,15 @@ cookie:
 
 # 애플리케이션 설정
 app:
+  security:
+    stateSecret: ${STATE_SECRET:keepick-state-secret-key-change-in-production}
   frontend:
     url: ${FRONTEND_URL:http://localhost:3000}
+  redirect:
+    # 아무것도 못 맞추면 여기로 보냄 (원하는 기본값으로)
+    defaultBase: https://fe-keepick.vercel.app
+    # 허용 오리진 (쉼표로 구분)
+    allowed: https://localhost:3000,https://fe-keepick.vercel.app
   vision-ai:
     url: ${VISION_AI_URL:http://127.0.0.1:5000}
   dev:
