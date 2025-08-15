@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import type { AlbumType, GroupPhoto } from "@/entities/group"
 import { getTimelineAlbumList, deleteTimelineAlbum, type TimelineAlbumListItem } from "@/features/timeline-album/api/timelineAlbumApi"
@@ -47,11 +48,25 @@ export const samplePhotos = {
 
 export function useGroupSpace(groupId?: number) {
   const queryClient = useQueryClient()
+  const searchParams = useSearchParams()
   const [currentModeIndex, setCurrentModeIndex] = useState(0) // Album/Gallery 모드
   const [currentAlbumIndex, setCurrentAlbumIndex] = useState(0)
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
   const [deletingAlbumId, setDeletingAlbumId] = useState<number | null>(null)
+
+  // URL 쿼리 파라미터에 따라 초기 앨범 섹션 설정
+  useEffect(() => {
+    const albumParam = searchParams.get('album')
+    if (albumParam) {
+      const albumIndex = albumTypes.findIndex(album => album.id === albumParam)
+      if (albumIndex !== -1) {
+        setCurrentAlbumIndex(albumIndex)
+        setCurrentModeIndex(0) // Album 모드로 설정
+        setCurrentPhotoIndex(0) // 첫 번째 사진으로 리셋
+      }
+    }
+  }, [searchParams])
 
   const currentMode = mainModes[currentModeIndex]
   const currentAlbum = albumTypes[currentAlbumIndex]

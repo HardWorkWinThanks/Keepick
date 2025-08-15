@@ -529,7 +529,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
         <div className="text-center">
           <div className="text-2xl font-keepick-primary mb-4 text-red-400">티어 앨범을 불러올 수 없습니다</div>
           <div className="text-gray-400 mb-4">앨범이 존재하지 않거나 접근 권한이 없습니다.</div>
-          <Link href={`/group/${groupId}#tier`} className="text-[#FE7A25] hover:text-orange-400 font-keepick-primary">
+          <Link href={`/group/${groupId}?album=tier`} className="text-[#FE7A25] hover:text-orange-400 font-keepick-primary">
             그룹으로 돌아가기
           </Link>
         </div>
@@ -555,7 +555,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
         }`}
       >
         <div className="flex items-center justify-between px-8 py-4">
-          <Link href={`/group/${groupId}#tier`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
+          <Link href={`/group/${groupId}?album=tier`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
             <ArrowLeft size={20} />
             <span className="font-keepick-primary text-sm">돌아가기</span>
           </Link>

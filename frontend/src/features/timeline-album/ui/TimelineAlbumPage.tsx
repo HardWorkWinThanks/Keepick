@@ -461,7 +461,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl font-keepick-primary mb-4">타임라인 앨범을 찾을 수 없습니다</div>
-          <Link href={`/group/${groupId}#timeline`} className="text-[#FE7A25] hover:underline">
+          <Link href={`/group/${groupId}?album=timeline`} className="text-[#FE7A25] hover:underline">
             그룹 페이지로 돌아가기
           </Link>
         </div>
@@ -478,7 +478,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
         }`}
       >
         <div className="flex items-center justify-between px-8 py-4">
-          <Link href={`/group/${groupId}#timeline`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
+          <Link href={`/group/${groupId}?album=timeline`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
             <ArrowLeft size={20} />
             <span className="font-keepick-primary text-sm">돌아가기</span>
           </Link>
