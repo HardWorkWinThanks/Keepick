@@ -95,8 +95,7 @@ cookie:
 app:
   security:
     stateSecret: ${STATE_SECRET:keepick-state-secret-key-change-in-production}
-  frontend:
-    url: ${FRONTEND_URL:http://localhost:3000}
+
   redirect:
     # 아무것도 못 맞추면 여기로 보냄 (원하는 기본값으로)
     defaultBase: https://fe-keepick.vercel.app

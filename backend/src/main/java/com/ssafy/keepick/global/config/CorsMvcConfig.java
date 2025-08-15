@@ -5,16 +5,18 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.util.List;
+
 @Configuration
 public class CorsMvcConfig implements WebMvcConfigurer {
 
-    @Value("${app.frontend.url}")
-    private String frontendUrl;
+    @Value("#{'${app.redirect.allowed}'.split('\\s*,\\s*')}")
+    private List<String> allowedOrigins;
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins(frontendUrl, "https://localhost:3000")                    // 허용할 origin
+                .allowedOrigins(allowedOrigins.toArray(new String[0]))                    // 허용할 origin
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")  // 허용할 HTTP 메서드
                 .allowedHeaders("*")                            // 허용할 헤더
                 .allowCredentials(true)                         // 쿠키/인증 정보 허용
