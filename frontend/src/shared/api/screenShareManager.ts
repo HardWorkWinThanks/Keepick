@@ -24,7 +24,7 @@ class ScreenShareManager {
 
   // 리소스 정리를 위한 타이머
   private streamCleanupTimers = new Map<string, number>();
-  
+
   // 중복 종료 방지를 위한 플래그
   private stoppingScreenShare = false;
 
@@ -112,9 +112,9 @@ class ScreenShareManager {
       // 화면 캡처 - 부드러운 프레임을 위한 최적화된 설정
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
-          width: { ideal: 1920, max: 2560 },  // FHD 기본, 2K 최대
-          height: { ideal: 1080, max: 1440 }, // FHD 기본, 2K 최대  
-          frameRate: { ideal: 60, max: 60 },  // 60fps 유지
+          width: { ideal: 1920, max: 2560 }, // FHD 기본, 2K 최대
+          height: { ideal: 1080, max: 1440 }, // FHD 기본, 2K 최대
+          frameRate: { ideal: 60, max: 60 }, // 60fps 유지
         },
         audio: {
           echoCancellation: true,
@@ -208,6 +208,7 @@ class ScreenShareManager {
       const screenTrack = mediaTrackManager.getLocalScreenTrack(screenSharePeerId);
 
       if (screenTrack?.producer) {
+        this.dispatch(stopScreenShareSuccess());
         try {
           await mediasoupManager.stopProduction(screenTrack.producer.id);
           console.log(`📤 Screen share production stopped:`, {
@@ -268,7 +269,9 @@ class ScreenShareManager {
       // 🔒 중복 Consumer 생성 방지 - Producer ID 기반 강력한 체크
       const existingTrackByProducer = mediaTrackManager.getTrackByProducerId(producerId);
       if (existingTrackByProducer) {
-        console.log(`⚠️ Screen share consumer already exists for producer ${producerId}, skipping...`);
+        console.log(
+          `⚠️ Screen share consumer already exists for producer ${producerId}, skipping...`
+        );
         this.cancelStreamCleanup(producerPeerId);
         return;
       }
@@ -441,7 +444,7 @@ class ScreenShareManager {
     // 🆕 MediaTrackManager는 별도로 정리됨 (mediasoupManager.cleanup()에서)
     this.device = null;
     this.dispatch = null;
-    
+
     // 플래그 초기화
     this.stoppingScreenShare = false;
 

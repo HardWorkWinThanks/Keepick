@@ -27,7 +27,7 @@ export const MediaControls = () => {
         disabled={!isConnected || !hasLocalMedia}
         className={`p-3 rounded-full transition-all duration-200 transform hover:scale-110 disabled:opacity-50 ${
           audio.enabled
-            ? 'bg-[#4ade80] text-white hover:bg-[#22c55e]'
+            ? 'bg-[#FE7A25] text-white hover:bg-[#FF8C42]'
             : 'bg-[#D22016] text-white hover:bg-[#B91C1C]'
         }`}
         title={audio.enabled ? '마이크 끄기' : '마이크 켜기'}
@@ -45,7 +45,7 @@ export const MediaControls = () => {
         disabled={!isConnected || !hasLocalMedia}
         className={`p-3 rounded-full transition-all duration-200 transform hover:scale-110 disabled:opacity-50 ${
           video.enabled
-            ? 'bg-[#4ade80] text-white hover:bg-[#22c55e]'
+            ? 'bg-[#FE7A25] text-white hover:bg-[#FF8C42]'
             : 'bg-[#D22016] text-white hover:bg-[#B91C1C]'
         }`}
         title={video.enabled ? '카메라 끄기' : '카메라 켜기'}

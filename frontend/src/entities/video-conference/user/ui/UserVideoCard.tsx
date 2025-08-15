@@ -65,8 +65,7 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
 
     return () => {
       if (video.srcObject) {
-        const stream = video.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
+        // 트랙은 정지하지 않음 (다른 곳에서 사용 중일 수 있음)
         video.srcObject = null;
       }
     };
@@ -102,7 +101,7 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
       <AnimatePresence>
         {isSpeaking && (
           <motion.div
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-1/4 h-1 bg-[#4ade80] rounded-b-full shadow-[0_0_10px_rgba(74,222,128,0.8)] z-20"
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-1/4 h-1 bg-[#FE7A25] rounded-b-full shadow-[0_0_10px_rgba(254,122,37,0.8)] z-20"
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
@@ -144,8 +143,8 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
           <span className="text-white font-medium truncate">{userName}</span>
           <div className="flex items-center space-x-2">
             {hasAudio ? (
-              <div className="p-1 bg-[#4ade80]/20 rounded-full">
-                <MicrophoneIcon className="w-4 h-4 text-[#4ade80]" />
+              <div className="p-1 bg-[#FE7A25]/20 rounded-full">
+                <MicrophoneIcon className="w-4 h-4 text-[#FE7A25]" />
               </div>
             ) : (
               <div className="p-1 bg-[#D22016]/20 rounded-full">

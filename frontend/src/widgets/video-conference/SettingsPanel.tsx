@@ -157,7 +157,7 @@ export const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
                     </div>
                     <span
                       className={`text-sm ${
-                        isCameraOn ? "text-[#4ade80]" : "text-[#D22016]"
+                        isCameraOn ? "text-[#FE7A25]" : "text-[#D22016]"
                       }`}
                     >
                       {isCameraOn ? "켜짐" : "꺼짐"}
@@ -171,7 +171,7 @@ export const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
                     </div>
                     <span
                       className={`text-sm ${
-                        isMicOn ? "text-[#4ade80]" : "text-[#D22016]"
+                        isMicOn ? "text-[#FE7A25]" : "text-[#D22016]"
                       }`}
                     >
                       {isMicOn ? "켜짐" : "꺼짐"}
@@ -185,7 +185,7 @@ export const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
                     </div>
                     <span
                       className={`text-sm ${
-                        isSharing ? "text-[#4ade80]" : "text-[#A0A0A5]"
+                        isSharing ? "text-[#FE7A25]" : "text-[#A0A0A5]"
                       }`}
                     >
                       {isSharing ? "공유 중" : "꺼짐"}

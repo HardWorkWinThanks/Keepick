@@ -1,7 +1,7 @@
 // src/shared/hooks/useMediaTrack.ts
 import { useAppSelector } from '@/shared/hooks/redux';
 import { mediaTrackManager } from '@/shared/api/mediaTrackManager';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 // 로컬 미디어 트랙 Hook
 export const useLocalMediaTrack = (kind: 'audio' | 'video') => {
@@ -104,7 +104,11 @@ export const useLocalScreenShareTrack = () => {
   
   const screenTrack = useMemo(() => {
     // 화면 공유가 활성화된 경우에만 트랙 반환
-    return screenShareState.isSharing ? mediaTrackManager.getLocalScreenShareTrack() : null;
+    if (!screenShareState.isSharing) return null;
+    
+    // peerId에 _screen 접미사가 붙은 트랙을 찾기
+    const currentUser = 'local'; // 로컬 사용자를 위한 기본값
+    return mediaTrackManager.getLocalScreenShareTrack();
   }, [screenShareState.isSharing]);
   
   return {
@@ -113,6 +117,91 @@ export const useLocalScreenShareTrack = () => {
     isLoading: screenShareState.isLoading,
     error: screenShareState.error,
     hasScreenTrack: !!screenTrack,
+  };
+};
+
+// 🆕 원격 화면 공유 Hook
+export const useRemoteScreenShareTrack = (socketId: string) => {
+  const screenTrack = useMemo(() => {
+    return socketId ? mediaTrackManager.getRemoteScreenTrack(socketId) : null;
+  }, [socketId]);
+  
+  return {
+    track: screenTrack?.track || null,
+    hasScreenTrack: !!screenTrack,
+    socketId,
+  };
+};
+
+// 🆕 모든 화면 공유 트랙 (로컬 + 원격) Hook
+export const useAllScreenShareTracks = () => {
+  const localScreenShare = useLocalScreenShareTrack();
+  const remotePeers = useAllRemotePeers();
+  
+  // 강제 리렌더링을 위한 상태 (트랙 상태 변화 감지용)
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // 주기적으로 트랙 상태 체크 (트랙이 끝났을 때를 감지하기 위함)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      let hasChanged = false;
+      
+      // 현재 활성 화면 공유 트랙들의 상태 체크
+      remotePeers.forEach(peer => {
+        const screenTrack = mediaTrackManager.getRemoteScreenTrack(peer.socketId);
+        if (screenTrack?.track && screenTrack.track.readyState === 'ended') {
+          hasChanged = true;
+        }
+      });
+      
+      if (hasChanged) {
+        console.log('🔄 [useAllScreenShareTracks] Detected track state change, forcing refresh');
+        setRefreshKey(prev => prev + 1);
+      }
+    }, 1000); // 1초마다 체크
+    
+    return () => clearInterval(interval);
+  }, [remotePeers]);
+  
+  const remoteScreenShares = useMemo(() => {
+    console.log('🔄 [useAllScreenShareTracks] Recalculating remote screen shares');
+    
+    const activeShares = remotePeers.map(peer => {
+      const screenTrack = mediaTrackManager.getRemoteScreenTrack(peer.socketId);
+      const track = screenTrack?.track;
+      
+      console.log(`🔍 [useAllScreenShareTracks] Peer ${peer.socketId}:`, {
+        hasScreenTrack: !!screenTrack,
+        hasTrack: !!track,
+        readyState: track?.readyState,
+        isActive: screenTrack && track && track.readyState === 'live'
+      });
+      
+      return {
+        socketId: peer.socketId,
+        peerName: peer.peerName,
+        screenTrack,
+      };
+    }).filter(peer => {
+      // 화면 공유 트랙이 있고, 트랙이 활성 상태인 경우만 포함
+      const track = peer.screenTrack?.track;
+      const isActive = peer.screenTrack && track && track.readyState === 'live';
+      
+      if (peer.screenTrack && !isActive) {
+        console.log(`⚠️ [useAllScreenShareTracks] Filtering out inactive screen share for ${peer.socketId}`);
+      }
+      
+      return isActive;
+    });
+    
+    console.log(`✅ [useAllScreenShareTracks] Active remote screen shares: ${activeShares.length}`);
+    return activeShares;
+  }, [remotePeers, refreshKey]); // refreshKey를 dependency에 추가
+  
+  return {
+    localScreenShare,
+    remoteScreenShares,
+    hasAnyScreenShare: localScreenShare.hasScreenTrack || remoteScreenShares.length > 0,
   };
 };
 

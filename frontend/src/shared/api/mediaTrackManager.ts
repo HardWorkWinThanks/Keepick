@@ -199,6 +199,18 @@ class MediaTrackManager {
       }
     }
 
+    // 🔒 Consumer ID로도 중복 체크 (추가 안전장치)
+    for (const [existingConsumerId, existingTrackId] of this.consumerMap) {
+      const existingTrackInfo = this.remoteTracks.get(existingTrackId);
+      if (existingTrackInfo && existingTrackInfo.consumer?.producerId === producerId) {
+        console.warn(
+          `⚠️ Consumer already exists for same producer ${producerId} with different consumer ID, reusing:`,
+          existingTrackId
+        );
+        return existingTrackId;
+      }
+    }
+
     const trackId = `${trackType}_remote_${socketId}_${kind}_${Date.now()}`;
 
     try {
@@ -303,9 +315,25 @@ class MediaTrackManager {
   getLocalScreenShareTrack(): MediaStreamTrack | null {
     for (const trackInfo of this.localTracks.values()) {
       if (trackInfo.trackType === "screen" && trackInfo.kind === "video") {
+        console.log(`🔍 Found local screen track:`, {
+          trackId: trackInfo.trackId,
+          peerId: trackInfo.peerId,
+          trackType: trackInfo.trackType,
+          kind: trackInfo.kind,
+          enabled: trackInfo.track.enabled,
+          readyState: trackInfo.track.readyState
+        });
         return trackInfo.track;
       }
     }
+    console.warn(`⚠️ No local screen share track found. Available tracks:`, 
+      Array.from(this.localTracks.values()).map(t => ({
+        trackId: t.trackId,
+        peerId: t.peerId,
+        trackType: t.trackType,
+        kind: t.kind
+      }))
+    );
     return null;
   }
 
@@ -618,7 +646,23 @@ class MediaTrackManager {
       return true;
     }
 
-    // 2단계: 동일한 peer + kind + trackType 조합 체크 (msid 충돌 방지)
+    // 2단계: Consumer Map에서 같은 producer ID 체크  
+    for (const [consumerId, trackId] of this.consumerMap) {
+      const trackInfo = this.remoteTracks.get(trackId);
+      if (trackInfo?.consumer?.producerId === producerId) {
+        console.warn(`⚠️ Producer ${producerId} already has consumer ${consumerId}`);
+        return true;
+      }
+    }
+
+    // 3단계: Remote Producer Map에서 직접 체크
+    if (this.remoteProducerMap.has(producerId)) {
+      const existingTrackId = this.remoteProducerMap.get(producerId);
+      console.warn(`⚠️ Producer ${producerId} already mapped to track ${existingTrackId}`);
+      return true;
+    }
+
+    // 4단계: 동일한 peer + kind + trackType 조합 체크 (msid 충돌 방지)
     const effectiveTrackType = trackType || "camera";
     for (const trackInfo of this.remoteTracks.values()) {
       if (
@@ -670,7 +714,7 @@ class MediaTrackManager {
     track: MediaStreamTrack,
     trackType: "camera" | "screen",
     appData: ProducerAppData
-  ): { track: MediaStreamTrack; appData: ProducerAppData; encodings?: any[] } {
+  ): { track: MediaStreamTrack; appData: any; encodings?: any[] } {
     const baseOptions = {
       track,
       appData,

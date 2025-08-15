@@ -23,6 +23,7 @@ class MediasoupManager {
   private dispatch: AppDispatch | null = null;
   private currentRoomId: string = "";
   private consumingProducers: Set<string> = new Set(); // 🆕 진행 중인 consume 작업 추적
+  private consumedProducers: Set<string> = new Set(); // 🆕 이미 완료된 Producer 추적
 
   public async init(dispatch: AppDispatch) {
     this.dispatch = dispatch;
@@ -154,22 +155,29 @@ class MediasoupManager {
       }) from ${producerSocketId}`
     );
 
-    // 🔒 중복 Consumer 생성 방지 - Producer ID 기반 강력한 체크
-    const existingTrackInfo = mediaTrackManager.getTrackByProducerId(producerId);
-    if (existingTrackInfo) {
-      console.warn(
-        `⚠️ Producer ${producerId} already consumed as ${existingTrackInfo.trackType} ${existingTrackInfo.kind}, ignoring...`
-      );
+    // 🔒 1단계: 이미 완료된 Producer 체크 (즉시 차단)
+    if (this.consumedProducers.has(producerId)) {
+      console.warn(`⚠️ Producer ${producerId} already completed, ignoring...`);
       return;
     }
 
-    // 🔒 추가 중복 방지 - 이미 진행 중인 consume 작업 체크
+    // 🔒 2단계: 진행 중인 consume 작업 체크 (동시 작업 방지)
     if (this.consumingProducers.has(producerId)) {
       console.warn(`⚠️ Producer ${producerId} is already being consumed, ignoring...`);
       return;
     }
 
-    // 🔒 Socket ID + Kind 기반 정확한 중복 체크
+    // 🔒 3단계: MediaTrackManager의 기존 트랙 체크
+    const existingTrackInfo = mediaTrackManager.getTrackByProducerId(producerId);
+    if (existingTrackInfo) {
+      console.warn(
+        `⚠️ Producer ${producerId} already consumed as ${existingTrackInfo.trackType} ${existingTrackInfo.kind}, marking as completed...`
+      );
+      this.consumedProducers.add(producerId);
+      return;
+    }
+
+    // 🔒 4단계: Socket ID + Kind 기반 정확한 중복 체크
     const isScreenShare =
       appData?.type === "screenshare" ||
       appData?.type === "screen" ||
@@ -186,14 +194,16 @@ class MediasoupManager {
       );
       if (hasExistingTrack) {
         console.warn(
-          `⚠️ Remote ${trackType} ${kind} track already exists for socket ${producerSocketId}, ignoring producer ${producerId}...`
+          `⚠️ Remote ${trackType} ${kind} track already exists for socket ${producerSocketId}, marking as completed...`
         );
+        this.consumedProducers.add(producerId);
         return;
       }
     }
 
-    // 진행 중인 작업으로 마킹
+    // 🔒 진행 중인 작업으로 마킹 (모든 체크 통과 후)
     this.consumingProducers.add(producerId);
+    console.log(`🔒 Locked producer ${producerId} for consumption`);
 
     try {
       // 🆕 화면 공유인지 감지 (이미 위에서 정의됨)
@@ -222,6 +232,18 @@ class MediasoupManager {
         // Consumer 생성
         const consumer = await this.recvTransport!.consume(consumerData);
 
+        // 🔒 Consumer 생성 직전 최종 중복 체크
+        const finalTrackCheck = mediaTrackManager.getTrackByProducerId(producerId);
+        if (finalTrackCheck) {
+          console.warn(
+            `⚠️ Producer ${producerId} was consumed during processing, cleaning up consumer...`
+          );
+          consumer.close();
+          this.consumingProducers.delete(producerId);
+          this.consumedProducers.add(producerId);
+          return;
+        }
+
         // MediaTrackManager를 통해 트랙 관리
         await mediaTrackManager.addRemoteTrack(
           producerId,
@@ -242,8 +264,10 @@ class MediasoupManager {
         type: isScreenShare ? "screen" : "camera",
       });
 
-      // 완료 후 진행 중 목록에서 제거
+      // 완료 후 진행 중 목록에서 제거하고 완료 목록에 추가
       this.consumingProducers.delete(producerId);
+      this.consumedProducers.add(producerId);
+      console.log(`🔓 Unlocked and marked completed producer ${producerId}`);
     } catch (error) {
       console.error(`❌ Failed to consume producer ${producerId}:`, error);
 
@@ -254,13 +278,15 @@ class MediasoupManager {
           error.message.includes("already consumed") ||
           error.message.includes("Consumer already exists"))
       ) {
-        console.warn(`⚠️ Producer ${producerId} seems to be already consumed, ignoring...`);
+        console.warn(`⚠️ Producer ${producerId} seems to be already consumed, marking as completed...`);
         this.consumingProducers.delete(producerId);
+        this.consumedProducers.add(producerId);
         return;
       }
 
-      // 에러 발생 시에도 진행 중 목록에서 제거
+      // 에러 발생 시에도 진행 중 목록에서 제거 (재시도 가능하도록 completed에는 추가하지 않음)
       this.consumingProducers.delete(producerId);
+      console.log(`🔓 Unlocked producer ${producerId} due to error`);
       throw error;
     }
   }
@@ -284,25 +310,49 @@ class MediasoupManager {
   public removePeer(socketId: string): void {
     if (!this.dispatch) return;
 
-    // 해당 피어의 모든 트랙 제거 (카메라 + 화면 공유)
+    console.log(`🧹 Starting peer removal cleanup for ${socketId}`);
+
+    // 1. 해당 피어와 관련된 모든 completed/consuming producer 정리
+    const peersProducers = Array.from(this.consumedProducers).concat(Array.from(this.consumingProducers));
+    const peersTrackIds = new Set<string>();
+    
+    // 해당 소켓ID와 관련된 모든 트랙 찾기
+    for (const [trackId, trackInfo] of mediaTrackManager.getAllRemoteTracks()) {
+      if (trackInfo.peerId === socketId) {
+        peersTrackIds.add(trackId);
+        if (trackInfo.consumer) {
+          console.log(`🗑️ Cleaning up consumer for peer ${socketId}: ${trackInfo.consumer.producerId}`);
+          this.consumedProducers.delete(trackInfo.consumer.producerId);
+          this.consumingProducers.delete(trackInfo.consumer.producerId);
+        }
+      }
+    }
+
+    // 2. MediaTrackManager에서 해당 피어의 모든 트랙 제거 (카메라 + 화면 공유)
     mediaTrackManager.removeRemoteTrackByType(socketId, "camera");
     mediaTrackManager.removeRemoteTrackByType(socketId, "screen");
 
-    // 🆕 ScreenShareManager에서도 정리
-    // producerId는 정확히 알 수 없으므로 peerId로 정리
+    // 3. ScreenShareManager에서도 정리
     try {
       screenShareManager.removeRemoteScreenShare("unknown", socketId);
     } catch (error) {
       console.warn(`⚠️ Screen share cleanup failed for ${socketId}:`, error);
     }
 
+    // 4. Redux 상태에서 피어 제거
     this.dispatch(removeRemotePeer(socketId));
 
-    console.log(`👥 Peer removed: ${socketId}`);
+    console.log(`✅ Peer removal completed for ${socketId}. Cleaned up ${peersTrackIds.size} tracks`);
   }
 
   // 🆕 Producer 종료 처리 (화면 공유 감지)
   public handleProducerClosed(producerId: string): void {
+    console.log(`🔌 Producer ${producerId} closed - cleaning up consumer states`);
+
+    // Producer 관련 상태 정리
+    this.consumedProducers.delete(producerId);
+    this.consumingProducers.delete(producerId);
+
     const trackInfo = mediaTrackManager.getTrackByProducerId(producerId);
     if (!trackInfo) {
       console.warn(`⚠️ No track found for producer ${producerId} - already cleaned up`);
@@ -400,8 +450,9 @@ class MediasoupManager {
     // Device 정리
     this.device = null;
 
-    // 진행 중인 consume 작업 목록 초기화
+    // 진행 중인 consume 작업 목록 및 완료된 Producer 목록 초기화
     this.consumingProducers.clear();
+    this.consumedProducers.clear();
 
     // Redux 상태 초기화
     if (this.dispatch) {
