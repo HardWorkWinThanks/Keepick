@@ -13,7 +13,7 @@ export const useOAuthCallback = () => {
   const dispatch = useAppDispatch();
   const isProcessing = useRef(false); // 중복 실행 방지
 
-  const tempGroupId = 27 // 시연용 로그인 후 리다이렉트 하드코딩 
+  // 시연용 하드코딩 제거됨 
 
   useEffect(() => {
     const run = async () => {
@@ -38,10 +38,10 @@ export const useOAuthCallback = () => {
       try {
         if (error) {
           console.error("OAuth2 Error:", error);
-          // URL 파라미터 정리 후 에러와 함께 그룹 페이지로 이동
+          // URL 파라미터 정리 후 에러와 함께 메인페이지로 이동
           const cleanUrl = window.location.origin + window.location.pathname;
           window.history.replaceState({}, '', cleanUrl);
-          router.replace(`/group/${tempGroupId}}?error=` + encodeURIComponent(error));
+          router.replace(`/?error=` + encodeURIComponent(error));
           return;
         }
 
@@ -65,19 +65,19 @@ export const useOAuthCallback = () => {
           // 3. 사용자 정보 가져오기
           await fetchUserInfo();
 
-          // 4. 성공 후 URL 파라미터 정리하고 그룹 스페이스로 이동
-          console.log("✅ OAuth 로그인 완료, 그룹 스페이스로 이동");
+          // 4. 성공 후 URL 파라미터 정리하고 메인페이지로 이동
+          console.log("✅ OAuth 로그인 완료, 메인페이지로 이동");
           // URL 파라미터를 모두 제거하여 OAuthHandler가 다시 실행되지 않도록 함
           const cleanUrl = window.location.origin + window.location.pathname;
           window.history.replaceState({}, '', cleanUrl);
-          router.replace(`/group/${tempGroupId}`); // 고정된 그룹 ID 1번으로 리다이렉트
+          router.replace(`/`); // 메인페이지로 리다이렉트
         }
       } catch (error) {
         console.error("OAuth 처리 중 오류:", error);
-        // URL 파라미터 정리 후 에러와 함께 그룹 페이지로 이동
+        // URL 파라미터 정리 후 에러와 함께 메인페이지로 이동
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, '', cleanUrl);
-        router.replace(`/group/${tempGroupId}?error=oauth_process_failed`);
+        router.replace(`/?error=oauth_process_failed`);
       } finally {
         isProcessing.current = false; // 처리 완료
         sessionStorage.removeItem('oauth_in_progress');
@@ -103,11 +103,11 @@ export const useOAuthCallback = () => {
       dispatch(setUser(data.data));
     } catch (error) {
       console.error("User info fetch error:", error);
-      // URL 파라미터 정리 후 사용자 정보 가져오기 실패 시 그룹 페이지로
+      // URL 파라미터 정리 후 사용자 정보 가져오기 실패 시 메인페이지로
       const cleanUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, '', cleanUrl);
-      // 사용자 정보 로드 실패해도 토큰은 있으므로 그룹 페이지로 이동
-      router.replace(`/group/${tempGroupId}?error=user_info_failed`);
+      // 사용자 정보 로드 실패해도 토큰은 있으므로 메인페이지로 이동
+      router.replace(`/?error=user_info_failed`);
     } finally {
       // 로딩 상태 종료
       dispatch(setUserLoading(false));
