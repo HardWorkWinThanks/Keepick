@@ -370,11 +370,11 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
       </div>
 
       {/* 하단 여백 - 그리드와 푸터 사이 */}
-      <div style={{ flex: '1 1 0', minHeight: 0 }}></div>
+      <div style={{ flex: '1.5 1 0', minHeight: 0 }}></div>
 
       {/* 하단 앨범 타입 표시 섹션 - 푸터 영역 */}
       {currentMode.id === "album" && (
-        <div className="flex-shrink-0 flex items-center justify-end px-8 py-1 bg-[#111111] z-10">
+        <div className="flex-shrink-0 flex items-center justify-end px-8 pt-4 pb-1 bg-[#111111] z-10">
           <div className="flex items-start gap-4">
             {/* Album Type Text - 고정 위치 */}
             <div className="text-right">
