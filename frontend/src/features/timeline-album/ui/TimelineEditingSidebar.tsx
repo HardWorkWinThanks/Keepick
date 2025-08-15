@@ -20,7 +20,7 @@ interface TimelineEditingSidebarProps {
   // 앨범 정보 인라인 편집
   albumInfo: EditingAlbumInfo | null
   onAlbumInfoUpdate: (updates: Partial<EditingAlbumInfo>) => void
-  titleInputRef?: React.RefObject<HTMLInputElement>
+  titleInputRef?: React.RefObject<HTMLInputElement | null>
 }
 
 export function TimelineEditingSidebar({ 
