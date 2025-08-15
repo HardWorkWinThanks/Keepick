@@ -6,46 +6,69 @@ import { ChevronDown, ChevronUp } from "lucide-react"
 import { ScrollArea } from "@/shared/ui/shadcn/scroll-area"
 import { DraggablePhotoGrid, PhotoDropZone } from "@/features/photo-drag-drop"
 import type { Photo, DragPhotoData } from "@/entities/photo"
-import { EditingAlbumInfo } from "../model/useTimelineEditor"
 import Image from "next/image"
 
-interface TimelineEditingSidebarProps {
+// 앨범 정보 편집 타입 (범용)
+export interface EditingAlbumInfo {
+  name: string;
+  description: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+interface AlbumEditingSidebarProps {
+  // 공통
   isOpen: boolean
   onClose: () => void
-  onCoverImageDrop?: (dragData: DragPhotoData) => void
-  onSectionPhotoRemove?: (dragData: DragPhotoData) => void // 섹션에서 사진 제거
-  onCoverImageRemove?: (dragData: DragPhotoData) => void // 대표이미지에서 사진 제거
-  // 하이브리드 방식으로 데이터 props로 전달
   availablePhotos: Photo[]
-  coverImage: Photo | null
-  // 앨범 정보 인라인 편집
+  draggingPhotoId: number | null
+  onDragStart: (e: React.DragEvent<HTMLDivElement>, photo: Photo) => void
+  onDragEnd: () => void
+  onDrop: (dragData: DragPhotoData) => void
+  
+  // 앨범 정보 편집
   albumInfo: EditingAlbumInfo | null
   onAlbumInfoUpdate: (updates: Partial<EditingAlbumInfo>) => void
   titleInputRef?: React.RefObject<HTMLInputElement | null>
+  
+  // 대표이미지
+  coverImage: Photo | null
+  onCoverImageDrop: (dragData: DragPhotoData) => void
+  onCoverImageRemove?: (dragData: DragPhotoData) => void
+  
+  // 조건부 기능
+  showDateInputs?: boolean  // 타임라인=true, 티어=false
+  
+  // 사용방법 안내 커스터마이징
+  title?: string
+  description?: string
+  instructions?: string[]
 }
 
-export function TimelineEditingSidebar({ 
+export function AlbumEditingSidebar({ 
   isOpen, 
   onClose, 
-  onCoverImageDrop,
-  onSectionPhotoRemove,
-  onCoverImageRemove,
   availablePhotos,
-  coverImage,
+  draggingPhotoId,
+  onDragStart,
+  onDragEnd,
+  onDrop,
   albumInfo,
   onAlbumInfoUpdate,
-  titleInputRef
-}: TimelineEditingSidebarProps) {
-  const [draggingPhotoId, setDraggingPhotoId] = useState<number | null>(null)
+  titleInputRef,
+  coverImage,
+  onCoverImageDrop,
+  onCoverImageRemove,
+  showDateInputs = true,
+  title = "앨범 수정",
+  description = "앨범 정보와 사진을 수정하세요.",
+  instructions = [
+    "사진을 드래그해서 타임라인 섹션으로 이동",
+    "각 섹션에 최대 3장까지 추가 가능", 
+    "드롭하면 자동으로 레이아웃 적용"
+  ]
+}: AlbumEditingSidebarProps) {
   const [isAlbumInfoExpanded, setIsAlbumInfoExpanded] = useState(true) // 앨범 정보 드롭다운 상태
-
-  const handleDragStart = (_: React.DragEvent<HTMLDivElement>, photo: Photo) => {
-    setDraggingPhotoId(photo.id)
-  }
-
-  const handleDragEnd = () => {
-    setDraggingPhotoId(null)
-  }
 
   return (
     <>
@@ -73,8 +96,8 @@ export function TimelineEditingSidebar({
           <div className="p-6">
             {/* Header */}
             <div className="mb-6">
-              <h2 className="text-lg font-semibold text-white mb-2">앨범 수정</h2>
-              <p className="text-sm text-gray-400 mb-4">앨범 정보와 사진을 수정하세요.</p>
+              <h2 className="text-lg font-semibold text-white mb-2">{title}</h2>
+              <p className="text-sm text-gray-400 mb-4">{description}</p>
             </div>
 
             {/* Album Info Dropdown */}
@@ -119,24 +142,26 @@ export function TimelineEditingSidebar({
                     )}
                   </div>
 
-                  {/* 날짜 범위 */}
-                  <div>
-                    <label className="text-sm font-medium text-gray-300 mb-2 block">날짜 범위</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="date"
-                        value={albumInfo?.startDate || ''}
-                        onChange={(e) => onAlbumInfoUpdate({ startDate: e.target.value })}
-                        className="bg-gray-800 text-gray-300 px-2 py-2 rounded border border-[#FE7A25]/30 focus:border-[#FE7A25] focus:outline-none text-sm [color-scheme:dark]"
-                      />
-                      <input
-                        type="date"
-                        value={albumInfo?.endDate || ''}
-                        onChange={(e) => onAlbumInfoUpdate({ endDate: e.target.value })}
-                        className="bg-gray-800 text-gray-300 px-2 py-2 rounded border border-[#FE7A25]/30 focus:border-[#FE7A25] focus:outline-none text-sm [color-scheme:dark]"
-                      />
+                  {/* 날짜 범위 - 조건부 렌더링 */}
+                  {showDateInputs && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-300 mb-2 block">날짜 범위</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="date"
+                          value={albumInfo?.startDate || ''}
+                          onChange={(e) => onAlbumInfoUpdate({ startDate: e.target.value })}
+                          className="bg-gray-800 text-gray-300 px-2 py-2 rounded border border-[#FE7A25]/30 focus:border-[#FE7A25] focus:outline-none text-sm [color-scheme:dark]"
+                        />
+                        <input
+                          type="date"
+                          value={albumInfo?.endDate || ''}
+                          onChange={(e) => onAlbumInfoUpdate({ endDate: e.target.value })}
+                          className="bg-gray-800 text-gray-300 px-2 py-2 rounded border border-[#FE7A25]/30 focus:border-[#FE7A25] focus:outline-none text-sm [color-scheme:dark]"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* 앨범 설명 */}
                   <div>
@@ -165,12 +190,29 @@ export function TimelineEditingSidebar({
                     </div>
                   </div>
 
-                  {/* 대표 이미지 섹션 */}
-                  {(onCoverImageDrop || coverImage) && (
+                  {/* 대표 이미지 안내 - 티어 앨범용 조건부 렌더링 */}
+                  {!showDateInputs && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-300 mb-2 block">대표 이미지</label>
+                      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
+                          <p className="text-blue-300 font-keepick-primary text-xs font-medium">
+                            S티어 1위가 앨범 대표이미지가 됩니다!
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 대표 이미지 섹션 - 타임라인 앨범용 */}
+                  {showDateInputs && (
                     <div>
                       <label className="text-sm font-medium text-gray-300 mb-3 block">대표 이미지</label>
                       <PhotoDropZone
-                        onDrop={(dragData, e) => onCoverImageDrop?.(dragData)}
+                        onDrop={(dragData, e) => onCoverImageDrop(dragData)}
                         dropZoneId="cover-image-drop"
                         className="relative w-full aspect-[4/3] bg-[#333333]/50 border-2 border-dashed border-gray-600 rounded-lg overflow-hidden hover:border-[#FE7A25] transition-colors"
                         // 대표이미지를 드래그 가능하게 만들기
@@ -236,14 +278,7 @@ export function TimelineEditingSidebar({
             </div>
             
             <PhotoDropZone
-              onDrop={(dragData, e) => {
-                // 섹션에서 온 사진 또는 대표이미지에서 온 사진 처리
-                if (dragData.source.startsWith('section-')) {
-                  onSectionPhotoRemove?.(dragData)
-                } else if (dragData.source === 'cover-image') {
-                  onCoverImageRemove?.(dragData)
-                }
-              }}
+              onDrop={onDrop}
               dropZoneId="sidebar-photos-grid"
               className="min-h-[300px] max-h-[400px] rounded-lg transition-colors border-2 border-transparent hover:border-[#FE7A25]/20 data-[drag-over=true]:border-[#FE7A25]/50 data-[drag-over=true]:bg-[#FE7A25]/5"
             >
@@ -251,8 +286,8 @@ export function TimelineEditingSidebar({
                 {availablePhotos.length > 0 ? (
                   <DraggablePhotoGrid
                     photos={availablePhotos}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
+                    onDragStart={onDragStart}
+                    onDragEnd={onDragEnd}
                     draggingPhotoId={draggingPhotoId}
                     sourceId="gallery"
                     gridClassName="grid grid-cols-3 gap-3 pr-2"
@@ -279,9 +314,9 @@ export function TimelineEditingSidebar({
             <div className="p-4 bg-gray-800/50 rounded-lg">
               <h4 className="text-sm font-medium text-white mb-2">사용 방법</h4>
               <ul className="text-xs text-gray-400 space-y-1">
-                <li>• 사진을 드래그해서 타임라인 섹션으로 이동</li>
-                <li>• 각 섹션에 최대 3장까지 추가 가능</li>
-                <li>• 드롭하면 자동으로 레이아웃 적용</li>
+                {instructions.map((instruction, index) => (
+                  <li key={index}>• {instruction}</li>
+                ))}
               </ul>
             </div>
           </div>

@@ -12,6 +12,7 @@ import { Photo, DragPhotoData } from "@/entities/photo"
 import { TIER_COLORS } from "@/shared/config/tierColors"
 import type { RootState } from "@/shared/config/store"
 import { clearSelectedPhotos, setIsFromGallery } from "@/features/photo-gallery/model/photoSelectionSlice"
+import { AlbumEditingSidebar, type EditingAlbumInfo } from "@/shared/ui/composite"
 import {
   useAlbumState,
 } from "@/features/album-management"
@@ -23,8 +24,6 @@ import {
   TierData,
 } from "@/features/tier-battle"
 import { PhotoModal } from "@/features/photos-viewing"
-import { DraggablePhotoGrid } from "@/features/photo-drag-drop"
-import { ScrollArea } from "@/shared/ui/shadcn/scroll-area"
 
 interface TierAlbumPageProps {
   groupId: string
@@ -136,6 +135,10 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
   const { selectedPhotos, isFromGallery } = useSelector((state: RootState) => state.photoSelection)
   const [isEditMode, setIsEditMode] = useState(false)
   
+  // 앨범 정보 편집 상태
+  const [albumInfo, setAlbumInfo] = useState<EditingAlbumInfo | null>(null)
+  const [coverImage, setCoverImage] = useState<Photo | null>(null)
+  
   const {
     isLoading,
     error,
@@ -197,6 +200,28 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
     setIsEditMode(!isEditMode)
   }
 
+  // tierAlbumData가 로드되면 앨범 정보 초기화
+  useEffect(() => {
+    if (tierAlbumData) {
+      setAlbumInfo({
+        name: tierAlbumData.title || '',
+        description: tierAlbumData.description || '',
+      })
+      
+      // 대표이미지 설정 (첫 번째 사진을 대표이미지로 사용)
+      const firstPhoto = Object.values(tierAlbumData.photos).flat()[0]
+      if (firstPhoto) {
+        setCoverImage({
+          id: firstPhoto.photoId,
+          src: firstPhoto.originalUrl,
+          thumbnailUrl: firstPhoto.thumbnailUrl,
+          originalUrl: firstPhoto.originalUrl,
+          name: `사진 #${firstPhoto.photoId}`
+        })
+      }
+    }
+  }, [tierAlbumData])
+
   // 갤러리에서 선택된 사진들로 앨범을 생성한 경우 자동으로 편집 모드 진입
   useEffect(() => {
     if (isFromGallery && selectedPhotos.length > 0) {
@@ -228,34 +253,41 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
       } else if (tierAlbumData?.photos) {
         // 기존 앨범 데이터를 편집용 형식으로 변환
         const convertedTierPhotos: TierData = {
-          S: tierAlbumData.photos.S?.map(photo => ({
+          S: tierAlbumData.photos.S?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
             id: photo.photoId,
             src: photo.originalUrl,
             name: `사진 #${photo.photoId}`
           })) || [],
-          A: tierAlbumData.photos.A?.map(photo => ({
+          A: tierAlbumData.photos.A?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
             id: photo.photoId,
             src: photo.originalUrl,
             name: `사진 #${photo.photoId}`
           })) || [],
-          B: tierAlbumData.photos.B?.map(photo => ({
+          B: tierAlbumData.photos.B?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
             id: photo.photoId,
             src: photo.originalUrl,
             name: `사진 #${photo.photoId}`
           })) || [],
-          C: tierAlbumData.photos.C?.map(photo => ({
+          C: tierAlbumData.photos.C?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
             id: photo.photoId,
             src: photo.originalUrl,
             name: `사진 #${photo.photoId}`
           })) || [],
-          D: tierAlbumData.photos.D?.map(photo => ({
+          D: tierAlbumData.photos.D?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
             id: photo.photoId,
             src: photo.originalUrl,
             name: `사진 #${photo.photoId}`
           })) || [],
         }
         setTierPhotos(convertedTierPhotos)
-        setAvailablePhotos([]) // 기존 앨범은 사용 가능한 사진이 없음
+        
+        // UNASSIGNED 사진들을 사용 가능한 사진으로 설정
+        const unassignedPhotos = tierAlbumData.photos.UNASSIGNED?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
+          id: photo.photoId,
+          src: photo.originalUrl,
+          name: `사진 #${photo.photoId}`
+        })) || []
+        setAvailablePhotos(unassignedPhotos)
       }
     }
   }, [tierAlbumId, isEditMode, isFromGallery, selectedPhotos, tierAlbumData])
@@ -272,12 +304,12 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
         D: tierPhotos.D?.map(photo => photo.id) || [],
       }
 
-      // 썸네일 ID 설정 (S 티어의 첫 번째 사진을 썸네일로 사용)
-      const thumbnailId = tierPhotos.S?.[0]?.id || tierPhotos.A?.[0]?.id || tierPhotos.B?.[0]?.id || tierPhotos.C?.[0]?.id || tierPhotos.D?.[0]?.id || 0
+      // 썸네일 ID 설정 - S 티어의 첫 번째 사진을 대표이미지로 사용
+      const thumbnailId = tierPhotos.S?.[0]?.id || tierPhotos.A?.[0]?.id || tierPhotos.B?.[0]?.id || tierPhotos.C?.[0]?.id || tierPhotos.D?.[0]?.id || null
 
       await updateTierAlbum(parseInt(groupId), parseInt(tierAlbumId), {
-        name: tierAlbumData?.title || "티어 앨범",
-        description: tierAlbumData?.description || "",
+        name: albumInfo?.name || tierAlbumData?.title || "티어 앨범",
+        description: albumInfo?.description || tierAlbumData?.description || "",
         thumbnailId: thumbnailId,
         photos: photosToSave
       })
@@ -290,6 +322,55 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
     } catch (error) {
       console.error("티어 앨범 저장 실패:", error)
       alert("❌ 티어 앨범 저장에 실패했습니다. 다시 시도해주세요.")
+    }
+  }
+
+  // 앨범 정보 업데이트 핸들러
+  const handleAlbumInfoUpdate = (updates: Partial<EditingAlbumInfo>) => {
+    setAlbumInfo(prev => prev ? { ...prev, ...updates } : null)
+  }
+
+  // 대표이미지 설정 핸들러
+  const handleCoverImageDrop = (dragData: DragPhotoData) => {
+    const photo: Photo = {
+      id: dragData.photoId,
+      src: dragData.originalUrl || dragData.src || '/placeholder/photo-placeholder.svg',
+      thumbnailUrl: dragData.thumbnailUrl,
+      originalUrl: dragData.originalUrl,
+      name: dragData.name || `사진 #${dragData.photoId}`
+    }
+    setCoverImage(photo)
+    
+    // 티어에서 온 사진인 경우 해당 티어에서 제거
+    if (dragData.source !== "available" && dragData.source !== "cover-image") {
+      handleReturnToAvailable(dragData.photoId, dragData.source, (photo) =>
+        setAvailablePhotos((prev) => [...prev, photo])
+      )
+    }
+  }
+
+  // 대표이미지 제거 핸들러
+  const handleCoverImageRemove = (dragData: DragPhotoData) => {
+    setCoverImage(null)
+    // 사용가능한 사진 목록에 추가
+    const photo: Photo = {
+      id: dragData.photoId,
+      src: dragData.originalUrl || dragData.src || '/placeholder/photo-placeholder.svg',
+      thumbnailUrl: dragData.thumbnailUrl,
+      originalUrl: dragData.originalUrl,
+      name: dragData.name || `사진 #${dragData.photoId}`
+    }
+    setAvailablePhotos((prev) => [...prev, photo])
+  }
+
+  // 사이드바에서 드롭될 때 처리 (티어 → 사용가능한 사진)
+  const handleSidebarDrop = (dragData: DragPhotoData) => {
+    if (dragData.source !== "available" && dragData.source !== "cover-image") {
+      handleReturnToAvailable(dragData.photoId, dragData.source, (photo) =>
+        setAvailablePhotos((prev) => [...prev, photo])
+      )
+    } else if (dragData.source === "cover-image") {
+      handleCoverImageRemove(dragData)
     }
   }
 
@@ -448,7 +529,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
         <div className="text-center">
           <div className="text-2xl font-keepick-primary mb-4 text-red-400">티어 앨범을 불러올 수 없습니다</div>
           <div className="text-gray-400 mb-4">앨범이 존재하지 않거나 접근 권한이 없습니다.</div>
-          <Link href={`/group/${groupId}`} className="text-[#FE7A25] hover:text-orange-400 font-keepick-primary">
+          <Link href={`/group/${groupId}#tier`} className="text-[#FE7A25] hover:text-orange-400 font-keepick-primary">
             그룹으로 돌아가기
           </Link>
         </div>
@@ -467,10 +548,14 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
         />
       </div>
 
-      {/* Header - timeline-album 헤더와 통합된 스타일 */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#111111]/95 backdrop-blur-sm border-b border-gray-800">
+      {/* Header */}
+      <header 
+        className={`fixed top-0 z-50 bg-[#111111]/95 backdrop-blur-sm border-b border-gray-800 transition-all duration-300 ${
+          isEditMode ? 'left-[320px] right-0' : 'left-0 right-0'
+        }`}
+      >
         <div className="flex items-center justify-between px-8 py-4">
-          <Link href={`/group/${groupId}`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
+          <Link href={`/group/${groupId}#tier`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
             <ArrowLeft size={20} />
             <span className="font-keepick-primary text-sm">돌아가기</span>
           </Link>
@@ -491,72 +576,8 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
       {/* Main Content */}
       <main className={`${isEditMode ? 'min-h-screen bg-[#111111] pt-24' : 'h-screen flex flex-col pt-16'} relative z-10`}>
         {isEditMode ? (
-          // 편집 모드 - 사이드바 레이아웃
-          <div className="flex gap-6 animate-fade-in pb-8 px-8 h-screen">
-            {/* 좌측: 사용가능한 사진 사이드바 */}
-            <div className="w-80 flex-shrink-0 space-y-4">
-              <div 
-                className="bg-gray-800/50 rounded-lg p-3 transition-all duration-200"
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  // 드래그 오버 시 시각적 피드백 - 배경색 변경
-                  e.currentTarget.classList.add('bg-gray-700/70', 'border-2', 'border-orange-400')
-                }}
-                onDragLeave={(e) => {
-                  // 드래그 리브 시 원래 스타일로 복원
-                  e.currentTarget.classList.remove('bg-gray-700/70', 'border-2', 'border-orange-400')
-                }}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  // 드롭 후 스타일 복원
-                  e.currentTarget.classList.remove('bg-gray-700/70', 'border-2', 'border-orange-400')
-                  
-                  // 드롭 즉시 상태 초기화
-                  setDraggingPhotoId(null)
-                  setDragOverPosition(null)
-                  
-                  const data = JSON.parse(e.dataTransfer.getData("text/plain"))
-                  const { photoId, source } = data
-                  
-                  // 티어에서 사용가능한 사진으로 이동 (source가 available이 아닌 경우에만)
-                  if (source !== "available") {
-                    handleReturnToAvailable(photoId, source, (photo) =>
-                      setAvailablePhotos((prev) => [...prev, photo])
-                    )
-                  }
-                }}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <h3 className="text-sm font-medium text-gray-300">사용가능한 사진</h3>
-                  <span className="text-xs text-gray-500">{availablePhotos.length}장</span>
-                </div>
-                
-                <ScrollArea className="h-[calc(100vh-200px)]">
-                  <DraggablePhotoGrid
-                    photos={availablePhotos}
-                    onDragStart={handleAvailablePhotoDragStart}
-                    onDragEnd={handleAvailablePhotoDragEnd}
-                    draggingPhotoId={draggingPhotoId}
-                    sourceId="available"
-                    gridClassName="grid grid-cols-3 gap-2 pb-2"
-                    photoClassName="aspect-square w-full object-cover rounded shadow-sm hover:scale-105 transition-transform cursor-grab"
-                  />
-                </ScrollArea>
-              </div>
-
-              {/* 사용방법 */}
-              <div className="bg-gray-800/30 rounded-lg p-3">
-                <h4 className="text-xs font-medium text-gray-300 mb-2">사용방법</h4>
-                <div className="space-y-1 text-xs text-gray-400">
-                  <div>• 사진을 드래그해서 티어로 이동</div>
-                  <div>• 티어에서 사진을 여기로 드래그하여 되돌리기</div>
-                  <div>• 정밀 배틀 모드로 순위 결정</div>
-                  <div>• 티어 내에서 순서 조정 가능</div>
-                  <div className="text-orange-400 font-medium">↔ 양방향 드래그&드롭 지원</div>
-                </div>
-              </div>
-            </div>
-
+          // 편집 모드 - 새로운 사이드바 + 티어 그리드 레이아웃
+          <div className="flex gap-6 animate-fade-in pb-8 px-8 h-screen pl-[340px]">
             {/* 우측: 티어 그리드 */}
             <div className="flex-1">
               {/* 메인 섹션 헤더 */}
@@ -834,6 +855,35 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
           </>
         )}
       </main>
+
+      {/* Album Editing Sidebar */}
+      <AlbumEditingSidebar 
+        isOpen={isEditMode}
+        onClose={() => setIsEditMode(false)}
+        availablePhotos={availablePhotos}
+        draggingPhotoId={draggingPhotoId}
+        onDragStart={(e, photo) => {
+          // DragPhotoData 형식으로 드래그 시작
+          e.dataTransfer.setData(
+            "text/plain",
+            JSON.stringify({ photoId: photo.id, source: "available" })
+          )
+          setDraggingPhotoId(photo.id)
+        }}
+        onDragEnd={handleAvailablePhotoDragEnd}
+        onDrop={handleSidebarDrop}
+        albumInfo={albumInfo}
+        onAlbumInfoUpdate={handleAlbumInfoUpdate}
+        coverImage={coverImage}
+        onCoverImageDrop={handleCoverImageDrop}
+        onCoverImageRemove={handleCoverImageRemove}
+        showDateInputs={false}
+        title="티어 앨범 수정"
+        description="앨범 정보와 사진을 수정하세요."
+        instructions={[
+          "드래그&드롭으로 앨범을 자유롭게 꾸미세요!"
+        ]}
+      />
     </div>
   )
 }

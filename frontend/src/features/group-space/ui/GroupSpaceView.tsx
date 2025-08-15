@@ -12,7 +12,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useGroupSpace } from "../model/useGroupSpace";
 import { PhotoGallery } from "@/features/photo-gallery";
-import { CreateAlbumButton } from "@/shared/ui/composite";
+import { CreateAlbumButton, DeleteConfirmationModal } from "@/shared/ui/composite";
 import type { Group } from "@/entities/group";
 import Image from "next/image";
 
@@ -24,6 +24,9 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
   const router = useRouter();
   // 앨범 생성 버튼 클릭 여부를 추적하는 상태
   const [isFromAlbumCreateButton, setIsFromAlbumCreateButton] = useState(false);
+  // 삭제 확인 모달 상태
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [albumToDelete, setAlbumToDelete] = useState<{ id: number; title: string } | null>(null);
   
   const {
     currentMode,
@@ -80,6 +83,21 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [group.groupId, switchToGalleryMode]);
+
+  // 삭제 확인 핸들러
+  const handleDeleteConfirm = () => {
+    if (albumToDelete) {
+      deleteAlbum(albumToDelete.id);
+      setDeleteModalOpen(false);
+      setAlbumToDelete(null);
+    }
+  };
+
+  // 삭제 모달 닫기 핸들러
+  const handleDeleteCancel = () => {
+    setDeleteModalOpen(false);
+    setAlbumToDelete(null);
+  };
 
   return (
     <div className="bg-[#111111] text-white flex flex-col min-h-0" style={{ height: 'calc(100vh - 90px)' }}>
@@ -307,9 +325,8 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    if (window.confirm(`"${photo.title}" 앨범을 삭제하시겠습니까?`)) {
-                                      deleteAlbum(photo.id)
-                                    }
+                                    setAlbumToDelete({ id: photo.id, title: photo.title || '제목 없는 앨범' })
+                                    setDeleteModalOpen(true)
                                   }}
                                   disabled={deletingAlbumId === photo.id || isDeletingAlbum}
                                   className={`absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 z-20 ${
@@ -415,6 +432,16 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
           </div>
         </div>
       )}
+
+      {/* 삭제 확인 모달 */}
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        itemName={albumToDelete?.title || ""}
+        itemType="앨범"
+        isLoading={isDeletingAlbum}
+      />
     </div>
   );
 }

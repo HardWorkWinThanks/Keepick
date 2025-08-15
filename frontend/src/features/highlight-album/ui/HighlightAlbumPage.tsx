@@ -28,7 +28,7 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#111111]/95 backdrop-blur-sm border-b border-gray-800">
         <div className="flex items-center justify-between px-8 py-4">
-          <Link href={`/group/${groupId}`} className="flex items-center gap-3 hover:opacity-70 transition-opacity text-white">
+          <Link href={`/group/${groupId}#highlight`} className="flex items-center gap-3 hover:opacity-70 transition-opacity text-white">
             <ArrowLeft size={20} className="text-white" />
             <span className="font-keepick-primary text-sm text-white">돌아가기</span>
           </Link>

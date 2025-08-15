@@ -18,16 +18,19 @@ export function useTierAlbum(groupId: string, tierAlbumId: string) {
   })
 
   // API 데이터를 TierPhoto 형식으로 변환 (실제 API 응답 구조 기반)
+  // UNASSIGNED는 뷰 모드에서 제외 (편집 모드에서만 사용)
   const photos: TierPhoto[] = tierAlbumData?.photos ? 
-    Object.entries(tierAlbumData.photos).flatMap(([tier, photos]) =>
-      photos.map(photo => ({
-        id: photo.photoId,
-        src: photo.originalUrl,  // originalUrl을 src로 사용
-        title: `사진 #${photo.photoId}`,
-        date: new Date().toISOString().split('T')[0].replace(/-/g, '.'), // 임시 날짜 (API에 없음)
-        tier: tier as "S" | "A" | "B" | "C" | "D",
-      }))
-    ) : []
+    Object.entries(tierAlbumData.photos)
+      .filter(([tier]) => tier !== 'UNASSIGNED')  // UNASSIGNED 제외
+      .flatMap(([tier, photos]) =>
+        photos.map(photo => ({
+          id: photo.photoId,
+          src: photo.originalUrl,  // originalUrl을 src로 사용
+          title: `사진 #${photo.photoId}`,
+          date: new Date().toISOString().split('T')[0].replace(/-/g, '.'), // 임시 날짜 (API에 없음)
+          tier: tier as "S" | "A" | "B" | "C" | "D",
+        }))
+      ) : []
 
   // 현재 티어의 사진들 필터링
   const currentTierPhotos = photos.filter((photo) => photo.tier === currentTier)

@@ -7,7 +7,7 @@ import { ArrowLeft, Edit, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useTimelineEditor, EditingSection } from "../model/useTimelineEditor"
-import { TimelineEditingSidebar } from "./TimelineEditingSidebar"
+import { AlbumEditingSidebar } from "@/shared/ui/composite"
 import { PhotoDropZone } from "@/features/photo-drag-drop"
 import type { RootState } from "@/shared/config/store"
 import type { DragPhotoData } from "@/entities/photo"
@@ -461,7 +461,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl font-keepick-primary mb-4">타임라인 앨범을 찾을 수 없습니다</div>
-          <Link href={`/group/${groupId}`} className="text-[#FE7A25] hover:underline">
+          <Link href={`/group/${groupId}#timeline`} className="text-[#FE7A25] hover:underline">
             그룹 페이지로 돌아가기
           </Link>
         </div>
@@ -478,7 +478,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
         }`}
       >
         <div className="flex items-center justify-between px-8 py-4">
-          <Link href={`/group/${groupId}`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
+          <Link href={`/group/${groupId}#timeline`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
             <ArrowLeft size={20} />
             <span className="font-keepick-primary text-sm">돌아가기</span>
           </Link>
@@ -589,10 +589,26 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
         </div>
       </footer>
 
-      {/* Timeline Editing Sidebar */}
-      <TimelineEditingSidebar 
+      {/* Album Editing Sidebar */}
+      <AlbumEditingSidebar 
         isOpen={isEditMode} 
         onClose={handleCancelEditing}
+        availablePhotos={availablePhotos}
+        draggingPhotoId={null} // TODO: 드래그 상태 연결 필요시 추가
+        onDragStart={() => {}} // TODO: 필요시 구현
+        onDragEnd={() => {}} // TODO: 필요시 구현
+        onDrop={(dragData) => {
+          // 섹션에서 온 사진 또는 대표이미지에서 온 사진 처리
+          if (dragData.source.startsWith('section-')) {
+            handleSectionPhotoRemove(dragData)
+          } else if (dragData.source === 'cover-image') {
+            handleCoverImageRemove(dragData)
+          }
+        }}
+        albumInfo={albumInfo}
+        onAlbumInfoUpdate={updateAlbumInfo}
+        titleInputRef={titleInputRef}
+        coverImage={albumInfo.coverImage}
         onCoverImageDrop={(dragData) => {
           // DragPhotoData를 Photo로 변환
           const photo: Photo = {
@@ -611,15 +627,11 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
             handleSectionPhotoRemove(dragData)
           }
         }}
-        onSectionPhotoRemove={handleSectionPhotoRemove}
         onCoverImageRemove={handleCoverImageRemove}
-        // 하이브리드 방식으로 데이터 전달
-        availablePhotos={availablePhotos}
-        coverImage={albumInfo.coverImage}
-        // 앨범 정보 인라인 편집
-        albumInfo={albumInfo}
-        onAlbumInfoUpdate={updateAlbumInfo}
-        titleInputRef={titleInputRef}
+        showDateInputs={true}
+        instructions={[
+          "드래그&드롭으로 앨범을 자유롭게 꾸미세요!"
+        ]}
       />
 
     </div>

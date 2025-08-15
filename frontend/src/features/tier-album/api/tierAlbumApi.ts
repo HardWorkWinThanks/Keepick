@@ -26,6 +26,7 @@ export interface TierAlbum {
     B: TierAlbumPhoto[];
     C: TierAlbumPhoto[];
     D: TierAlbumPhoto[];
+    UNASSIGNED: TierAlbumPhoto[];
   };
 }
 
@@ -33,7 +34,7 @@ export interface TierAlbum {
 export interface UpdateTierAlbumRequest {
   name: string;
   description: string;
-  thumbnailId: number;
+  thumbnailId: number | null;
   photos: {
     S: number[];
     A: number[];
