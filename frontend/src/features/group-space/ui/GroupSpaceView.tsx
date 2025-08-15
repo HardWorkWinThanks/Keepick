@@ -12,7 +12,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useGroupSpace } from "../model/useGroupSpace";
 import { PhotoGallery } from "@/features/photo-gallery";
-import { InteractiveHoverButton } from "@/shared/ui/composite";
+import { CreateAlbumButton } from "@/shared/ui/composite";
 import type { Group } from "@/entities/group";
 import Image from "next/image";
 
@@ -119,27 +119,15 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
             </div>
           </div>
 
-          {/* 타임라인 앨범 생성 버튼 - 우상단 */}
-          {currentMode.id === "album" && currentAlbum.id === "timeline" && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-            >
-              <InteractiveHoverButton
-                variant="ghost"
-                size="lg"
-                onClick={() => {
-                  console.log('타임라인 앨범 생성 버튼 클릭 - 갤러리 모드로 전환')
-                  setIsFromAlbumCreateButton(true) // 앨범 생성 버튼 클릭 플래그 설정
-                  switchToGalleryMode()
-                }}
-                className="text-lg px-8 py-4"
-              >
-                CREATE NEW ALBUM
-              </InteractiveHoverButton>
-            </motion.div>
+          {/* 앨범 생성 버튼 - 우상단 */}
+          {currentMode.id === "album" && (currentAlbum.id === "timeline" || currentAlbum.id === "tier") && (
+            <CreateAlbumButton
+              albumType={currentAlbum.id}
+              onCreateAlbum={() => {
+                setIsFromAlbumCreateButton(true) // 앨범 생성 버튼 클릭 플래그 설정
+                switchToGalleryMode()
+              }}
+            />
           )}
 
         </div>
@@ -217,7 +205,9 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                             <div className="text-center">
                               <div className="w-8 h-8 border-2 border-[#FE7A25] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                               <h2 className="text-xl font-keepick-primary font-bold tracking-wider text-white/60">
-                                타임라인 앨범을 불러오는 중...
+                                {currentAlbum.id === 'timeline' && '타임라인 앨범을 불러오는 중...'}
+                                {currentAlbum.id === 'tier' && '티어 앨범을 불러오는 중...'}
+                                {currentAlbum.id === 'highlight' && '하이라이트 앨범을 불러오는 중...'}
                               </h2>
                             </div>
                           </div>
@@ -312,8 +302,8 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                                 </p>
                               </div>
                               
-                              {/* 삭제 버튼 - 타임라인 앨범에만 표시 */}
-                              {currentAlbum.id === "timeline" && (
+                              {/* 삭제 버튼 - 타임라인 앨범과 티어 앨범에 표시 */}
+                              {(currentAlbum.id === "timeline" || currentAlbum.id === "tier") && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()

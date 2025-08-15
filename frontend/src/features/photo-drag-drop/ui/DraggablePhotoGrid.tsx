@@ -57,7 +57,7 @@ export function DraggablePhotoGrid({
           onDragStart={(e) => handleDragStart(e, photo)}
           onDragEnd={handleDragEnd}
           onClick={() => onPhotoClick?.(photo)}
-          className={`cursor-grab ${draggingPhotoId === photo.id ? "opacity-40" : ""}`}>
+          className={`cursor-grab transition-opacity duration-200 ${draggingPhotoId === photo.id ? "opacity-40" : "opacity-100"}`}>
           <Image
             src={photo.src || '/placeholder/photo-placeholder.svg'}
             alt={photo.name || `Photo ${photo.id}`}

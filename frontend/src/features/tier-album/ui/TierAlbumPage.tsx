@@ -6,6 +6,7 @@ import { motion } from "framer-motion"
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { useTierAlbum } from "../model/useTierAlbum"
+import { updateTierAlbum } from "../api/tierAlbumApi"
 import type { TierInfo, TierType } from "../types"
 import { Photo, DragPhotoData } from "@/entities/photo"
 import { TIER_COLORS } from "@/shared/config/tierColors"
@@ -13,7 +14,6 @@ import type { RootState } from "@/shared/config/store"
 import { clearSelectedPhotos, setIsFromGallery } from "@/features/photo-gallery/model/photoSelectionSlice"
 import {
   useAlbumState,
-  useAlbumStorage,
 } from "@/features/album-management"
 import {
   useTierGrid,
@@ -28,7 +28,7 @@ import { ScrollArea } from "@/shared/ui/shadcn/scroll-area"
 
 interface TierAlbumPageProps {
   groupId: string
-  albumId: string
+  tierAlbumId: string
 }
 
 // 티어 정보
@@ -131,13 +131,16 @@ const TiltShineCard: React.FC<TiltShineCardProps> = ({ children, tierColor, clas
   )
 }
 
-export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) {
+export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPageProps) {
   const dispatch = useDispatch()
   const { selectedPhotos, isFromGallery } = useSelector((state: RootState) => state.photoSelection)
   const [isEditMode, setIsEditMode] = useState(false)
   
   const {
     isLoading,
+    error,
+    photos: tierAlbumPhotos,
+    tierAlbumData,
     currentTier,
     currentPhotoIndex,
     currentTierPhotos,
@@ -147,10 +150,10 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
     goToPrevPhoto,
     goToNextPhoto,
     goToPhoto,
-  } = useTierAlbum(groupId, albumId)
+    refreshTierAlbumData,
+  } = useTierAlbum(groupId, tierAlbumId)
 
-  // TierAlbumWidget 로직 추가
-  const { saveAlbumData, loadAlbumData, getDefaultPhotos } = useAlbumStorage()
+  // 편집 모드에서 사용할 상태들
   const {
     availablePhotos,
     setAvailablePhotos,
@@ -202,63 +205,91 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
     }
   }, [isFromGallery, selectedPhotos])
 
-  // TierAlbumWidget 로직 - 앨범 데이터 로드
+  // 편집 모드 진입 시 데이터 설정
   useEffect(() => {
     if (isEditMode) {
-      const result = loadAlbumData(`tier_${albumId}`)
-      if (result.success && result.data && !isFromGallery) {
-        // 기존 저장된 데이터가 있고 갤러리에서 온 것이 아닌 경우
-        setTierPhotos(
-          result.data?.tierPhotos as TierData || {
-            S: [{ id: 500, src: "/dummy/jaewan1.jpg", name: "S급 사진1" }],
-            A: [],
-            B: [],
-            C: [],
-            D: [],
-          }
-        )
-        setAvailablePhotos(result.data.availablePhotos || getDefaultPhotos())
-      } else {
-        // 갤러리에서 선택된 사진들을 사용하거나 기본 데이터 설정
-        const photosToUse = isFromGallery && selectedPhotos.length > 0 
-          ? selectedPhotos.map(photo => ({
-              id: photo.id,
-              src: photo.src,
-              name: photo.title || `사진 #${photo.id}`
-            }))
-          : getDefaultPhotos()
-        
+      if (isFromGallery && selectedPhotos.length > 0) {
+        // 갤러리에서 선택된 사진들을 사용 가능한 사진으로 설정
+        const photosToUse = selectedPhotos.map(photo => ({
+          id: photo.id,
+          src: photo.src,
+          name: photo.title || `사진 #${photo.id}`
+        }))
         setAvailablePhotos(photosToUse)
-        // 기본 데이터 설정
+        
+        // 기본 빈 티어 설정
         setTierPhotos({
-          S: [{ id: 501, src: "/dummy/jaewan1.jpg", name: "S급 사진1" }],
+          S: [],
           A: [],
           B: [],
           C: [],
           D: [],
         })
-        setAvailablePhotos(getDefaultPhotos())
+      } else if (tierAlbumData?.photos) {
+        // 기존 앨범 데이터를 편집용 형식으로 변환
+        const convertedTierPhotos: TierData = {
+          S: tierAlbumData.photos.S?.map(photo => ({
+            id: photo.photoId,
+            src: photo.originalUrl,
+            name: `사진 #${photo.photoId}`
+          })) || [],
+          A: tierAlbumData.photos.A?.map(photo => ({
+            id: photo.photoId,
+            src: photo.originalUrl,
+            name: `사진 #${photo.photoId}`
+          })) || [],
+          B: tierAlbumData.photos.B?.map(photo => ({
+            id: photo.photoId,
+            src: photo.originalUrl,
+            name: `사진 #${photo.photoId}`
+          })) || [],
+          C: tierAlbumData.photos.C?.map(photo => ({
+            id: photo.photoId,
+            src: photo.originalUrl,
+            name: `사진 #${photo.photoId}`
+          })) || [],
+          D: tierAlbumData.photos.D?.map(photo => ({
+            id: photo.photoId,
+            src: photo.originalUrl,
+            name: `사진 #${photo.photoId}`
+          })) || [],
+        }
+        setTierPhotos(convertedTierPhotos)
+        setAvailablePhotos([]) // 기존 앨범은 사용 가능한 사진이 없음
       }
     }
-  }, [albumId, isEditMode])
+  }, [tierAlbumId, isEditMode, isFromGallery, selectedPhotos, tierAlbumData])
 
-  // 저장 핸들러
-  const handleSave = () => {
-    const success = saveAlbumData(
-      `tier_${albumId}`,
-      { tierPhotos, availablePhotos },
-      tierPhotos.S?.[0]
-    )
-
-    if (success) {
-      // 커버 이미지 저장
-      if (tierPhotos.S?.[0]) {
-        localStorage.setItem(`tierAlbumCover_${albumId}`, tierPhotos.S[0].src)
+  // 저장 핸들러 - 실제 API 명세에 맞게 수정
+  const handleSave = async () => {
+    try {
+      // TierData를 API 요청 형식으로 변환 (실제 API 명세 기반)
+      const photosToSave = {
+        S: tierPhotos.S?.map(photo => photo.id) || [],
+        A: tierPhotos.A?.map(photo => photo.id) || [],
+        B: tierPhotos.B?.map(photo => photo.id) || [],
+        C: tierPhotos.C?.map(photo => photo.id) || [],
+        D: tierPhotos.D?.map(photo => photo.id) || [],
       }
-      alert("✅ 티어 앨범이 성공적으로 저장되었습니다!")
+
+      // 썸네일 ID 설정 (S 티어의 첫 번째 사진을 썸네일로 사용)
+      const thumbnailId = tierPhotos.S?.[0]?.id || tierPhotos.A?.[0]?.id || tierPhotos.B?.[0]?.id || tierPhotos.C?.[0]?.id || tierPhotos.D?.[0]?.id || 0
+
+      await updateTierAlbum(parseInt(groupId), parseInt(tierAlbumId), {
+        name: tierAlbumData?.title || "티어 앨범",
+        description: tierAlbumData?.description || "",
+        thumbnailId: thumbnailId,
+        photos: photosToSave
+      })
+
+      // 저장 후 최신 데이터 새로고침
+      await refreshTierAlbumData()
+
+      alert("✅ 티어 앨범이 성공적으로 완성되었습니다!")
       setIsEditMode(false)
-    } else {
-      alert("❌ 저장 실패")
+    } catch (error) {
+      console.error("티어 앨범 저장 실패:", error)
+      alert("❌ 티어 앨범 저장에 실패했습니다. 다시 시도해주세요.")
     }
   }
 
@@ -276,17 +307,30 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
   }
 
   const handleDragEnd = () => {
+    // 즉시 상태 초기화
     setDraggingPhotoId(null)
     setDragOverPosition(null)
+    
+    // 추가 안전장치: 100ms 후 다시 한번 초기화
+    setTimeout(() => {
+      setDraggingPhotoId(null)
+      setDragOverPosition(null)
+    }, 100)
   }
 
-  // 사용가능한 사진용 드래그 핸들러 (useTierGrid의 setDraggingPhotoId 사용)
+  // 통합된 드래그 핸들러 (사용가능한 사진용)
   const handleAvailablePhotoDragStart = (_: React.DragEvent<HTMLDivElement>, photo: Photo) => {
     setDraggingPhotoId(photo.id)
   }
 
   const handleAvailablePhotoDragEnd = () => {
+    // 즉시 상태 초기화
     setDraggingPhotoId(null)
+    
+    // 추가 안전장치: 100ms 후 다시 한번 초기화
+    setTimeout(() => {
+      setDraggingPhotoId(null)
+    }, 100)
   }
 
   const handleDragOverTierArea = (e: React.DragEvent, tier: string) => {
@@ -320,7 +364,10 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
   ) => {
     e.preventDefault()
     e.stopPropagation()
+    
+    // 드롭 즉시 상태 초기화
     setDragOverPosition(null)
+    setDraggingPhotoId(null)
 
     const data = JSON.parse(e.dataTransfer.getData("text/plain"))
     const { photoId, source } = data
@@ -394,6 +441,21 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
     )
   }
 
+  // 에러 상태
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl font-keepick-primary mb-4 text-red-400">티어 앨범을 불러올 수 없습니다</div>
+          <div className="text-gray-400 mb-4">앨범이 존재하지 않거나 접근 권한이 없습니다.</div>
+          <Link href={`/group/${groupId}`} className="text-[#FE7A25] hover:text-orange-400 font-keepick-primary">
+            그룹으로 돌아가기
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden relative">
       <div className="absolute inset-0 opacity-5">
@@ -413,10 +475,12 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
             <span className="font-keepick-primary text-sm">돌아가기</span>
           </Link>
           <div className="text-center">
-            <h1 className="font-keepick-heavy text-xl tracking-wider">TIER ALBUM {albumId}</h1>
+            <h1 className="font-keepick-heavy text-xl tracking-wider">
+              {tierAlbumData?.title || `TIER ALBUM ${tierAlbumId}`}
+            </h1>
           </div>
           <button 
-            onClick={toggleEditMode}
+            onClick={isEditMode ? handleSave : toggleEditMode}
             className="px-6 py-2 border-2 border-orange-500 hover:border-orange-400 text-orange-500 hover:text-orange-400 bg-transparent font-keepick-primary text-sm rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-orange-500/25"
           >
             {isEditMode ? "티어 완성하기" : "티어 수정하기"}
@@ -431,7 +495,37 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
           <div className="flex gap-6 animate-fade-in pb-8 px-8 h-screen">
             {/* 좌측: 사용가능한 사진 사이드바 */}
             <div className="w-80 flex-shrink-0 space-y-4">
-              <div className="bg-gray-800/50 rounded-lg p-3">
+              <div 
+                className="bg-gray-800/50 rounded-lg p-3 transition-all duration-200"
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  // 드래그 오버 시 시각적 피드백 - 배경색 변경
+                  e.currentTarget.classList.add('bg-gray-700/70', 'border-2', 'border-orange-400')
+                }}
+                onDragLeave={(e) => {
+                  // 드래그 리브 시 원래 스타일로 복원
+                  e.currentTarget.classList.remove('bg-gray-700/70', 'border-2', 'border-orange-400')
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  // 드롭 후 스타일 복원
+                  e.currentTarget.classList.remove('bg-gray-700/70', 'border-2', 'border-orange-400')
+                  
+                  // 드롭 즉시 상태 초기화
+                  setDraggingPhotoId(null)
+                  setDragOverPosition(null)
+                  
+                  const data = JSON.parse(e.dataTransfer.getData("text/plain"))
+                  const { photoId, source } = data
+                  
+                  // 티어에서 사용가능한 사진으로 이동 (source가 available이 아닌 경우에만)
+                  if (source !== "available") {
+                    handleReturnToAvailable(photoId, source, (photo) =>
+                      setAvailablePhotos((prev) => [...prev, photo])
+                    )
+                  }
+                }}
+              >
                 <div className="flex items-center gap-2 mb-3">
                   <h3 className="text-sm font-medium text-gray-300">사용가능한 사진</h3>
                   <span className="text-xs text-gray-500">{availablePhotos.length}장</span>
@@ -452,10 +546,13 @@ export default function TierAlbumPage({ groupId, albumId }: TierAlbumPageProps) 
 
               {/* 사용방법 */}
               <div className="bg-gray-800/30 rounded-lg p-3">
+                <h4 className="text-xs font-medium text-gray-300 mb-2">사용방법</h4>
                 <div className="space-y-1 text-xs text-gray-400">
                   <div>• 사진을 드래그해서 티어로 이동</div>
+                  <div>• 티어에서 사진을 여기로 드래그하여 되돌리기</div>
                   <div>• 정밀 배틀 모드로 순위 결정</div>
                   <div>• 티어 내에서 순서 조정 가능</div>
+                  <div className="text-orange-400 font-medium">↔ 양방향 드래그&드롭 지원</div>
                 </div>
               </div>
             </div>

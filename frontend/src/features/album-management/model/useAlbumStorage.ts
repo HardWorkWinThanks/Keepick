@@ -58,28 +58,10 @@ export function useAlbumStorage() {
   };
 
   /**
-   * 개발 및 테스트용 기본 사진 데이터 목록을 반환합니다.
-   * @returns 기본 Photo 객체 배열
-   * const getDefaultPhotos = (): Photo[] => [ 로 나중에 바꾸기.
+   * 개발 및 테스트용 기본 사진 데이터 목록을 반환합니다. (더미 데이터 제거)
+   * @returns 빈 Photo 객체 배열 - 실제 데이터는 API에서 로드
    */
-  const getDefaultPhotos = (): Photo[] => [
-    { id: 12, src: "/dummy/main-dummy12.jpg", name: "사진12" },
-    { id: 13, src: "/dummy/main-dummy13.jpg", name: "사진13" },
-    { id: 14, src: "/dummy/main-dummy14.jpg", name: "사진14" },
-    { id: 15, src: "/dummy/main-dummy15.jpg", name: "사진15" },
-    { id: 16, src: "/dummy/main-dummy16.jpg", name: "사진16" },
-    { id: 17, src: "/dummy/jeju-dummy1.webp", name: "제주도1" },
-    { id: 18, src: "/dummy/jeju-dummy2.jpg", name: "제주도2" },
-    { id: 19, src: "/dummy/jeju-dummy3.jpg", name: "제주도3" },
-    { id: 20, src: "/dummy/ssafy-dummy1.jpg", name: "싸피1" },
-    { id: 21, src: "/dummy/ssafy-dummy2.jpg", name: "싸피2" },
-    { id: 22, src: "/dummy/ssafy-dummy3.jpg", name: "싸피3" },
-    { id: 23, src: "/dummy/food-dummy1.jpg", name: "음식1" },
-    { id: 24, src: "/dummy/sea-dummy1.jpg", name: "바다1" },
-    { id: 25, src: "/dummy/ugly_00217.jpg", name: "ugly1" },
-    { id: 26, src: "/dummy/ugly_074.jpg", name: "ugly2" },
-    { id: 27, src: "/dummy/ugly.jpg", name: "ugly3" },
-  ];
+  const getDefaultPhotos = (): Photo[] => [];
 
   // 훅이 제공하는 함수들을 객체 형태로 반환합니다.
   return {
