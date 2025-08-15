@@ -98,7 +98,7 @@ export function useGroupSpace(groupId?: number) {
 
   // API 데이터를 GroupPhoto 형식으로 변환
   const convertToGroupPhotos = (albums: TimelineAlbumListItem[]): GroupPhoto[] => {
-    console.log('🔄 convertToGroupPhotos - 원본 앨범 데이터:', albums)
+    // console.log('🔄 convertToGroupPhotos - 원본 앨범 데이터:', albums)
     
     const converted = albums.map(album => {
       const groupPhoto = {
@@ -116,7 +116,7 @@ export function useGroupSpace(groupId?: number) {
       return groupPhoto
     })
     
-    console.log('✅ convertToGroupPhotos - 최종 결과:', converted)
+    // console.log('✅ convertToGroupPhotos - 최종 결과:', converted)
     return converted
   }
 

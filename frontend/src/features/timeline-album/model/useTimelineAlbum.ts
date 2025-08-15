@@ -45,6 +45,7 @@ export function useTimelineAlbum(groupId: string, albumId: string) {
     loading,
     error,
     updateTimelineAlbum: updateMutation.mutate,
+    updateTimelineAlbumAsync: updateMutation.mutateAsync, // 비동기 완료를 기다리는 메서드 추가
     isUpdating: updateMutation.isPending,
     updateError: updateMutation.error,
     refetchTimeline: refetch,

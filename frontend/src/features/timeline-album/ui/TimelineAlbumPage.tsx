@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSelector, useDispatch } from "react-redux"
 import { motion } from "framer-motion"
 import { ArrowLeft, Edit, Plus, Trash2 } from "lucide-react"
@@ -8,7 +8,6 @@ import Link from "next/link"
 import Image from "next/image"
 import { useTimelineEditor, EditingSection } from "../model/useTimelineEditor"
 import { TimelineEditingSidebar } from "./TimelineEditingSidebar"
-import { AlbumInfoModal } from "./AlbumInfoModal"
 import { PhotoDropZone } from "@/features/photo-drag-drop"
 import type { RootState } from "@/shared/config/store"
 import type { DragPhotoData } from "@/entities/photo"
@@ -44,14 +43,11 @@ function TimelineSectionLayout({
 }) {
   // 섹션의 사진들 (최대 3개, 인덱스 보존)
   const photos = section.photos || []
-  console.log(`🖼️ 섹션 ${section.id} 사진들:`, photos)
   
   const imageSlots: (Photo | null)[] = [...photos]
   while (imageSlots.length < 3) {
     imageSlots.push(null)
   }
-  
-  console.log(`🖼️ 섹션 ${section.id} imageSlots:`, imageSlots)
 
   const layoutProps = {
     0: { // Section 1: 큰 이미지 왼쪽 상단, 작은 이미지들 오른쪽 하단 겹침
@@ -105,7 +101,6 @@ function TimelineSectionLayout({
       viewport: { once: true }
     }
 
-    console.log(`🖼️ 섹션 ${section.id} 이미지 ${imageIndex}:`, photo)
     
     const imageContent = (
       <>
@@ -146,7 +141,7 @@ function TimelineSectionLayout({
             if (photo) {
               const dragData: DragPhotoData = {
                 photoId: photo.id,
-                source: `section-${index}-${imageIndex}`, // sectionIndex 사용
+                source: `section-${index}-${imageIndex}`, // index는 렌더링 순서
                 src: photo.src,
                 thumbnailUrl: photo.thumbnailUrl,
                 originalUrl: photo.originalUrl,
@@ -154,7 +149,6 @@ function TimelineSectionLayout({
               }
               e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
               e.dataTransfer.effectAllowed = 'move'
-              console.log('섹션에서 드래그 시작:', dragData)
             }
           }}
         >
@@ -310,18 +304,22 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     updateAlbumInfo
   } = useTimelineEditor(groupId, albumId)
 
-  const [isAlbumInfoModalOpen, setIsAlbumInfoModalOpen] = useState(false)
-  const [isSelectingCoverImage, setIsSelectingCoverImage] = useState(false)
   const [dragOverImage, setDragOverImage] = useState<{ sectionIndex: number; imageIndex: number } | null>(null)
+  const [hasProcessedGalleryMode, setHasProcessedGalleryMode] = useState(false) // 갤러리 모드 처리 완룼 플래그
+  const titleInputRef = useRef<HTMLInputElement>(null) // 제목 입력 필드 참조
 
-  // 갤러리에서 선택된 사진들로 앨범을 생성한 경우 자동으로 편집 모드 진입 + 앨범 정보 모달 자동 오픈
+  // 갤러리에서 선택된 사진들로 앨범을 생성한 경우 자동으로 편집 모드 진입
   useEffect(() => {
-    if (isFromGallery && selectedPhotos.length > 0) {
+    if (isFromGallery && selectedPhotos.length > 0 && !hasProcessedGalleryMode) {
       startEditing()
-      setIsAlbumInfoModalOpen(true) // 앨범 정보 모달 자동 오픈
-      console.log('갤러리에서 선택된 사진들로 타임라인 앨범 편집 시작:', selectedPhotos)
+      setHasProcessedGalleryMode(true)
+      
+      // 제목 입력 필드에 포커스 (약간 지연 후)
+      setTimeout(() => {
+        titleInputRef.current?.focus()
+      }, 500)
     }
-  }, [isFromGallery, selectedPhotos, startEditing])
+  }, [isFromGallery, selectedPhotos, hasProcessedGalleryMode, startEditing])
 
   const handleEditModeToggle = () => {
     if (isEditMode) {
@@ -337,13 +335,36 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     try {
       await save()
       
-      // 편집 완료 시 갤러리 상태 정리
+      // 저장 완료 후 갤러리 상태 정리
       if (isFromGallery) {
         dispatch(clearSelectedPhotos())
         dispatch(setIsFromGallery(false))
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('앨범 저장 실패:', error)
+      
+      // 사용자에게 에러 메시지 표시
+      let errorMessage = '앨범 저장에 실패했습니다.'
+      if (error.message === '앨범 제목을 입력해주세요') {
+        errorMessage = error.message
+        // 제목 필드에 포커스
+        titleInputRef.current?.focus()
+      } else if (error.response?.status === 401) {
+        errorMessage = '로그인이 만료되었습니다. 다시 로그인해주세요.'
+      } else if (error.response?.status === 403) {
+        errorMessage = '앨범을 수정할 권한이 없습니다.'
+      } else if (error.response?.status === 404) {
+        if (error.response?.data?.message === '존재하지 않는 사진입니다.') {
+          errorMessage = '일부 사진이 서버에서 찾을 수 없습니다.\n\n해결 방법:\n1. 페이지를 새로고침해주세요\n2. 문제가 계속되면 섹션의 사진들을 다시 선택해주세요'
+        } else {
+          errorMessage = '앨범을 찾을 수 없습니다.'
+        }
+      } else if (error.response?.status >= 500) {
+        errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+      }
+      
+      // 간단한 에러 알림 (toast나 modal 대신 alert 사용)
+      alert(errorMessage)
     }
   }
 
@@ -360,8 +381,6 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
   }
 
   const handleImageDrop = (sectionIndex: number, imageIndex: number, dragData: DragPhotoData) => {
-    console.log('🎯 하이브리드: 사진 드롭:', { sectionIndex, imageIndex, dragData })
-    
     // 갤러리에서 섹션으로 이동
     if (dragData.source === 'gallery') {
       moveSidebarToSection(dragData.photoId, sectionIndex, imageIndex)
@@ -380,45 +399,38 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
 
   // 섹션에서 사진 제거 핸들러
   const handleSectionPhotoRemove = (dragData: DragPhotoData) => {
-    console.log('🗑️ 하이브리드: 섹션에서 사진 제거:', dragData)
-    
     // source에서 섹션 정보 파싱 (section-{sectionIndex}-{imageIndex})
-    const sourceMatch = dragData.source.match(/section-(\\d+)-(\\d+)/)
-    if (!sourceMatch) {
-      console.warn('❌ 잘못된 source 형식:', dragData.source)
-      return
-    }
+    const sourceMatch = dragData.source.match(/section-(\d+)-(\d+)/)
+    if (!sourceMatch) return
     
-    const sectionIndex = parseInt(sourceMatch[1])
+    const renderIndex = parseInt(sourceMatch[1])
     const imageIndex = parseInt(sourceMatch[2])
-    console.log('🗑️ 파싱된 정보:', { sectionIndex, imageIndex })
     
-    // 하이브리드 방식으로 섹션에서 갤러리로 이동
-    moveSectionToSidebar(sectionIndex, imageIndex)
+    if (renderIndex >= 0 && renderIndex < sections.length) {
+      moveSectionToSidebar(renderIndex, imageIndex)
+    }
   }
 
-  // 앨범 정보 모달 핸들러들
-  const handleAlbumInfoChange = (field: string, value: string | Photo | null) => {
-    if (field === 'coverImage') {
-      const photo = value as Photo | null
-      if (photo) {
-        setCoverImage(photo.id, photo)
-      }
-    } else if (field === 'title') {
-      // 모달에서는 'title'이지만 내부적으로는 'name' 필드 사용
-      updateAlbumInfo({ name: value as string })
-    } else {
-      updateAlbumInfo({ [field]: value })
+  // 대표이미지에서 사진 제거 핸들러
+  const handleCoverImageRemove = (dragData: DragPhotoData) => {
+    if (dragData.source === 'cover-image') {
+      updateAlbumInfo({ coverImage: null, thumbnailId: 0 })
     }
   }
 
   const handleCoverImageSelect = (photo: Photo) => {
     setCoverImage(photo.id, photo)
-    setIsSelectingCoverImage(false)
   }
 
-  const handleToggleCoverImageSelection = () => {
-    setIsSelectingCoverImage(!isSelectingCoverImage)
+  // 편집 취소 공통 함수
+  const handleCancelEditing = () => {
+    cancelEditing()
+    
+    // 편집 취소 시 갤러리 상태 정리
+    if (isFromGallery) {
+      dispatch(clearSelectedPhotos())
+      dispatch(setIsFromGallery(false))
+    }
   }
 
   if (loading) {
@@ -464,6 +476,21 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
             </h1>
           </div>
           <div className="flex gap-2">
+            {/* 취소 버튼 */}
+            {isEditMode && (
+              <button
+                onClick={handleCancelEditing}
+                className="group relative p-px rounded-xl overflow-hidden bg-gray-600 transition-all duration-300 transform hover:scale-105 hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600"
+                title="편집 취소"
+              >
+                <div className="bg-[#111111] rounded-[11px] px-4 py-2">
+                  <div className="flex items-center gap-2 text-white">
+                    <span className="font-keepick-primary text-sm">취소</span>
+                  </div>
+                </div>
+              </button>
+            )}
+            
             {/* 섹션 추가 버튼 */}
             {isEditMode && (
               <button
@@ -553,20 +580,8 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       {/* Timeline Editing Sidebar */}
       <TimelineEditingSidebar 
         isOpen={isEditMode} 
-        onClose={() => {
-          cancelEditing()
-          // 편집 취소 시에도 갤러리 상태 정리
-          if (isFromGallery) {
-            dispatch(clearSelectedPhotos())
-            dispatch(setIsFromGallery(false))
-          }
-        }}
-        onShowAlbumInfoModal={() => {
-          setIsAlbumInfoModalOpen(true)
-        }}
+        onClose={handleCancelEditing}
         onCoverImageDrop={(dragData) => {
-          console.log('🖼️ 하이브리드: 대표이미지 드롭:', dragData)
-          
           // DragPhotoData를 Photo로 변환
           const photo: Photo = {
             id: dragData.photoId,
@@ -585,27 +600,16 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
           }
         }}
         onSectionPhotoRemove={handleSectionPhotoRemove}
+        onCoverImageRemove={handleCoverImageRemove}
         // 하이브리드 방식으로 데이터 전달
         availablePhotos={availablePhotos}
         coverImage={albumInfo.coverImage}
+        // 앨범 정보 인라인 편집
+        albumInfo={albumInfo}
+        onAlbumInfoUpdate={updateAlbumInfo}
+        titleInputRef={titleInputRef}
       />
 
-      {/* Album Info Modal */}
-      <AlbumInfoModal
-        isOpen={isAlbumInfoModalOpen}
-        onClose={() => setIsAlbumInfoModalOpen(false)}
-        albumInfo={{
-          title: albumInfo.name,
-          startDate: albumInfo.startDate,
-          endDate: albumInfo.endDate,
-          description: albumInfo.description,
-          coverImage: albumInfo.coverImage
-        }}
-        onAlbumInfoChange={handleAlbumInfoChange}
-        onCoverImageSelect={handleCoverImageSelect}
-        isSelectingCoverImage={isSelectingCoverImage}
-        onToggleCoverImageSelection={handleToggleCoverImageSelection}
-      />
     </div>
   )
 }

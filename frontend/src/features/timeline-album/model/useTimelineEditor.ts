@@ -36,6 +36,7 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     timelineAlbum, 
     loading, 
     updateTimelineAlbum, 
+    updateTimelineAlbumAsync,
     isUpdating,
     refetchTimeline 
   } = useTimelineAlbum(groupId, albumId)
@@ -46,18 +47,21 @@ export function useTimelineEditor(groupId: string, albumId: string) {
 
   // 서버 데이터를 편집 상태로 변환하는 함수
   const convertToEditingState = useCallback((album: TimelineAlbum): TimelineEditingState => {
-    // 사진 데이터 정규화
+    // 사진 데이터 정규화 (서버 스키마에 맞게 수정)
     const normalizePhotos = (photos: any[]): Photo[] => {
-      return photos.map((photo: any) => ({
-        id: photo.id || photo.photoId,
-        src: photo.src || photo.thumbnailUrl || photo.originalUrl || '/placeholder/photo-placeholder.svg',
-        thumbnailUrl: photo.thumbnailUrl,
-        originalUrl: photo.originalUrl,
-        name: photo.name || photo.title || `사진 #${photo.id || photo.photoId}`
-      })).filter(photo => photo.id)
+      return photos.map((photo: any) => {
+        const photoId = photo.photoId || photo.id // 서버는 photoId 사용
+        return {
+          id: photoId,
+          src: photo.thumbnailUrl || photo.originalUrl || '/placeholder/photo-placeholder.svg',
+          thumbnailUrl: photo.thumbnailUrl,
+          originalUrl: photo.originalUrl,
+          name: photo.name || photo.title || `사진 #${photoId}`
+        }
+      }).filter(photo => photo.id && photo.id !== 0)
     }
 
-    // 섹션 변환 (최대 3개 사진, 인덱스 보존)
+    // 섹션 변환 (서버 스키마에 맞게 수정)
     const editingSections: EditingSection[] = album.sections.length > 0 
       ? album.sections.map(section => {
           const normalizedPhotos: (Photo | null)[] = Array(3).fill(null)
@@ -65,19 +69,30 @@ export function useTimelineEditor(groupId: string, albumId: string) {
           if (section.photos && Array.isArray(section.photos)) {
             section.photos.forEach((photo: any, idx: number) => {
               if (photo && idx < 3) {
+                const photoId = photo.photoId || photo.id // 서버는 photoId 사용
                 normalizedPhotos[idx] = {
-                  id: photo.id || photo.photoId,
-                  src: photo.src || photo.thumbnailUrl || photo.originalUrl || '/placeholder/photo-placeholder.svg',
+                  id: photoId,
+                  src: photo.thumbnailUrl || photo.originalUrl || '/placeholder/photo-placeholder.svg',
                   thumbnailUrl: photo.thumbnailUrl,
                   originalUrl: photo.originalUrl,
-                  name: photo.name || photo.title || `사진 #${photo.id || photo.photoId}`
+                  name: photo.name || photo.title || `사진 #${photoId}`
                 }
               }
             })
           }
           
+          // photoIds 배열 생성 (서버 응답에 없으므로 photos에서 추출)
+          const photoIds = normalizedPhotos
+            .filter((photo): photo is Photo => photo !== null)
+            .map(photo => photo.id)
+          
           return {
-            ...section,
+            id: section.sectionId || section.id, // 서버는 sectionId 사용
+            name: section.name,
+            description: section.description,
+            startDate: section.startDate,
+            endDate: section.endDate,
+            photoIds: photoIds, // 계산된 photoIds
             photos: normalizedPhotos
           }
         })
@@ -91,14 +106,27 @@ export function useTimelineEditor(groupId: string, albumId: string) {
           photos: Array(3).fill(null)
         }]
 
+    // 대표이미지 정보 추출 (서버에서 설정된 대표이미지가 있으면 복원)
+    const hasCoverImage = album.thumbnailUrl && 
+      album.thumbnailUrl !== "/placeholder.svg" && 
+      album.thumbnailUrl !== "/placeholder/photo-placeholder.svg"
+    
+    const coverImage: Photo | null = hasCoverImage ? {
+      id: album.thumbnailId || 0, // 실제 thumbnailId 사용
+      src: album.thumbnailUrl,
+      thumbnailUrl: album.thumbnailUrl,
+      originalUrl: album.originalUrl || album.thumbnailUrl,
+      name: `${album.name} 대표이미지`
+    } : null
+
     return {
       albumInfo: {
         name: album.name,
         description: album.description,
         startDate: album.startDate,
         endDate: album.endDate,
-        thumbnailId: 0,
-        coverImage: null
+        thumbnailId: hasCoverImage ? (album.thumbnailId || 0) : 0, // 서버에 설정된 thumbnailId 복원
+        coverImage: coverImage
       },
       sections: editingSections,
       unusedPhotos: normalizePhotos(album.unusedPhotos || [])
@@ -113,10 +141,11 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     }
   }, [timelineAlbum, convertToEditingState])
 
-  // 편집 모드 종료
+  // 편집 모드 종료 (모든 변경사항 취소하고 원래 상태로 복원)
   const cancelEditing = useCallback(() => {
     setIsEditMode(false)
     setEditingState(null)
+    // 원본 데이터로 복원하려면 캐시를 다시 불러오거나 자동으로 displayData가 원본으로 돌아감
   }, [])
 
   // 사용 가능한 사진들 계산 (실시간)
@@ -131,8 +160,8 @@ export function useTimelineEditor(groupId: string, albumId: string) {
       })
     })
     
-    // 대표이미지로 사용 중인 사진도 제외
-    if (editingState.albumInfo.coverImage) {
+    // 대표이미지로 사용 중인 사진도 제외 (ID가 0이 아닌 경우만)
+    if (editingState.albumInfo.coverImage && editingState.albumInfo.coverImage.id !== 0) {
       usedPhotoIds.add(editingState.albumInfo.coverImage.id)
     }
     
@@ -140,10 +169,20 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     return editingState.unusedPhotos.filter(photo => !usedPhotoIds.has(photo.id))
   }, [editingState])
 
+  // photoIds를 photos 배열에서 실시간 계산하는 헬퍼 함수
+  const syncPhotoIds = useCallback((photos: (Photo | null)[]): number[] => {
+    return photos
+      .filter((photo): photo is Photo => {
+        if (photo === null) return false
+        if (typeof photo.id !== 'number' || photo.id <= 0) return false
+        if (!photo.src && !photo.thumbnailUrl && !photo.originalUrl) return false
+        return true
+      })
+      .map(photo => photo.id)
+  }, [])
+
   // 갤러리에서 섹션으로 사진 이동
   const moveSidebarToSection = useCallback((photoId: number, sectionIndex: number, imageIndex: number) => {
-    if (!editingState) return
-
     setEditingState(prev => {
       if (!prev) return prev
 
@@ -157,10 +196,8 @@ export function useTimelineEditor(groupId: string, albumId: string) {
       // 해당 위치에 사진 배치
       newSection.photos[imageIndex] = photo
       
-      // photoIds 배열 업데이트 (null이 아닌 사진들의 ID만)
-      newSection.photoIds = newSection.photos
-        .filter((p): p is Photo => p !== null)
-        .map(p => p.id)
+      // photoIds 배열 실시간 동기화
+      newSection.photoIds = syncPhotoIds(newSection.photos)
       
       newSections[sectionIndex] = newSection
 
@@ -169,18 +206,17 @@ export function useTimelineEditor(groupId: string, albumId: string) {
         sections: newSections
       }
     })
-  }, [editingState])
+  }, [syncPhotoIds])
 
   // 섹션에서 갤러리로 사진 이동
   const moveSectionToSidebar = useCallback((sectionIndex: number, imageIndex: number) => {
-    if (!editingState) return
-
     setEditingState(prev => {
       if (!prev) return prev
 
       const section = prev.sections[sectionIndex]
       if (!section || !section.photos[imageIndex]) return prev
 
+      const photoToRemove = section.photos[imageIndex]
       const newSections = [...prev.sections]
       const newSection = { ...newSections[sectionIndex] }
       newSection.photos = [...newSection.photos]
@@ -188,24 +224,27 @@ export function useTimelineEditor(groupId: string, albumId: string) {
       // 해당 위치의 사진 제거 (null로 설정)
       newSection.photos[imageIndex] = null
       
-      // photoIds 배열 업데이트
-      newSection.photoIds = newSection.photos
-        .filter((p): p is Photo => p !== null)
-        .map(p => p.id)
+      // photoIds 배열 실시간 동기화
+      newSection.photoIds = syncPhotoIds(newSection.photos)
       
       newSections[sectionIndex] = newSection
 
+      // 제거된 사진을 unusedPhotos에 다시 추가
+      const newUnusedPhotos = [...prev.unusedPhotos]
+      if (photoToRemove && !newUnusedPhotos.some(p => p.id === photoToRemove.id)) {
+        newUnusedPhotos.push(photoToRemove)
+      }
+
       return {
         ...prev,
-        sections: newSections
+        sections: newSections,
+        unusedPhotos: newUnusedPhotos
       }
     })
-  }, [editingState])
+  }, [syncPhotoIds])
 
   // 대표이미지 설정
   const setCoverImage = useCallback((photoId: number, photo: Photo) => {
-    if (!editingState) return
-
     setEditingState(prev => {
       if (!prev) return prev
 
@@ -218,12 +257,10 @@ export function useTimelineEditor(groupId: string, albumId: string) {
         }
       }
     })
-  }, [editingState])
+  }, [])
 
   // 섹션 업데이트
   const updateSection = useCallback((sectionIndex: number, field: string, value: string) => {
-    if (!editingState) return
-
     setEditingState(prev => {
       if (!prev) return prev
 
@@ -238,12 +275,10 @@ export function useTimelineEditor(groupId: string, albumId: string) {
         sections: newSections
       }
     })
-  }, [editingState])
+  }, [])
 
   // 섹션 추가
   const addSection = useCallback(() => {
-    if (!editingState) return
-
     setEditingState(prev => {
       if (!prev) return prev
 
@@ -262,14 +297,12 @@ export function useTimelineEditor(groupId: string, albumId: string) {
         sections: [...prev.sections, newSection]
       }
     })
-  }, [editingState])
+  }, [])
 
   // 섹션 삭제
   const deleteSection = useCallback((sectionIndex: number) => {
-    if (!editingState || editingState.sections.length <= 1) return
-
     setEditingState(prev => {
-      if (!prev) return prev
+      if (!prev || prev.sections.length <= 1) return prev
 
       const newSections = prev.sections.filter((_, index) => index !== sectionIndex)
 
@@ -278,12 +311,10 @@ export function useTimelineEditor(groupId: string, albumId: string) {
         sections: newSections
       }
     })
-  }, [editingState])
+  }, [])
 
   // 앨범 정보 업데이트
   const updateAlbumInfo = useCallback((updates: Partial<EditingAlbumInfo>) => {
-    if (!editingState) return
-
     setEditingState(prev => {
       if (!prev) return prev
 
@@ -295,83 +326,58 @@ export function useTimelineEditor(groupId: string, albumId: string) {
         }
       }
     })
-  }, [editingState])
+  }, [])
 
   // 저장
   const save = useCallback(async () => {
-    if (!editingState || !timelineAlbum) return
+    if (!editingState || !timelineAlbum) {
+      console.warn('❌ 저장 실패: 편집 상태 또는 앨범 데이터가 없습니다.')
+      return
+    }
 
     try {
+      // 대표이미지 ID 처리
+      let thumbnailId = 0
+      if (editingState.albumInfo.coverImage) {
+        if (editingState.albumInfo.coverImage.id !== 0) {
+          thumbnailId = editingState.albumInfo.coverImage.id
+        } else if (editingState.albumInfo.thumbnailId > 0) {
+          thumbnailId = editingState.albumInfo.thumbnailId
+        }
+      }
+      
+      // 섹션 데이터 준비
+      const validSections = editingState.sections.map((section) => {
+        const isExistingSection = timelineAlbum?.sections.some(originalSection => originalSection.id === section.id)
+        const photoIds = syncPhotoIds(section.photos)
+        
+        return {
+          ...(isExistingSection && { id: section.id }),
+          name: section.name || '',
+          description: section.description || '',
+          startDate: section.startDate || '',
+          endDate: section.endDate || '',
+          photoIds
+        }
+      })
+
       // 업데이트할 데이터
       const updateData = {
-        name: editingState.albumInfo.name,
-        description: editingState.albumInfo.description,
-        thumbnailId: editingState.albumInfo.thumbnailId || editingState.albumInfo.coverImage?.id || 0,
-        startDate: editingState.albumInfo.startDate,
-        endDate: editingState.albumInfo.endDate,
-        sections: editingState.sections.map(section => {
-          const isExistingSection = timelineAlbum?.sections.some(originalSection => originalSection.id === section.id)
-          
-          return {
-            ...(isExistingSection && { id: section.id }),
-            name: section.name,
-            description: section.description,
-            startDate: section.startDate,
-            endDate: section.endDate,
-            photoIds: section.photoIds
-          }
-        })
+        name: editingState.albumInfo.name || '',
+        description: editingState.albumInfo.description || '',
+        thumbnailId,
+        startDate: editingState.albumInfo.startDate || '',
+        endDate: editingState.albumInfo.endDate || '',
+        sections: validSections
+      }
+      
+      // 필수 필드 검증
+      if (!updateData.name.trim()) {
+        throw new Error('앨범 제목을 입력해주세요')
       }
 
-      // Optimistic update: 먼저 캐시를 업데이트하여 즉시 UI 반영
-      queryClient.setQueriesData(
-        {
-          predicate: (query) => {
-            const queryKey = query.queryKey as string[]
-            return queryKey[0] === 'timelineAlbums' && queryKey[1] === groupId
-          }
-        },
-        (oldData: any) => {
-          if (!oldData?.list) return oldData
-          
-          // 해당 앨범의 정보를 업데이트
-          const updatedList = oldData.list.map((album: any) => {
-            if (album.albumId === parseInt(albumId)) {
-              return {
-                ...album,
-                name: updateData.name,
-                description: updateData.description,
-                startDate: updateData.startDate,
-                endDate: updateData.endDate,
-                updatedAt: new Date().toISOString()
-              }
-            }
-            return album
-          })
-          
-          return {
-            ...oldData,
-            list: updatedList
-          }
-        }
-      )
-
       // 서버 업데이트 실행
-      await new Promise((resolve, reject) => {
-        updateTimelineAlbum(updateData)
-        setTimeout(resolve, 100)
-      })
-
-      // 최신 데이터 리페치 (서버와 동기화)
-      await refetchTimeline()
-      
-      // 백그라운드에서 그룹스페이스 데이터도 다시 가져오기
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey as string[]
-          return queryKey[0] === 'timelineAlbums' && queryKey[1] === groupId
-        }
-      })
+      await updateTimelineAlbumAsync(updateData)
       
       // 편집 모드 종료
       setIsEditMode(false)
@@ -379,18 +385,9 @@ export function useTimelineEditor(groupId: string, albumId: string) {
       
     } catch (error) {
       console.error('앨범 저장 실패:', error)
-      
-      // 에러 발생시 캐시 원상복구
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey as string[]
-          return queryKey[0] === 'timelineAlbums' && queryKey[1] === groupId
-        }
-      })
-      
       throw error
     }
-  }, [editingState, timelineAlbum, updateTimelineAlbum, refetchTimeline, queryClient, groupId, albumId])
+  }, [editingState, timelineAlbum, updateTimelineAlbumAsync, groupId, albumId])
 
   // 표시용 데이터 (편집 중이면 편집 상태, 아니면 서버 데이터)
   const displayData = isEditMode && editingState ? editingState : 

@@ -1,14 +1,15 @@
 import { Photo } from "@/entities/photo";
 
-// 타임라인 섹션 (기존 TimelineEvent 대체)
+// 타임라인 섹션 (서버 스키마에 맞게 수정)
 export interface TimelineSection {
-  id: number; // 섹션 고유 ID
+  id?: number; // 클라이언트용 섹션 ID  
+  sectionId?: number; // 서버용 섹션 ID
   name: string; // 섹션 제목 (예: "해변에서의 시간")
   description: string; // 섹션 설명
   startDate: string; // 시작 날짜 (YYYY-MM-DD)
   endDate: string; // 종료 날짜 (YYYY-MM-DD)
-  photoIds: number[]; // 해당 섹션에 속한 사진 ID 목록
-  photos?: (Photo | null)[]; // 실제 사진 데이터 (UI에서 사용, 인덱스 보존을 위해 null 허용)
+  photoIds?: number[]; // 해당 섹션에 속한 사진 ID 목록 (클라이언트 계산)
+  photos?: any[]; // 서버에서 받은 사진 데이터 (photoId 사용)
 }
 
 // 타임라인 앨범
@@ -17,6 +18,7 @@ export interface TimelineAlbum {
   name: string;
   description: string;
   thumbnailUrl: string;
+  thumbnailId?: number; // 대표이미지 사진 ID (optional)
   originalUrl: string;
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
