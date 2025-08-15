@@ -6,6 +6,10 @@ import {
   Consumer,
 } from "mediasoup/node/lib/types";
 import * as mediasoup from "mediasoup";
+import {
+  ProducerAppData,
+  ConsumerAppData,
+} from "../../../shared/types/media.type";
 
 export interface RoomState {
   id: string;
@@ -47,6 +51,7 @@ export interface ProduceData {
   kind: mediasoup.types.MediaKind;
   rtpParameters: mediasoup.types.RtpParameters;
   roomId: string;
+  appData?: ProducerAppData;
 }
 
 export interface ConsumeData {
@@ -54,6 +59,7 @@ export interface ConsumeData {
   producerId: string;
   rtpCapabilities: mediasoup.types.RtpCapabilities;
   roomId: string;
+  appData?: ProducerAppData;
 }
 
 export interface ProducerInfo {
@@ -80,4 +86,32 @@ export interface PeerJoinedEvent {
 
 export interface PeerLeftEvent {
   peerId: string;
+}
+
+// Producer 정보 타입 (내부 관리용)
+export interface PeerProducerInfo {
+  id: string;
+  kind: "audio" | "video";
+  rtpParameters: any;
+  appData: ProducerAppData;
+  paused: boolean;
+  createdAt: Date;
+}
+
+// Consumer 정보 타입 (내부 관리용)
+export interface PeerConsumerInfo {
+  id: string;
+  producerId: string;
+  kind: "audio" | "video";
+  rtpParameters: any;
+  appData: ConsumerAppData;
+  paused: boolean;
+  createdAt: Date;
+}
+
+// 방에 참가한 피어와 Producer 정보
+export interface PeerWithProducers {
+  id: string;
+  name: string;
+  producers: PeerProducerInfo[]; // 🆕 appData 포함된 Producer 정보
 }
