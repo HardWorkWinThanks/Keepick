@@ -48,7 +48,7 @@ export function PhotoModal({ photo, isOpen, onClose }: PhotoModalProps) {
   return (
     // 모달 배경 (클릭 시 닫힘)
     <div
-      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4"
       onClick={onClose}
       style={{
         animation: "fadeIn 0.15s ease-out",

@@ -5,6 +5,7 @@ import { useSelector, useDispatch } from "react-redux"
 import { motion } from "framer-motion"
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { useTierAlbum } from "../model/useTierAlbum"
 import { updateTierAlbum } from "../api/tierAlbumApi"
 import { addPhotosToTierAlbum, removePhotosFromTierAlbum } from "../api/tierAlbumPhotos"
@@ -927,7 +928,14 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
                   "--tw-ring-color": index === currentPhotoIndex ? currentTierInfo.color : "transparent",
                 } as React.CSSProperties}
               >
-                <img src={photo.src || "/placeholder.svg"} alt={photo.title} className="w-full h-full object-cover" />
+                <Image 
+                  src={photo.src || "/placeholder.svg"} 
+                  alt={photo.title} 
+                  width={48}
+                  height={48}
+                  sizes="48px"
+                  className="w-full h-full object-cover" 
+                />
                 <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
                   <span className="font-keepick-primary text-xs text-white">{index + 1}</span>
                 </div>

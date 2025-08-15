@@ -91,8 +91,9 @@ export default function TierBattleModal({
                 <Image
                   src={currentOpponent.src}
                   alt="기존 사진"
-                  layout="fill"
-                  objectFit="cover"
+                  fill
+                  sizes="(max-width: 768px) 50vw, 400px"
+                  className="object-cover"
                 />
                 <div
                   className={`absolute inset-0 border-4 rounded-lg transition-all duration-300 ${
@@ -140,8 +141,9 @@ export default function TierBattleModal({
                 <Image
                   src={newPhoto.src}
                   alt="새로운 사진"
-                  layout="fill"
-                  objectFit="cover"
+                  fill
+                  sizes="(max-width: 768px) 50vw, 400px"
+                  className="object-cover"
                 />
                 <div
                   className={`absolute inset-0 border-4 rounded-lg transition-all duration-300 ${
