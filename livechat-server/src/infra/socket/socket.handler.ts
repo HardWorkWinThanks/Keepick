@@ -6,7 +6,6 @@ import { RoomEventsHandler } from "../../domain/room/service/room-events.handler
 import { TransportEventsHandler } from "../../domain/transport/service/transport-events.handler";
 import { MediaEventsHandler } from "../../domain/media/media-events.handler";
 import { ChatEventsHandler } from "../../domain/chat/service/chat-events.handler";
-import { ScreenShareEventsHandler } from '../../domain/screenshare/services/screen-share-events.handler';
 
 import {
   CreateTransportData,
@@ -22,24 +21,28 @@ import {
   TypingData,
   GetMessagesData,
 } from "../../domain/chat/types/chat.types";
-import {
-  StartScreenShareData,
-  StopScreenShareData,
-  ConsumeScreenShareData,
-} from '../../domain/screenshare/types/screen-share.types';
+// import {
+//   StartScreenShareData,
+//   StopScreenShareData,
+//   ConsumeScreenShareData,
+// } from "../../domain/screenshare/types/screen-share.types";
 
 export function setupSocketHandlers(io: Server): void {
   io.on("connection", (socket: Socket) => {
     // 핸들러들 인스턴스 생성
     const roomEventsHandler = new RoomEventsHandler(roomService);
     const transportEventsHandler = new TransportEventsHandler(roomService);
-    const mediaEventsHandler = new MediaEventsHandler(roomService, roomEventsHandler);
-    const chatEventsHandler = new ChatEventsHandler(chatService);
-    const screenShareEventsHandler = new ScreenShareEventsHandler(
-      screenShareService,
+    const mediaEventsHandler = new MediaEventsHandler(
       roomService,
-      mediaEventsHandler
+      roomEventsHandler,
+      screenShareService
     );
+    const chatEventsHandler = new ChatEventsHandler(chatService);
+    // const screenShareEventsHandler = new ScreenShareEventsHandler(
+    //   screenShareService,
+    //   roomService,
+    //   mediaEventsHandler
+    // );
     // =========================
     // Room 관련 이벤트
     socket.on("join_room", async (data: JoinRoomData) => {
@@ -84,47 +87,52 @@ export function setupSocketHandlers(io: Server): void {
     socket.on("consume", async (data: ConsumeData) => {
       await mediaEventsHandler.handleConsume(socket, data);
     });
-    
+
     socket.on("resume_consumer", async (data: { consumerId: string }) => {
       await mediaEventsHandler.handleResumeConsumer(socket, data);
     });
 
+    // Media 관련 이벤트 섹션에 추가
+    socket.on("close_producer", async (data: { producerId: string }) => {
+      await mediaEventsHandler.handleCloseProducer(socket, data);
+    });
+
     // =========================
     // Gesture 관련 이벤트
-    socket.on('gesture_detect', (data) => {
-      console.log('Gesture detected:', data);
+    socket.on("gesture_detect", (data) => {
+      console.log("Gesture detected:", data);
       // 같은 방의 다른 클라이언트들에게만 브로드캐스트 (자신 제외)
-      socket.to(data.roomId).emit('gesture_detected', data);
-    });
-    
-    // =========================
-    // 화면 공유 관련 이벤트
-    socket.on("start_screen_share", async (data: StartScreenShareData) => {
-      await screenShareEventsHandler.handleStartScreenShare(socket, data);
+      socket.to(data.roomId).emit("gesture_detected", data);
     });
 
-    socket.on("stop_screen_share", async (data: StopScreenShareData) => {
-      await screenShareEventsHandler.handleStopScreenShare(socket, data);
-    });
+    // // =========================
+    // // 화면 공유 관련 이벤트
+    // socket.on("start_screen_share", async (data: StartScreenShareData) => {
+    //   await screenShareEventsHandler.handleStartScreenShare(socket, data);
+    // });
 
-    socket.on("consume_screen_share", async (data: ConsumeScreenShareData) => {
-      await screenShareEventsHandler.handleConsumeScreenShare(socket, data);
-    });
+    // socket.on("stop_screen_share", async (data: StopScreenShareData) => {
+    //   await screenShareEventsHandler.handleStopScreenShare(socket, data);
+    // });
 
-    socket.on("get_active_screen_shares", (data: { roomId: string }) => {
-      screenShareEventsHandler.handleGetActiveScreenShares(socket, data);
-    });
+    // socket.on("consume_screen_share", async (data: ConsumeScreenShareData) => {
+    //   await screenShareEventsHandler.handleConsumeScreenShare(socket, data);
+    // });
 
-    socket.on("debug_screen_share", (data: { roomId: string }) => {
-      screenShareService.debugRoom(data.roomId);
-    });
-    
+    // socket.on("get_active_screen_shares", (data: { roomId: string }) => {
+    //   screenShareEventsHandler.handleGetActiveScreenShares(socket, data);
+    // });
+
+    // socket.on("debug_screen_share", (data: { roomId: string }) => {
+    //   screenShareService.debugRoom(data.roomId);
+    // });
+
     // =========================
     // Chat 관련 이벤트
     socket.on("chat_join", async (data: { roomId: string; userName: string }) => {
       await chatEventsHandler.handleJoinChat(socket, data);
     });
-    
+
     socket.on("chat_leave", (data?: { roomId: string }) => {
       chatEventsHandler.handleLeaveChat(socket, data);
     });

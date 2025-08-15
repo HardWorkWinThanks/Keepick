@@ -7,7 +7,7 @@ export const mediasoupConfig = {
     rtcMaxPort: 10100,
   },
   webRtcTransport: {
-    listenIps: [{ ip: "0.0.0.0", announcedIp: "192.168.0.22" }],
+    listenIps: [{ ip: "0.0.0.0", announcedIp: "192.168.0.7" }],
     enableUdp: true,
     enableTcp: true,
     preferUdp: true,
