@@ -312,10 +312,10 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
 
                             <div className="mt-6 space-y-2">
                               <h3 className="text-lg font-medium text-white/90 group-hover:text-[#FE7A25] transition-colors">
-                                {photo.title || '앨범 제목을 작성해주세요'}
+                                {photo.title && photo.title.trim() ? photo.title : '앨범 제목을 작성해주세요'}
                               </h3>
                               <p className="text-base text-white/60 uppercase tracking-wider">
-                                {photo.subtitle || '앨범 설명을 작성해주세요'}
+                                {photo.subtitle && photo.subtitle.trim() ? photo.subtitle : '앨범 설명을 작성해주세요'}
                               </p>
                             </div>
                           </motion.div>

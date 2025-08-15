@@ -68,7 +68,8 @@ export function useGroupSpace(groupId?: number) {
     queryKey: ['timelineAlbums', groupId, currentPage],
     queryFn: () => getTimelineAlbumList(groupId!, currentPage, 12),
     enabled: !!groupId && currentAlbum.id === 'timeline',
-    staleTime: 5 * 60 * 1000, // 5분간 캐시 유지
+    staleTime: 0, // 캐시를 즉시 stale로 만들어 항상 최신 데이터 확인
+    refetchOnWindowFocus: false, // 불필요한 재요청 방지
   })
 
   // 타임라인 앨범 삭제 mutation
@@ -97,12 +98,26 @@ export function useGroupSpace(groupId?: number) {
 
   // API 데이터를 GroupPhoto 형식으로 변환
   const convertToGroupPhotos = (albums: TimelineAlbumListItem[]): GroupPhoto[] => {
-    return albums.map(album => ({
-      id: album.albumId,
-      title: album.name,
-      subtitle: album.description || `${album.photoCount}장의 사진`,
-      image: album.thumbnailUrl || "/placeholder.svg"
-    }))
+    console.log('🔄 convertToGroupPhotos - 원본 앨범 데이터:', albums)
+    
+    const converted = albums.map(album => {
+      const groupPhoto = {
+        id: album.albumId,
+        title: album.name,
+        subtitle: album.description || `${album.photoCount}장의 사진`,
+        image: album.thumbnailUrl || "/placeholder.svg"
+      }
+      
+      console.log(`📝 앨범 ${album.albumId} 변환:`, {
+        원본: { name: album.name, description: album.description },
+        변환결과: { title: groupPhoto.title, subtitle: groupPhoto.subtitle }
+      })
+      
+      return groupPhoto
+    })
+    
+    console.log('✅ convertToGroupPhotos - 최종 결과:', converted)
+    return converted
   }
 
   // 현재 앨범에 따라 데이터 결정

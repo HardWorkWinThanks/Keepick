@@ -302,32 +302,76 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     if (!editingState || !timelineAlbum) return
 
     try {
-      await new Promise((resolve, reject) => {
-        updateTimelineAlbum({
-          name: editingState.albumInfo.name,
-          description: editingState.albumInfo.description,
-          thumbnailId: editingState.albumInfo.thumbnailId || editingState.albumInfo.coverImage?.id || 0,
-          startDate: editingState.albumInfo.startDate,
-          endDate: editingState.albumInfo.endDate,
-          sections: editingState.sections.map(section => {
-            const isExistingSection = timelineAlbum?.sections.some(originalSection => originalSection.id === section.id)
-            
-            return {
-              ...(isExistingSection && { id: section.id }),
-              name: section.name,
-              description: section.description,
-              startDate: section.startDate,
-              endDate: section.endDate,
-              photoIds: section.photoIds
-            }
-          })
+      // 업데이트할 데이터
+      const updateData = {
+        name: editingState.albumInfo.name,
+        description: editingState.albumInfo.description,
+        thumbnailId: editingState.albumInfo.thumbnailId || editingState.albumInfo.coverImage?.id || 0,
+        startDate: editingState.albumInfo.startDate,
+        endDate: editingState.albumInfo.endDate,
+        sections: editingState.sections.map(section => {
+          const isExistingSection = timelineAlbum?.sections.some(originalSection => originalSection.id === section.id)
+          
+          return {
+            ...(isExistingSection && { id: section.id }),
+            name: section.name,
+            description: section.description,
+            startDate: section.startDate,
+            endDate: section.endDate,
+            photoIds: section.photoIds
+          }
         })
-        
+      }
+
+      // Optimistic update: 먼저 캐시를 업데이트하여 즉시 UI 반영
+      queryClient.setQueriesData(
+        {
+          predicate: (query) => {
+            const queryKey = query.queryKey as string[]
+            return queryKey[0] === 'timelineAlbums' && queryKey[1] === groupId
+          }
+        },
+        (oldData: any) => {
+          if (!oldData?.list) return oldData
+          
+          // 해당 앨범의 정보를 업데이트
+          const updatedList = oldData.list.map((album: any) => {
+            if (album.albumId === parseInt(albumId)) {
+              return {
+                ...album,
+                name: updateData.name,
+                description: updateData.description,
+                startDate: updateData.startDate,
+                endDate: updateData.endDate,
+                updatedAt: new Date().toISOString()
+              }
+            }
+            return album
+          })
+          
+          return {
+            ...oldData,
+            list: updatedList
+          }
+        }
+      )
+
+      // 서버 업데이트 실행
+      await new Promise((resolve, reject) => {
+        updateTimelineAlbum(updateData)
         setTimeout(resolve, 100)
       })
 
-      // 최신 데이터 리페치
+      // 최신 데이터 리페치 (서버와 동기화)
       await refetchTimeline()
+      
+      // 백그라운드에서 그룹스페이스 데이터도 다시 가져오기
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey as string[]
+          return queryKey[0] === 'timelineAlbums' && queryKey[1] === groupId
+        }
+      })
       
       // 편집 모드 종료
       setIsEditMode(false)
@@ -335,9 +379,18 @@ export function useTimelineEditor(groupId: string, albumId: string) {
       
     } catch (error) {
       console.error('앨범 저장 실패:', error)
+      
+      // 에러 발생시 캐시 원상복구
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey as string[]
+          return queryKey[0] === 'timelineAlbums' && queryKey[1] === groupId
+        }
+      })
+      
       throw error
     }
-  }, [editingState, timelineAlbum, updateTimelineAlbum, refetchTimeline])
+  }, [editingState, timelineAlbum, updateTimelineAlbum, refetchTimeline, queryClient, groupId, albumId])
 
   // 표시용 데이터 (편집 중이면 편집 상태, 아니면 서버 데이터)
   const displayData = isEditMode && editingState ? editingState : 

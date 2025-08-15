@@ -29,9 +29,12 @@ export function useTimelineAlbum(groupId: string, albumId: string) {
         queryKey: ['timeline-album', groupId, albumId]
       })
       
-      // 그룹스페이스 앨범 목록도 무효화하여 업데이트된 앨범 정보 반영
+      // 그룹스페이스 앨범 목록도 무효화 - 모든 페이지 포함
       queryClient.invalidateQueries({
-        queryKey: ['timelineAlbums', groupId]
+        predicate: (query) => {
+          const queryKey = query.queryKey as string[]
+          return queryKey[0] === 'timelineAlbums' && queryKey[1] === groupId
+        }
       })
     },
   })

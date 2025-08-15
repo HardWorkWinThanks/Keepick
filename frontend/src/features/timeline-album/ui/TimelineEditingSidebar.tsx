@@ -105,49 +105,46 @@ export function TimelineEditingSidebar({
               </div>
             )}
 
-            {/* 섹션에서 제거할 사진 드롭존 */}
-            {onSectionPhotoRemove && (
-              <div className="mb-6">
-                <PhotoDropZone
-                  onDrop={(dragData, e) => onSectionPhotoRemove?.(dragData)}
-                  dropZoneId="sidebar-photos-return"
-                  className="min-h-[50px] border-2 border-dashed border-gray-600/50 rounded-lg p-3 hover:border-[#FE7A25]/50 transition-colors"
-                >
-                  <div className="text-center text-gray-500 font-keepick-primary text-xs">
-                    섹션에서 사진을 여기로 드래그하여 제거
-                  </div>
-                </PhotoDropZone>
-              </div>
-            )}
           </div>
 
-          {/* Photos Grid */}
+          {/* Photos Grid - 전체 영역을 드롭존으로 */}
           <div className="flex-1 flex flex-col px-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-gray-300">선택된 사진</h3>
               <span className="text-xs text-gray-500">{availablePhotos.length}장</span>
             </div>
             
-            <ScrollArea className="flex-1">
-              {availablePhotos.length > 0 ? (
-                <DraggablePhotoGrid
-                  photos={availablePhotos}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                  draggingPhotoId={draggingPhotoId}
-                  sourceId="gallery"
-                  gridClassName="grid grid-cols-3 gap-3 pr-2"
-                  photoClassName="w-full h-auto object-cover rounded-md shadow-sm aspect-square hover:scale-105 transition-transform cursor-grab"
-                />
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <div className="text-4xl mb-4">📸</div>
-                  <div className="font-keepick-primary text-sm">
-                    사용 가능한 사진이 없습니다
+            <PhotoDropZone
+              onDrop={(dragData, e) => onSectionPhotoRemove?.(dragData)}
+              dropZoneId="sidebar-photos-grid"
+              className="flex-1 min-h-[200px] rounded-lg transition-colors border-2 border-transparent hover:border-[#FE7A25]/20 data-[drag-over=true]:border-[#FE7A25]/50 data-[drag-over=true]:bg-[#FE7A25]/5"
+            >
+              <ScrollArea className="h-full">
+                {availablePhotos.length > 0 ? (
+                  <DraggablePhotoGrid
+                    photos={availablePhotos}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    draggingPhotoId={draggingPhotoId}
+                    sourceId="gallery"
+                    gridClassName="grid grid-cols-3 gap-3 pr-2"
+                    photoClassName="w-full h-auto object-cover rounded-md shadow-sm aspect-square hover:scale-105 transition-transform cursor-grab"
+                  />
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center text-gray-500">
+                      <div className="text-4xl mb-4">📸</div>
+                      <div className="font-keepick-primary text-sm">
+                        사용 가능한 사진이 없습니다
+                      </div>
+                      <div className="font-keepick-primary text-xs mt-2 text-gray-600">
+                        섹션에서 사진을 여기로 드래그하세요
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
-            </ScrollArea>
+                )}
+              </ScrollArea>
+            </PhotoDropZone>
           </div>
 
           {/* Instructions - Fixed at bottom */}
