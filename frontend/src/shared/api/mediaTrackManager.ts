@@ -105,33 +105,16 @@ class MediaTrackManager {
         appData,
       };
 
-      // 화면 공유인 경우 더 높은 품질 설정
+      // 화면 공유인 경우 Chrome 호환 고품질 설정
       if (trackType === "screen") {
+        // 단일 고품질 인코딩 (Chrome 호환성 우선)
         produceOptions.encodings = [
-          { 
-            maxBitrate: 5000000,  // 5 Mbps
-            rid: "high",
-            maxFramerate: 30,
-            scaleResolutionDownBy: 1
-          },
-          { 
-            maxBitrate: 3000000,  // 3 Mbps  
-            rid: "medium", 
-            scaleResolutionDownBy: 1.5,
-            maxFramerate: 25
-          },
-          { 
-            maxBitrate: 1500000,  // 1.5 Mbps
-            rid: "low", 
-            scaleResolutionDownBy: 2,
-            maxFramerate: 20
-          },
+          {
+            maxBitrate: 8000000, // 8 Mbps 고화질
+            maxFramerate: 30,    // 안정적인 30fps
+          }
         ];
-        produceOptions.codecOptions = {
-          videoGoogleStartBitrate: 2000,  // 시작 비트레이트 증가
-          videoGoogleMaxBitrate: 5000000,  // 최대 비트레이트 설정
-          videoGoogleMinBitrate: 500000,   // 최소 비트레이트 설정
-        };
+        // codecOptions 제거 - Chrome 호환성 문제 방지
       }
 
       const producer = await this.sendTransport.produce(produceOptions);
@@ -212,7 +195,10 @@ class MediaTrackManager {
     // 🔒 중복 Consumer 생성 방지 - Producer ID 기반 강력한 체크
     const existingTrackByProducer = this.getTrackByProducerId(producerId);
     if (existingTrackByProducer) {
-      console.warn(`⚠️ Consumer already exists for producer ${producerId}, reusing existing track:`, existingTrackByProducer.trackId);
+      console.warn(
+        `⚠️ Consumer already exists for producer ${producerId}, reusing existing track:`,
+        existingTrackByProducer.trackId
+      );
       return existingTrackByProducer.trackId;
     }
 
@@ -222,7 +208,10 @@ class MediaTrackManager {
       // 기존 트랙이 있다면 해당 trackId 반환
       for (const [trackId, trackInfo] of this.remoteTracks) {
         if (trackInfo.track === existingTrack) {
-          console.warn(`⚠️ Remote ${trackType} ${kind} track already exists for ${socketId}, reusing:`, trackId);
+          console.warn(
+            `⚠️ Remote ${trackType} ${kind} track already exists for ${socketId}, reusing:`,
+            trackId
+          );
           return trackId;
         }
       }
@@ -232,7 +221,7 @@ class MediaTrackManager {
 
     try {
       console.log(`🔍 Creating new consumer for producer ${producerId} (${trackType} ${kind})`);
-      
+
       // Consumer 생성 (socketApi를 통해 서버와 협상)
       const consumerData = await this.createConsumer(producerId, rtpCapabilities);
       const consumer = await this.recvTransport.consume({
@@ -295,7 +284,11 @@ class MediaTrackManager {
   // 🆕 카메라 트랙 전용 메서드들
   getLocalCameraTrack(kind: "audio" | "video"): MediaStreamTrack | null {
     for (const trackInfo of this.localTracks.values()) {
-      if (trackInfo.peerId === "local" && trackInfo.trackType === "camera" && trackInfo.kind === kind) {
+      if (
+        trackInfo.peerId === "local" &&
+        trackInfo.trackType === "camera" &&
+        trackInfo.kind === kind
+      ) {
         return trackInfo.track;
       }
     }
@@ -304,7 +297,11 @@ class MediaTrackManager {
 
   getLocalCameraTrackInfo(kind: "audio" | "video"): TrackInfo | null {
     for (const trackInfo of this.localTracks.values()) {
-      if (trackInfo.peerId === "local" && trackInfo.trackType === "camera" && trackInfo.kind === kind) {
+      if (
+        trackInfo.peerId === "local" &&
+        trackInfo.trackType === "camera" &&
+        trackInfo.kind === kind
+      ) {
         return trackInfo;
       }
     }
@@ -471,8 +468,13 @@ class MediaTrackManager {
 
     this.remoteTracks.delete(trackId);
 
-    // Redux 상태 업데이트
-    this.dispatch(removeRemoteTrack({ socketId, kind: trackInfo.kind }));
+    // Redux 상태 업데이트 (화면 공유 트랙은 Redux에서 관리하지 않음)
+    if (trackInfo.trackType === "camera") {
+      this.dispatch(removeRemoteTrack({ socketId, kind: trackInfo.kind }));
+      console.log(`🔄 Redux removed camera ${trackInfo.kind} track for ${socketId}`);
+    } else {
+      console.log(`🚫 Skipping Redux removal for ${trackInfo.trackType} track`);
+    }
 
     console.log(`🗑️ Remote ${trackInfo.trackType} ${trackInfo.kind} track removed:`, trackId);
   }
@@ -481,20 +483,20 @@ class MediaTrackManager {
   getLocalTrack(
     kind: "audio" | "video",
     trackType: "camera" | "screen" = "camera",
-    peerId: string = "local"  // 🆕 기본값을 "local"로 설정
+    peerId: string = "local" // 🆕 기본값을 "local"로 설정
   ): MediaStreamTrack | null {
     for (const trackInfo of this.localTracks.values()) {
       // peerId는 이제 필수값 (기본값 "local")
       if (trackInfo.peerId !== peerId) {
         continue;
       }
-      
+
       if (trackInfo.kind === kind && trackInfo.trackType === trackType) {
         console.log(`🎯 Found ${trackType} ${kind} track for peerId: ${peerId}`, trackInfo.trackId);
         return trackInfo.track;
       }
     }
-    
+
     console.warn(`⚠️ No ${trackType} ${kind} track found for peerId: ${peerId}`);
     return null;
   }
@@ -537,7 +539,12 @@ class MediaTrackManager {
     return this.localTracks.get(trackId) || this.remoteTracks.get(trackId) || null;
   }
 
-  hasRemoteProducer(producerId: string, socketId: string, kind: "audio" | "video", trackType?: "camera" | "screen"): boolean {
+  hasRemoteProducer(
+    producerId: string,
+    socketId: string,
+    kind: "audio" | "video",
+    trackType?: "camera" | "screen"
+  ): boolean {
     // Producer ID로 먼저 체크 (가장 정확한 방법)
     const trackByProducerId = this.getTrackByProducerId(producerId);
     if (trackByProducerId) {
@@ -557,9 +564,12 @@ class MediaTrackManager {
       const matchesSocket = trackInfo.peerId === socketId;
       const matchesKind = trackInfo.kind === kind;
       const matchesTrackType = !trackType || trackInfo.trackType === trackType;
-      
+
       if (matchesSocket && matchesKind && matchesTrackType) {
-        console.log(`🔍 Found existing ${trackInfo.trackType} ${kind} track for ${socketId}:`, trackInfo.trackId);
+        console.log(
+          `🔍 Found existing ${trackInfo.trackType} ${kind} track for ${socketId}:`,
+          trackInfo.trackId
+        );
         return true;
       }
     }

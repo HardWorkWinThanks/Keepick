@@ -65,70 +65,45 @@ class WebRTCHandler {
 
     this.socket.on("new_producer", (data: NewProducerInfo) => {
       console.log("🎬 [WebRTCHandler] New producer available:", data);
-      
-      // 🔒 이미 처리 중인 Producer인지 확인
+
+      // 중복 처리 방지 로직 (그대로 유지)
       if (this.processingProducers.has(data.producerId)) {
-        console.warn(`⚠️ Producer ${data.producerId} is already being processed, ignoring duplicate event`);
+        console.warn(`⚠️ Producer ${data.producerId} is already being processed, ignoring...`);
         return;
       }
-
-      // 처리 중으로 마킹
       this.processingProducers.add(data.producerId);
 
+      // appData.type을 확인하여 화면 공유인지 판단
+      const isScreenShare = data.appData?.type === "screen" || data.appData?.type === "screenshare" || data.appData?.trackType === "screen";
+
+      // mediasoupManager의 consumeProducer를 항상 호출
+      // consumeProducer 내부에서 trackType에 따라 다르게 처리하도록 책임을 위임
       mediasoupManager
         .consumeProducer({
           producerId: data.producerId,
           producerSocketId: data.producerSocketId,
-          kind: data.kind,  // 🆕 kind 정보 전달
+          kind: data.kind,
           appData: data.appData,
-        })
-        .then(() => {
-          console.log(`✅ Successfully processed producer ${data.producerId}`);
         })
         .catch((error) => {
           console.error(`❌ Failed to consume producer ${data.producerId}:`, error);
         })
         .finally(() => {
-          // 처리 완료 후 제거
           this.processingProducers.delete(data.producerId);
         });
+
+      // 화면 공유인 경우 UI 이벤트를 위해 추가 처리
+      if (isScreenShare) {
+        window.dispatchEvent(new CustomEvent("screenShareStarted", { detail: data }));
+      }
     });
 
+    // [통합] 프로듀서 종료 처리 (카메라, 오디오, 화면 공유 모두)
     this.socket.on("producer_closed", (data: ProducerClosedData) => {
       console.log(`🔌 [WebRTCHandler] Producer ${data.producerId} was closed.`);
+
+      // mediasoupManager가 producerId를 받아 알아서 처리하도록 위임
       mediasoupManager.handleProducerClosed(data.producerId);
-    });
-
-    // 🆕 화면 공유 종료 이벤트 핸들러 추가
-    this.socket.on("screen_share_stopped", (data: any) => {
-      console.log(`🖥️ [WebRTCHandler] Screen share stopped: ${data.producerId} from ${data.peerId}`);
-      
-      // ScreenShareManager를 통해 원격 화면 공유 제거
-      screenShareManager.removeRemoteScreenShare(data.producerId, data.peerId);
-      
-      // MediasoupManager를 통해서도 Producer 정리
-      mediasoupManager.handleProducerClosed(data.producerId);
-    });
-
-    // [수정] 화면 공유 자동 소비 로직 추가
-    this.socket.on("screen_share_started", (data: ScreenShareStartedData) => {
-      console.log("🖥️ [WebRTCHandler] Screen share started:", data);
-      if (this.socket && data.peerId !== this.socket.id) {
-        // 다른 사람이 시작한 화면 공유를 자동으로 consume 합니다.
-        mediasoupManager
-          .consumeProducer({
-            producerId: data.producerId,
-            producerSocketId: data.peerId,
-            appData: { type: "screen", peerId: data.peerId, peerName: data.peerName },
-          })
-          .catch((err) => console.error("Auto-consuming screen share failed", err));
-      }
-      window.dispatchEvent(new CustomEvent("screenShareStarted", { detail: data }));
-    });
-
-    this.socket.on("screen_share_stopped", (data: ScreenShareStoppedData) => {
-      console.log("🖥️ [WebRTCHandler] Screen share stopped:", data);
-      window.dispatchEvent(new CustomEvent("screenShareStopped", { detail: data }));
     });
   }
 
@@ -154,7 +129,7 @@ class WebRTCHandler {
           await mediasoupManager.consumeProducer({
             producerId: producer.producerId,
             producerSocketId: peer.id,
-            kind: producer.kind,  // 🆕 kind 정보 전달
+            kind: producer.kind, // 🆕 kind 정보 전달
             appData: undefined, // PeerWithProducers doesn't include appData
           });
         }
@@ -203,6 +178,9 @@ class WebRTCHandler {
 
   public resumeConsumer = (data: { consumerId: string }): Promise<void> =>
     socketManager.request("resume_consumer", "consumer_resumed", data);
+
+  public closeProducer = (data: { producerId: string }): Promise<void> =>
+    socketManager.request("close_producer", "producer_closed", data);
 
   private getCurrentRoomId(): string {
     const path = window.location.pathname;
