@@ -26,10 +26,9 @@ export const MessageInput = ({
           onChange={(e) => onChange(e.target.value)}
           onKeyPress={onKeyPress}
           placeholder={placeholder}
-          className="w-full bg-[#222222] text-[#FFFFFF] placeholder-[#A0A0A5] border border-[#424245] rounded-lg px-3 py-2 resize-none focus:outline-none focus:border-[#FE7A25] transition-colors"
+          className="w-full bg-[#222222] text-[#FFFFFF] placeholder-[#A0A0A5] border border-[#424245] rounded-lg px-3 py-2 resize-none focus:outline-none focus:border-[#FE7A25] transition-colors no-scrollba"
           rows={1}
           style={{
-            minHeight: "40px",
             maxHeight: "120px",
             fontFamily: "Line-Seed, sans-serif",
           }}
@@ -37,7 +36,9 @@ export const MessageInput = ({
             // 자동 높이 조절
             const target = e.target as HTMLTextAreaElement;
             target.style.height = "auto";
-            target.style.height = Math.min(target.scrollHeight, 120) + "px";
+            // maxHeight 값을 style에서 직접 가져와 일관성 유지
+            const maxHeight = parseInt(target.style.maxHeight) || 120;
+            target.style.height = Math.min(target.scrollHeight, maxHeight) + "px";
           }}
         />
       </div>
@@ -45,7 +46,8 @@ export const MessageInput = ({
       <button
         onClick={onSend}
         disabled={!value.trim()}
-        className="p-2 bg-[#FE7A25] hover:bg-[#E06B1F] disabled:bg-[#424245] disabled:cursor-not-allowed rounded-lg transition-colors"
+        // ◀◀◀ 수정된 부분: 버튼의 높이를 textarea와 맞추기 위해 패딩을 조절합니다.
+        className="p-2 h-10 w-10 flex items-center justify-center bg-[#FE7A25] hover:bg-[#E06B1F] disabled:bg-[#424245] disabled:cursor-not-allowed rounded-lg transition-colors flex-shrink-0"
       >
         <PaperAirplaneIcon className="w-5 h-5 text-[#222222]" />
       </button>

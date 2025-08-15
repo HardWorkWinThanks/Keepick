@@ -69,12 +69,19 @@ class MediaTrackManager {
 
     try {
       // 🎯 트랙 중복 체크 - 동일한 peerId + kind + trackType 조합
-      const existingLocalTrack = this.getLocalTrack(track.kind as "audio" | "video", trackType, peerId);
+      const existingLocalTrack = this.getLocalTrack(
+        track.kind as "audio" | "video",
+        trackType,
+        peerId
+      );
       if (existingLocalTrack) {
         // 기존 트랙이 있으면 해당 trackId 찾아서 반환
         for (const [existingTrackId, trackInfo] of this.localTracks) {
           if (trackInfo.track === existingLocalTrack) {
-            console.warn(`⚠️ Local ${trackType} ${track.kind} track already exists for ${peerId}, reusing:`, existingTrackId);
+            console.warn(
+              `⚠️ Local ${trackType} ${track.kind} track already exists for ${peerId}, reusing:`,
+              existingTrackId
+            );
             return existingTrackId;
           }
         }
@@ -321,17 +328,18 @@ class MediaTrackManager {
           trackType: trackInfo.trackType,
           kind: trackInfo.kind,
           enabled: trackInfo.track.enabled,
-          readyState: trackInfo.track.readyState
+          readyState: trackInfo.track.readyState,
         });
         return trackInfo.track;
       }
     }
-    console.warn(`⚠️ No local screen share track found. Available tracks:`, 
-      Array.from(this.localTracks.values()).map(t => ({
+    console.warn(
+      `⚠️ No local screen share track found. Available tracks:`,
+      Array.from(this.localTracks.values()).map((t) => ({
         trackId: t.trackId,
         peerId: t.peerId,
         trackType: t.trackType,
-        kind: t.kind
+        kind: t.kind,
       }))
     );
     return null;
@@ -446,7 +454,7 @@ class MediaTrackManager {
       trackType: trackInfo.trackType,
       kind: trackInfo.kind,
       peerId: trackInfo.peerId,
-      hasProducer: !!trackInfo.producer
+      hasProducer: !!trackInfo.producer,
     });
 
     // Producer 정리 및 매핑 동기화
@@ -457,7 +465,7 @@ class MediaTrackManager {
     }
 
     // MediaStreamTrack 정리
-    if (trackInfo.track && trackInfo.track.readyState !== 'ended') {
+    if (trackInfo.track && trackInfo.track.readyState !== "ended") {
       trackInfo.track.stop();
     }
 
@@ -484,20 +492,20 @@ class MediaTrackManager {
       kind: trackInfo.kind,
       peerId: trackInfo.peerId,
       socketId,
-      hasConsumer: !!trackInfo.consumer
+      hasConsumer: !!trackInfo.consumer,
     });
 
     // Consumer 정리 및 매핑 동기화
     if (trackInfo.consumer) {
       const producerId = trackInfo.consumer.producerId;
-      
+
       trackInfo.consumer.close();
       this.consumerMap.delete(trackInfo.consumer.id);
       this.remoteProducerMap.delete(producerId);
-      
+
       console.log(`🔄 Consumer closed and mappings removed:`, {
         consumerId: trackInfo.consumer.id,
-        producerId
+        producerId,
       });
     }
 
@@ -589,7 +597,7 @@ class MediaTrackManager {
       kind: trackInfo.kind,
       peerId: trackInfo.peerId,
       isLocal: this.localTracks.has(trackInfo.trackId),
-      isRemote: this.remoteTracks.has(trackInfo.trackId)
+      isRemote: this.remoteTracks.has(trackInfo.trackId),
     });
 
     // 로컬 트랙인지 원격 트랙인지 확인하고 적절한 제거 메서드 호출
@@ -601,7 +609,9 @@ class MediaTrackManager {
       this.removeRemoteTrack(trackInfo.trackId, trackInfo.peerId);
     } else {
       // 맵에는 있지만 실제 트랙이 없는 경우 - 맵만 정리
-      console.warn(`⚠️ TrackInfo found but track not in local/remote maps, cleaning up mappings for producer: ${producerId}`);
+      console.warn(
+        `⚠️ TrackInfo found but track not in local/remote maps, cleaning up mappings for producer: ${producerId}`
+      );
       this.cleanupProducerMappings(producerId, trackInfo);
     }
   }
@@ -609,27 +619,27 @@ class MediaTrackManager {
   // Producer와 관련된 모든 매핑 정리 (동기화 보장)
   private cleanupProducerMappings(producerId: string, trackInfo: TrackInfo): void {
     console.log(`🧹 Cleaning up producer mappings for ${producerId}`);
-    
+
     // Producer 관련 매핑 정리
     this.producerMap.delete(producerId);
     this.remoteProducerMap.delete(producerId);
-    
+
     // Consumer가 있는 경우 Consumer 매핑도 정리
     if (trackInfo.consumer) {
       this.consumerMap.delete(trackInfo.consumer.id);
       trackInfo.consumer.close();
     }
-    
+
     // Producer가 있는 경우 Producer 정리
     if (trackInfo.producer) {
       trackInfo.producer.close();
     }
-    
+
     // MediaStreamTrack 정리
-    if (trackInfo.track && trackInfo.track.readyState !== 'ended') {
+    if (trackInfo.track && trackInfo.track.readyState !== "ended") {
       trackInfo.track.stop();
     }
-    
+
     console.log(`✅ Producer mappings cleaned up for ${producerId}`);
   }
 
@@ -646,7 +656,7 @@ class MediaTrackManager {
       return true;
     }
 
-    // 2단계: Consumer Map에서 같은 producer ID 체크  
+    // 2단계: Consumer Map에서 같은 producer ID 체크
     for (const [consumerId, trackId] of this.consumerMap) {
       const trackInfo = this.remoteTracks.get(trackId);
       if (trackInfo?.consumer?.producerId === producerId) {
@@ -726,10 +736,10 @@ class MediaTrackManager {
         ...baseOptions,
         encodings: [
           {
-            maxBitrate: 6000000,    // 6 Mbps (안정적인 높은 화질)
-            maxFramerate: 60,       // 60fps로 부드러운 프레임
+            maxBitrate: 5000000, // 6 Mbps (안정적인 높은 화질)
+            maxFramerate: 30,
             scaleResolutionDownBy: 1, // 원본 해상도 유지
-          }
+          },
         ],
       };
     } else {

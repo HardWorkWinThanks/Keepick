@@ -278,7 +278,9 @@ class MediasoupManager {
           error.message.includes("already consumed") ||
           error.message.includes("Consumer already exists"))
       ) {
-        console.warn(`⚠️ Producer ${producerId} seems to be already consumed, marking as completed...`);
+        console.warn(
+          `⚠️ Producer ${producerId} seems to be already consumed, marking as completed...`
+        );
         this.consumingProducers.delete(producerId);
         this.consumedProducers.add(producerId);
         return;
@@ -313,15 +315,19 @@ class MediasoupManager {
     console.log(`🧹 Starting peer removal cleanup for ${socketId}`);
 
     // 1. 해당 피어와 관련된 모든 completed/consuming producer 정리
-    const peersProducers = Array.from(this.consumedProducers).concat(Array.from(this.consumingProducers));
+    const peersProducers = Array.from(this.consumedProducers).concat(
+      Array.from(this.consumingProducers)
+    );
     const peersTrackIds = new Set<string>();
-    
+
     // 해당 소켓ID와 관련된 모든 트랙 찾기
     for (const [trackId, trackInfo] of mediaTrackManager.getAllRemoteTracks()) {
       if (trackInfo.peerId === socketId) {
         peersTrackIds.add(trackId);
         if (trackInfo.consumer) {
-          console.log(`🗑️ Cleaning up consumer for peer ${socketId}: ${trackInfo.consumer.producerId}`);
+          console.log(
+            `🗑️ Cleaning up consumer for peer ${socketId}: ${trackInfo.consumer.producerId}`
+          );
           this.consumedProducers.delete(trackInfo.consumer.producerId);
           this.consumingProducers.delete(trackInfo.consumer.producerId);
         }
@@ -342,7 +348,9 @@ class MediasoupManager {
     // 4. Redux 상태에서 피어 제거
     this.dispatch(removeRemotePeer(socketId));
 
-    console.log(`✅ Peer removal completed for ${socketId}. Cleaned up ${peersTrackIds.size} tracks`);
+    console.log(
+      `✅ Peer removal completed for ${socketId}. Cleaned up ${peersTrackIds.size} tracks`
+    );
   }
 
   // 🆕 Producer 종료 처리 (화면 공유 감지)

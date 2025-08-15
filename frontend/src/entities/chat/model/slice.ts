@@ -20,7 +20,7 @@ interface ChatState {
 }
 
 const initialState: ChatState = {
-  isChatOpen: false,
+  isChatOpen: true,
   messages: [],
   unreadCount: 0,
 };
@@ -51,9 +51,7 @@ const chatSlice = createSlice({
       };
 
       // 중복 메시지 체크 - ID가 같은 메시지가 이미 있는지 확인
-      const existingMessageIndex = state.messages.findIndex(
-        (msg) => msg.id === newMessage.id
-      );
+      const existingMessageIndex = state.messages.findIndex((msg) => msg.id === newMessage.id);
 
       if (existingMessageIndex !== -1) {
         // 이미 존재하는 메시지라면 업데이트 (임시 메시지 -> 확정 메시지)
@@ -136,9 +134,7 @@ const chatSlice = createSlice({
       const newMessages = action.payload.map((msg) => ({
         ...msg,
         timestamp:
-          typeof msg.timestamp === "string"
-            ? msg.timestamp
-            : new Date(msg.timestamp).toISOString(), // Date를 string으로 변환
+          typeof msg.timestamp === "string" ? msg.timestamp : new Date(msg.timestamp).toISOString(), // Date를 string으로 변환
       }));
 
       // 기존 메시지와 새 메시지를 합치되 중복 제거
@@ -156,8 +152,7 @@ const chatSlice = createSlice({
 
       // 시간순 정렬 (string으로 변환된 timestamp를 Date로 비교)
       state.messages = Array.from(messageMap.values()).sort(
-        (a, b) =>
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
 
       console.log(`💬 [REDUX] Set ${state.messages.length} messages (deduped)`);

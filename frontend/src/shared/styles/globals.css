@@ -195,3 +195,13 @@
   font-family: "Line-Seed", var(--font-montserrat), sans-serif;
   font-weight: 700;
 }
+
+/* 스크롤바를 숨기는 유틸리티 클래스 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}

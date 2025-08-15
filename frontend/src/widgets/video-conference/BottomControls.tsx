@@ -25,7 +25,7 @@ export const BottomControls = () => {
 
   return (
     <>
-      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 mb-4">
+      <div className="w-full flex justify-center items-center py-4">
         <div className="flex items-center gap-4 p-4 rounded-full backdrop-blur-sm bg-[#2C2C2E]/80">
           {/* 기본 미디어 컨트롤 (마이크, 카메라, 나가기) */}
           <MediaControls />

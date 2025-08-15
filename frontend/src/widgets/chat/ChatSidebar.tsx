@@ -5,11 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/shared/hooks/redux";
 import { toggleChat, markAsRead } from "@/entities/chat/model/slice";
 import { chatSocketHandler } from "@/entities/chat/model/socketEvents";
-import {
-  XMarkIcon,
-  ChatBubbleLeftIcon,
-  UserIcon,
-} from "@heroicons/react/24/solid";
+import { XMarkIcon, ChatBubbleLeftIcon, UserIcon } from "@heroicons/react/24/solid";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
 import { TypingIndicator } from "./TypingIndicator";
@@ -50,16 +46,14 @@ export const ChatSidebar = () => {
   const totalParticipants = users.length + 1;
 
   return (
-    <div className="h-full bg-[#2C2C2E] border-l border-[#424245] flex flex-col">
+    <div className="h-full bg-[#2C2C2E] border-l border-[#424245] flex flex-col overflow-hidden">
       {/* 헤더 */}
       <div className="flex items-center justify-between p-4 border-b border-[#424245]">
         <div className="flex items-center space-x-2">
           <ChatBubbleLeftIcon className="w-5 h-5 text-[#FE7A25]" />
           <div>
             <h3 className="text-[#FFFFFF] font-semibold font-header">채팅</h3>
-            <p className="text-xs text-[#A0A0A5]">
-              {totalParticipants}명 참여 중
-            </p>
+            <p className="text-xs text-[#A0A0A5]">{totalParticipants}명 참여 중</p>
           </div>
         </div>
         <button
@@ -77,9 +71,7 @@ export const ChatSidebar = () => {
           <UserIcon className="w-4 h-4" />
           <span>
             {userName} (나)
-            {users.length > 0 && (
-              <span>, {users.map((user) => user.name).join(", ")}</span>
-            )}
+            {users.length > 0 && <span>, {users.map((user) => user.name).join(", ")}</span>}
           </span>
         </div>
       </div>

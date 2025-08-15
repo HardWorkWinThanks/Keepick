@@ -94,8 +94,8 @@ export const SystemMessage = ({ message }: SystemMessageProps) => {
   };
 
   return (
-    <div className="flex justify-center my-4">
-      <div className="flex items-center space-x-2 bg-[#222222] px-3 py-2 rounded-full border border-[#424245]">
+    <div className="flex justify-center my-4 resize-none">
+      <div className="flex items-center space-x-2 bg-[#222222] px-3 py-2 rounded-full border border-[#424245] resize-none">
         {/* 아이콘 */}
         {getIcon()}
 
@@ -103,9 +103,7 @@ export const SystemMessage = ({ message }: SystemMessageProps) => {
         <span className={`text-sm ${getTextColor()}`}>{message.content}</span>
 
         {/* 시간 */}
-        <span className="text-xs text-[#666666] ml-2">
-          {formatTime(message.timestamp)}
-        </span>
+        <span className="text-xs text-[#666666] ml-2">{formatTime(message.timestamp)}</span>
       </div>
     </div>
   );

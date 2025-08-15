@@ -43,7 +43,6 @@ export const ConferenceClientPage = ({ roomId }: ConferenceClientPageProps) => {
       try {
         console.log(`🚀 Joining room: ${roomId}, user: ${userName}`);
         webrtcHandler.joinRoom({ roomId, userName });
-        chatHandler.joinChat({ roomId, userName });
       } catch (e) {
         console.error("❌ Failed to join room:", e);
       }
@@ -51,13 +50,7 @@ export const ConferenceClientPage = ({ roomId }: ConferenceClientPageProps) => {
   };
 
   if (!isInRoom) {
-    return (
-      <Lobby
-        onJoin={handleJoin}
-        isLoading={isJoining}
-        error={error}
-      />
-    );
+    return <Lobby onJoin={handleJoin} isLoading={isJoining} error={error} />;
   }
 
   return <ConferenceLayout />;

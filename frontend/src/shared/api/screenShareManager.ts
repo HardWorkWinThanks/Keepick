@@ -112,9 +112,9 @@ class ScreenShareManager {
       // 화면 캡처 - 부드러운 프레임을 위한 최적화된 설정
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
-          width: { ideal: 1920, max: 2560 }, // FHD 기본, 2K 최대
-          height: { ideal: 1080, max: 1440 }, // FHD 기본, 2K 최대
-          frameRate: { ideal: 60, max: 60 }, // 60fps 유지
+          width: { ideal: 1280, max: 1920 }, // 720p(1280x720)를 우선 시도하고, 최대 1080p(1920x1080)로 제한
+          height: { ideal: 720, max: 1080 },
+          frameRate: { ideal: 30, max: 30 },
         },
         audio: {
           echoCancellation: true,

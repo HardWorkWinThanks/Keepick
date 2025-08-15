@@ -51,9 +51,7 @@ export class ChatSocketHandler {
       return;
     }
 
-    console.log(
-      `💬 [CLIENT] 📤 Sending message: "${content}" to room ${this.currentRoomId}`
-    );
+    console.log(`💬 [CLIENT] 📤 Sending message: "${content}" to room ${this.currentRoomId}`);
 
     // 임시 메시지 ID 생성 (서버 응답 전까지 UI에 표시용)
     const tempId = `temp-${Date.now()}-${Math.random()}`;
@@ -86,10 +84,7 @@ export class ChatSocketHandler {
 
   // 다른 사용자의 메시지 수신
   public handleReceivedMessage(data: ServerChatMessage) {
-    console.log(
-      `💬 [CLIENT] 📨 Received message from ${data.senderName}:`,
-      data
-    );
+    console.log(`💬 [CLIENT] 📨 Received message from ${data.senderName}:`, data);
 
     if (this.dispatch) {
       const chatMessage: ChatMessage = {
@@ -103,9 +98,7 @@ export class ChatSocketHandler {
         timestamp: data.timestamp, // 이미 string 형태로 받음
       };
       this.dispatch(addMessage(chatMessage));
-      console.log(
-        `💬 [CLIENT] ✅ Added received message to UI: ${chatMessage.id}`
-      );
+      console.log(`💬 [CLIENT] ✅ Added received message to UI: ${chatMessage.id}`);
     }
   }
 
@@ -144,10 +137,7 @@ export class ChatSocketHandler {
   }
 
   // 메시지 히스토리 처리 (대량 메시지 중복 제거)
-  public handleMessageHistory(data: {
-    success: boolean;
-    messages?: ServerChatMessage[];
-  }) {
+  public handleMessageHistory(data: { success: boolean; messages?: ServerChatMessage[] }) {
     console.log(`💬 [CLIENT] 📚 Received message history:`, data);
 
     if (this.dispatch && data.success && data.messages) {
@@ -167,9 +157,7 @@ export class ChatSocketHandler {
 
       // 히스토리는 setMessages로 중복 제거하며 설정
       this.dispatch(setMessages(historyMessages));
-      console.log(
-        `💬 [CLIENT] ✅ Set ${historyMessages.length} history messages (deduped)`
-      );
+      console.log(`💬 [CLIENT] ✅ Set ${historyMessages.length} history messages (deduped)`);
     }
   }
 
@@ -213,9 +201,7 @@ export class ChatSocketHandler {
     isTyping: boolean;
   }) {
     console.log(
-      `💬 [CLIENT] ⌨️ ${data.participantName} is ${
-        data.isTyping ? "typing" : "not typing"
-      }`
+      `💬 [CLIENT] ⌨️ ${data.participantName} is ${data.isTyping ? "typing" : "not typing"}`
     );
 
     // 커스텀 이벤트로 TypingIndicator 컴포넌트에 전달
@@ -247,9 +233,7 @@ export class ChatSocketHandler {
   public handleRoomJoined() {
     console.log(`💬 [CLIENT] 🏠 Joined room: ${this.currentRoomId}`);
     if (this.dispatch) {
-      this.dispatch(
-        addSystemMessage("회의실에 입장했습니다. 채팅을 시작해보세요!")
-      );
+      this.dispatch(addSystemMessage("채팅을 시작해보세요!"));
     }
   }
 
