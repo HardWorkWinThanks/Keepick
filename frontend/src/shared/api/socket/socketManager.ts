@@ -59,7 +59,7 @@ class SocketManager {
    * @param data 보낼 데이터
    * @param timeout 타임아웃 (ms)
    */
-  public request<T>(event: string, responseEvent: string, data: any, timeout = 10000): Promise<T> {
+  public request<T>(event: string, responseEvent: string, data: any, timeout = 3000): Promise<T> {
     return new Promise((resolve, reject) => {
       if (!this.socket) {
         return reject(new Error("Socket not initialized."));

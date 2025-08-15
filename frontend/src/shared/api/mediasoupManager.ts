@@ -313,13 +313,26 @@ class MediasoupManager {
 
     // [역할 분리] 화면 공유 트랙이면 screenShareManager에 정리 위임
     if (trackInfo.trackType === "screen") {
-      screenShareManager.removeRemoteScreenShare(producerId, trackInfo.peerId);
-      // screenShareManager가 이미 mediaTrackManager.removeTrackByType을 호출하므로 
-      // 여기서는 추가로 removeTrackByProducerId를 호출하지 않음
+      // 원격 트랙인지 확인 (remoteTracks에서 관리되는 트랙)
+      const isRemoteTrack = mediaTrackManager.getAllRemoteTracks().has(trackInfo.trackId);
+
+      if (isRemoteTrack) {
+        // 원격 화면 공유 트랙 - screenShareManager에서 처리
+        screenShareManager.removeRemoteScreenShare(producerId, trackInfo.peerId);
+      } else {
+        // 로컬 화면 공유 트랙 - 이미 stopScreenShare에서 처리되었으므로 스킵
+        console.log(`🚫 Skipping local screen share cleanup - already handled by stopScreenShare`);
+      }
     } else {
       // 일반 카메라/오디오 트랙은 직접 제거
       mediaTrackManager.removeTrackByProducerId(producerId);
     }
+  }
+
+  // 현재 사용자 ID 가져오기 (소켓 ID 등)
+  private getCurrentUserId(): string {
+    // 여기서는 간단히 처리하기 위해 로컬 트랙인지 확인하는 다른 방법을 사용
+    return "local"; // 실제로는 현재 사용자의 소켓 ID를 반환해야 함
   }
 
   // 로컬 트랙 토글

@@ -109,12 +109,12 @@ class ScreenShareManager {
       this.dispatch(startScreenShareRequest());
       console.log(`🚀 Starting screen share for ${peerName} (${peerId})`);
 
-      // 화면 캡처 - 최고 화질 설정
+      // 화면 캡처 - 부드러운 프레임을 위한 최적화된 설정
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
-          width: { ideal: 2560, max: 3840 }, // 4K까지 지원
-          height: { ideal: 1440, max: 2160 }, // 4K까지 지원
-          frameRate: { ideal: 60, max: 60 }, // 60fps 고정
+          width: { ideal: 1920, max: 2560 },  // FHD 기본, 2K 최대
+          height: { ideal: 1080, max: 1440 }, // FHD 기본, 2K 최대  
+          frameRate: { ideal: 60, max: 60 },  // 60fps 유지
         },
         audio: {
           echoCancellation: true,
