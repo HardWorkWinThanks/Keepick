@@ -336,14 +336,12 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     }
 
     try {
-      // 대표이미지 ID 처리
-      let thumbnailId = 0
-      if (editingState.albumInfo.coverImage) {
-        if (editingState.albumInfo.coverImage.id !== 0) {
-          thumbnailId = editingState.albumInfo.coverImage.id
-        } else if (editingState.albumInfo.thumbnailId > 0) {
-          thumbnailId = editingState.albumInfo.thumbnailId
-        }
+      // 대표이미지 ID 처리 (변경하지 않으면 null로 전송)
+      let thumbnailId = null
+      if (editingState.albumInfo.coverImage && editingState.albumInfo.coverImage.id > 0) {
+        thumbnailId = editingState.albumInfo.coverImage.id
+      } else if (editingState.albumInfo.thumbnailId > 0) {
+        thumbnailId = editingState.albumInfo.thumbnailId
       }
       
       // 섹션 데이터 준비

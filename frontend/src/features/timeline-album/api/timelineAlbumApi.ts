@@ -18,7 +18,7 @@ export interface CreateTimelineAlbumResponse {
 export interface UpdateTimelineAlbumRequest {
   name: string;
   description: string;
-  thumbnailId: number;
+  thumbnailId: number | null;
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
   sections: {
