@@ -1,9 +1,8 @@
 // src/features/screen-share/ui/ScreenShareButton.tsx
 "use client";
 
-import { useAppDispatch, useAppSelector } from "@/shared/hooks/redux";
-import { screenShareManager } from "@/shared/api/screenShareManager";
-import { socketApi } from "@/shared/api/socketApi";
+import { socketManager } from "@/shared/api/socket";
+import { useScreenShareControls } from "../hooks/useScreenShare";
 import { ComputerDesktopIcon, StopIcon } from "@heroicons/react/24/solid";
 
 interface ScreenShareButtonProps {
@@ -15,22 +14,12 @@ export const ScreenShareButton = ({
   roomId,
   className = "",
 }: ScreenShareButtonProps) => {
-  const dispatch = useAppDispatch();
-  const { isSharing, isLoading, error } = useAppSelector(
-    (state) => state.screenShare
-  );
-  const { userName } = useAppSelector((state) => state.session);
-  const socketId = socketApi.getSocketId() || "unknown";
+  const { isSharing, isLoading, error, toggleScreenShare } = useScreenShareControls(roomId);
+  const socketId = socketManager.getSocket()?.id || "unknown";
 
   const handleToggleScreenShare = async () => {
     try {
-      if (isSharing) {
-        // 화면 공유 중지
-        await screenShareManager.stopScreenShare(roomId, socketId);
-      } else {
-        // 화면 공유 시작
-        await screenShareManager.startScreenShare(roomId, socketId, userName);
-      }
+      await toggleScreenShare(socketId);
     } catch (error) {
       console.error("Screen share toggle failed:", error);
     }

@@ -1,8 +1,7 @@
 // src/shared/api/screenShareManager.ts
 import { Device } from "mediasoup-client";
-import { Transport, Producer, Consumer } from "mediasoup-client/types";
 import { AppDispatch } from "@/shared/config/store";
-import { socketApi } from "./socketApi";
+import { mediaTrackManager } from "./mediaTrackManager";
 import {
   startScreenShareRequest,
   startScreenShareSuccess,
@@ -15,19 +14,20 @@ import {
 } from "@/entities/screen-share/model/slice";
 
 class ScreenShareManager {
-  private device: Device | null = null;
-  private sendTransport: Transport | null = null;
-  private recvTransport: Transport | null = null;
-  private producer: Producer | null = null;
-  private consumers = new Map<string, Consumer>();
-  private localStream: MediaStream | null = null;
-  private remoteStreams = new Map<string, MediaStream>();
   private dispatch: AppDispatch | null = null;
+  private device: Device | null = null;
+  
+  // 🆕 간소화: MediaStream만 관리, Producer/Consumer는 MediaTrackManager가 담당
+  private localStream: MediaStream | null = null;
+  private remoteStreams = new Map<string, MediaStream>(); // peerId -> MediaStream
+  
+  // 리소스 정리를 위한 타이머
+  private streamCleanupTimers = new Map<string, number>();
 
   public init(dispatch: AppDispatch, device: Device) {
     this.dispatch = dispatch;
     this.device = device;
-    console.log("🔧 ScreenShareManager initialized with device:", !!device);
+    console.log("🔧 ScreenShareManager initialized with MediaTrackManager integration");
   }
 
   public getLocalScreenStream = () => {
@@ -37,22 +37,69 @@ class ScreenShareManager {
 
   public getRemoteScreenStream = (peerId: string) => {
     const stream = this.remoteStreams.get(peerId);
-    console.log(`📺 Getting remote screen stream for ${peerId}:`, !!stream);
-    console.log(
-      "📺 Available remote streams:",
-      Array.from(this.remoteStreams.keys())
-    );
-    return stream;
+    console.log(`📺 Getting remote screen stream for ${peerId}:`, {
+      streamExists: !!stream,
+      streamActive: stream?.active,
+      trackCount: stream?.getTracks().length,
+      streamId: stream?.id
+    });
+    
+    if (stream && stream.active && stream.getTracks().length > 0) {
+      console.log(`✅ Returning valid stream for ${peerId}`);
+      return stream;
+    } else if (stream && !stream.active) {
+      console.warn(`🗑️ Removing inactive stream for ${peerId}`);
+      this.remoteStreams.delete(peerId);
+      return null;
+    }
+    
+    console.warn(`⚠️ No valid stream found for ${peerId}`);
+    return stream || null;
   };
 
-  // 화면 공유 시작
+  // 현재 방 ID 가져오기
+  private getCurrentRoomId(): string {
+    const path = window.location.pathname;
+    const matches = path.match(/\/groupchat\/([^\/\?#]+)/);
+    const roomId = matches ? decodeURIComponent(matches[1]) : '';
+    
+    if (!roomId && typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomIdParam = urlParams.get('roomId');
+      if (roomIdParam) {
+        return roomIdParam;
+      }
+    }
+    
+    return roomId || 'test';
+  }
+
+  // 🆕 화면 공유 시작 (MediaTrackManager 활용)
   public async startScreenShare(
     roomId: string,
     peerId: string,
     peerName: string
   ): Promise<void> {
-    if (!this.dispatch || !this.device) {
+    const actualRoomId = roomId || this.getCurrentRoomId();
+    console.log(`🚀 Starting screen share - roomId: "${actualRoomId}", peerId: "${peerId}", peerName: "${peerName}"`);
+    
+    if (!this.dispatch) {
       throw new Error("ScreenShareManager not initialized");
+    }
+
+    // 🔒 중복 화면 공유 방지
+    const existingScreenTrack = mediaTrackManager.getLocalScreenTrack(peerId);
+    if (existingScreenTrack) {
+      console.warn("⚠️ Screen share already active, stopping previous one...");
+      await this.stopScreenShare(actualRoomId, peerId);
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    // 기존 로컬 스트림 정리
+    if (this.localStream) {
+      console.log("🧹 Cleaning up existing local stream...");
+      this.localStream.getTracks().forEach(track => track.stop());
+      this.localStream = null;
     }
 
     try {
@@ -71,54 +118,45 @@ class ScreenShareManager {
 
       this.localStream = stream;
       const videoTrack = stream.getVideoTracks()[0];
-      console.log("📹 Local screen stream created:", stream.id);
+      
+      console.log("📹 Local screen stream created:", {
+        streamId: stream.id,
+        trackId: videoTrack.id
+      });
 
       // 화면 공유가 사용자에 의해 중지될 때 처리
       videoTrack.onended = () => {
         console.log("Screen share ended by user");
-        this.stopScreenShare(roomId, peerId);
+        this.stopScreenShare(actualRoomId, peerId);
       };
 
-      // Send Transport 생성 (없는 경우)
-      if (!this.sendTransport) {
-        await this.createSendTransport(roomId);
-      }
-
-      if (!this.sendTransport) {
-        throw new Error("Failed to create send transport");
-      }
-
-      // Producer 생성
-      this.producer = await this.sendTransport.produce({
-        track: videoTrack,
-        appData: { type: "screenshare" },
+      // 🆕 MediaTrackManager를 통해 Producer 생성
+      const trackId = await mediaTrackManager.addScreenShareTrack(videoTrack, peerId, peerName);
+      
+      console.log("🖥️ Screen share track created:", {
+        trackId,
+        peerId,
+        streamId: stream.id,
       });
 
+      // Redux 상태 업데이트
       const screenShare = {
-        id: this.producer.id,
-        producerId: this.producer.id,
+        id: trackId,
+        producerId: trackId, // trackId가 곧 producerId 역할
         peerId,
         peerName,
         isActive: true,
-        startedAt: new Date(),
+        startedAt: Date.now(),
       };
 
       this.dispatch(startScreenShareSuccess(screenShare));
 
-      // 서버에 화면 공유 시작 알림
-      socketApi.startScreenShare({
-        roomId,
-        peerId,
-        producerId: this.producer.id,
-        transportId: this.sendTransport.id,
-        rtpParameters: this.producer.rtpParameters,
-      });
-
       console.log("✅ Screen share started successfully", {
-        producerId: this.producer.id,
+        trackId,
         peerId,
         streamId: stream.id,
       });
+
     } catch (error) {
       console.error("❌ Screen share failed:", error);
       this.dispatch(
@@ -136,7 +174,7 @@ class ScreenShareManager {
     }
   }
 
-  // 화면 공유 중지
+  // 🆕 화면 공유 중지 (MediaTrackManager 활용)
   public async stopScreenShare(roomId: string, peerId: string): Promise<void> {
     if (!this.dispatch) {
       throw new Error("ScreenShareManager not initialized");
@@ -146,19 +184,8 @@ class ScreenShareManager {
       this.dispatch(stopScreenShareRequest());
       console.log(`🛑 Stopping screen share for ${peerId}`);
 
-      // Producer 정리
-      if (this.producer) {
-        const producerId = this.producer.id;
-        this.producer.close();
-        this.producer = null;
-
-        // 서버에 화면 공유 중지 알림
-        socketApi.stopScreenShare({
-          roomId,
-          peerId,
-          producerId,
-        });
-      }
+      // 🆕 MediaTrackManager를 통해 트랙 제거
+      mediaTrackManager.removeLocalTrackByType(peerId, 'screen');
 
       // 로컬 스트림 정리
       if (this.localStream) {
@@ -168,6 +195,7 @@ class ScreenShareManager {
 
       this.dispatch(stopScreenShareSuccess());
       console.log("✅ Screen share stopped successfully");
+
     } catch (error) {
       console.error("❌ Stop screen share failed:", error);
       this.dispatch(
@@ -179,7 +207,7 @@ class ScreenShareManager {
     }
   }
 
-  // 원격 화면 공유 소비
+  // 🆕 원격 화면 공유 소비 (MediaTrackManager 활용)
   public async consumeScreenShare(
     roomId: string,
     producerId: string,
@@ -195,47 +223,61 @@ class ScreenShareManager {
         `🔍 Consuming screen share from ${producerPeerName} (${producerPeerId}), producerId: ${producerId}`
       );
 
-      // 이미 해당 peerId의 스트림이 존재하는지 확인
-      if (this.remoteStreams.has(producerPeerId)) {
-        console.log(
-          `⚠️ Stream already exists for ${producerPeerId}, skipping...`
-        );
+      // 🔒 중복 Consumer 생성 방지
+      const existingTrack = mediaTrackManager.getRemoteScreenTrack(producerPeerId);
+      if (existingTrack) {
+        console.log(`⚠️ Screen share consumer already exists for ${producerPeerId}, skipping...`);
+        this.cancelStreamCleanup(producerPeerId);
         return;
       }
 
-      // Recv Transport 생성 (없는 경우)
-      if (!this.recvTransport) {
-        await this.createRecvTransport(roomId);
+      // 이미 해당 peerId의 스트림이 존재하는지 확인
+      if (this.remoteStreams.has(producerPeerId)) {
+        console.log(`⚠️ Stream already exists for ${producerPeerId}, checking validity...`);
+        
+        const existingStream = this.remoteStreams.get(producerPeerId);
+        if (existingStream && existingStream.active) {
+          this.cancelStreamCleanup(producerPeerId);
+          console.log(`✅ Valid stream exists, reusing for ${producerPeerId}`);
+          return;
+        } else {
+          console.log(`🧹 Removing inactive stream for ${producerPeerId}`);
+          this.remoteStreams.delete(producerPeerId);
+        }
       }
 
-      if (!this.recvTransport) {
-        throw new Error("Failed to create recv transport");
-      }
-
-      // 서버에 consume 요청
-      const consumerOptions = await socketApi.consumeScreenShare({
-        roomId,
-        transportId: this.recvTransport.id,
+      // 🆕 MediaTrackManager를 통해 Consumer 생성
+      const trackId = await mediaTrackManager.addRemoteTrack(
         producerId,
-        rtpCapabilities: this.device.rtpCapabilities,
-      });
+        producerPeerId,
+        'video',
+        this.device.rtpCapabilities,
+        'screen' // trackType
+      );
 
-      // Consumer 생성
-      const consumer = await this.recvTransport.consume(consumerOptions);
-      this.consumers.set(producerId, consumer);
+      // 🆕 MediaTrackManager에서 트랙 가져오기
+      const track = mediaTrackManager.getRemoteTrack(producerPeerId, 'video', 'screen');
+      if (!track) {
+        throw new Error('Failed to get screen share track from MediaTrackManager');
+      }
 
       // 스트림 생성
-      const stream = new MediaStream([consumer.track]);
+      const stream = new MediaStream([track]);
       this.remoteStreams.set(producerPeerId, stream);
+      
+      console.log("📺 Remote screen stream created:", {
+        streamId: stream.id,
+        trackId: track.id,
+        trackReadyState: track.readyState,
+        streamActive: stream.active,
+        trackCount: stream.getTracks().length
+      });
 
-      console.log(
-        `📹 Remote screen stream created for ${producerPeerId}:`,
-        stream.id
-      );
-      console.log(
-        `📺 Remote streams map:`,
-        Array.from(this.remoteStreams.keys())
-      );
+      // 스트림 종료 감지 및 자동 정리
+      track.onended = () => {
+        console.log(`📺 Remote screen track ended for ${producerPeerId}`);
+        this.scheduleStreamCleanup(producerPeerId, producerId);
+      };
 
       // Redux 상태 업데이트
       const screenShare = {
@@ -244,31 +286,24 @@ class ScreenShareManager {
         peerId: producerPeerId,
         peerName: producerPeerName,
         isActive: true,
-        startedAt: new Date(),
+        startedAt: Date.now(),
       };
 
       this.dispatch(addRemoteScreenShare(screenShare));
 
-      // Consumer resume (필요한 경우)
-      if (consumer.paused) {
-        await socketApi.resumeConsumer(consumer.id);
-      }
-
       console.log(`✅ Screen share consumption successful: ${producerPeerId}`, {
         producerId,
+        trackId,
         streamId: stream.id,
-        consumerPaused: consumer.paused,
       });
+
     } catch (error) {
-      console.error(
-        `❌ Screen share consumption failed: ${producerPeerId}`,
-        error
-      );
+      console.error(`❌ Screen share consumption failed: ${producerPeerId}`, error);
       throw error;
     }
   }
 
-  // 원격 화면 공유 제거
+  // 🆕 원격 화면 공유 제거 (MediaTrackManager 활용)
   public removeRemoteScreenShare(
     producerId: string,
     producerPeerId: string
@@ -280,20 +315,22 @@ class ScreenShareManager {
         `🗑️ Removing remote screen share: ${producerPeerId}, producerId: ${producerId}`
       );
 
-      // Consumer 정리
-      const consumer = this.consumers.get(producerId);
-      if (consumer) {
-        consumer.close();
-        this.consumers.delete(producerId);
-        console.log(`🗑️ Consumer closed for producerId: ${producerId}`);
-      }
+      // 정리 타이머 취소
+      this.cancelStreamCleanup(producerPeerId);
+
+      // 🆕 MediaTrackManager를 통해 트랙 제거
+      mediaTrackManager.removeRemoteTrackByType(producerPeerId, 'screen');
 
       // 스트림 정리
       const stream = this.remoteStreams.get(producerPeerId);
       if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+        const activeTracks = stream.getTracks().filter(track => track.readyState === 'live');
+        activeTracks.forEach((track) => track.stop());
+        
         this.remoteStreams.delete(producerPeerId);
-        console.log(`🗑️ Stream removed for peerId: ${producerPeerId}`);
+        console.log(`🗑️ Stream removed for peerId: ${producerPeerId} (stopped ${activeTracks.length} tracks)`);
+      } else {
+        console.log(`⚠️ Stream not found for peerId: ${producerPeerId}`);
       }
 
       // Redux 상태 업데이트
@@ -312,84 +349,41 @@ class ScreenShareManager {
     }
   }
 
-  // Send Transport 생성
-  private async createSendTransport(roomId: string): Promise<void> {
-    try {
-      console.log("🚚 Creating screen share send transport...");
-      const transportOptions = await socketApi.createProducerTransport(roomId);
-      this.sendTransport = this.device!.createSendTransport(transportOptions);
-
-      this.sendTransport.on(
-        "connect",
-        async ({ dtlsParameters }, callback, errback) => {
-          try {
-            await socketApi.connectTransport({
-              transportId: this.sendTransport!.id,
-              dtlsParameters,
-            });
-            callback();
-          } catch (error) {
-            errback(error as Error);
-          }
-        }
-      );
-
-      this.sendTransport.on(
-        "produce",
-        async ({ kind, rtpParameters }, callback, errback) => {
-          try {
-            const { id } = await socketApi.produce({
-              transportId: this.sendTransport!.id,
-              kind,
-              rtpParameters,
-              roomId,
-            });
-            callback({ id });
-          } catch (error) {
-            errback(error as Error);
-          }
-        }
-      );
-
-      console.log("✅ Screen share send transport created");
-    } catch (error) {
-      console.error("❌ Create send transport failed:", error);
-      throw error;
+  // 스트림 정리 스케줄링
+  private scheduleStreamCleanup(peerId: string, producerId: string): void {
+    // 기존 타이머 정리
+    const existingTimer = this.streamCleanupTimers.get(peerId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
     }
+
+    // 3초 후 정리 (딜레이를 통해 일시적 연결 끊김 처리)
+    const timer = window.setTimeout(() => {
+      console.log(`⏰ Scheduled cleanup for ${peerId}`);
+      this.removeRemoteScreenShare(producerId, peerId);
+      this.streamCleanupTimers.delete(peerId);
+    }, 3000);
+
+    this.streamCleanupTimers.set(peerId, timer);
   }
 
-  // Recv Transport 생성
-  private async createRecvTransport(roomId: string): Promise<void> {
-    try {
-      console.log("🚚 Creating screen share recv transport...");
-      const transportOptions = await socketApi.createConsumerTransport(roomId);
-      this.recvTransport = this.device!.createRecvTransport(transportOptions);
-
-      this.recvTransport.on(
-        "connect",
-        async ({ dtlsParameters }, callback, errback) => {
-          try {
-            await socketApi.connectTransport({
-              transportId: this.recvTransport!.id,
-              dtlsParameters,
-            });
-            callback();
-          } catch (error) {
-            errback(error as Error);
-          }
-        }
-      );
-
-      console.log("✅ Screen share recv transport created");
-    } catch (error) {
-      console.error("❌ Create recv transport failed:", error);
-      throw error;
+  // 즉시 스트림 정리 취소
+  private cancelStreamCleanup(peerId: string): void {
+    const timer = this.streamCleanupTimers.get(peerId);
+    if (timer) {
+      clearTimeout(timer);
+      this.streamCleanupTimers.delete(peerId);
+      console.log(`⏹️ Canceled cleanup for ${peerId}`);
     }
   }
 
   // 정리
   public cleanup(): void {
     console.log("🧹 Cleaning up screen share resources...");
+
+    // 모든 정리 타이머 취소
+    this.streamCleanupTimers.forEach((timer) => clearTimeout(timer));
+    this.streamCleanupTimers.clear();
 
     // 로컬 스트림 정리
     if (this.localStream) {
@@ -404,30 +398,7 @@ class ScreenShareManager {
     });
     this.remoteStreams.clear();
 
-    // Producer 정리
-    if (this.producer) {
-      this.producer.close();
-      this.producer = null;
-    }
-
-    // Consumers 정리
-    this.consumers.forEach((consumer, producerId) => {
-      console.log(`🗑️ Cleaning up consumer for ${producerId}`);
-      consumer.close();
-    });
-    this.consumers.clear();
-
-    // Transports 정리
-    if (this.sendTransport) {
-      this.sendTransport.close();
-      this.sendTransport = null;
-    }
-
-    if (this.recvTransport) {
-      this.recvTransport.close();
-      this.recvTransport = null;
-    }
-
+    // 🆕 MediaTrackManager는 별도로 정리됨 (mediasoupManager.cleanup()에서)
     this.device = null;
     this.dispatch = null;
 

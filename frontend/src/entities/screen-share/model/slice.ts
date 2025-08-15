@@ -7,7 +7,7 @@ export interface ScreenShare {
   peerId: string;
   peerName: string;
   isActive: boolean;
-  startedAt: Date;
+  startedAt: number;
 }
 
 interface ScreenShareState {

@@ -1,6 +1,6 @@
 // src/entities/video-conference/session/model/slice.ts
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { User } from "@/shared/types/webrtc";
+import { User } from "@/shared/types/webrtc.types";
 import { joinRoomThunk } from "./thunks";
 
 interface SessionState {

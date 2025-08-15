@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useCallback, ReactNode } from "react";
 import * as tf from "@tensorflow/tfjs";
 import { HandLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import { useAppSelector } from "@/shared/hooks/redux";
-import { socketApi } from "@/shared/api/socketApi";
+import { gestureHandler, chatHandler, webrtcHandler } from "@/shared/api/socket";
 import { CpuChipIcon, EyeIcon, PowerIcon } from "@heroicons/react/24/solid";
 
 // --- 설정 상수 ---
@@ -383,14 +383,14 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
 
       if (roomId && userName) {
         console.log(`🤲 [BROADCAST] Static gesture: ${label} ${emoji}`);
-        socketApi.broadcastStaticGesture({
+        gestureHandler.broadcastStaticGesture({
           roomId,
           gestureType: "static",
           label,
           emoji,
           confidence,
           timestamp: now,
-          userId: socketApi.getSocketId() || "unknown",
+          userId: "current-user",
           userName,
         });
       }
@@ -407,14 +407,14 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
 
       if (roomId && userName) {
         console.log(`🌊 [BROADCAST] Dynamic gesture: ${label} ${emoji}`);
-        socketApi.broadcastDynamicGesture({
+        gestureHandler.broadcastDynamicGesture({
           roomId,
           gestureType: "dynamic",
           label,
           emoji,
           confidence,
           timestamp: now,
-          userId: socketApi.getSocketId() || "unknown",
+          userId: "current-user",
           userName,
         });
       }
@@ -426,12 +426,12 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
     (effect: string, emoji: string) => {
       if (roomId && userName) {
         console.log(`✨ [BROADCAST] Gesture effect: ${effect} ${emoji}`);
-        socketApi.broadcastGestureEffect({
+        gestureHandler.broadcastGestureEffect({
           roomId,
           effect,
           emoji,
           timestamp: Date.now(),
-          userId: socketApi.getSocketId() || "unknown",
+          userId: "current-user",
           userName,
           duration: 2000,
         });
@@ -638,7 +638,7 @@ export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
       console.log(
         `⚙️ [BROADCAST] Gesture status: static=${isStaticGestureOn}, dynamic=${isDynamicGestureOn}`
       );
-      socketApi.broadcastGestureStatus({
+      gestureHandler.broadcastGestureStatus({
         roomId,
         userName,
         staticGestureEnabled: isStaticGestureOn,

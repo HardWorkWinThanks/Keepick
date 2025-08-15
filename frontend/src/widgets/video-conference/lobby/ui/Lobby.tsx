@@ -13,8 +13,7 @@ import {
 import { Button } from "@/shared/ui/shadcn/button";
 
 interface LobbyProps {
-  // onJoin 시그니처에 userName 추가
-  onJoin: (stream: MediaStream, userName: string) => void;
+  onJoin: (userName: string) => void;
   isLoading: boolean;
   error: string | null;
 }
@@ -100,9 +99,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
             "다른 애플리케이션에서 카메라를 사용 중입니다. 다른 앱을 종료하고 다시 시도해주세요."
           );
         } else {
-          setMediaError(
-            `미디어 장치 오류: ${err.message || "알 수 없는 오류"}`
-          );
+          setMediaError(`미디어 장치 오류: ${err.message || "알 수 없는 오류"}`);
         }
         setIsCameraOn(false);
         setIsMicOn(false);
@@ -163,31 +160,22 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
 
   const handleJoinClick = () => {
     // userName.trim()으로 공백만 있는 이름은 방지
-    if (localStream && !isLoading && userName.trim()) {
-      onJoin(localStream, userName.trim());
+    if (!isLoading && userName.trim()) {
+      onJoin(userName.trim());
     }
   };
 
   // 참여 가능 조건에 userName 확인 추가
-  const canJoinMeeting =
-    localStream && !isLoading && !isInitializing && userName.trim() !== "";
-  const hasVideoTrack = localStream
-    ? localStream.getVideoTracks().length > 0
-    : false;
-  const hasAudioTrack = localStream
-    ? localStream.getAudioTracks().length > 0
-    : false;
+  const canJoinMeeting = !isLoading && !isInitializing && userName.trim() !== "";
+  const hasVideoTrack = localStream ? localStream.getVideoTracks().length > 0 : false;
+  const hasAudioTrack = localStream ? localStream.getAudioTracks().length > 0 : false;
 
   return (
     <div className="min-h-screen bg-[#222222] flex items-center justify-center p-4 font-body">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-[#FFFFFF] font-header mb-2">
-            회의 준비
-          </h1>
-          <p className="text-[#A0A0A5]">
-            카메라와 마이크를 확인하고 회의에 참여하세요
-          </p>
+          <h1 className="text-3xl font-bold text-[#FFFFFF] font-header mb-2">회의 준비</h1>
+          <p className="text-[#A0A0A5]">카메라와 마이크를 확인하고 회의에 참여하세요</p>
         </div>
 
         <div className="bg-[#2C2C2E] rounded-2xl p-6 shadow-2xl animate-scale-in">
@@ -197,9 +185,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
               <div className="absolute inset-0 flex items-center justify-center bg-[#222222]">
                 <div className="text-center">
                   <div className="w-10 h-10 border-4 border-[#FE7A25] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                  <p className="text-[#A0A0A5] text-sm">
-                    미디어 장치를 확인 중...
-                  </p>
+                  <p className="text-[#A0A0A5] text-sm">미디어 장치를 확인 중...</p>
                 </div>
               </div>
             )}
@@ -216,30 +202,29 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
               }`}
             />
 
-            {!isInitializing &&
-              (!isCameraOn || !hasVideoTrack || mediaError) && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-[#A0A0A5] bg-[#222222]">
-                  {mediaError ? (
-                    <>
-                      <ExclamationTriangleIcon className="w-12 h-12 text-[#D22016] mb-3" />
-                      <p className="text-center text-[#D22016] px-4 text-sm leading-relaxed">
-                        {mediaError}
-                      </p>
-                      <button
-                        onClick={() => window.location.reload()}
-                        className="mt-3 px-3 py-1.5 bg-[#FE7A25] hover:bg-[#E06B1F] rounded-lg text-[#222222] text-sm font-medium transition-colors"
-                      >
-                        다시 시도
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <VideoCameraSlashIcon className="w-12 h-12 mb-3" />
-                      <p>카메라가 꺼져 있습니다</p>
-                    </>
-                  )}
-                </div>
-              )}
+            {!isInitializing && (!isCameraOn || !hasVideoTrack || mediaError) && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-[#A0A0A5] bg-[#222222]">
+                {mediaError ? (
+                  <>
+                    <ExclamationTriangleIcon className="w-12 h-12 text-[#D22016] mb-3" />
+                    <p className="text-center text-[#D22016] px-4 text-sm leading-relaxed">
+                      {mediaError}
+                    </p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="mt-3 px-3 py-1.5 bg-[#FE7A25] hover:bg-[#E06B1F] rounded-lg text-[#222222] text-sm font-medium transition-colors"
+                    >
+                      다시 시도
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <VideoCameraSlashIcon className="w-12 h-12 mb-3" />
+                    <p>카메라가 꺼져 있습니다</p>
+                  </>
+                )}
+              </div>
+            )}
 
             {isMicOn && hasAudioTrack && !mediaError && (
               <div className="absolute bottom-3 left-3">
@@ -268,9 +253,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
                 }`}
               >
                 <VideoCameraIcon
-                  className={`w-4 h-4 ${
-                    hasVideoTrack ? "text-[#FE7A25]" : "text-[#D22016]"
-                  }`}
+                  className={`w-4 h-4 ${hasVideoTrack ? "text-[#FE7A25]" : "text-[#D22016]"}`}
                 />
               </div>
               <div className="flex-1">
@@ -279,9 +262,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
                   {hasVideoTrack ? "연결됨" : "연결되지 않음"}
                 </p>
               </div>
-              {hasVideoTrack && (
-                <CheckCircleIcon className="w-4 h-4 text-[#FE7A25]" />
-              )}
+              {hasVideoTrack && <CheckCircleIcon className="w-4 h-4 text-[#FE7A25]" />}
             </div>
 
             <div className="flex items-center space-x-2 p-3 bg-[#222222] rounded-lg">
@@ -291,9 +272,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
                 }`}
               >
                 <MicrophoneIcon
-                  className={`w-4 h-4 ${
-                    hasAudioTrack ? "text-[#FE7A25]" : "text-[#D22016]"
-                  }`}
+                  className={`w-4 h-4 ${hasAudioTrack ? "text-[#FE7A25]" : "text-[#D22016]"}`}
                 />
               </div>
               <div className="flex-1">
@@ -302,9 +281,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
                   {hasAudioTrack ? "연결됨" : "연결되지 않음"}
                 </p>
               </div>
-              {hasAudioTrack && (
-                <CheckCircleIcon className="w-4 h-4 text-[#FE7A25]" />
-              )}
+              {hasAudioTrack && <CheckCircleIcon className="w-4 h-4 text-[#FE7A25]" />}
             </div>
           </div>
 
@@ -392,9 +369,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
             <div className="mt-4 p-3 bg-[#D22016]/10 rounded-lg">
               <div className="flex items-center space-x-2">
                 <ExclamationTriangleIcon className="w-4 h-4 text-[#D22016]" />
-                <p className="text-[#D22016] text-sm">
-                  서버 연결 오류: {error}
-                </p>
+                <p className="text-[#D22016] text-sm">서버 연결 오류: {error}</p>
               </div>
             </div>
           )}

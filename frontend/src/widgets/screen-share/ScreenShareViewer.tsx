@@ -204,7 +204,17 @@ const ScreenShareVideo = ({
 
     if (stream && videoRef.current) {
       videoRef.current.srcObject = stream;
-      videoRef.current.play().catch(console.error);
+      
+      // AbortError 방지를 위한 안전한 play 처리
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          // AbortError는 무시 (정상적인 중단)
+          if (error.name !== 'AbortError') {
+            console.error('Video play error:', error);
+          }
+        });
+      }
     }
 
     return () => {

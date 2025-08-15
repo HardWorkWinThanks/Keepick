@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useAppSelector } from "@/shared/hooks/redux";
 import { useLocalMediaControls, useTransportState } from "@/shared/hooks/useMediaTrack";
 import { mediasoupManager } from "@/shared/api/mediasoupManager";
-import { socketApi } from "@/shared/api/socketApi";
+import { gestureHandler, chatHandler, webrtcHandler } from "@/shared/api/socket";
 import {
   MicrophoneIcon,
   VideoCameraIcon,
@@ -61,7 +61,7 @@ export const MediaControls = () => {
       <button
         onClick={() => {
           mediasoupManager.cleanup();
-          socketApi.leaveRoom();
+          webrtcHandler.leaveRoom();
           window.location.href = '/';
         }}
         className="p-3 rounded-full bg-[#D22016] text-white hover:bg-[#B91C1C] transition-all duration-200 transform hover:scale-110"

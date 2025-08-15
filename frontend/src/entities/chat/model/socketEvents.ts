@@ -8,7 +8,7 @@ import {
   setMessages,
   ChatMessage,
 } from "./slice";
-import { socketApi } from "@/shared/api/socketApi";
+import { chatHandler } from "@/shared/api/socket";
 
 // 서버에서 받는 채팅 메시지 타입 (서버 API에 맞게 수정)
 export interface ServerChatMessage {
@@ -41,7 +41,7 @@ export class ChatSocketHandler {
     this.currentUserName = userName;
 
     // 채팅방 입장
-    socketApi.joinChat({ roomId, userName });
+    chatHandler.joinChat({ roomId, userName });
   }
 
   // 메시지 전송 (중복 방지 로직 추가)
@@ -59,7 +59,7 @@ export class ChatSocketHandler {
     const tempId = `temp-${Date.now()}-${Math.random()}`;
 
     // 서버 API에 맞는 형태로 메시지 전송
-    socketApi.sendChatMessage({
+    chatHandler.sendChatMessage({
       roomId: this.currentRoomId,
       content,
       messageType: "text",
@@ -72,7 +72,7 @@ export class ChatSocketHandler {
         type: "user",
         content,
         sender: {
-          id: socketApi.getSocketId() || "unknown",
+          id: "current-user",
           name: this.currentUserName,
         },
         timestamp: new Date().toISOString(), // Date를 string으로 변환
@@ -184,7 +184,7 @@ export class ChatSocketHandler {
     console.log(`💬 [CLIENT] ⌨️ Setting typing status: ${isTyping}`);
 
     // 서버에 타이핑 상태 전송
-    socketApi.sendTypingStatus({
+    chatHandler.sendTypingStatus({
       roomId: this.currentRoomId,
       isTyping,
     });
@@ -263,7 +263,7 @@ export class ChatSocketHandler {
         this.setTypingStatus(false);
       }
 
-      socketApi.leaveChat({ roomId: this.currentRoomId });
+      chatHandler.leaveChat({ roomId: this.currentRoomId });
 
       // 타이핑 타이머 정리
       if (this.typingTimeout) {

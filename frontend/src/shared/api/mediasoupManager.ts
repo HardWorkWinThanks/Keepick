@@ -2,8 +2,8 @@
 import { Device } from "mediasoup-client";
 import { Transport, RtpCapabilities } from "mediasoup-client/types";
 import { AppDispatch } from "@/shared/config/store";
-import { socketApi } from "./socketApi";
 import { mediaTrackManager } from "./mediaTrackManager";
+import { screenShareManager } from "./screenShareManager"; // 🆕 화면 공유 매니저 추가
 import {
   setDeviceLoaded,
   setRtpCapabilities,
@@ -13,27 +13,29 @@ import {
   removeRemotePeer,
   resetMediaState,
 } from "@/entities/video-conference/media/model/mediaSlice";
+import { webrtcHandler } from "./socket";
+import { ProducerAppData } from "@/shared/types/webrtc.types";
 
 class MediasoupManager {
   private device: Device | null = null;
   private sendTransport: Transport | null = null;
   private recvTransport: Transport | null = null;
   private dispatch: AppDispatch | null = null;
-  private currentRoomId: string = '';
+  private currentRoomId: string = "";
+  private consumingProducers: Set<string> = new Set(); // 🆕 진행 중인 consume 작업 추적
 
   public async init(dispatch: AppDispatch) {
     this.dispatch = dispatch;
     mediaTrackManager.init(dispatch);
 
     try {
-      console.log('🚀 Initializing MediaSoup...');
-      
+      console.log("🚀 Initializing MediaSoup...");
+
       // Device 생성 및 초기화
       this.device = new Device();
-      console.log('✅ MediaSoup Device created');
-
+      console.log("✅ MediaSoup Device created");
     } catch (error) {
-      console.error('❌ MediaSoup initialization failed:', error);
+      console.error("❌ MediaSoup initialization failed:", error);
       throw error;
     }
   }
@@ -41,24 +43,30 @@ class MediasoupManager {
   // RTP Capabilities 로드
   public async loadDevice(rtpCapabilities: RtpCapabilities): Promise<void> {
     if (!this.device || !this.dispatch) {
-      throw new Error('Device not initialized');
+      throw new Error("Device not initialized");
     }
 
     // 이미 로드된 경우 스킵
     if (this.device.loaded) {
-      console.log('⚠️ Device already loaded, skipping...');
+      console.log("⚠️ Device already loaded, skipping...");
       return;
     }
 
     try {
       await this.device.load({ routerRtpCapabilities: rtpCapabilities });
-      
+
       this.dispatch(setRtpCapabilities(rtpCapabilities));
       this.dispatch(setDeviceLoaded(true));
-      
-      console.log('✅ Device loaded with RTP capabilities');
+
+      // 🆕 Device 로드 완료 후 ScreenShareManager 초기화
+      if (this.device) {
+        screenShareManager.init(this.dispatch, this.device);
+        console.log("🖥️ ScreenShareManager initialized with device");
+      }
+
+      console.log("✅ Device loaded with RTP capabilities");
     } catch (error) {
-      console.error('❌ Failed to load device:', error);
+      console.error("❌ Failed to load device:", error);
       throw error;
     }
   }
@@ -66,36 +74,37 @@ class MediasoupManager {
   // Transport 생성
   public async createTransports(roomId: string): Promise<void> {
     if (!this.device || !this.dispatch) {
-      throw new Error('Device not initialized');
+      throw new Error("Device not initialized");
     }
 
     this.currentRoomId = roomId;
 
     try {
       // Send Transport 생성
-      const sendTransportData = await socketApi.createProducerTransport(roomId);
-      console.log('📤 Send transport data:', sendTransportData);
+      const sendTransportData = await webrtcHandler.createProducerTransport({ roomId });
+      console.log("📤 Send transport data:", sendTransportData);
       this.sendTransport = this.device.createSendTransport(sendTransportData);
       this.setupSendTransportEvents(roomId);
 
       // Recv Transport 생성
-      const recvTransportData = await socketApi.createConsumerTransport(roomId);
-      console.log('📥 Recv transport data:', recvTransportData);
+      const recvTransportData = await webrtcHandler.createConsumerTransport({ roomId });
+      console.log("📥 Recv transport data:", recvTransportData);
       this.recvTransport = this.device.createRecvTransport(recvTransportData);
       this.setupRecvTransportEvents();
 
       // MediaTrackManager에 Transport 설정
       mediaTrackManager.setTransports(this.sendTransport, this.recvTransport, roomId);
 
-      this.dispatch(setTransports({
-        sendId: this.sendTransport.id,
-        recvId: this.recvTransport.id,
-      }));
+      this.dispatch(
+        setTransports({
+          sendId: this.sendTransport.id,
+          recvId: this.recvTransport.id,
+        })
+      );
 
-      console.log('✅ Transports created successfully');
-
+      console.log("✅ Transports created successfully");
     } catch (error) {
-      console.error('❌ Failed to create transports:', error);
+      console.error("❌ Failed to create transports:", error);
       throw error;
     }
   }
@@ -113,57 +122,116 @@ class MediasoupManager {
       const videoTrack = stream.getVideoTracks()[0];
 
       if (audioTrack) {
-        await mediaTrackManager.addLocalTrack(audioTrack, 'local');
+        await mediaTrackManager.addLocalTrack(audioTrack, "local", "camera");
       }
       if (videoTrack) {
-        await mediaTrackManager.addLocalTrack(videoTrack, 'local');
+        await mediaTrackManager.addLocalTrack(videoTrack, "local", "camera");
       }
 
-      console.log('✅ Local media started');
-
+      console.log("✅ Local media started");
     } catch (error) {
-      console.error('❌ Failed to start local media:', error);
+      console.error("❌ Failed to start local media:", error);
       throw error;
     }
   }
 
-  // 원격 Producer 소비
-  public async consumeProducer(data: { producerId: string; producerSocketId: string }): Promise<void> {
+  // 🆕 원격 Producer 소비 (화면 공유 타입 감지)
+  public async consumeProducer(data: {
+    producerId: string;
+    producerSocketId: string;
+    appData?: any;
+  }): Promise<void> {
     if (!this.device || !this.dispatch) {
-      throw new Error('Device not initialized');
+      throw new Error("Device not initialized");
     }
 
-    const { producerId, producerSocketId } = data;
+    const { producerId, producerSocketId, appData } = data;
+
+    // 🔒 중복 Consumer 생성 방지 - Producer ID 기반 체크
+    const existingTrackInfo = mediaTrackManager.getTrackByProducerId(producerId);
+    if (existingTrackInfo) {
+      console.warn(`⚠️ Producer ${producerId} seems to be already consumed, ignoring...`);
+      return;
+    }
+
+    // 🔒 추가 중복 방지 - 이미 진행 중인 consume 작업 체크
+    if (this.consumingProducers.has(producerId)) {
+      console.warn(`⚠️ Producer ${producerId} is already being consumed, ignoring...`);
+      return;
+    }
+
+    // 진행 중인 작업으로 마킹
+    this.consumingProducers.add(producerId);
 
     try {
-      // 서버에서 Producer 정보 가져오기
-      const consumerData = await socketApi.consume({
-        transportId: this.recvTransport!.id,
-        producerId,
-        rtpCapabilities: this.device.rtpCapabilities,
-        roomId: this.currentRoomId,
-      });
-
-      // Consumer 생성
-      const consumer = await this.recvTransport!.consume(consumerData);
-      
-      // MediaTrackManager를 통해 트랙 관리
-      await mediaTrackManager.addRemoteTrack(
-        producerId,
-        producerSocketId,
-        consumer.kind as 'audio' | 'video',
-        this.device.rtpCapabilities
+      // 🆕 화면 공유인지 감지 (appData 또는 서버에서 전달된 정보로 판단)
+      const isScreenShare = appData?.type === "screenshare" || appData?.type === "screen";
+      console.log(
+        `🔍 Consuming producer: ${producerId} (${
+          isScreenShare ? "screen share" : "camera"
+        }) from ${producerSocketId}`
       );
 
-      // Consumer resume
-      if (consumer.paused) {
-        await socketApi.resumeConsumer(consumer.id);
+      if (isScreenShare) {
+        // 🖥️ 화면 공유는 ScreenShareManager를 통해 처리
+        await screenShareManager.consumeScreenShare(
+          this.currentRoomId,
+          producerId,
+          producerSocketId,
+          appData?.peerName || "Unknown User"
+        );
+      } else {
+        // 📹 일반 미디어는 기존 로직으로 처리
+        // 서버에서 Producer 정보 가져오기
+        const consumerData = await webrtcHandler.consume({
+          transportId: this.recvTransport!.id,
+          producerId,
+          rtpCapabilities: this.device.rtpCapabilities,
+          roomId: this.currentRoomId,
+        });
+
+        // Consumer 생성
+        const consumer = await this.recvTransport!.consume(consumerData);
+
+        // MediaTrackManager를 통해 트랙 관리
+        await mediaTrackManager.addRemoteTrack(
+          producerId,
+          producerSocketId,
+          consumer.kind as "audio" | "video",
+          this.device.rtpCapabilities,
+          "camera" // 일반 카메라 트랙
+        );
+
+        // Consumer resume
+        if (consumer.paused) {
+          await webrtcHandler.resumeConsumer({ consumerId: consumer.id });
+        }
       }
 
-      console.log(`✅ Consumer created for ${producerSocketId}:`, consumer.kind);
+      console.log(`✅ Consumer created for ${producerSocketId}:`, {
+        producerId,
+        type: isScreenShare ? "screen" : "camera",
+      });
 
+      // 완료 후 진행 중 목록에서 제거
+      this.consumingProducers.delete(producerId);
     } catch (error) {
       console.error(`❌ Failed to consume producer ${producerId}:`, error);
+
+      // 중복 msid 오류이거나 이미 처리된 Producer인 경우 무시
+      if (
+        error instanceof Error &&
+        (error.message.includes("Duplicate a=msid") ||
+          error.message.includes("already consumed") ||
+          error.message.includes("Consumer already exists"))
+      ) {
+        console.warn(`⚠️ Producer ${producerId} seems to be already consumed, ignoring...`);
+        this.consumingProducers.delete(producerId);
+        return;
+      }
+
+      // 에러 발생 시에도 진행 중 목록에서 제거
+      this.consumingProducers.delete(producerId);
       throw error;
     }
   }
@@ -172,66 +240,96 @@ class MediasoupManager {
   public addPeer(socketId: string, peerName: string): void {
     if (!this.dispatch) return;
 
-    this.dispatch(addRemotePeer({
-      socketId,
-      peerId: socketId,
-      peerName,
-    }));
+    this.dispatch(
+      addRemotePeer({
+        socketId,
+        peerId: socketId,
+        peerName,
+      })
+    );
 
     console.log(`👥 Peer added: ${peerName} (${socketId})`);
   }
 
-  // 피어 제거
+  // 🆕 피어 제거 (화면 공유도 함께 정리)
   public removePeer(socketId: string): void {
     if (!this.dispatch) return;
 
-    // 해당 피어의 모든 트랙 제거
-    const audioTrackId = `remote_${socketId}_audio`;
-    const videoTrackId = `remote_${socketId}_video`;
-    
-    mediaTrackManager.removeRemoteTrack(audioTrackId, socketId);
-    mediaTrackManager.removeRemoteTrack(videoTrackId, socketId);
+    // 해당 피어의 모든 트랙 제거 (카메라 + 화면 공유)
+    mediaTrackManager.removeRemoteTrackByType(socketId, "camera");
+    mediaTrackManager.removeRemoteTrackByType(socketId, "screen");
+
+    // 🆕 ScreenShareManager에서도 정리
+    // producerId는 정확히 알 수 없으므로 peerId로 정리
+    try {
+      screenShareManager.removeRemoteScreenShare("unknown", socketId);
+    } catch (error) {
+      console.warn(`⚠️ Screen share cleanup failed for ${socketId}:`, error);
+    }
 
     this.dispatch(removeRemotePeer(socketId));
 
     console.log(`👥 Peer removed: ${socketId}`);
   }
 
-  // Producer 종료 처리
+  // 🆕 Producer 종료 처리 (화면 공유 감지)
   public handleProducerClosed(producerId: string): void {
     const trackInfo = mediaTrackManager.getTrackByProducerId(producerId);
     if (trackInfo) {
-      mediaTrackManager.removeRemoteTrack(trackInfo.trackId, trackInfo.peerId);
+      console.log(`🔌 Producer ${producerId} closed, track type: ${trackInfo.trackType}`);
+
+      if (trackInfo.trackType === "screen") {
+        // 🖥️ 화면 공유 Producer 종료
+        screenShareManager.removeRemoteScreenShare(producerId, trackInfo.peerId);
+      } else {
+        // 📹 일반 미디어 Producer 종료
+        mediaTrackManager.removeRemoteTrack(trackInfo.trackId, trackInfo.peerId);
+      }
+
       console.log(`🔌 Producer ${producerId} closed, track removed`);
     }
   }
 
   // 로컬 트랙 토글
-  public toggleLocalTrack(kind: 'audio' | 'video'): void {
-    const track = mediaTrackManager.getLocalTrack(kind);
+  public toggleLocalTrack(kind: "audio" | "video"): void {
+    const track = mediaTrackManager.getLocalTrack(kind, "camera");
     if (track) {
       const newEnabled = !track.enabled;
-      mediaTrackManager.enableLocalTrack(`local_${kind}`, newEnabled);
-      console.log(`🔄 Local ${kind} ${newEnabled ? 'enabled' : 'disabled'}`);
+      // trackId 찾기
+      for (const [trackId, trackInfo] of mediaTrackManager["localTracks"]) {
+        if (trackInfo.track === track) {
+          mediaTrackManager.enableLocalTrack(trackId, newEnabled);
+          break;
+        }
+      }
+      console.log(`🔄 Local ${kind} ${newEnabled ? "enabled" : "disabled"}`);
     }
   }
 
   // 디바이스 변경
-  public async changeDevice(kind: 'audio' | 'video', deviceId: string): Promise<void> {
+  public async changeDevice(kind: "audio" | "video", deviceId: string): Promise<void> {
     try {
-      const constraints = kind === 'video' 
-        ? { video: { deviceId, width: 1280, height: 720 } }
-        : { audio: { deviceId } };
+      const constraints =
+        kind === "video"
+          ? { video: { deviceId, width: 1280, height: 720 } }
+          : { audio: { deviceId } };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       const newTrack = stream.getTracks()[0];
 
       // 기존 트랙을 새 트랙으로 교체
-      const trackId = `local_${kind}`;
-      await mediaTrackManager.replaceLocalTrack(trackId, newTrack);
+      // trackId 찾기
+      const existingTrack = mediaTrackManager.getLocalTrack(kind, "camera");
+      if (existingTrack) {
+        for (const [trackId, trackInfo] of mediaTrackManager["localTracks"]) {
+          if (trackInfo.track === existingTrack && trackInfo.trackType === "camera") {
+            await mediaTrackManager.replaceLocalTrack(trackId, newTrack);
+            break;
+          }
+        }
+      }
 
       console.log(`🔄 ${kind} device changed to:`, deviceId);
-
     } catch (error) {
       console.error(`❌ Failed to change ${kind} device:`, error);
       throw error;
@@ -240,7 +338,10 @@ class MediasoupManager {
 
   // 정리
   public cleanup(): void {
-    console.log('🧹 Cleaning up MediaSoup...');
+    console.log("🧹 Cleaning up MediaSoup...");
+
+    // 🆕 ScreenShareManager 정리
+    screenShareManager.cleanup();
 
     // 트랙 매니저 정리
     mediaTrackManager.cleanup();
@@ -258,78 +359,85 @@ class MediasoupManager {
     // Device 정리
     this.device = null;
 
+    // 진행 중인 consume 작업 목록 초기화
+    this.consumingProducers.clear();
+
     // Redux 상태 초기화
     if (this.dispatch) {
       this.dispatch(resetMediaState());
     }
 
-    this.currentRoomId = '';
+    this.currentRoomId = "";
     this.dispatch = null;
 
-    console.log('✅ MediaSoup cleanup completed');
+    console.log("✅ MediaSoup cleanup completed");
   }
 
   // Send Transport 이벤트 설정
   private setupSendTransportEvents(roomId: string): void {
     if (!this.sendTransport) return;
 
-    this.sendTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
+    this.sendTransport.on("connect", async ({ dtlsParameters }, callback, errback) => {
       try {
-        await socketApi.connectTransport({
+        await webrtcHandler.connectTransport({
           transportId: this.sendTransport!.id,
           dtlsParameters,
         });
         callback();
-        console.log('✅ Send transport connected');
+        console.log("✅ Send transport connected");
       } catch (error) {
-        console.error('❌ Send transport connect failed:', error);
+        console.error("❌ Send transport connect failed:", error);
         errback(error as Error);
       }
     });
 
-    this.sendTransport.on('produce', async ({ kind, rtpParameters }, callback, errback) => {
-      try {
-        const { id } = await socketApi.produce({
-          transportId: this.sendTransport!.id,
-          kind,
-          rtpParameters,
-          roomId,
-        });
-        callback({ id });
-        console.log(`✅ Producer created: ${id} (${kind})`);
-      } catch (error) {
-        console.error('❌ Produce failed:', error);
-        errback(error as Error);
+    this.sendTransport.on(
+      "produce",
+      async ({ kind, rtpParameters, appData }, callback, errback) => {
+        try {
+          const { id } = await webrtcHandler.produce({
+            transportId: this.sendTransport!.id,
+            kind,
+            rtpParameters,
+            roomId,
+            appData: appData as unknown as ProducerAppData | undefined, // 🆕 appData 전달 (화면 공유 정보 포함)
+          });
+          callback({ id });
+          console.log(
+            `✅ Producer created: ${id} (${kind})${
+              appData?.type === "screen" ? " [SCREEN SHARE]" : ""
+            }`
+          );
+        } catch (error) {
+          console.error("❌ Produce failed:", error);
+          errback(error as Error);
+        }
       }
-    });
+    );
 
-    this.sendTransport.on('connectionstatechange', (state) => {
+    this.sendTransport.on("connectionstatechange", (state) => {
       console.log(`🔗 Send transport state: ${state}`);
-      
-      // Transport가 실패해도 기능적으로는 작동하므로 connected로 처리
-      // (Producer 생성이 성공했다면 미디어 전송은 가능)
+
       if (this.dispatch) {
-        // failed 상태라도 기능적으로는 연결된 것으로 간주
-        const functionallyConnected = (state === 'connected') || (state === 'failed');
+        const functionallyConnected = state === "connected" || state === "failed";
         this.dispatch(setTransportConnected(functionallyConnected));
       }
-      
-      // 연결 실패 시 더 자세한 로그 (하지만 panic하지 않음)
-      if (state === 'failed') {
-        console.warn('⚠️ Send transport state is failed, but may still be functional');
-        this.sendTransport?.getStats().then(stats => {
-          console.log('Send transport stats:', stats);
+
+      if (state === "failed") {
+        console.warn("⚠️ Send transport state is failed, but may still be functional");
+        this.sendTransport?.getStats().then((stats) => {
+          console.log("Send transport stats:", stats);
         });
       }
     });
 
-    // ICE gathering state 변경 추적 (올바른 이벤트명)
-    this.sendTransport.on('icegatheringstatechange', (iceState) => {
+    // ICE gathering state 변경 추적
+    this.sendTransport.on("icegatheringstatechange", (iceState) => {
       console.log(`🧊 Send transport ICE gathering state: ${iceState}`);
     });
 
     // ICE candidate error 추적
-    this.sendTransport.on('icecandidateerror', (error) => {
+    this.sendTransport.on("icecandidateerror", (error) => {
       console.error(`❌ Send transport ICE candidate error:`, error);
     });
   }
@@ -338,46 +446,45 @@ class MediasoupManager {
   private setupRecvTransportEvents(): void {
     if (!this.recvTransport) return;
 
-    this.recvTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
+    this.recvTransport.on("connect", async ({ dtlsParameters }, callback, errback) => {
       try {
-        await socketApi.connectTransport({
+        await webrtcHandler.connectTransport({
           transportId: this.recvTransport!.id,
           dtlsParameters,
         });
         callback();
-        console.log('✅ Recv transport connected');
+        console.log("✅ Recv transport connected");
       } catch (error) {
-        console.error('❌ Recv transport connect failed:', error);
+        console.error("❌ Recv transport connect failed:", error);
         errback(error as Error);
       }
     });
 
-    this.recvTransport.on('connectionstatechange', (state) => {
+    this.recvTransport.on("connectionstatechange", (state) => {
       console.log(`🔗 Recv transport state: ${state}`);
-      
-      // Redux 상태도 업데이트 (전체 연결 상태는 send와 recv 모두 고려)
+
       if (this.dispatch && this.sendTransport) {
-        const bothConnected = (state === 'connected' && this.sendTransport.connectionState === 'connected') ||
-                             (this.sendTransport.connectionState === 'connected' && state === 'connected');
+        const bothConnected =
+          (state === "connected" && this.sendTransport.connectionState === "connected") ||
+          (this.sendTransport.connectionState === "connected" && state === "connected");
         this.dispatch(setTransportConnected(bothConnected));
       }
-      
-      // 연결 실패 시 더 자세한 로그
-      if (state === 'failed') {
-        console.error('❌ Recv transport connection failed');
-        this.recvTransport?.getStats().then(stats => {
-          console.log('Recv transport stats:', stats);
+
+      if (state === "failed") {
+        console.error("❌ Recv transport connection failed");
+        this.recvTransport?.getStats().then((stats) => {
+          console.log("Recv transport stats:", stats);
         });
       }
     });
 
     // ICE gathering state 변경 추적
-    this.recvTransport.on('icegatheringstatechange', (iceState) => {
+    this.recvTransport.on("icegatheringstatechange", (iceState) => {
       console.log(`🧊 Recv transport ICE gathering state: ${iceState}`);
     });
 
     // ICE candidate error 추적
-    this.recvTransport.on('icecandidateerror', (error) => {
+    this.recvTransport.on("icecandidateerror", (error) => {
       console.error(`❌ Recv transport ICE candidate error:`, error);
     });
   }

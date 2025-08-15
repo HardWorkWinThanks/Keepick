@@ -1,6 +1,6 @@
 // src/entities/video-conference/media/model/slice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { MediaState, MediaTrackState, PeerMediaState } from '@/shared/types/media.types';
+import { MediaState, MediaTrackState, PeerMediaState, LocalMediaState } from '@/shared/types/media.types';
 import type { RtpCapabilities } from 'mediasoup-client/types';
 
 const initialState: MediaState = {

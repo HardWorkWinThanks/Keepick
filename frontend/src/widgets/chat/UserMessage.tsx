@@ -3,7 +3,7 @@
 
 import { ChatMessage } from "@/entities/chat/model/slice";
 import { useAppSelector } from "@/shared/hooks/redux";
-import { socketApi } from "@/shared/api/socketApi";
+import { gestureHandler, chatHandler, webrtcHandler } from "@/shared/api/socket";
 import { UserIcon, ClockIcon } from "@heroicons/react/24/solid";
 
 interface UserMessageProps {
@@ -15,7 +15,7 @@ export const UserMessage = ({
   message,
   isTemporary = false,
 }: UserMessageProps) => {
-  const currentUserId = socketApi.getSocketId();
+  const currentUserId = "current-user";
   const isOwnMessage = message.sender?.id === currentUserId;
 
   const formatTime = (timestamp: Date | string | number) => {

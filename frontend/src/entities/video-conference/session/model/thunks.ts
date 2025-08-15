@@ -1,13 +1,13 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { RootState } from "@/shared/config/store";
-import { socketApi } from "@/shared/api/socketApi";
+import { webrtcHandler } from "@/shared/api/socket";
 import { mediasoupManager } from "@/shared/api/mediasoupManager";
 import { consumeNewProducerThunk } from "@/entities/video-conference/consume-stream/model/thunks";
 import { resetRoomState, setUsers, setRoomId } from "./slice"; // setRoomId, setUsers를 같은 폴더의 slice에서 가져옴
 import { resetMediaState } from "@/entities/video-conference/media/model/slice";
 import { resetWebrtcState } from "@/entities/video-conference/webrtc/model/slice";
 import { RtpCapabilities } from "mediasoup-client/types";
-import { User } from "@/shared/types/webrtc";
+import { User } from "@/shared/types/webrtc.types";
 import { setInRoom } from "./slice";
 
 // ====================================================================
@@ -27,9 +27,9 @@ export const joinRoomThunk = createAsyncThunk(
       // 방에 참여하기 전에 Redux 상태에 roomId를 먼저 저장합니다.
       dispatch(setRoomId(roomId));
 
-      console.log("[2] joinRoomThunk: socketApi.joinRoom 호출 (요청만 보냄)");
+      console.log("[2] joinRoomThunk: webrtcHandler.joinRoom 호출 (요청만 보냄)");
       // 서버에 방 참여를 요청합니다. 반환값을 기다리지 않습니다. (Fire-and-Forget)
-      socketApi.joinRoom({ roomId, userName });
+      webrtcHandler.joinRoom({ roomId, userName });
 
       // Thunk는 성공적으로 요청을 보냈다는 사실만 반환합니다.
       return { roomId, userName };
@@ -48,10 +48,7 @@ export const joinRoomThunk = createAsyncThunk(
 export const setupConferenceThunk = createAsyncThunk(
   "session/setupConference",
   async (
-    {
-      rtpCapabilities,
-      peers,
-    }: { rtpCapabilities: RtpCapabilities; peers: User[] },
+    { rtpCapabilities, peers }: { rtpCapabilities: RtpCapabilities; peers: User[] },
     { dispatch, getState, rejectWithValue }
   ) => {
     const state = getState() as RootState;
@@ -110,7 +107,7 @@ export const leaveRoomThunk = createAsyncThunk(
   async (_, { dispatch, rejectWithValue }) => {
     try {
       // 새로운 구조에서는 직접 호출
-      socketApi.leaveRoom();
+      webrtcHandler.leaveRoom();
       mediasoupManager.cleanup();
 
       // 모든 관련 상태를 초기화합니다.
