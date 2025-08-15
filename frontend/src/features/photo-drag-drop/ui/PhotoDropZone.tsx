@@ -47,10 +47,29 @@ export function PhotoDropZone({
    */
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const dragData = JSON.parse(
-      e.dataTransfer.getData("text/plain")
-    ) as DragPhotoData;
-    onDrop(dragData, e);
+    
+    try {
+      const dragDataString = e.dataTransfer.getData("text/plain");
+      
+      // 비어있거나 유효하지 않은 데이터 검사
+      if (!dragDataString || dragDataString.trim() === '') {
+        console.warn('PhotoDropZone: 빈 드래그 데이터를 받았습니다');
+        return;
+      }
+      
+      const dragData = JSON.parse(dragDataString) as DragPhotoData;
+      
+      // 기본 필드 검증
+      if (!dragData.photoId) {
+        console.warn('PhotoDropZone: 유효하지 않은 드래그 데이터입니다:', dragData);
+        return;
+      }
+      
+      onDrop(dragData, e);
+    } catch (error) {
+      console.error('PhotoDropZone: 드래그 데이터 파싱 실패:', error);
+      console.error('원본 데이터:', e.dataTransfer.getData("text/plain"));
+    }
   };
 
   return (

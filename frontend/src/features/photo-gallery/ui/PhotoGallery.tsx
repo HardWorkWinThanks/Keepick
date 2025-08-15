@@ -15,6 +15,8 @@ import { requestAiAnalysis, requestSimilarPhotosAnalysis, createAnalysisStatusSS
 import { getGroupPhotos, getGroupOverview, getPhotoTags, convertToGalleryPhoto, deleteGroupPhotos } from "../api/galleryPhotosApi"
 import { useBlurredPhotosFlat, useSimilarPhotosFlat, useAllPhotosFlat, useAllTags } from "../api/queries"
 import { useInfiniteScroll } from "@/shared/lib"
+import { addPhotosToTimelineAlbum } from "@/features/timeline-album/api/timelineAlbumPhotos"
+import { addPhotosToTierAlbum } from "@/features/tier-album/api/tierAlbumPhotos"
 
 interface PhotoGalleryProps {
   groupId: string
@@ -28,9 +30,12 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   // TanStack Query 클라이언트
   const queryClient = useQueryClient()
   
-  // URL 파라미터 감지 (썸네일 선택 모드)
+  // URL 파라미터 감지 (썸네일 선택 모드, 앨범 추가 모드)
   const searchParams = useSearchParams()
   const isThumbnailSelectionMode = searchParams.get('mode') === 'thumbnail'
+  const isAddToAlbumParam = searchParams.get('mode') === 'add'
+  const targetAlbumType = searchParams.get('target') // 'timeline' or 'tier'
+  const targetAlbumId = searchParams.get('albumId')
   
   const {
     allPhotos,
@@ -55,12 +60,13 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     setGalleryData,
   } = usePhotoGallery(groupId)
 
-  // 선택 모드 타입 상태 (앨범 생성 또는 사진 삭제)
-  const [selectionType, setSelectionType] = useState<'album' | 'delete' | null>(null)
+  // 선택 모드 타입 상태 (앨범 생성, 사진 삭제, 앨범에 추가)
+  const [selectionType, setSelectionType] = useState<'album' | 'delete' | 'add_to_album' | null>(null)
   // usePhotoGallery의 baseSelectionMode를 기본 선택 모드 상태로 사용
   const isSelectionMode = baseSelectionMode
   const isAlbumMode = selectionType === 'album' && baseSelectionMode
   const isDeleteMode = selectionType === 'delete' && baseSelectionMode
+  const isAddToAlbumMode = selectionType === 'add_to_album' && baseSelectionMode
 
   // 갤러리 뷰 모드 (전체/흐린사진/유사사진)
   const [viewMode, setViewMode] = useState<'all' | 'blurred' | 'similar'>('all')
@@ -193,6 +199,17 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
       return () => clearTimeout(timer)
     }
   }, [autoEnterAlbumMode])
+
+  // URL 파라미터로 앨범 추가 모드 자동 활성화
+  useEffect(() => {
+    if (isAddToAlbumParam && targetAlbumType && targetAlbumId) {
+      console.log(`앨범에서 사진 추가 모드로 진입 - ${targetAlbumType} 앨범 ${targetAlbumId}`)
+      // 선택모드 활성화
+      enterBaseSelectionMode()
+      // 앨범 추가 모드로 설정
+      setSelectionType('add_to_album')
+    }
+  }, [isAddToAlbumParam, targetAlbumType, targetAlbumId])
 
   // 컴포넌트가 다시 마운트될 때 (다른 화면에서 돌아올 때) 선택모드 해제
   useEffect(() => {
@@ -515,6 +532,38 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
       alert('사진 삭제에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setIsDeleteModalOpen(false)
+    }
+  }
+  
+  // 선택된 사진들을 앨범에 추가 (ADD_TO_ALBUM 모드)
+  const handleAddToAlbum = async () => {
+    if (selectedPhotos.length === 0 || !targetAlbumType || !targetAlbumId) return
+    
+    try {
+      console.log(`앨범에 사진 추가 요청: ${targetAlbumType} 앨범 ${targetAlbumId}`, selectedPhotos)
+      
+      // 사진 ID 추출
+      const photoIds = selectedPhotos.map(photo => photo.id)
+      
+      // 앨범 타입에 따른 API 호출
+      if (targetAlbumType === 'timeline') {
+        await addPhotosToTimelineAlbum(parseInt(groupId), parseInt(targetAlbumId), photoIds)
+      } else if (targetAlbumType === 'tier') {
+        await addPhotosToTierAlbum(parseInt(groupId), parseInt(targetAlbumId), photoIds)
+      }
+      
+      console.log(`${selectedPhotos.length}장의 사진을 ${targetAlbumType} 앨범에 추가 완료`)
+      
+      // 성공 후 앨범 편집 페이지로 돌아가기
+      const backUrl = targetAlbumType === 'timeline' 
+        ? `/group/${groupId}/timeline/${targetAlbumId}?mode=edit&from=gallery`
+        : `/group/${groupId}/tier/${targetAlbumId}?mode=edit&from=gallery`
+      
+      window.location.href = backUrl
+      
+    } catch (error) {
+      console.error('앨범에 사진 추가 실패:', error)
+      alert('앨범에 사진을 추가하는데 실패했습니다. 다시 시도해주세요.')
     }
   }
 
@@ -992,15 +1041,19 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                                 selectedPhotos.some(selected => selected.id === photo.photoId)
                                   ? isDeleteMode 
                                     ? "border-red-500 bg-red-500/20"
-                                    : "border-[#FE7A25] bg-[#FE7A25]/20"
+                                    : isAddToAlbumMode
+                                      ? "border-green-500 bg-green-500/20"
+                                      : "border-[#FE7A25] bg-[#FE7A25]/20"
                                   : isDeleteMode
                                     ? "border-transparent hover:border-red-500/50"
-                                    : "border-transparent hover:border-[#FE7A25]/50"
+                                    : isAddToAlbumMode
+                                      ? "border-transparent hover:border-green-500/50"
+                                      : "border-transparent hover:border-[#FE7A25]/50"
                               }`}
                             >
                               {selectedPhotos.some(selected => selected.id === photo.photoId) && (
                                 <div className={`absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center ${
-                                  isDeleteMode ? "bg-red-500" : "bg-[#FE7A25]"
+                                  isDeleteMode ? "bg-red-500" : isAddToAlbumMode ? "bg-green-500" : "bg-[#FE7A25]"
                                 }`}>
                                   <Check size={14} className="text-white" />
                                 </div>
@@ -1084,15 +1137,19 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                             selectedPhotos.some(selected => selected.id === photo.id)
                               ? isDeleteMode 
                                 ? "border-red-500 bg-red-500/20"
-                                : "border-[#FE7A25] bg-[#FE7A25]/20"
+                                : isAddToAlbumMode
+                                  ? "border-green-500 bg-green-500/20"
+                                  : "border-[#FE7A25] bg-[#FE7A25]/20"
                               : isDeleteMode
                                 ? "border-transparent hover:border-red-500/50"
-                                : "border-transparent hover:border-[#FE7A25]/50"
+                                : isAddToAlbumMode
+                                  ? "border-transparent hover:border-green-500/50"
+                                  : "border-transparent hover:border-[#FE7A25]/50"
                           }`}
                         >
                           {selectedPhotos.some(selected => selected.id === photo.id) && (
                             <div className={`absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center ${
-                              isDeleteMode ? "bg-red-500" : "bg-[#FE7A25]"
+                              isDeleteMode ? "bg-red-500" : isAddToAlbumMode ? "bg-green-500" : "bg-[#FE7A25]"
                             }`}>
                               <Check size={14} className="text-white" />
                             </div>
@@ -1261,7 +1318,9 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
             className={`fixed bottom-0 left-0 right-0 z-50 backdrop-blur-lg border-t-4 shadow-2xl ${
               isDeleteMode 
                 ? "bg-gradient-to-t from-red-500/20 to-[#1a1a1a]/98 border-red-500 shadow-red-500/30"
-                : "bg-gradient-to-t from-[#FE7A25]/20 to-[#1a1a1a]/98 border-[#FE7A25] shadow-[#FE7A25]/30"
+                : isAddToAlbumMode
+                  ? "bg-gradient-to-t from-green-500/20 to-[#1a1a1a]/98 border-green-500 shadow-green-500/30"
+                  : "bg-gradient-to-t from-[#FE7A25]/20 to-[#1a1a1a]/98 border-[#FE7A25] shadow-[#FE7A25]/30"
             }`}
           >
             <div className="max-w-7xl mx-auto px-8">
@@ -1287,6 +1346,15 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                       <p className="font-keepick-primary text-xm text-gray-400 mb-3">
                         선택한 사진들을 갤러리에서 삭제할 수 있습니다. 
                       </p>
+                      : isAddToAlbumMode ?
+                      <div className="mb-3">
+                        <p className="font-keepick-primary text-xm text-gray-400 mb-2">
+                          선택한 사진들을 {targetAlbumType === 'timeline' ? '타임라인' : '티어'} 앨범에 추가할 수 있습니다.
+                        </p>
+                        <p className="font-keepick-primary text-xs text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded px-2 py-1">
+                          📝 이미 앨범에 있는 사진들은 추가되지 않습니다.
+                        </p>
+                      </div>
                       : 
                       <p className="font-keepick-primary text-xm text-gray-400 mb-3">
                         선택한 사진들로 앨범을 생성할 수 있습니다. 
@@ -1425,6 +1493,21 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                         whileTap={selectedPhotos.length > 0 ? { scale: 0.95 } : {}}
                       >
                         {selectedPhotos.length}개의 사진 삭제하기
+                      </motion.button>
+                    ) : isAddToAlbumMode ? (
+                      /* 앨범 추가 모드: 앨범에 추가하기 버튼 */
+                      <motion.button
+                        onClick={handleAddToAlbum}
+                        disabled={selectedPhotos.length === 0}
+                        className={`px-4 py-3 bg-transparent border-2 border-green-500 font-keepick-heavy text-sm tracking-wide transition-all duration-300 whitespace-nowrap ${
+                          selectedPhotos.length === 0
+                            ? "text-gray-500 border-gray-600 cursor-not-allowed"
+                            : "text-white hover:bg-green-500/20 hover:border-green-500 hover:shadow-lg hover:shadow-green-500/20"
+                        }`}
+                        whileHover={selectedPhotos.length > 0 ? { scale: 1.05 } : {}}
+                        whileTap={selectedPhotos.length > 0 ? { scale: 0.95 } : {}}
+                      >
+                        {selectedPhotos.length}개의 사진 앨범에 추가하기
                       </motion.button>
                     ) : (
                       /* 앨범 모드: 앨범 생성 버튼들 */

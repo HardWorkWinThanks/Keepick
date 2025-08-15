@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { motion } from "framer-motion"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react"
 import { ScrollArea } from "@/shared/ui/shadcn/scroll-area"
 import { DraggablePhotoGrid, PhotoDropZone } from "@/features/photo-drag-drop"
 import type { Photo, DragPhotoData } from "@/entities/photo"
@@ -43,6 +43,13 @@ interface AlbumEditingSidebarProps {
   title?: string
   description?: string
   instructions?: string[]
+  
+  // 사진 추가/삭제 기능 (새로 추가)
+  onAddPhotos?: () => void
+  onDeletePhotos?: (photoIds: number[]) => void
+  albumType?: 'timeline' | 'tier'
+  groupId?: string
+  albumId?: string
 }
 
 export function AlbumEditingSidebar({ 
@@ -65,10 +72,17 @@ export function AlbumEditingSidebar({
   instructions = [
     "사진을 드래그해서 타임라인 섹션으로 이동",
     "각 섹션에 최대 3장까지 추가 가능", 
-    "드롭하면 자동으로 레이아웃 적용"
-  ]
+    "드롯하면 자동으로 레이아웃 적용"
+  ],
+  onAddPhotos,
+  onDeletePhotos,
+  albumType,
+  groupId,
+  albumId
 }: AlbumEditingSidebarProps) {
-  const [isAlbumInfoExpanded, setIsAlbumInfoExpanded] = useState(true) // 앨범 정보 드롭다운 상태
+  const [isAlbumInfoExpanded, setIsAlbumInfoExpanded] = useState(!albumInfo?.name || albumInfo.name.trim() === '') // 앨범 제목이 없을 때만 드롭다운 열림
+  const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]) // 삭제를 위한 사진 선택
+  const [isDeleteMode, setIsDeleteMode] = useState(false) // 삭제 모드
 
   return (
     <>
@@ -271,9 +285,58 @@ export function AlbumEditingSidebar({
           {/* Photos Grid - 전체 영역을 드롭존으로 */}
           <div className="flex flex-col px-6 pb-6">
             <div className="p-4 bg-gray-800/50 rounded-lg mb-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-semibold text-white">갤러리에서 선택한 사진</h3>
                 <span className="text-sm text-gray-400">{availablePhotos.length}장</span>
+              </div>
+              
+              {/* 사진 추가/삭제 버튼들 */}
+              <div className="flex items-center gap-2">
+                {/* 갤러리에서 사진 추가 버튼 */}
+                {onAddPhotos && (
+                  <button
+                    onClick={onAddPhotos}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded text-green-400 hover:bg-green-500/20 hover:border-green-500/40 transition-colors text-xs font-medium"
+                  >
+                    <Plus size={12} />
+                    갤러리에서 추가
+                  </button>
+                )}
+                
+                {/* 삭제 모드 토글 버튼 */}
+                {onDeletePhotos && availablePhotos.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setIsDeleteMode(!isDeleteMode)
+                      setSelectedPhotos([])
+                    }}
+                    className={`flex items-center gap-1 px-3 py-1.5 border rounded text-xs font-medium transition-colors ${
+                      isDeleteMode
+                        ? "bg-red-500/20 border-red-500/40 text-red-300"
+                        : "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20 hover:border-red-500/40"
+                    }`}
+                  >
+                    <Trash2 size={12} />
+                    {isDeleteMode ? '취소' : '삭제 모드'}
+                  </button>
+                )}
+                
+                {/* 선택된 사진 삭제 실행 버튼 */}
+                {isDeleteMode && selectedPhotos.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (onDeletePhotos) {
+                        onDeletePhotos(selectedPhotos)
+                        setSelectedPhotos([])
+                        setIsDeleteMode(false)
+                      }
+                    }}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-red-600 border border-red-500 rounded text-white hover:bg-red-700 transition-colors text-xs font-medium"
+                  >
+                    <Trash2 size={12} />
+                    {selectedPhotos.length}장 삭제
+                  </button>
+                )}
               </div>
             </div>
             
@@ -284,15 +347,74 @@ export function AlbumEditingSidebar({
             >
               <ScrollArea className="h-full max-h-[400px]">
                 {availablePhotos.length > 0 ? (
-                  <DraggablePhotoGrid
-                    photos={availablePhotos}
-                    onDragStart={onDragStart}
-                    onDragEnd={onDragEnd}
-                    draggingPhotoId={draggingPhotoId}
-                    sourceId="gallery"
-                    gridClassName="grid grid-cols-3 gap-3 pr-2"
-                    photoClassName="w-full h-auto object-cover rounded-md shadow-sm aspect-square hover:scale-105 transition-transform cursor-grab"
-                  />
+                  <div className="grid grid-cols-3 gap-3 pr-2">
+                    {availablePhotos.map((photo) => {
+                      const isSelected = selectedPhotos.includes(photo.id)
+                      return (
+                        <div key={photo.id} className="relative">
+                          <div
+                            className={`relative w-full aspect-square rounded-md overflow-hidden cursor-grab transition-all duration-200 ${
+                              isDeleteMode 
+                                ? isSelected
+                                  ? "ring-2 ring-red-500 ring-offset-2 ring-offset-gray-900 scale-95"
+                                  : "hover:ring-2 hover:ring-red-300 hover:ring-offset-1 hover:ring-offset-gray-900"
+                                : "hover:scale-105"
+                            }`}
+                            draggable={!isDeleteMode}
+                            onDragStart={(e) => {
+                              if (!isDeleteMode) {
+                                onDragStart(e, photo)
+                              } else {
+                                e.preventDefault()
+                              }
+                            }}
+                            onDragEnd={() => {
+                              if (!isDeleteMode) {
+                                onDragEnd()
+                              }
+                            }}
+                            onClick={() => {
+                              if (isDeleteMode) {
+                                setSelectedPhotos(prev => 
+                                  prev.includes(photo.id)
+                                    ? prev.filter(id => id !== photo.id)
+                                    : [...prev, photo.id]
+                                )
+                              }
+                            }}
+                            style={{
+                              opacity: draggingPhotoId === photo.id ? 0.5 : 1,
+                              cursor: isDeleteMode ? "pointer" : "grab"
+                            }}
+                          >
+                            <Image
+                              src={photo.thumbnailUrl || photo.src || "/placeholder/photo-placeholder.svg"}
+                              alt={photo.name || `Photo ${photo.id}`}
+                              fill
+                              sizes="80px"
+                              className="object-cover"
+                              draggable={false}
+                            />
+                            
+                            {/* 삭제 모드에서 선택 표시 */}
+                            {isDeleteMode && (
+                              <div className={`absolute top-1 right-1 w-5 h-5 rounded-full border-2 transition-all ${
+                                isSelected
+                                  ? "bg-red-500 border-red-500"
+                                  : "bg-gray-800/80 border-gray-400"
+                              }`}>
+                                {isSelected && (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Trash2 size={10} className="text-white" />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 ) : (
                   <div className="h-full flex items-center justify-center">
                     <div className="text-center text-gray-500">

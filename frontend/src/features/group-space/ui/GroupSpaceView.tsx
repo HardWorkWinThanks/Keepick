@@ -60,6 +60,23 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
       setIsFromAlbumCreateButton(false);
     };
   }, []);
+  
+  // URL 파라미터로 갤러리 모드 자동 전환 처리
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isGalleryMode = urlParams.get('gallery') === 'true';
+    const mode = urlParams.get('mode');
+    
+    if (isGalleryMode) {
+      console.log('갤러리 모드 파라미터 감지 - 갤러리로 전환');
+      switchToGalleryMode();
+      
+      // 추가 모드나 다른 모드에 따른 처리
+      if (mode) {
+        console.log(`갤러리 모드: ${mode}`);
+      }
+    }
+  }, [switchToGalleryMode]);
 
   // 사이드바에서 썸네일 변경 요청 메시지 수신
   useEffect(() => {

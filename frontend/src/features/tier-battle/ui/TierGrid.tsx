@@ -58,8 +58,14 @@ export function TierGrid({
           <div
             className="flex-1 p-2 flex flex-wrap gap-2 items-center border-t border-b
   border-r border-gray-600 rounded-r-md min-h-[112px] bg-[#111111]"
-            onDragOver={(e) => onDragOverTierArea(e, label)}
-            onDrop={(e) => onDropTierArea(e, label)}
+            onDragOver={(e) => {
+              e.preventDefault(); // 드롭을 가능하게 하기 위해 필수
+              onDragOverTierArea(e, label);
+            }}
+            onDrop={(e) => {
+              e.preventDefault(); // 브라우저 기본 동작 방지
+              onDropTierArea(e, label);
+            }}
           >
             {(tierPhotos[label] || []).length === 0 && !draggingPhotoId && (
               <div
@@ -73,10 +79,16 @@ export function TierGrid({
               <div
                 key={photo.id}
                 className="flex items-center"
-                onDragOver={(e) => onDragOverPosition(e, label, index)}
-                onDrop={(e) =>
-                  onDropAtPosition(e, label, dragOverPosition?.index ?? index)
-                }
+                onDragOver={(e) => {
+                  e.preventDefault(); // 드롭을 가능하게 하기 위해 필수
+                  e.stopPropagation(); // 이벤트 버블링 방지
+                  onDragOverPosition(e, label, index);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault(); // 브라우저 기본 동작 방지
+                  e.stopPropagation(); // 이벤트 버블링 방지
+                  onDropAtPosition(e, label, dragOverPosition?.index ?? index);
+                }}
               >
                 {dragOverPosition?.tier === label &&
                   dragOverPosition.index === index && (

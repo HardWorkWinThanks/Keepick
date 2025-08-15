@@ -388,6 +388,42 @@ export function useTimelineEditor(groupId: string, albumId: string) {
       }
     })
   }, [])
+  
+  // 사진 삭제 후 상태 업데이트
+  const removePhotosFromState = useCallback((photoIds: number[]) => {
+    setEditingState(prev => {
+      if (!prev) return prev
+      
+      // 섹션에서 삭제된 사진들 null로 치환
+      const updatedSections = prev.sections.map(section => ({
+        ...section,
+        photos: section.photos.map(photo => 
+          photo && photoIds.includes(photo.id) ? null : photo
+        )
+      }))
+      
+      // unusedPhotos에서 삭제된 사진들 제거
+      const updatedUnusedPhotos = prev.unusedPhotos.filter(photo => 
+        !photoIds.includes(photo.id)
+      )
+      
+      // 대표이미지도 삭제된 사진이면 null로 설정
+      let updatedCoverImage = prev.albumInfo.coverImage
+      if (updatedCoverImage && photoIds.includes(updatedCoverImage.id)) {
+        updatedCoverImage = null
+      }
+      
+      return {
+        ...prev,
+        sections: updatedSections,
+        unusedPhotos: updatedUnusedPhotos,
+        albumInfo: {
+          ...prev.albumInfo,
+          coverImage: updatedCoverImage
+        }
+      }
+    })
+  }, [])
 
   // 저장
   const save = useCallback(async () => {
@@ -469,6 +505,7 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     startEditing,
     cancelEditing,
     save,
+    refetchTimeline,
     
     // 편집 액션들
     moveSidebarToSection,
@@ -478,6 +515,7 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     updateSection,
     addSection,
     deleteSection,
-    updateAlbumInfo
+    updateAlbumInfo,
+    removePhotosFromState
   }
 }

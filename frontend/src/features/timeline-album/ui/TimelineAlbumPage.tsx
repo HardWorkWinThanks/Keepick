@@ -13,6 +13,9 @@ import type { RootState } from "@/shared/config/store"
 import type { DragPhotoData } from "@/entities/photo"
 import { Photo } from "@/entities/photo"
 import { clearSelectedPhotos, setIsFromGallery } from "@/features/photo-gallery/model/photoSelectionSlice"
+import { addPhotosToTimelineAlbum, removePhotosFromTimelineAlbum } from "../api/timelineAlbumPhotos"
+import { saveEditingState, clearEditingState, TimelineEditingState } from "@/shared/lib/editingStateManager"
+import { useQueryClient } from '@tanstack/react-query'
 
 interface TimelineAlbumPageProps {
   groupId: string
@@ -282,6 +285,7 @@ function TimelineSectionLayout({
 
 export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPageProps) {
   const dispatch = useDispatch()
+  const queryClient = useQueryClient()
   const { selectedPhotos, isFromGallery } = useSelector((state: RootState) => state.photoSelection)
   
   // 새로운 하이브리드 에디터 훅 사용
@@ -302,7 +306,9 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     updateSection,
     addSection,
     deleteSection,
-    updateAlbumInfo
+    updateAlbumInfo,
+    refetchTimeline,
+    removePhotosFromState
   } = useTimelineEditor(groupId, albumId)
 
   const [dragOverImage, setDragOverImage] = useState<{ sectionIndex: number; imageIndex: number } | null>(null)
@@ -442,6 +448,52 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     if (isFromGallery) {
       dispatch(clearSelectedPhotos())
       dispatch(setIsFromGallery(false))
+    }
+  }
+  
+  // 갤러리에서 사진 추가 하들러
+  const handleAddPhotos = () => {
+    // 현재 편집 상태를 sessionStorage에 저장
+    const currentState: TimelineEditingState = {
+      albumInfo: {
+        name: albumInfo.name || '',
+        description: albumInfo.description || '',
+        startDate: albumInfo.startDate,
+        endDate: albumInfo.endDate,
+        coverImage: albumInfo.coverImage,
+        thumbnailId: albumInfo.coverImage?.id
+      },
+      sections: sections,
+      availablePhotos: availablePhotos
+    }
+    
+    saveEditingState('timeline', currentState)
+    
+    // 갤러리로 이동 (추가 모드로) - 그룹 페이지에서 갤러리 모드로
+    window.location.href = `/group/${groupId}?gallery=true&mode=add&target=timeline&albumId=${albumId}`
+  }
+  
+  // 사진 삭제 하들러
+  const handleDeletePhotos = async (photoIds: number[]) => {
+    try {
+      console.log('타임라인 앨범에서 사진 삭제:', photoIds)
+      
+      // API 호출로 사진 삭제
+      await removePhotosFromTimelineAlbum(parseInt(groupId), parseInt(albumId), photoIds)
+      
+      // 사진 삭제 성공 - 즉시 UI 업데이트로 빠른 반영
+      console.log('사진 삭제 성공 - 사이드바 즉시 업데이트')
+      
+      // 삭제된 사진들을 편집 상태에서 즉시 제거
+      removePhotosFromState(photoIds)
+      
+      console.log('사이드바 업데이트 완료 - 삭제된 사진들이 즉시 사라짐')
+      
+      console.log(`${photoIds.length}장의 사진을 타임라인 앨범에서 삭제 완료`)
+      
+    } catch (error) {
+      console.error('사진 삭제 실패:', error)
+      alert('사진 삭제에 실패했습니다. 다시 시도해주세요.')
     }
   }
 
@@ -595,8 +647,23 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
         onClose={handleCancelEditing}
         availablePhotos={availablePhotos}
         draggingPhotoId={null} // TODO: 드래그 상태 연결 필요시 추가
-        onDragStart={() => {}} // TODO: 필요시 구현
-        onDragEnd={() => {}} // TODO: 필요시 구현
+        onDragStart={(e, photo) => {
+          // 사이드바에서 드래그 시작 시 DragPhotoData 설정
+          const dragData: DragPhotoData = {
+            photoId: photo.id,
+            source: 'gallery',
+            src: photo.src || '',
+            thumbnailUrl: photo.thumbnailUrl,
+            originalUrl: photo.originalUrl,
+            name: photo.name || `사진 #${photo.id}`
+          }
+          e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
+          e.dataTransfer.effectAllowed = 'move'
+          console.log('타임라인 앨범 사이드바에서 드래그 시작:', dragData)
+        }}
+        onDragEnd={() => {
+          // 드래그 종료 시 정리 작업 (필요시)
+        }}
         onDrop={(dragData) => {
           // 섹션에서 온 사진 또는 대표이미지에서 온 사진 처리
           if (dragData.source.startsWith('section-')) {
@@ -632,6 +699,11 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
         instructions={[
           "드래그&드롭으로 앨범을 자유롭게 꾸미세요!"
         ]}
+        onAddPhotos={handleAddPhotos}
+        onDeletePhotos={handleDeletePhotos}
+        albumType="timeline"
+        groupId={groupId}
+        albumId={albumId}
       />
 
     </div>
