@@ -16,6 +16,7 @@ export interface RoomState {
   router: Router;
   peers: Map<string, Peer>;
   createdAt: Date;
+  chatSessionId?: string; // 방 생성시 채팅 세션 ID
 }
 
 export interface Peer {
