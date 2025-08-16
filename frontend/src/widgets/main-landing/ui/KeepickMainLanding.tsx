@@ -1,13 +1,89 @@
 'use client'
 
-import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react"
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle, memo, useMemo, useCallback } from "react"
 import Image from "next/image"
 
 interface KeepickMainLandingRef {
   spillPhotos: () => void
 }
 
-const KeepickMainLanding = forwardRef<KeepickMainLandingRef>((props, ref) => {
+// 최적화된 앨범 커버 컴포넌트
+interface AlbumCoverProps {
+  album: any
+  mounted: boolean
+  windowWidth: number
+  animationKey: number
+  getResponsiveSize: (size: number) => number
+}
+
+const AlbumCover = memo(({ album, mounted, windowWidth, animationKey, getResponsiveSize }: AlbumCoverProps) => {
+  const responsiveWidth = useMemo(() => getResponsiveSize(album.baseWidth), [getResponsiveSize, album.baseWidth])
+  const responsiveHeight = useMemo(() => getResponsiveSize(album.baseHeight), [getResponsiveSize, album.baseHeight])
+  
+  return (
+    <div
+      key={`${album.id}-${animationKey}`}
+      className="absolute transition-all hover:scale-105 hover:z-50"
+      style={{
+        left: album.x,
+        top: album.y,
+        transform: mounted 
+          ? `translate3d(0, 0, 0) rotate(${album.rotation}deg)` 
+          : `translate3d(${album.initialX * (windowWidth >= 1440 ? 1.2 : 1)}px, ${album.initialY}px, 0) rotate(${album.rotation}deg)`,
+        zIndex: album.zIndex,
+        opacity: mounted ? album.opacity : 0,
+        transitionDelay: `${album.delay}s`,
+        transitionDuration: `${album.duration}s`,
+        transitionTimingFunction: album.id % 3 === 0 
+          ? 'cubic-bezier(0.15, 0.8, 0.25, 1)' 
+          : album.id % 3 === 1 
+            ? 'cubic-bezier(0.18, 0.9, 0.32, 1)' 
+            : 'cubic-bezier(0.12, 0.7, 0.28, 1)',
+        willChange: mounted ? 'auto' : 'transform, opacity',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
+      }}
+    >
+      <div 
+        className="relative shadow-2xl"
+        style={{
+          width: `${responsiveWidth}px`,
+          height: `${responsiveHeight}px`,
+          transform: 'translate3d(0, 0, 0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+        }}
+      >
+        <Image
+          src={`/dummy/main-dummy${album.id}.jpg`}
+          alt={`Main Dummy ${album.id}`}
+          width={responsiveWidth}
+          height={responsiveHeight}
+          className="w-full h-full object-cover rounded-sm shadow-lg select-none"
+          style={{
+            filter: `brightness(0.9) contrast(1.1)`,
+            transform: 'translate3d(0, 0, 0)',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+          }}
+          draggable={false}
+          loading={album.id <= 8 ? "eager" : "lazy"}
+          quality={85}
+        />
+        <div 
+          className="absolute inset-0 rounded-sm"
+          style={{
+            background: `linear-gradient(${album.rotation + 45}deg, rgba(0,0,0,0.1) 0%, transparent 50%, rgba(255,255,255,0.05) 100%)`,
+          }}
+        />
+      </div>
+    </div>
+  )
+})
+
+AlbumCover.displayName = 'AlbumCover'
+
+const KeepickMainLandingComponent = forwardRef<KeepickMainLandingRef>((props, ref) => {
   const [mounted, setMounted] = useState(false)
   const [logoVisible, setLogoVisible] = useState(false)
   const [animationKey, setAnimationKey] = useState(0)
@@ -311,10 +387,13 @@ const KeepickMainLanding = forwardRef<KeepickMainLandingRef>((props, ref) => {
         <div 
           className="transition-transform duration-300"
           style={{ 
-            transform: `scale(${scale})`,
+            transform: `translate3d(0, 0, 0) scale(${scale})`,
             transformOrigin: 'center center',
             width: '1600px',
             height: '1000px',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            willChange: 'transform',
           }}
         >
           {/* Main Content */}
@@ -327,59 +406,16 @@ const KeepickMainLanding = forwardRef<KeepickMainLandingRef>((props, ref) => {
               
               {/* Album covers pile */}
               <div className="relative w-full h-full" key={animationKey}>
-                {albumCovers.map((album) => {
-                  const responsiveWidth = getResponsiveSize(album.baseWidth)
-                  const responsiveHeight = getResponsiveSize(album.baseHeight)
-                  
-                  return (
-                    <div
-                      key={`${album.id}-${animationKey}`}
-                      className="absolute transition-all hover:scale-105 hover:z-50"
-                      style={{
-                        left: album.x,
-                        top: album.y,
-                        transform: mounted 
-                          ? `rotate(${album.rotation}deg)` 
-                          : `translateX(${album.initialX * (windowWidth >= 1440 ? 1.2 : 1)}px) translateY(${album.initialY}px) rotate(${album.rotation}deg)`,
-                        zIndex: album.zIndex,
-                        opacity: mounted ? album.opacity : 0,
-                        transitionDelay: `${album.delay}s`,
-                        transitionDuration: `${album.duration}s`,
-                        transitionTimingFunction: album.id % 3 === 0 
-                          ? 'cubic-bezier(0.15, 0.8, 0.25, 1)' 
-                          : album.id % 3 === 1 
-                            ? 'cubic-bezier(0.18, 0.9, 0.32, 1)' 
-                            : 'cubic-bezier(0.12, 0.7, 0.28, 1)',
-                      }}
-                    >
-                      <div 
-                        className="relative shadow-2xl"
-                        style={{
-                          width: `${responsiveWidth}px`,
-                          height: `${responsiveHeight}px`,
-                        }}
-                      >
-                        <Image
-                          src={`/dummy/main-dummy${album.id}.jpg`}
-                          alt={`Main Dummy ${album.id}`}
-                          width={responsiveWidth}
-                          height={responsiveHeight}
-                          className="w-full h-full object-cover rounded-sm shadow-lg select-none"
-                          style={{
-                            filter: `brightness(0.9) contrast(1.1)`,
-                          }}
-                          draggable={false}
-                        />
-                        <div 
-                          className="absolute inset-0 rounded-sm"
-                          style={{
-                            background: `linear-gradient(${album.rotation + 45}deg, rgba(0,0,0,0.1) 0%, transparent 50%, rgba(255,255,255,0.05) 100%)`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
+                {albumCovers.map((album) => (
+                  <AlbumCover
+                    key={`${album.id}-${animationKey}`}
+                    album={album}
+                    mounted={mounted}
+                    windowWidth={windowWidth}
+                    animationKey={animationKey}
+                    getResponsiveSize={getResponsiveSize}
+                  />
+                ))}
 
                 {/* Photo Keepick Logo - 정확한 중앙 정렬 */}
                 <div 
@@ -390,7 +426,10 @@ const KeepickMainLanding = forwardRef<KeepickMainLandingRef>((props, ref) => {
                     zIndex: 100,
                     left: '50%',
                     top: '50%',
-                    transform: 'translate(-50%, -50%)'
+                    transform: 'translate3d(-50%, -50%, 0)',
+                    willChange: logoVisible ? 'auto' : 'transform, opacity',
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
                   }}
                 >
                   <Image
@@ -421,6 +460,9 @@ const KeepickMainLanding = forwardRef<KeepickMainLandingRef>((props, ref) => {
   )
 })
 
+KeepickMainLandingComponent.displayName = 'KeepickMainLandingComponent'
+
+const KeepickMainLanding = memo(KeepickMainLandingComponent)
 KeepickMainLanding.displayName = 'KeepickMainLanding'
 
 export default KeepickMainLanding
