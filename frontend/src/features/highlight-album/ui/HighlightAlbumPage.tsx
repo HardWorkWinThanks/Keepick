@@ -46,35 +46,53 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
   return (
       <div className="min-h-screen bg-black relative overflow-hidden">
         {/* Header */}
-        <header className="fixed top-0 left-0 right-0 z-50 bg-[#111111]/95 backdrop-blur-sm border-b border-gray-800">
-          <div className="flex items-center justify-between px-8 py-4">
-            <Link href={`/group/${groupId}?album=highlight`} className="flex items-center gap-3 hover:opacity-70 transition-opacity text-white">
-              <ArrowLeft size={20} className="text-white" />
-              <span className="font-keepick-primary text-sm text-white">돌아가기</span>
-            </Link>
-            <div className="text-center">
-              <h1 className="font-keepick-heavy text-xl tracking-wider text-white">HIGHLIGHT ALBUM {albumId}</h1>
+        <header className="fixed top-0 right-0 z-40 bg-[#111111] border-b border-gray-800 transition-all duration-200"
+                style={{ left: '240px', width: 'calc(100% - 240px)' }}>
+          <div className="relative flex items-center py-2 px-8">
+            {/* 왼쪽 영역 - 고정 너비 */}
+            <div className="flex items-center" style={{ width: '200px' }}>
+              <Link href={`/group/${groupId}?album=highlight`} className="flex items-center gap-3 hover:opacity-70 transition-opacity text-white">
+                <ArrowLeft size={20} />
+                <span className="font-keepick-primary text-sm">돌아가기</span>
+              </Link>
             </div>
-            <div className="flex items-center gap-3">
-              <button 
+            
+            {/* 중앙 제목 - 절대 위치로 중앙 고정 */}
+            <div className="absolute left-1/2 transform -translate-x-1/2">
+              <h1 className="font-keepick-heavy text-xl tracking-wider text-center text-white">
+                {album.name || 'HIGHLIGHT ALBUM'}
+              </h1>
+            </div>
+            
+            {/* 오른쪽 영역 - 버튼들 */}
+            <div className="flex gap-2 ml-auto">
+              <button
                 onClick={toggleEditMode}
-                className="px-6 py-2 border-2 border-orange-500 hover:border-orange-400 text-orange-500 hover:text-orange-400 bg-transparent font-keepick-primary text-sm rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-orange-500/25"
+                className={`group relative px-4 py-2 text-white transition-all duration-300 ${
+                  isEditMode
+                    ? 'hover:text-green-400'
+                    : 'hover:text-[#FE7A25]'
+                }`}
+                title={isEditMode ? '편집 완료' : '앨범 편집'}
               >
-                {isEditMode ? "편집 완료" : "편집 모드"}
+                <div className="flex items-center gap-2">
+                  <Settings size={16} />
+                  <span className="font-keepick-primary text-sm tracking-wide">
+                    {isEditMode ? '완료' : '수정'}
+                  </span>
+                </div>
+                <div className={`absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full ${
+                  isEditMode ? 'bg-green-400' : 'bg-[#FE7A25]'
+                }`}></div>
               </button>
             </div>
           </div>
         </header>
 
-      {/* Cross Lines */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="absolute w-full h-0.5 bg-gradient-to-r from-transparent via-orange-400 to-transparent opacity-30"></div>
-        <div className="absolute h-full w-0.5 bg-gradient-to-b from-transparent via-orange-400 to-transparent opacity-30"></div>
-      </div>
 
       {/* Four Quadrants with Clear Separation */}
-      <div className="grid grid-cols-1 md:grid-cols-2 grid-rows-4 md:grid-rows-2 h-screen pt-16 gap-0.5 bg-orange-400/20">
-        {Object.entries(album.emotions).map(([emotion, photos], index) => {
+      <div className="grid grid-cols-1 md:grid-cols-2 grid-rows-4 md:grid-rows-2 h-screen pt-14 gap-0.5 bg-[#111111]">
+        {Object.entries(album.photos).map(([emotion, photos], index) => {
           const getZoomButtonPosition = (index: number) => {
             if (index === 0) return "top-4 right-4"
             if (index === 1) return "top-4 right-4"
@@ -85,7 +103,7 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
           return (
             <div
               key={emotion}
-              className="relative p-4 md:p-6 flex flex-col h-full bg-black border border-orange-400/30"
+              className="relative p-4 md:p-6 flex flex-col h-full bg-[#111111]"
             >
               {/* Zoom Button */}
               <button
@@ -105,7 +123,7 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
               </button>
 
               {/* Emotion Label */}
-              <div className="flex items-center space-x-3 mb-6 flex-shrink-0">
+              <div className="flex items-center justify-center space-x-3 mb-6 flex-shrink-0">
                 <div className="w-8 h-8 md:w-10 md:h-10">
                   <Image
                     src={emotionIcons[emotion as keyof typeof emotionIcons] || "/placeholder.svg"}
@@ -175,7 +193,7 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
                                 }}
                               >
                                 <Image
-                                  src={ photo || "/presentation/surprise_018.jpg"}
+                                  src={ photo.photoUrl || "/presentation/surprise_018.jpg"}
                                   alt={`${emotion} ${actualIndex + 1}`}
                                   fill
                                   className="object-cover pointer-events-none"
