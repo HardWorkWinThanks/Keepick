@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Users } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { InteractiveHoverButton } from '@/shared/ui/composite/InteractiveHoverButton'
 
 // 임시 참가자 타입 (추후 실제 타입으로 교체 예정)
 interface Participant {
@@ -26,11 +27,11 @@ export function GroupChatVideoSection({
   
   // 임시 데이터 (테스트용) - 추후 실제 데이터로 교체
   const mockParticipants: Participant[] = [
-    { id: '1', name: '나', isMe: true },
-    { id: '2', name: '김철수' },
-    { id: '3', name: '이영희' },
-    { id: '4', name: '박민수' },
-    { id: '5', name: '최지원' },
+    // { id: '1', name: '나', isMe: true },
+    // { id: '2', name: '김철수' },
+    // { id: '3', name: '이영희' },
+    // { id: '4', name: '박민수' },
+    // { id: '5', name: '최지원' },
   ]
   
   const currentParticipants = participants.length > 0 ? participants : mockParticipants
@@ -94,12 +95,32 @@ export function GroupChatVideoSection({
             className="overflow-hidden"
           >
             <div className="p-4 pt-0">
-              {/* 비디오 그리드 */}
-              <div 
-                className={`grid gap-2 ${getGridClass(participantCount)}`}
-                style={{ minHeight: '200px' }} // 고정 높이
-              >
-                {currentParticipants.map((participant, index) => (
+              {/* 0명일 때 그룹챗 시작 UI */}
+              {participantCount === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 px-4 min-h-[200px]">
+                  <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mb-6">
+                    <Users size={36} className="text-gray-400" />
+                  </div>
+                  <h4 className="text-white font-medium text-sm mb-2">그룹챗이 비어있어요</h4>
+                  <p className="text-gray-400 text-xs text-center mb-6 leading-relaxed">
+                    친구들과 화상통화를 시작해보세요!
+                  </p>
+                  <InteractiveHoverButton
+                    variant="ghost"
+                    size="md"
+                    className="text-sm px-6 py-2"
+                  >
+                    그룹챗 시작
+                  </InteractiveHoverButton>
+                </div>
+              ) : (
+                <>
+                  {/* 비디오 그리드 */}
+                  <div 
+                    className={`grid gap-2 ${getGridClass(participantCount)}`}
+                    style={{ minHeight: '200px' }} // 고정 높이
+                  >
+                    {currentParticipants.map((participant, index) => (
                   <div
                     key={participant.id}
                     className={`aspect-square bg-gray-800 rounded-lg border border-gray-700 flex items-center justify-center relative overflow-hidden ${
@@ -128,37 +149,39 @@ export function GroupChatVideoSection({
                       muted={participant.isMe}
                     /> */}
                   </div>
-                ))}
-              </div>
+                    ))}
+                  </div>
 
-              {/* 페이지네이션 (6명 초과시) */}
-              {participantCount > 6 && (
-                <div className="flex justify-center items-center gap-2 mt-3">
-                  <button className="w-6 h-6 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-center">
-                    <ChevronDown size={12} className="text-white rotate-90" />
-                  </button>
-                  <span className="text-xs text-gray-400">1 / 2</span>
-                  <button className="w-6 h-6 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-center">
-                    <ChevronDown size={12} className="text-white -rotate-90" />
-                  </button>
-                </div>
+                  {/* 페이지네이션 (6명 초과시) */}
+                  {participantCount > 6 && (
+                    <div className="flex justify-center items-center gap-2 mt-3">
+                      <button className="w-6 h-6 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-center">
+                        <ChevronDown size={12} className="text-white rotate-90" />
+                      </button>
+                      <span className="text-xs text-gray-400">1 / 2</span>
+                      <button className="w-6 h-6 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-center">
+                        <ChevronDown size={12} className="text-white -rotate-90" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 컨트롤 버튼 영역 (공간 예약) */}
+                  <div className="mt-4 pt-3 border-t border-gray-800">
+                    <div className="flex justify-center gap-2">
+                      {/* TODO: 실제 화상회의 컨트롤 버튼들로 교체 */}
+                      <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
+                        <span className="text-xs text-gray-400">🎤</span>
+                      </div>
+                      <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
+                        <span className="text-xs text-gray-400">📹</span>
+                      </div>
+                      <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center">
+                        <span className="text-xs text-white">❌</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
-
-              {/* 컨트롤 버튼 영역 (공간 예약) */}
-              <div className="mt-4 pt-3 border-t border-gray-800">
-                <div className="flex justify-center gap-2">
-                  {/* TODO: 실제 화상회의 컨트롤 버튼들로 교체 */}
-                  <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
-                    <span className="text-xs text-gray-400">🎤</span>
-                  </div>
-                  <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
-                    <span className="text-xs text-gray-400">📹</span>
-                  </div>
-                  <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center">
-                    <span className="text-xs text-white">❌</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </motion.div>
         )}
