@@ -83,11 +83,15 @@ export function AlbumEditingSidebar({
   const [isAlbumInfoExpanded, setIsAlbumInfoExpanded] = useState(false) // 기본값을 false로 설정
   const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]) // 삭제를 위한 사진 선택
   const [isDeleteMode, setIsDeleteMode] = useState(false) // 삭제 모드
+  const isInitialMount = useRef(true) // 초기 마운트 상태를 추적
 
-  // albumInfo가 변경될 때마다 드롭다운 상태를 업데이트
+  // 초기 마운트 시에만 드롭다운 상태를 설정
   useEffect(() => {
-    // 앨범 제목이 없거나 비어있으면 드롭다운 열림, 있으면 닫힘
-    setIsAlbumInfoExpanded(!albumInfo?.name || albumInfo.name.trim() === '')
+    if (isInitialMount.current) {
+      // 앨범 제목이 없거나 비어있으면 드롭다운 열림, 있으면 닫힘
+      setIsAlbumInfoExpanded(!albumInfo?.name || albumInfo.name.trim() === '')
+      isInitialMount.current = false
+    }
   }, [albumInfo?.name])
 
   return (
