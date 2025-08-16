@@ -9,6 +9,7 @@ import AppSidebar from '@/widgets/layout/ui/AppSidebar'
 import { GroupSelectorSection } from '@/widgets/layout/ui/GroupSelectorSection'
 import { GroupInfoSection } from '@/widgets/layout/ui/GroupInfoSection'
 import { GalleryPhotosSection } from '@/widgets/layout/ui/GalleryPhotosSection'
+import { AlbumEditSidebar } from '@/widgets/layout'
 import { useModal } from "@/shared/ui/modal/Modal"
 import { CreateGroupModal, useGroupManagement } from "@/features/group-management"
 import { useGroupInfo } from "@/features/group-management"
@@ -33,6 +34,33 @@ function TimelineEditSidebar() {
   
   // window 이벤트로 메인페이지의 실시간 데이터 수신
   return <TimelineEditSidebarContent groupId={groupId} albumId={albumId} />
+}
+
+// 티어 편집 사이드바 컴포넌트 (실시간 데이터 전달받음)
+function TierEditSidebar() {
+  const pathname = usePathname()
+  const albumId = pathname.match(/tier\/(\d+)/)?.[1]
+  const groupId = pathname.match(/group\/(\d+)/)?.[1]
+  
+  if (!groupId || !albumId) return null
+  
+  return <TierEditSidebarContent groupId={groupId} albumId={albumId} />
+}
+
+// 하이라이트 편집 사이드바 컴포넌트 (그룹챗만 표시)
+function HighlightEditSidebar() {
+  const searchParams = useSearchParams()
+  
+  // URL 기반으로 편집 모드 확인
+  const isEditModeFromURL = searchParams.get('edit') === 'true'
+  
+  // 편집 모드가 아니면 null 반환 (그룹챗만 표시됨)
+  if (!isEditModeFromURL) {
+    return null
+  }
+  
+  // 편집 모드에서도 그룹챗만 표시하므로 null 반환
+  return null
 }
 
 // 타임라인 편집 사이드바 내용 컴포넌트
@@ -127,6 +155,108 @@ function TimelineEditSidebarContent({ groupId, albumId }: { groupId: string, alb
       onAddPhotos={handleAddPhotos}
       onDeletePhotos={handleDeletePhotos}
       title="타임라인 편집용 사진"
+      showControls={true}
+    />
+  )
+}
+
+// 티어 편집 사이드바 내용 컴포넌트
+function TierEditSidebarContent({ groupId, albumId }: { groupId: string, albumId: string }) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const [availablePhotos, setAvailablePhotos] = useState<Photo[]>([])
+  const [loading, setLoading] = useState(false)
+  const [draggingPhotoId, setDraggingPhotoId] = useState<number | null>(null)
+  
+  // URL 기반으로 편집 모드 확인
+  const isEditModeFromURL = searchParams.get('edit') === 'true'
+  
+  // 메인페이지에서 실시간 availablePhotos 수신
+  useEffect(() => {
+    const handleAvailablePhotosUpdate = (event: CustomEvent) => {
+      setAvailablePhotos(event.detail || [])
+    }
+
+    const handleEditModeChanged = (event: CustomEvent) => {
+      const { isEditMode: editMode, availablePhotos: photos } = event.detail || {}
+      if (editMode && photos) {
+        setAvailablePhotos(photos)
+      }
+    }
+
+    // 기본 이벤트 리스너
+    window.addEventListener('tierAvailablePhotosUpdate', handleAvailablePhotosUpdate as EventListener)
+    // 편집 모드 변경 이벤트 리스너 (추가 안전장치)
+    window.addEventListener('tierEditModeChanged', handleEditModeChanged as EventListener)
+    
+    // 컴포넌트 마운트 시 메인페이지에 데이터 요청
+    window.dispatchEvent(new CustomEvent('tierSidebarMounted'))
+    
+    return () => {
+      window.removeEventListener('tierAvailablePhotosUpdate', handleAvailablePhotosUpdate as EventListener)
+      window.removeEventListener('tierEditModeChanged', handleEditModeChanged as EventListener)
+    }
+  }, [])
+  
+  // 갤러리에서 사진 추가 핸들러
+  const handleAddPhotos = () => {
+    // 갤러리로 이동 (추가 모드로) - 그룹 페이지에서 갤러리 모드로
+    window.location.href = `/group/${groupId}?gallery=true&mode=add&target=tier&albumId=${albumId}`
+  }
+  
+  // 사진 삭제 핸들러 - TierAlbumPage와 동일한 API 사용
+  const handleDeletePhotos = async (photoIds: number[]) => {
+    try {
+      setLoading(true)
+      // TierAlbumPage에서 처리하도록 window 이벤트로 전달
+      window.dispatchEvent(new CustomEvent('tierPhotosDeleteRequest', { detail: photoIds }))
+      
+    } catch (error) {
+      alert('사진 삭제에 실패했습니다.')
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  // 드래그 시작 핸들러
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, photo: Photo) => {
+    setDraggingPhotoId(photo.id)
+    const dragData: DragPhotoData = {
+      photoId: photo.id,
+      source: 'available',
+      originalUrl: photo.originalUrl,
+      thumbnailUrl: photo.thumbnailUrl,
+      name: photo.name
+    }
+    e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
+    e.dataTransfer.effectAllowed = 'move'
+  }
+  
+  // 드래그 종료 핸들러
+  const handleDragEnd = () => {
+    setDraggingPhotoId(null)
+  }
+  
+  // 드롭 핸들러 (티어에서 사이드바로 드래그된 사진 처리)
+  const handleDrop = (dragData: DragPhotoData) => {
+    // window 이벤트로 TierAlbumPage에 알림
+    window.dispatchEvent(new CustomEvent('tierSidebarDrop', { detail: dragData }))
+  }
+  
+  if (!isEditModeFromURL) {
+    return null
+  }
+  
+  return (
+    <GalleryPhotosSection
+      availablePhotos={availablePhotos}
+      draggingPhotoId={draggingPhotoId}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDrop={handleDrop}
+      onAddPhotos={handleAddPhotos}
+      onDeletePhotos={handleDeletePhotos}
+      title="티어 편집용 사진"
       showControls={true}
     />
   )
@@ -229,18 +359,16 @@ function GroupLayoutContent({ children }: GroupLayoutProps) {
       return <TimelineEditSidebar />
     }
 
-    // 티어 앨범: /group/[groupId]/album/tier/[albumId]  
-    const tierMatch = pathname.match(/^\/group\/\d+\/album\/tier\/\d+$/)
-    if (tierMatch) {
-      // 티어 앨범은 각 페이지에서 독립적으로 사이드바 관리 (기존 방식 유지)
-      return null
+    // 티어 앨범 편집 모드: /group/[groupId]/tier/[albumId]?edit=true
+    const tierMatch = pathname.match(/^\/group\/\d+\/tier\/(\d+)$/)
+    if (tierMatch && searchParams.get('edit') === 'true') {
+      return <TierEditSidebar />
     }
 
-    // 하이라이트 앨범: /group/[groupId]/album/highlight/[albumId]
-    const highlightMatch = pathname.match(/^\/group\/\d+\/album\/highlight\/\d+$/)
-    if (highlightMatch) {
-      // 하이라이트 앨범은 항상 그룹챗만 표시
-      return null
+    // 하이라이트 앨범 편집 모드: /group/[groupId]/highlight/[albumId]?edit=true
+    const highlightMatch = pathname.match(/^\/group\/\d+\/highlight\/(\d+)$/)
+    if (highlightMatch && searchParams.get('edit') === 'true') {
+      return <HighlightEditSidebar />
     }
     
     return null // 기타 경로는 그룹챗만

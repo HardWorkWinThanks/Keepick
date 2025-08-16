@@ -39,9 +39,15 @@ export function TierGrid({
   onImageClick,
 }: TierGridProps) {
   return (
-    <div className="bg-[#222222] rounded-xl shadow-lg border border-gray-700 p-4 space-y-2">
+    <div className="bg-[#222222] rounded-xl shadow-lg border border-gray-700 p-4 space-y-2 relative">
+      {/* 배경 텍스트 Keepick */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+        <span className="text-[12rem] font-keepick-heavy text-gray-800/10 select-none tracking-wider transform rotate-12">
+          Keepick
+        </span>
+      </div>
       {tiers.map(({ label, color }) => (
-        <div key={label} className="flex items-start">
+        <div key={label} className="flex items-start relative z-10">
           <div
             className="w-16 h-28 flex-shrink-0 flex items-center justify-center text-3xl font-black rounded-l-md bg-gray-800 border-r border-gray-600 relative"
           >
@@ -67,14 +73,6 @@ export function TierGrid({
               onDropTierArea(e, label);
             }}
           >
-            {(tierPhotos[label] || []).length === 0 && !draggingPhotoId && (
-              <div
-                className="w-full h-full flex items-center justify-center
-  text-gray-500 text-center"
-              >
-                <span className="text-sm font-keepick-primary">빈 티어</span>
-              </div>
-            )}
             {(tierPhotos[label] || []).map((photo, index) => (
               <div
                 key={photo.id}

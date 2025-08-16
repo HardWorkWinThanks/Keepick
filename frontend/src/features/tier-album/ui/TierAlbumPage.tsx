@@ -1,27 +1,18 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { useSelector, useDispatch } from "react-redux"
+import { useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { ArrowLeft, ChevronLeft, ChevronRight, Settings } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, Settings, Check } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { useTierEditor } from "../model/useTierEditor"
 import { useTierAlbum } from "../model/useTierAlbum"
-import { updateTierAlbum } from "../api/tierAlbumApi"
-import { addPhotosToTierAlbum, removePhotosFromTierAlbum } from "../api/tierAlbumPhotos"
-import { saveEditingState, clearEditingState, TierEditingState } from "@/shared/lib/editingStateManager"
 import type { TierInfo, TierType } from "../types"
 import { Photo, DragPhotoData } from "@/entities/photo"
 import { TIER_COLORS } from "@/shared/config/tierColors"
-import type { RootState } from "@/shared/config/store"
-import { clearSelectedPhotos, setIsFromGallery } from "@/features/photo-gallery/model/photoSelectionSlice"
 import { AlbumInfoEditModal, type EditingAlbumInfo } from "@/shared/ui/modal/AlbumInfoEditModal"
-import { GalleryPhotosSection } from "@/widgets/layout/ui/GalleryPhotosSection"
 import {
-  useAlbumState,
-} from "@/features/album-management"
-import {
-  useTierGrid,
   useTierBattle,
   TierGrid,
   TierBattleModal,
@@ -135,20 +126,47 @@ const TiltShineCard: React.FC<TiltShineCardProps> = ({ children, tierColor, clas
 }
 
 export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPageProps) {
-  const dispatch = useDispatch()
-  const { selectedPhotos, isFromGallery } = useSelector((state: RootState) => state.photoSelection)
-  const [isEditMode, setIsEditMode] = useState(false)
+  const searchParams = useSearchParams()
   
-  // 앨범 정보 편집 상태
-  const [albumInfo, setAlbumInfo] = useState<EditingAlbumInfo | null>(null)
-  const [coverImage, setCoverImage] = useState<Photo | null>(null)
-  const [isAlbumInfoModalOpen, setIsAlbumInfoModalOpen] = useState(false)
-  
+  // 통합 편집 훅 (상태 관리 통합)
   const {
+    // 기본 상태
     isLoading,
     error,
-    photos: tierAlbumPhotos,
     tierAlbumData,
+    
+    // 편집 상태
+    isEditMode,
+    tierPhotos,
+    setTierPhotos,
+    availablePhotos,
+    setAvailablePhotos,
+    
+    // 앨범 정보
+    albumInfo,
+    coverImage,
+    setCoverImage,
+    
+    // 드래그&드롭 상태
+    dragOverPosition,
+    setDragOverPosition,
+    draggingPhotoId,
+    setDraggingPhotoId,
+    
+    // 설정
+    tiers: battleTiers,
+    
+    // 액션들
+    toggleEditMode,
+    saveChanges,
+    addPhotosFromGallery,
+    deletePhotos,
+    updateAlbumInfo,
+  } = useTierEditor(groupId, tierAlbumId)
+
+  // 뷰 모드용 훅 (기존 로직 유지)
+  const {
+    photos: tierAlbumPhotos,
     currentTier,
     currentPhotoIndex,
     currentTierPhotos,
@@ -158,29 +176,9 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
     goToPrevPhoto,
     goToNextPhoto,
     goToPhoto,
-    refreshTierAlbumData,
   } = useTierAlbum(groupId, tierAlbumId)
 
-  // 편집 모드에서 사용할 상태들
-  const {
-    availablePhotos,
-    setAvailablePhotos,
-  } = useAlbumState()
-
-  // 사진 모달을 위한 상태 관리
-  const { photo: selectedModalPhoto, isOpen: isPhotoModalOpen, openModal: openPhotoModal, closeModal: closePhotoModal } = usePhotoModal()
-
-  const {
-    tierPhotos,
-    setTierPhotos,
-    tiers: battleTiers,
-    dragOverPosition,
-    setDragOverPosition,
-    draggingPhotoId,
-    setDraggingPhotoId,
-    handleReturnToAvailable,
-  } = useTierGrid()
-
+  // 배틀 모드 훅
   const {
     showComparisonModal,
     setShowComparisonModal,
@@ -192,152 +190,86 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
     handleCloseBattleModal,
   } = useTierBattle()
 
+  // 사진 모달 훅
+  const { photo: selectedModalPhoto, isOpen: isPhotoModalOpen, openModal: openPhotoModal, closeModal: closePhotoModal } = usePhotoModal()
+  
+  // 모달 상태
+  const [isAlbumInfoModalOpen, setIsAlbumInfoModalOpen] = useState(false)
+
   const currentTierInfo = tiers.find((tier) => tier.id === currentTier)!
-
-  // 편집 모드 토글
-  const toggleEditMode = () => {
-    if (isEditMode && isFromGallery) {
-      // 편집 완료 시 선택 상태 초기화
-      dispatch(clearSelectedPhotos())
-      dispatch(setIsFromGallery(false))
-    }
-    setIsEditMode(!isEditMode)
-  }
-
-  // tierAlbumData가 로드되면 앨범 정보 초기화
+  
+  // URL 파라미터에서 편집 모드 확인하여 자동 진입 (갤러리에서 돌아온 경우만)
   useEffect(() => {
-    if (tierAlbumData) {
-      setAlbumInfo({
-        name: tierAlbumData.title || '',
-        description: tierAlbumData.description || '',
-      })
+    const editParam = searchParams.get('edit')
+    const fromParam = searchParams.get('from')
+    
+    // 갤러리에서 돌아온 경우에만 편집 모드로 진입
+    if (editParam === 'true' && fromParam === 'gallery' && !isEditMode) {
+      toggleEditMode()
       
-      // 대표이미지 설정 (첫 번째 사진을 대표이미지로 사용)
-      const firstPhoto = Object.values(tierAlbumData.photos).flat()[0]
-      if (firstPhoto) {
-        setCoverImage({
-          id: firstPhoto.photoId,
-          originalUrl: firstPhoto.originalUrl,
-          thumbnailUrl: firstPhoto.thumbnailUrl,
-          name: `사진 #${firstPhoto.photoId}`
-        })
-      }
+      // URL에서 from=gallery 파라미터 제거 (한 번만 처리되도록)
+      const url = new URL(window.location.href)
+      url.searchParams.delete('from')
+      window.history.replaceState({}, '', url.toString())
     }
-  }, [tierAlbumData])
-
-  // 갤러리에서 선택된 사진들로 앨범을 생성한 경우 자동으로 편집 모드 진입
+  }, [searchParams, isEditMode, toggleEditMode])
+  
+  // 편집 모드 변경 시 URL 업데이트
   useEffect(() => {
-    if (isFromGallery && selectedPhotos.length > 0) {
-      setIsEditMode(true)
-      console.log('갤러리에서 선택된 사진들로 티어 앨범 편집 시작:', selectedPhotos)
-    }
-  }, [isFromGallery, selectedPhotos])
-
-  // 편집 모드 진입 시 데이터 설정
-  useEffect(() => {
+    const url = new URL(window.location.href)
     if (isEditMode) {
-      if (isFromGallery && selectedPhotos.length > 0) {
-        // 갤러리에서 선택된 사진들을 사용 가능한 사진으로 설정
-        const photosToUse = selectedPhotos.map(photo => ({
-          id: photo.id,
-          originalUrl: photo.originalUrl,
-          thumbnailUrl: photo.thumbnailUrl,
-          name: photo.title || `사진 #${photo.id}`
-        }))
-        setAvailablePhotos(photosToUse)
-        
-        // 기본 빈 티어 설정
-        setTierPhotos({
-          S: [],
-          A: [],
-          B: [],
-          C: [],
-          D: [],
-        })
-      } else if (tierAlbumData?.photos) {
-        // 기존 앨범 데이터를 편집용 형식으로 변환
-        const convertedTierPhotos: TierData = {
-          S: tierAlbumData.photos.S?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
-            id: photo.photoId,
-            originalUrl: photo.originalUrl,
-            thumbnailUrl: photo.thumbnailUrl,
-            name: `사진 #${photo.photoId}`
-          })) || [],
-          A: tierAlbumData.photos.A?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
-            id: photo.photoId,
-            originalUrl: photo.originalUrl,
-            thumbnailUrl: photo.thumbnailUrl,
-            name: `사진 #${photo.photoId}`
-          })) || [],
-          B: tierAlbumData.photos.B?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
-            id: photo.photoId,
-            originalUrl: photo.originalUrl,
-            thumbnailUrl: photo.thumbnailUrl,
-            name: `사진 #${photo.photoId}`
-          })) || [],
-          C: tierAlbumData.photos.C?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
-            id: photo.photoId,
-            originalUrl: photo.originalUrl,
-            thumbnailUrl: photo.thumbnailUrl,
-            name: `사진 #${photo.photoId}`
-          })) || [],
-          D: tierAlbumData.photos.D?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
-            id: photo.photoId,
-            originalUrl: photo.originalUrl,
-            thumbnailUrl: photo.thumbnailUrl,
-            name: `사진 #${photo.photoId}`
-          })) || [],
-        }
-        setTierPhotos(convertedTierPhotos)
-        
-        // UNASSIGNED 사진들을 사용 가능한 사진으로 설정
-        const unassignedPhotos = tierAlbumData.photos.UNASSIGNED?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
-          id: photo.photoId,
-          originalUrl: photo.originalUrl,
-          thumbnailUrl: photo.thumbnailUrl,
-          name: `사진 #${photo.photoId}`
-        })) || []
-        setAvailablePhotos(unassignedPhotos)
-      }
+      url.searchParams.set('edit', 'true')
+    } else {
+      url.searchParams.delete('edit')
     }
-  }, [tierAlbumId, isEditMode, isFromGallery, selectedPhotos, tierAlbumData])
-
-  // 저장 핸들러 - 실제 API 명세에 맞게 수정
-  const handleSave = async () => {
-    try {
-      // TierData를 API 요청 형식으로 변환 (실제 API 명세 기반)
-      const photosToSave = {
-        S: tierPhotos.S?.map(photo => photo.id) || [],
-        A: tierPhotos.A?.map(photo => photo.id) || [],
-        B: tierPhotos.B?.map(photo => photo.id) || [],
-        C: tierPhotos.C?.map(photo => photo.id) || [],
-        D: tierPhotos.D?.map(photo => photo.id) || [],
-      }
-
-      // 썸네일 ID 설정 - S 티어의 첫 번째 사진을 대표이미지로 사용
-      const thumbnailId = tierPhotos.S?.[0]?.id || tierPhotos.A?.[0]?.id || tierPhotos.B?.[0]?.id || tierPhotos.C?.[0]?.id || tierPhotos.D?.[0]?.id || null
-
-      await updateTierAlbum(parseInt(groupId), parseInt(tierAlbumId), {
-        name: albumInfo?.name || tierAlbumData?.title || "티어 앨범",
-        description: albumInfo?.description || tierAlbumData?.description || "",
-        thumbnailId: thumbnailId,
-        photos: photosToSave
+    window.history.replaceState({}, '', url.toString())
+  }, [isEditMode])
+  
+  // 사이드바 이벤트 처리
+  useEffect(() => {
+    const handleSidebarDropEvent = (event: CustomEvent) => {
+      const dragData = event.detail
+      handleSidebarDrop(dragData)
+    }
+    
+    const handlePhotosDeleteRequest = (event: CustomEvent) => {
+      const photoIds = event.detail
+      deletePhotos(photoIds).catch(error => {
+        console.error('사진 삭제 실패:', error)
+        alert('사진 삭제에 실패했습니다. 다시 시도해주세요.')
       })
-
-      // 저장 후 최신 데이터 새로고침
-      await refreshTierAlbumData()
-
-      // 바로 뷰 모드로 전환
-      setIsEditMode(false)
-    } catch (error) {
-      console.error("티어 앨범 저장 실패:", error)
-      alert("❌ 티어 앨범 저장에 실패했습니다. 다시 시도해주세요.")
     }
-  }
+    
+    window.addEventListener('tierSidebarDrop', handleSidebarDropEvent as EventListener)
+    window.addEventListener('tierPhotosDeleteRequest', handlePhotosDeleteRequest as EventListener)
+    
+    return () => {
+      window.removeEventListener('tierSidebarDrop', handleSidebarDropEvent as EventListener)
+      window.removeEventListener('tierPhotosDeleteRequest', handlePhotosDeleteRequest as EventListener)
+    }
+  }, [deletePhotos])
 
   // 앨범 정보 업데이트 핸들러
   const handleAlbumInfoUpdate = (updates: Partial<EditingAlbumInfo>) => {
-    setAlbumInfo(prev => prev ? { ...prev, ...updates } : null)
+    updateAlbumInfo(updates)
+  }
+
+  // 티어에서 사용 가능한 사진으로 되돌리는 핸들러
+  const handleReturnToAvailable = (
+    photoId: number,
+    fromTier: string,
+    onReturn: (photo: Photo) => void
+  ) => {
+    const photo = tierPhotos[fromTier]?.find((p) => p.id === photoId)
+    if (photo) {
+      // 티어에서 해당 사진 제거
+      setTierPhotos((prev) => ({
+        ...prev,
+        [fromTier]: prev[fromTier].filter((p) => p.id !== photoId),
+      }))
+      // 콜백 함수를 호출하여 사용 가능한 사진 목록에 추가
+      onReturn(photo)
+    }
   }
 
   // 대표이미지 설정 핸들러
@@ -571,54 +503,17 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
     }
   }
   
-  // 갤러리에서 사진 추가 하들러
+  // 갤러리에서 사진 추가 핸들러
   const handleAddPhotos = () => {
-    // 현재 편집 상태를 sessionStorage에 저장
-    const currentState: TierEditingState = {
-      albumInfo: {
-        name: albumInfo?.name || '',
-        description: albumInfo?.description || ''
-      },
-      tierPhotos: tierPhotos as { S: Photo[]; A: Photo[]; B: Photo[]; C: Photo[]; D: Photo[]; },
-      availablePhotos: availablePhotos
-    }
-    
-    saveEditingState('tier', currentState)
-    
-    // 갤러리로 이동 (추가 모드로) - 그룹 페이지에서 갤러리 모드로
-    window.location.href = `/group/${groupId}?gallery=true&mode=add&target=tier&albumId=${tierAlbumId}`
+    addPhotosFromGallery()
   }
   
-  // 사진 삭제 하들러
+  // 사진 삭제 핸들러
   const handleDeletePhotos = async (photoIds: number[]) => {
-    try {
-      console.log('티어 앨범에서 사진 삭제:', photoIds)
-      
-      // API 호출로 사진 삭제
-      await removePhotosFromTierAlbum(parseInt(groupId), parseInt(tierAlbumId), photoIds)
-      
-      // 로컬 상태 업데이트: availablePhotos에서 삭제
-      const updatedAvailablePhotos = availablePhotos.filter(photo => !photoIds.includes(photo.id))
-      setAvailablePhotos(updatedAvailablePhotos)
-      
-      // 티어에서도 삭제된 사진들 제거 (null 체크 추가)
-      const updatedTierPhotos = { ...tierPhotos }
-      Object.keys(updatedTierPhotos).forEach(tier => {
-        updatedTierPhotos[tier] = updatedTierPhotos[tier].filter(photo => photo && photo.id && !photoIds.includes(photo.id))
-      })
-      setTierPhotos(updatedTierPhotos)
-      
-      // 대표이미지도 삭제된 사진이면 제거
-      if (coverImage && photoIds.includes(coverImage.id)) {
-        setCoverImage(null)
-      }
-      
-      console.log(`${photoIds.length}장의 사진을 티어 앨범에서 삭제 완료`)
-      
-    } catch (error) {
+    deletePhotos(photoIds).catch(error => {
       console.error('사진 삭제 실패:', error)
       alert('사진 삭제에 실패했습니다. 다시 시도해주세요.')
-    }
+    })
   }
 
   // 로딩 상태
@@ -650,35 +545,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
 
   return (
     <div className="relative">
-      {/* 편집모드일 때만 사이드바 표시 */}
-      {isEditMode && (
-        <div className="fixed right-0 top-0 h-full w-80 bg-[#111111] border-l border-gray-800 z-50 overflow-y-auto">
-          <GalleryPhotosSection
-            availablePhotos={availablePhotos}
-            draggingPhotoId={draggingPhotoId}
-            onDragStart={(e, photo) => {
-              // DragPhotoData 형식으로 드래그 시작 - source를 'available'로 통일
-              const dragData: DragPhotoData = {
-                photoId: photo.id,
-                source: 'available',
-                originalUrl: photo.originalUrl,
-                thumbnailUrl: photo.thumbnailUrl,
-                name: photo.name || `사진 #${photo.id}`
-              }
-              e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
-              e.dataTransfer.effectAllowed = 'move'
-              setDraggingPhotoId(photo.id)
-              console.log('티어 앨범 사이드바에서 드래그 시작:', dragData)
-            }}
-            onDragEnd={handleAvailablePhotoDragEnd}
-            onDrop={handleSidebarDrop}
-            onAddPhotos={handleAddPhotos}
-            onDeletePhotos={handleDeletePhotos}
-            title="티어 배틀용 사진"
-          />
-        </div>
-      )}
-      <div className="min-h-screen bg-black text-white overflow-hidden relative">
+      <div className="min-h-screen bg-[#111111] text-white overflow-hidden relative">
         <div className="absolute inset-0 opacity-5">
           <div
             className="absolute inset-0"
@@ -688,40 +555,81 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
           />
         </div>
 
-        {/* Header */}
-        <header className="fixed top-0 left-0 right-0 z-50 bg-[#111111] border-b border-gray-800">
-          <div className="flex items-center justify-between px-8 py-4">
-            <Link href={`/group/${groupId}?album=tier`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
-              <ArrowLeft size={20} />
-              <span className="font-keepick-primary text-sm">돌아가기</span>
-            </Link>
-            <div className="text-center">
-              <h1 className="font-keepick-heavy text-xl tracking-wider">
+        {/* Header - 편집/뷰 모드 공통 */}
+        <header className="fixed top-0 right-0 z-40 bg-[#111111] border-b border-gray-800 transition-all duration-200"
+                style={{ left: '240px', width: 'calc(100% - 240px)' }}>
+          <div className="relative flex items-center py-2 px-8">
+            {/* 왼쪽 영역 - 고정 너비 */}
+            <div className="flex items-center" style={{ width: '200px' }}>
+              {isEditMode ? (
+                <button
+                  onClick={toggleEditMode}
+                  className="flex items-center gap-3 hover:opacity-70 transition-opacity"
+                >
+                  <ArrowLeft size={20} />
+                  <span className="font-keepick-primary text-sm">돌아가기</span>
+                </button>
+              ) : (
+                <Link 
+                  href={`/group/${groupId}?album=tier`} 
+                  className="flex items-center gap-3 hover:opacity-70 transition-opacity"
+                >
+                  <ArrowLeft size={20} />
+                  <span className="font-keepick-primary text-sm">돌아가기</span>
+                </Link>
+              )}
+            </div>
+            
+            {/* 중앙 영역 - 제목 */}
+            <div className="flex-1 text-center">
+              <h1 className="font-keepick-heavy text-lg tracking-wider">
                 {tierAlbumData?.title || `TIER ALBUM ${tierAlbumId}`}
               </h1>
             </div>
-            <div className="flex items-center gap-3">
-              {/* 앨범 정보 수정 버튼 */}
-              <button
-                onClick={() => setIsAlbumInfoModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
-              >
-                <Settings size={16} />
-                <span className="text-sm">앨범 정보</span>
-              </button>
+            
+            {/* 오른쪽 영역 - 버튼들 */}
+            <div className="flex gap-2 ml-auto">
+              {/* 앨범 정보 수정 버튼 - 편집 모드일 때만 표시 */}
+              {isEditMode && (
+                <button
+                  onClick={() => setIsAlbumInfoModalOpen(true)}
+                  className="group relative px-4 py-2 text-white hover:text-blue-400 transition-all duration-300"
+                  title="앨범 정보 수정"
+                >
+                  <div className="flex items-center gap-2">
+                    <Settings size={16} />
+                    <span className="font-keepick-primary text-sm tracking-wide">앨범 정보</span>
+                  </div>
+                  <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400 group-hover:w-full transition-all duration-300"></div>
+                </button>
+              )}
               
+              {/* 편집/완료 버튼 */}
               <button 
-                onClick={isEditMode ? handleSave : toggleEditMode}
-                className="px-6 py-2 border-2 border-orange-500 hover:border-orange-400 text-orange-500 hover:text-orange-400 bg-transparent font-keepick-primary text-sm rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-orange-500/25"
+                onClick={isEditMode ? saveChanges : toggleEditMode}
+                className={`group relative px-4 py-2 text-white transition-all duration-300 ${
+                  isEditMode
+                    ? 'hover:text-green-400'
+                    : 'hover:text-[#FE7A25]'
+                }`}
+                title={isEditMode ? '편집 완료' : '티어 편집'}
               >
-                {isEditMode ? "티어 완성하기" : "티어 수정하기"}
+                <div className="flex items-center gap-2">
+                  {isEditMode ? <Check size={16} /> : <Settings size={16} />}
+                  <span className="font-keepick-primary text-sm tracking-wide">
+                    {isEditMode ? "티어 완성하기" : "티어 수정하기"}
+                  </span>
+                </div>
+                <div className={`absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full ${
+                  isEditMode ? 'bg-green-400' : 'bg-[#FE7A25]'
+                }`}></div>
               </button>
             </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className={`${isEditMode ? 'min-h-screen bg-[#111111] pt-24 pr-80' : 'h-screen flex flex-col pt-16'} relative z-10`}>
+        <main className={`${isEditMode ? 'min-h-screen bg-[#111111] pt-16' : 'h-screen flex flex-col pt-16'} relative z-10`}>
           {isEditMode ? (
             // 편집 모드 - 티어 그리드 레이아웃 (사이드바는 AppLayout에서 관리)
             <div className="flex gap-6 animate-fade-in pb-8 px-8 h-screen">
@@ -1007,39 +915,12 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
           onClose={() => setIsAlbumInfoModalOpen(false)}
           albumInfo={albumInfo}
           onAlbumInfoUpdate={handleAlbumInfoUpdate}
-          coverImage={coverImage}
-          onCoverImageDrop={handleCoverImageDrop}
-          onCoverImageRemove={handleCoverImageRemove}
           showDateInputs={false}
           title="티어 앨범 정보 수정"
           albumType="tier"
           onSave={async () => {
-            // 앨범 정보만 저장 (티어 구성은 별도 저장)
-            if (tierAlbumData && albumInfo) {
-              try {
-                // 현재 티어 구성을 유지하면서 정보만 업데이트
-                const currentPhotos = {
-                  S: tierAlbumData.photos.S?.map(photo => photo.photoId) || [],
-                  A: tierAlbumData.photos.A?.map(photo => photo.photoId) || [],
-                  B: tierAlbumData.photos.B?.map(photo => photo.photoId) || [],
-                  C: tierAlbumData.photos.C?.map(photo => photo.photoId) || [],
-                  D: tierAlbumData.photos.D?.map(photo => photo.photoId) || [],
-                }
-                
-                await updateTierAlbum(parseInt(groupId), parseInt(tierAlbumId), {
-                  name: albumInfo.name,
-                  description: albumInfo.description,
-                  thumbnailId: coverImage?.id || null,
-                  photos: currentPhotos
-                })
-                
-                // 최신 데이터 새로고침
-                await refreshTierAlbumData()
-              } catch (error) {
-                console.error("앨범 정보 저장 실패:", error)
-                throw error
-              }
-            }
+            // 앨범 정보만 저장하고 편집 모드는 유지
+            setIsAlbumInfoModalOpen(false)
           }}
         />
 

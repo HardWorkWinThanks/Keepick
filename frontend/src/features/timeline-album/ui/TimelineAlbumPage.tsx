@@ -546,12 +546,12 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       const dragData = e.dataTransfer.types.includes('text/plain')
       if (dragData) {
         e.preventDefault()
-        e.dataTransfer.dropEffect = 'none'
-        e.currentTarget.style.cursor = 'not-allowed'
+        e.dataTransfer.dropEffect = 'none' as any
+        (e.currentTarget as HTMLElement).style.cursor = 'not-allowed'
       }
     },
     onDragLeave: (e: React.DragEvent) => {
-      e.currentTarget.style.cursor = 'auto'
+      (e.currentTarget as HTMLElement).style.cursor = 'auto'
     },
     onDrop: (e: React.DragEvent) => {
       // 사진 드래그 데이터인지 확인하고 차단
@@ -565,7 +565,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       } catch {
         // JSON 파싱 실패 시 일반 텍스트로 간주하고 허용
       }
-      e.currentTarget.style.cursor = 'auto'
+      (e.currentTarget as HTMLElement).style.cursor = 'auto'
     }
   }
 

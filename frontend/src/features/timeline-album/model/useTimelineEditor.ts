@@ -142,7 +142,14 @@ export function useTimelineEditor(groupId: string, albumId: string) {
         console.log('💾 저장된 편집 상태 복원됨')
         // 저장된 상태를 현재 에디터 형식으로 변환
         const restoredEditingState: TimelineEditingState = {
-          albumInfo: savedState.albumInfo,
+          albumInfo: {
+            name: savedState.albumInfo?.name || '',
+            description: savedState.albumInfo?.description || '',
+            startDate: savedState.albumInfo?.startDate || '',
+            endDate: savedState.albumInfo?.endDate || '',
+            thumbnailId: savedState.albumInfo?.thumbnailId || 0,
+            coverImage: savedState.albumInfo?.coverImage || null
+          },
           sections: savedState.sections,
           unusedPhotos: savedState.availablePhotos
         }

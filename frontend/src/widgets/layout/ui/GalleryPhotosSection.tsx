@@ -38,6 +38,7 @@ export function GalleryPhotosSection({
   const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]) // 삭제를 위한 사진 선택
   const [isDeleteMode, setIsDeleteMode] = useState(false) // 삭제 모드
 
+
   return (
     <div className="p-4 border-b border-gray-800">
       {/* 사진 그리드 - 고정 크기 */}

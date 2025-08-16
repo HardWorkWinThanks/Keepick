@@ -76,7 +76,7 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
         console.log(`갤러리 모드: ${mode}`);
       }
     }
-  }, [switchToGalleryMode]);
+  }, []); // URL 파라미터는 초기 로드시에만 확인
 
   // 사이드바에서 썸네일 변경 요청 메시지 수신
   useEffect(() => {

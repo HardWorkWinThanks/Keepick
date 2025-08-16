@@ -29,7 +29,7 @@ export function useTierAlbum(groupId: string, tierAlbumId: string) {
 
   // API 데이터를 TierPhoto 형식으로 변환 (실제 API 응답 구조 기반)
   // UNASSIGNED는 뷰 모드에서 제외 (편집 모드에서만 사용)
-  console.log('티어 앨범 API 데이터:', tierAlbumData)
+  // console.log('티어 앨범 API 데이터:', tierAlbumData)
   const photos: TierPhoto[] = tierAlbumData?.photos ? 
     Object.entries(tierAlbumData.photos)
       .filter(([tier]) => tier !== 'UNASSIGNED')  // UNASSIGNED 제외

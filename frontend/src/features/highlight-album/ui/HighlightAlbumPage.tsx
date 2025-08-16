@@ -1,9 +1,11 @@
 "use client"
 
-import { ZoomIn, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
+import { useState, useEffect } from "react"
+import { ZoomIn, ArrowLeft, ChevronLeft, ChevronRight, Settings } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useHighlightAlbum } from "../model/useHighlightAlbum"
+import type { Photo, DragPhotoData } from "@/entities/photo"
 
 interface HighlightAlbumPageProps {
   groupId: string
@@ -11,6 +13,8 @@ interface HighlightAlbumPageProps {
 }
 
 export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps) {
+  const [isEditMode, setIsEditMode] = useState(false)
+  
   const {
     album,
     emotionIcons,
@@ -22,6 +26,22 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
     handlePrevSlide,
     handleNextSlide,
   } = useHighlightAlbum(groupId, albumId)
+  
+  // 편집 모드 토글
+  const toggleEditMode = () => {
+    setIsEditMode(!isEditMode)
+  }
+  
+  // 편집 모드 변경 시 URL 업데이트
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    if (isEditMode) {
+      url.searchParams.set('edit', 'true')
+    } else {
+      url.searchParams.delete('edit')
+    }
+    window.history.replaceState({}, '', url.toString())
+  }, [isEditMode])
 
   return (
       <div className="min-h-screen bg-black relative overflow-hidden">
@@ -35,7 +55,14 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
             <div className="text-center">
               <h1 className="font-keepick-heavy text-xl tracking-wider text-white">HIGHLIGHT ALBUM {albumId}</h1>
             </div>
-            <div className="w-24"></div> {/* 균형을 위한 빈 공간 */}
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={toggleEditMode}
+                className="px-6 py-2 border-2 border-orange-500 hover:border-orange-400 text-orange-500 hover:text-orange-400 bg-transparent font-keepick-primary text-sm rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-orange-500/25"
+              >
+                {isEditMode ? "편집 완료" : "편집 모드"}
+              </button>
+            </div>
           </div>
         </header>
 
