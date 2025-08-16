@@ -45,6 +45,7 @@ export function useTimelineEditor(groupId: string, albumId: string) {
   // 편집 상태 (로컬)
   const [isEditMode, setIsEditMode] = useState(false)
   const [editingState, setEditingState] = useState<TimelineEditingState | null>(null)
+  const [availablePhotos, setAvailablePhotos] = useState<Photo[]>([])
 
   // 서버 데이터를 편집 상태로 변환하는 함수
   const convertToEditingState = useCallback((album: TimelineAlbum): TimelineEditingState => {
@@ -118,6 +119,15 @@ export function useTimelineEditor(groupId: string, albumId: string) {
       name: `${album.name} 대표이미지`
     } : null
 
+    const unusedPhotos = normalizePhotos(album.unusedPhotos || [])
+    
+    console.log('🔄 convertToEditingState 실행:', {
+      albumName: album.name,
+      sectionsCount: editingSections.length,
+      unusedPhotosCount: unusedPhotos.length,
+      unusedPhotos: unusedPhotos.map(p => ({ id: p.id, name: p.name }))
+    })
+
     return {
       albumInfo: {
         name: album.name,
@@ -128,14 +138,14 @@ export function useTimelineEditor(groupId: string, albumId: string) {
         coverImage: coverImage
       },
       sections: editingSections,
-      unusedPhotos: normalizePhotos(album.unusedPhotos || [])
+      unusedPhotos: unusedPhotos
     }
   }, [])
 
   // 편집 모드 시작 - 저장된 상태 복원 시도
   const startEditing = useCallback(() => {
     if (timelineAlbum) {
-      // 먼저 저장된 편집 상태 복원 시도
+      // 먼저 저장된 편집 상태 복원 시도 (갤러리에서 돌아온 경우 이미 삭제됨)
       const savedState = restoreEditingState<SavedEditingState>('timeline')
       
       if (savedState) {
@@ -157,7 +167,9 @@ export function useTimelineEditor(groupId: string, albumId: string) {
         // 복원 후 저장된 상태는 정리
         clearEditingState('timeline')
       } else {
-        // 저장된 상태가 없으면 서버 데이터로 초기화
+        // 저장된 상태가 없으면 최신 서버 데이터로 초기화
+        // (갤러리에서 돌아온 경우 새로 추가된 사진들이 포함됨)
+        console.log('🔄 최신 서버 데이터로 편집 상태 초기화 (갤러리 추가 사진 포함)')
         setEditingState(convertToEditingState(timelineAlbum))
       }
       
@@ -172,9 +184,12 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     // 원본 데이터로 복원하려면 캐시를 다시 불러오거나 자동으로 displayData가 원본으로 돌아감
   }, [])
 
-  // 사용 가능한 사진들 계산 (실시간)
-  const availablePhotos = useCallback((): Photo[] => {
-    if (!editingState) return []
+  // editingState 변경 시 availablePhotos 자동 계산
+  useEffect(() => {
+    if (!editingState) {
+      setAvailablePhotos([])
+      return
+    }
     
     // 섹션에서 사용 중인 사진 ID들 수집
     const usedPhotoIds = new Set<number>()
@@ -186,8 +201,17 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     
     // 대표이미지는 복사 개념이므로 availablePhotos에서 제외하지 않음
     
-    // 사용되지 않은 사진들만 반환
-    return editingState.unusedPhotos.filter(photo => !usedPhotoIds.has(photo.id))
+    // 사용되지 않은 사진들만 설정
+    const newAvailablePhotos = editingState.unusedPhotos.filter(photo => !usedPhotoIds.has(photo.id))
+    
+    console.log('📸 availablePhotos 자동 계산:', {
+      totalUnusedPhotos: editingState.unusedPhotos.length,
+      usedPhotoIds: Array.from(usedPhotoIds),
+      finalAvailablePhotos: newAvailablePhotos.length,
+      photos: newAvailablePhotos.map(p => ({ id: p.id, name: p.name }))
+    })
+    
+    setAvailablePhotos(newAvailablePhotos)
   }, [editingState])
 
   // photoIds를 photos 배열에서 실시간 계산하는 헬퍼 함수
@@ -248,17 +272,22 @@ export function useTimelineEditor(groupId: string, albumId: string) {
 
       return newState
     })
+    
+    // availablePhotos에서 해당 사진 즉시 제거
+    setAvailablePhotos(prev => prev.filter(p => p.id !== photoId))
   }, [syncPhotoIds, queryClient, groupId, albumId])
 
   // 섹션에서 갤러리로 사진 이동
   const moveSectionToSidebar = useCallback((sectionIndex: number, imageIndex: number) => {
+    let photoToRemove: Photo | null = null
+    
     setEditingState(prev => {
       if (!prev) return prev
 
       const section = prev.sections[sectionIndex]
       if (!section || !section.photos[imageIndex]) return prev
 
-      const photoToRemove = section.photos[imageIndex]
+      photoToRemove = section.photos[imageIndex]
       const newSections = [...prev.sections]
       const newSection = { ...newSections[sectionIndex] }
       newSection.photos = [...newSection.photos]
@@ -300,6 +329,17 @@ export function useTimelineEditor(groupId: string, albumId: string) {
 
       return newState
     })
+    
+    // availablePhotos에 해당 사진 즉시 추가
+    if (photoToRemove) {
+      setAvailablePhotos(prev => {
+        // 중복 체크 후 추가
+        if (!prev.some(p => p.id === photoToRemove!.id)) {
+          return [...prev, photoToRemove!]
+        }
+        return prev
+      })
+    }
   }, [syncPhotoIds, queryClient, groupId, albumId])
 
   // 섹션 내/섹션 간 이미지 위치 교환 (자연스러운 스왑)
@@ -602,7 +642,7 @@ export function useTimelineEditor(groupId: string, albumId: string) {
       const stateToSave: SavedEditingState = {
         albumInfo: editingState.albumInfo,
         sections: editingState.sections,
-        availablePhotos: availablePhotos()
+        availablePhotos: availablePhotos
       }
       saveEditingState('timeline', stateToSave)
       console.log('💾 편집 상태가 세션에 저장됨')
@@ -624,6 +664,12 @@ export function useTimelineEditor(groupId: string, albumId: string) {
       } else if (editingState.albumInfo.thumbnailId > 0) {
         thumbnailId = editingState.albumInfo.thumbnailId
       }
+      
+      console.log('💾 대표이미지 저장:', {
+        coverImage: editingState.albumInfo.coverImage,
+        thumbnailId: editingState.albumInfo.thumbnailId,
+        finalThumbnailId: thumbnailId
+      })
       
       // 섹션 데이터 준비
       const validSections = editingState.sections.map((section) => {
@@ -683,7 +729,7 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     // 표시용 데이터
     albumInfo: displayData?.albumInfo || null,
     sections: displayData?.sections || [],
-    availablePhotos: isEditMode ? availablePhotos() : [],
+    availablePhotos: isEditMode ? availablePhotos : [],
     
     // 액션
     startEditing,

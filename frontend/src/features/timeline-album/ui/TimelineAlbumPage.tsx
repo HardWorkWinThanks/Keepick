@@ -364,14 +364,48 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     }
   }, [handleSidebarDrop])
 
-  // 사이드바에 실시간 availablePhotos 전달
+  // 사이드바로 실시간 데이터 전송 (안전한 이벤트 발송)
   useEffect(() => {
-    if (isEditMode) {
-      window.dispatchEvent(new CustomEvent('timelineAvailablePhotosUpdate', { 
-        detail: availablePhotos 
-      }))
+    if (isEditMode && availablePhotos.length >= 0) { // 빈 배열도 유효한 상태로 간주
+      // 약간의 지연을 두어 사이드바 컴포넌트가 마운트된 후 이벤트 발송
+      const timeoutId = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('timelineAvailablePhotosUpdate', { 
+          detail: availablePhotos 
+        }))
+      }, 100)
+      
+      return () => clearTimeout(timeoutId)
     }
   }, [availablePhotos, isEditMode])
+
+  // 편집 모드 변경 시 즉시 사이드바에 알림 (추가 안전장치)
+  useEffect(() => {
+    if (isEditMode) {
+      // 편집 모드 진입 시 사이드바가 데이터를 요청할 수 있도록 이벤트 발송
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('timelineEditModeChanged', { 
+          detail: { isEditMode: true, availablePhotos } 
+        }))
+      }, 200)
+    }
+  }, [isEditMode, availablePhotos])
+
+  // 사이드바 마운트 이벤트 처리 (사이드바가 늦게 마운트되는 경우 대응)
+  useEffect(() => {
+    const handleSidebarMounted = () => {
+      if (isEditMode && availablePhotos.length >= 0) {
+        window.dispatchEvent(new CustomEvent('timelineAvailablePhotosUpdate', { 
+          detail: availablePhotos 
+        }))
+      }
+    }
+
+    window.addEventListener('timelineSidebarMounted', handleSidebarMounted)
+    
+    return () => {
+      window.removeEventListener('timelineSidebarMounted', handleSidebarMounted)
+    }
+  }, [isEditMode, availablePhotos])
   
   // 사이드바에서 사진 삭제 이벤트 처리
   useEffect(() => {
@@ -404,14 +438,25 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     }
   }, [isEditMode, saveEditingStateToSession])
 
-  // 갤러리에서 돌아온 경우 데이터 새로고침 - 최적화
+  // 갤러리에서 돌아온 경우 데이터 새로고침 후 편집모드 진입
   useEffect(() => {
     const fromGallery = searchParams.get('from') === 'gallery'
     if (fromGallery) {
-      console.log('갤러리에서 돌아옴 - 편집모드 진입')
+      console.log('갤러리에서 돌아옴 - 저장된 편집 상태 삭제 후 최신 데이터로 편집모드 진입')
       
-      // 즉시 편집모드 진입 (리패치 없이)
-      startEditing()
+      // 갤러리에서 돌아온 경우 저장된 편집 상태 삭제 (새 사진이 포함된 최신 데이터 사용하기 위해)
+      clearEditingState('timeline')
+      
+      // 먼저 최신 데이터 새로고침
+      refetchTimeline().then(() => {
+        console.log('갤러리 추가 사진 포함한 데이터 새로고침 완료 - 편집모드 진입')
+        // 데이터 새로고침 완료 후 편집모드 진입
+        startEditing()
+      }).catch((error) => {
+        console.error('데이터 새로고침 실패:', error)
+        // 실패해도 편집모드는 진입
+        startEditing()
+      })
       
       // URL에서 from=gallery 파라미터만 제거하고 edit=true는 유지
       const newSearchParams = new URLSearchParams(searchParams)
@@ -419,7 +464,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       const newUrl = `/group/${groupId}/timeline/${albumId}?${newSearchParams.toString()}`
       router.replace(newUrl)
     }
-  }, [searchParams, router, groupId, albumId, startEditing])
+  }, [searchParams, router, groupId, albumId, startEditing, refetchTimeline])
 
   // 빈 앨범 자동 편집 모드 진입 (단순화됨)
   useEffect(() => {

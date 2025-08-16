@@ -80,10 +80,24 @@ function TimelineEditSidebarContent({ groupId, albumId }: { groupId: string, alb
       setAvailablePhotos(event.detail || [])
     }
 
+    const handleEditModeChanged = (event: CustomEvent) => {
+      const { isEditMode: editMode, availablePhotos: photos } = event.detail || {}
+      if (editMode && photos) {
+        setAvailablePhotos(photos)
+      }
+    }
+
+    // 기본 이벤트 리스너
     window.addEventListener('timelineAvailablePhotosUpdate', handleAvailablePhotosUpdate as EventListener)
+    // 편집 모드 변경 이벤트 리스너 (추가 안전장치)
+    window.addEventListener('timelineEditModeChanged', handleEditModeChanged as EventListener)
+    
+    // 컴포넌트 마운트 시 메인페이지에 데이터 요청
+    window.dispatchEvent(new CustomEvent('timelineSidebarMounted'))
     
     return () => {
       window.removeEventListener('timelineAvailablePhotosUpdate', handleAvailablePhotosUpdate as EventListener)
+      window.removeEventListener('timelineEditModeChanged', handleEditModeChanged as EventListener)
     }
   }, [])
   
