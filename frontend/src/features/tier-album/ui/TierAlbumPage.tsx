@@ -17,7 +17,6 @@ import type { RootState } from "@/shared/config/store"
 import { clearSelectedPhotos, setIsFromGallery } from "@/features/photo-gallery/model/photoSelectionSlice"
 import { AlbumInfoEditModal, type EditingAlbumInfo } from "@/shared/ui/modal/AlbumInfoEditModal"
 import { GalleryPhotosSection } from "@/widgets/layout/ui/GalleryPhotosSection"
-import AppLayout from "@/widgets/layout/ui/AppLayout"
 import {
   useAlbumState,
 } from "@/features/album-management"
@@ -625,66 +624,35 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
   // 로딩 상태
   if (isLoading) {
     return (
-      <AppLayout
-        sidebarConfig={{
-          showGroupChat: true,
-          dynamicContent: null,
-          currentGroup: {
-            id: groupId,
-            name: "그룹",
-            description: "",
-            thumbnailUrl: ""
-          }
-        }}
-      >
-        <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-2xl font-keepick-primary mb-4">티어 앨범을 불러오는 중...</div>
-            <div className="w-8 h-8 border-2 border-[#FE7A25] border-t-transparent rounded-full animate-spin mx-auto"></div>
-          </div>
+      <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl font-keepick-primary mb-4">티어 앨범을 불러오는 중...</div>
+          <div className="w-8 h-8 border-2 border-[#FE7A25] border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
-      </AppLayout>
+      </div>
     )
   }
 
   // 에러 상태
   if (error) {
     return (
-      <AppLayout
-        sidebarConfig={{
-          showGroupChat: true,
-          dynamicContent: null,
-          currentGroup: {
-            id: groupId,
-            name: "그룹",
-            description: "",
-            thumbnailUrl: ""
-          }
-        }}
-      >
-        <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-2xl font-keepick-primary mb-4 text-red-400">티어 앨범을 불러올 수 없습니다</div>
-            <div className="text-gray-400 mb-4">앨범이 존재하지 않거나 접근 권한이 없습니다.</div>
-            <Link href={`/group/${groupId}?album=tier`} className="text-[#FE7A25] hover:text-orange-400 font-keepick-primary">
-              그룹으로 돌아가기
-            </Link>
-          </div>
+      <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl font-keepick-primary mb-4 text-red-400">티어 앨범을 불러올 수 없습니다</div>
+          <div className="text-gray-400 mb-4">앨범이 존재하지 않거나 접근 권한이 없습니다.</div>
+          <Link href={`/group/${groupId}?album=tier`} className="text-[#FE7A25] hover:text-orange-400 font-keepick-primary">
+            그룹으로 돌아가기
+          </Link>
         </div>
-      </AppLayout>
+      </div>
     )
   }
 
   return (
-    <AppLayout
-      sidebarConfig={{
-        showGroupChat: true,
-        showCreateGroupButton: false, // 그룹 선택 버튼 비활성화
-        showGroupsSection: false,
-        showFriendsSection: false,
-        useDefaultContent: false, // 기본 컨텐츠 비활성화
-        forceInitialPinned: true, // 사이드바 상태 유지
-        dynamicContent: isEditMode ? (
+    <div className="relative">
+      {/* 편집모드일 때만 사이드바 표시 */}
+      {isEditMode && (
+        <div className="fixed right-0 top-0 h-full w-80 bg-[#111111] border-l border-gray-800 z-50 overflow-y-auto">
           <GalleryPhotosSection
             availablePhotos={availablePhotos}
             draggingPhotoId={draggingPhotoId}
@@ -708,15 +676,8 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
             onDeletePhotos={handleDeletePhotos}
             title="티어 배틀용 사진"
           />
-        ) : null,
-        currentGroup: {
-          id: groupId,
-          name: `그룹 ${groupId}`,
-          description: "",
-          thumbnailUrl: ""
-        }
-      }}
-    >
+        </div>
+      )}
       <div className="min-h-screen bg-black text-white overflow-hidden relative">
         <div className="absolute inset-0 opacity-5">
           <div
@@ -760,7 +721,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
         </header>
 
         {/* Main Content */}
-        <main className={`${isEditMode ? 'min-h-screen bg-[#111111] pt-24' : 'h-screen flex flex-col pt-16'} relative z-10`}>
+        <main className={`${isEditMode ? 'min-h-screen bg-[#111111] pt-24 pr-80' : 'h-screen flex flex-col pt-16'} relative z-10`}>
           {isEditMode ? (
             // 편집 모드 - 티어 그리드 레이아웃 (사이드바는 AppLayout에서 관리)
             <div className="flex gap-6 animate-fade-in pb-8 px-8 h-screen">
@@ -1089,6 +1050,6 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
           onClose={closePhotoModal}
         />
       </div>
-    </AppLayout>
+    </div>
   )
 }

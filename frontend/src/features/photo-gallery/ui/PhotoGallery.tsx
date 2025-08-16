@@ -562,10 +562,19 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
       
       console.log(`${selectedPhotos.length}장의 사진을 ${targetAlbumType} 앨범에 추가 완료`)
       
-      // 성공 후 앨범 편집 페이지로 돌아가기
+      // 앨범 캐시 무효화하여 최신 데이터 반영
+      if (targetAlbumType === 'timeline') {
+        // 타임라인 앨범 캐시 무효화
+        queryClient.invalidateQueries({ queryKey: ['timeline-album', groupId, targetAlbumId] })
+      } else if (targetAlbumType === 'tier') {
+        // 티어 앨범 캐시 무효화  
+        queryClient.invalidateQueries({ queryKey: ['tier-album', groupId, targetAlbumId] })
+      }
+      
+      // 성공 후 앨범 편집 페이지로 돌아가기 (편집 모드 유지)
       const backUrl = targetAlbumType === 'timeline' 
-        ? `/group/${groupId}/timeline/${targetAlbumId}?mode=edit&from=gallery`
-        : `/group/${groupId}/tier/${targetAlbumId}?mode=edit&from=gallery`
+        ? `/group/${groupId}/timeline/${targetAlbumId}?edit=true&from=gallery`
+        : `/group/${groupId}/tier/${targetAlbumId}?edit=true&from=gallery`
       
       window.location.href = backUrl
       

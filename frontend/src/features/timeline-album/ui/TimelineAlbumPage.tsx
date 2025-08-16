@@ -1,15 +1,15 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useSelector, useDispatch } from "react-redux"
+import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { ArrowLeft, Edit, Plus, Trash2, Settings } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useTimelineEditor, EditingSection } from "../model/useTimelineEditor"
+import { useTimelineAlbum } from "../model/useTimelineAlbum"
 import { AlbumInfoEditModal } from "@/shared/ui/modal/AlbumInfoEditModal"
-import { GalleryPhotosSection } from "@/widgets/layout/ui/GalleryPhotosSection"
-import AppLayout from "@/widgets/layout/ui/AppLayout"
 import { PhotoDropZone } from "@/features/photo-drag-drop"
 import type { RootState } from "@/shared/config/store"
 import type { DragPhotoData } from "@/entities/photo"
@@ -17,7 +17,6 @@ import { Photo } from "@/entities/photo"
 import { clearSelectedPhotos, setIsFromGallery } from "@/features/photo-gallery/model/photoSelectionSlice"
 import { addPhotosToTimelineAlbum, removePhotosFromTimelineAlbum } from "../api/timelineAlbumPhotos"
 import { saveEditingState, clearEditingState, TimelineEditingState } from "@/shared/lib/editingStateManager"
-import { useQueryClient } from '@tanstack/react-query'
 
 interface TimelineAlbumPageProps {
   groupId: string
@@ -88,6 +87,8 @@ function TimelineSectionLayout({
         isEditMode && dragOverImageIndex === imageIndex ? 'ring-2 ring-[#FE7A25]' : ''
       } bg-[#222222]/50 rounded-sm border border-white/10 ${
         photo && isEditMode ? 'cursor-grab active:cursor-grabbing' : ''
+      } ${
+        isEditMode ? 'hover:ring-1 hover:ring-[#FE7A25]/50 transition-all duration-200' : ''
       }`
     }
 
@@ -125,11 +126,16 @@ function TimelineSectionLayout({
           </div>
         )}
         {isEditMode && (
-          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-            <div className="text-white text-center text-sm font-keepick-primary">
-              사진 {imageIndex + 1}
+          <>
+            {/* 드롭 오버레이 - 더 큰 드롭 영역 제공 */}
+            <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+              <div className="text-white text-center text-sm font-keepick-primary">
+                사진 {imageIndex + 1}
+              </div>
             </div>
-          </div>
+            {/* 확장된 드롭 영역 - 패딩으로 더 넓은 드롭 영역 */}
+            <div className="absolute -inset-2 pointer-events-none" />
+          </>
         )}
       </>
     )
@@ -152,7 +158,7 @@ function TimelineSectionLayout({
                 name: photo.name
               }
               e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
-              e.dataTransfer.effectAllowed = 'move'
+              e.dataTransfer.effectAllowed = 'copy' // 대표이미지는 복사 개념
             }
           }}
         >
@@ -285,11 +291,15 @@ function TimelineSectionLayout({
 }
 
 export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPageProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const dispatch = useDispatch()
-  const queryClient = useQueryClient()
   const { selectedPhotos, isFromGallery } = useSelector((state: RootState) => state.photoSelection)
   
-  // 새로운 하이브리드 에디터 훅 사용
+  // 기본 앨범 정보 (편집 모드와 관계없이 항상 로드)
+  const { timelineAlbum: baseAlbum, loading: baseLoading } = useTimelineAlbum(groupId, albumId)
+  
+  // 새로운 통합된 에디터 훅 사용 (복잡한 useEffect 체인 모두 제거!)
   const {
     isEditMode,
     loading,
@@ -309,38 +319,120 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     deleteSection,
     updateAlbumInfo,
     refetchTimeline,
-    removePhotosFromState
+    removePhotosFromState,
+    saveAlbumInfoOnly,
+    saveAlbumInfoWithData
   } = useTimelineEditor(groupId, albumId)
 
   const [dragOverImage, setDragOverImage] = useState<{ sectionIndex: number; imageIndex: number } | null>(null)
-  const [hasProcessedGalleryMode, setHasProcessedGalleryMode] = useState(false) // 갤러리 모드 처리 완룼 플래그
-  const titleInputRef = useRef<HTMLInputElement>(null) // 제목 입력 필드 참조
-  
-  // 앨범정보 수정 모달 상태
+  const titleInputRef = useRef<HTMLInputElement>(null)
   const [isAlbumInfoModalOpen, setIsAlbumInfoModalOpen] = useState(false)
+  
+  // 모달용 로컬 상태 (모달 내부에서만 수정, 저장 시에만 실제 상태 업데이트)
+  const [modalAlbumInfo, setModalAlbumInfo] = useState<any>(null)
 
-  // 빈 앨범 감지로 새로 만든 앨범에서 자동으로 편집 모드 진입 (더 확실한 방법)
-  useEffect(() => {
-    // 앨범 제목이 비어있으면 새로 만든 앨범으로 간주하고 편집모드 자동 진입
-    if (albumInfo && !albumInfo.name?.trim() && !isEditMode && !hasProcessedGalleryMode) {
-      console.log('빈 앨범 감지 - 편집모드 자동 활성화')
-      startEditing()
-      setHasProcessedGalleryMode(true)
-      
-      // 제목 입력 필드에 포커스 (약간 지연 후)
-      setTimeout(() => {
-        titleInputRef.current?.focus()
-      }, 500)
+  // 사이드바에서 섹션으로 드롭된 사진 처리 (window 이벤트로 통신)
+  const handleSidebarDrop = useCallback((dragData: DragPhotoData) => {
+    // 섹션에서 드래그된 사진인 경우 사이드바로 이동
+    if (dragData.source && dragData.source.startsWith('section-')) {
+      const sourceMatch = dragData.source.match(/section-(\d+)-(\d+)/)
+      if (sourceMatch) {
+        const sectionIndex = parseInt(sourceMatch[1])
+        const imageIndex = parseInt(sourceMatch[2])
+        moveSectionToSidebar(sectionIndex, imageIndex)
+      }
     }
-  }, [albumInfo, isEditMode, hasProcessedGalleryMode, startEditing])
+  }, [moveSectionToSidebar])
+
+  // 사이드바 드롭 이벤트 리스너 등록
+  useEffect(() => {
+    const handleSidebarDropEvent = (event: CustomEvent) => {
+      handleSidebarDrop(event.detail)
+    }
+
+    window.addEventListener('timelineSidebarDrop', handleSidebarDropEvent as EventListener)
+    
+    return () => {
+      window.removeEventListener('timelineSidebarDrop', handleSidebarDropEvent as EventListener)
+    }
+  }, [handleSidebarDrop])
+
+  // 사이드바에 실시간 availablePhotos 전달
+  useEffect(() => {
+    if (isEditMode) {
+      window.dispatchEvent(new CustomEvent('timelineAvailablePhotosUpdate', { 
+        detail: availablePhotos 
+      }))
+    }
+  }, [availablePhotos, isEditMode])
+  
+  // 사이드바에서 사진 삭제 이벤트 처리
+  useEffect(() => {
+    const handlePhotosDeleted = (event: CustomEvent) => {
+      const deletedPhotoIds: number[] = event.detail
+      
+      // 편집 상태에서 삭제된 사진들 제거
+      removePhotosFromState(deletedPhotoIds)
+    }
+
+    window.addEventListener('timelinePhotosDeleted', handlePhotosDeleted as EventListener)
+    
+    return () => {
+      window.removeEventListener('timelinePhotosDeleted', handlePhotosDeleted as EventListener)
+    }
+  }, [removePhotosFromState])
+
+  // 갤러리에서 돌아온 경우 데이터 새로고침
+  useEffect(() => {
+    const fromGallery = searchParams.get('from') === 'gallery'
+    if (fromGallery) {
+      console.log('갤러리에서 돌아옴 - 타임라인 데이터 새로고침')
+      
+      // 타임라인 앨범 데이터 새로고침
+      refetchTimeline().then(() => {
+        // 데이터 새로고침 후 편집 모드가 켜져 있다면 편집 상태 다시 초기화
+        if (isEditMode) {
+          console.log('편집 모드 상태 새로고침')
+          startEditing()
+        }
+      })
+      
+      // URL에서 from=gallery 파라미터 제거
+      const newSearchParams = new URLSearchParams(searchParams)
+      newSearchParams.delete('from')
+      const newUrl = newSearchParams.toString() 
+        ? `/group/${groupId}/timeline/${albumId}?${newSearchParams.toString()}`
+        : `/group/${groupId}/timeline/${albumId}`
+      router.replace(newUrl)
+    }
+  }, [searchParams, refetchTimeline, router, groupId, albumId, isEditMode, startEditing])
+
+  // 빈 앨범 자동 편집 모드 진입 (단순화됨)
+  useEffect(() => {
+    if (albumInfo && !albumInfo.name?.trim() && !isEditMode) {
+      // 내부 상태 업데이트
+      startEditing()
+      
+      // URL에 edit=true 파라미터 추가
+      const newSearchParams = new URLSearchParams(searchParams)
+      newSearchParams.set('edit', 'true')
+      router.replace(`/group/${groupId}/timeline/${albumId}?${newSearchParams.toString()}`)
+      
+      setTimeout(() => titleInputRef.current?.focus(), 500)
+    }
+  }, [albumInfo?.name, isEditMode, startEditing, searchParams, router, groupId, albumId])
 
   const handleEditModeToggle = () => {
     if (isEditMode) {
-      // 편집 완료 - 저장
       handleSave()
     } else {
-      // 편집 모드 진입
+      // 편집 모드 시작: 내부 상태 + URL 업데이트
       startEditing()
+      
+      // URL에 edit=true 파라미터 추가
+      const newSearchParams = new URLSearchParams(searchParams)
+      newSearchParams.set('edit', 'true')
+      router.replace(`/group/${groupId}/timeline/${albumId}?${newSearchParams.toString()}`)
     }
   }
 
@@ -348,36 +440,26 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     try {
       await save()
       
+      // URL에서 edit=true 파라미터 제거 (편집 모드 종료)
+      const newSearchParams = new URLSearchParams(searchParams)
+      newSearchParams.delete('edit')
+      const newUrl = newSearchParams.toString() 
+        ? `/group/${groupId}/timeline/${albumId}?${newSearchParams.toString()}`
+        : `/group/${groupId}/timeline/${albumId}`
+      router.replace(newUrl)
+      
       // 저장 완료 후 갤러리 상태 정리
       if (isFromGallery) {
         dispatch(clearSelectedPhotos())
         dispatch(setIsFromGallery(false))
       }
     } catch (error: any) {
-      console.error('앨범 저장 실패:', error)
-      
-      // 사용자에게 에러 메시지 표시
-      let errorMessage = '앨범 저장에 실패했습니다.'
+      // 제목 미입력 에러 처리
       if (error.message === '앨범 제목을 입력해주세요') {
-        errorMessage = error.message
-        // 제목 필드에 포커스
         titleInputRef.current?.focus()
-      } else if (error.response?.status === 401) {
-        errorMessage = '로그인이 만료되었습니다. 다시 로그인해주세요.'
-      } else if (error.response?.status === 403) {
-        errorMessage = '앨범을 수정할 권한이 없습니다.'
-      } else if (error.response?.status === 404) {
-        if (error.response?.data?.message === '존재하지 않는 사진입니다.') {
-          errorMessage = '일부 사진이 서버에서 찾을 수 없습니다.\n\n해결 방법:\n1. 페이지를 새로고침해주세요\n2. 문제가 계속되면 섹션의 사진들을 다시 선택해주세요'
-        } else {
-          errorMessage = '앨범을 찾을 수 없습니다.'
-        }
-      } else if (error.response?.status >= 500) {
-        errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
       }
       
-      // 간단한 에러 알림 (toast나 modal 대신 alert 사용)
-      alert(errorMessage)
+      alert(error.message || '앨범 저장에 실패했습니다.')
     }
   }
 
@@ -448,60 +530,22 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
   const handleCancelEditing = () => {
     cancelEditing()
     
+    // URL에서 edit=true 파라미터 제거 (편집 모드 종료)
+    const newSearchParams = new URLSearchParams(searchParams)
+    newSearchParams.delete('edit')
+    const newUrl = newSearchParams.toString() 
+      ? `/group/${groupId}/timeline/${albumId}?${newSearchParams.toString()}`
+      : `/group/${groupId}/timeline/${albumId}`
+    router.replace(newUrl)
+    
     // 편집 취소 시 갤러리 상태 정리
     if (isFromGallery) {
       dispatch(clearSelectedPhotos())
       dispatch(setIsFromGallery(false))
     }
   }
-  
-  // 갤러리에서 사진 추가 하들러
-  const handleAddPhotos = () => {
-    // 현재 편집 상태를 sessionStorage에 저장
-    const currentState: TimelineEditingState = {
-      albumInfo: {
-        name: albumInfo?.name || '',
-        description: albumInfo?.description || '',
-        startDate: albumInfo?.startDate,
-        endDate: albumInfo?.endDate,
-        coverImage: albumInfo?.coverImage,
-        thumbnailId: albumInfo?.coverImage?.id
-      },
-      sections: sections,
-      availablePhotos: availablePhotos
-    }
-    
-    saveEditingState('timeline', currentState)
-    
-    // 갤러리로 이동 (추가 모드로) - 그룹 페이지에서 갤러리 모드로
-    window.location.href = `/group/${groupId}?gallery=true&mode=add&target=timeline&albumId=${albumId}`
-  }
-  
-  // 사진 삭제 하들러
-  const handleDeletePhotos = async (photoIds: number[]) => {
-    try {
-      console.log('타임라인 앨범에서 사진 삭제:', photoIds)
-      
-      // API 호출로 사진 삭제
-      await removePhotosFromTimelineAlbum(parseInt(groupId), parseInt(albumId), photoIds)
-      
-      // 사진 삭제 성공 - 즉시 UI 업데이트로 빠른 반영
-      console.log('사진 삭제 성공 - 사이드바 즉시 업데이트')
-      
-      // 삭제된 사진들을 편집 상태에서 즉시 제거
-      removePhotosFromState(photoIds)
-      
-      console.log('사이드바 업데이트 완료 - 삭제된 사진들이 즉시 사라짐')
-      
-      console.log(`${photoIds.length}장의 사진을 타임라인 앨범에서 삭제 완료`)
-      
-    } catch (error) {
-      console.error('사진 삭제 실패:', error)
-      alert('사진 삭제에 실패했습니다. 다시 시도해주세요.')
-    }
-  }
 
-  if (loading) {
+  if (baseLoading && !baseAlbum) {
     return (
       <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center">
         <div className="text-center">
@@ -512,7 +556,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     )
   }
 
-  if (!albumInfo) {
+  if (!baseAlbum && !baseLoading) {
     return (
       <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center">
         <div className="text-center">
@@ -526,70 +570,28 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
   }
 
   return (
-    <AppLayout
-      sidebarConfig={{
-        showGroupChat: true,
-        showCreateGroupButton: false, // 그룹 선택 버튼 비활성화 (그룹스페이스에서만 사용)
-        showGroupsSection: false,
-        showFriendsSection: false,
-        useDefaultContent: false, // 기본 컨텐츠(그룹 선택) 비활성화
-        forceInitialPinned: true, // 사이드바 상태 유지 (그룹 내 이동 시)
-        dynamicContent: isEditMode ? (
-          <GalleryPhotosSection
-            availablePhotos={availablePhotos}
-            draggingPhotoId={null}
-            onDragStart={(e, photo) => {
-              // 사이드바에서 드래그 시작 시 DragPhotoData 설정
-              const dragData: DragPhotoData = {
-                photoId: photo.id,
-                source: 'gallery',
-                originalUrl: photo.originalUrl || '',
-                thumbnailUrl: photo.thumbnailUrl,
-                name: photo.name || `사진 #${photo.id}`
-              }
-              e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
-              e.dataTransfer.effectAllowed = 'move'
-              console.log('타임라인 앨범 사이드바에서 드래그 시작:', dragData)
-            }}
-            onDragEnd={() => {
-              // 드래그 종료 시 정리 작업
-            }}
-            onDrop={(dragData) => {
-              // 섹션에서 온 사진 또는 대표이미지에서 온 사진 처리
-              if (dragData.source.startsWith('section-')) {
-                handleSectionPhotoRemove(dragData)
-              } else if (dragData.source === 'cover-image') {
-                handleCoverImageRemove(dragData)
-              }
-            }}
-            onAddPhotos={handleAddPhotos}
-            onDeletePhotos={handleDeletePhotos}
-            title="타임라인 편집용 사진"
-          />
-        ) : null,
-        currentGroup: {
-          id: groupId,
-          name: `그룹 ${groupId}`,
-          description: "",
-          thumbnailUrl: ""
-        }
-      }}
-    >
-      <div className="min-h-screen bg-[#111111] text-white">
-        {/* Header */}
-        <header className="fixed top-0 left-0 right-0 z-50 bg-[#111111]/95 backdrop-blur-sm border-b border-gray-800">
-        
-        <div className="flex items-center justify-between px-8 py-4">
-          <Link href={`/group/${groupId}?album=timeline`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
-            <ArrowLeft size={20} />
-            <span className="font-keepick-primary text-sm">돌아가기</span>
-          </Link>
-          <div className="text-center">
-            <h1 className="font-keepick-heavy text-xl tracking-wider">
-              {albumInfo.name}
+    <div className="min-h-screen bg-[#111111] text-white">
+      {/* Header */}
+      <header className="fixed top-0 right-0 z-40 bg-[#111111]/95 backdrop-blur-sm border-b border-gray-800 transition-all duration-200"
+               style={{ left: '240px', width: 'calc(100% - 240px)' }}>
+        <div className="relative flex items-center py-4 px-8">
+          {/* 왼쪽 영역 - 고정 너비 */}
+          <div className="flex items-center" style={{ width: '200px' }}>
+            <Link href={`/group/${groupId}?album=timeline`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
+              <ArrowLeft size={20} />
+              <span className="font-keepick-primary text-sm">돌아가기</span>
+            </Link>
+          </div>
+          
+          {/* 중앙 제목 - 절대 위치로 중앙 고정 */}
+          <div className="absolute left-1/2 transform -translate-x-1/2">
+            <h1 className="font-keepick-heavy text-xl tracking-wider text-center">
+              {(isEditMode ? albumInfo?.name : baseAlbum?.name) || '제목 없음'}
             </h1>
           </div>
-          <div className="flex gap-2">
+          
+          {/* 오른쪽 영역 - 버튼들 */}
+          <div className="flex gap-2 ml-auto">
             {/* 취소 버튼 */}
             {isEditMode && (
               <button
@@ -621,9 +623,21 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
               </button>
             )}
             
-            {/* 앨범 정보 수정 버튼 */}
-            <button
-              onClick={() => setIsAlbumInfoModalOpen(true)}
+            {/* 앨범 정보 수정 버튼 - 편집 모드일 때만 표시 */}
+            {isEditMode && (
+              <button
+              onClick={() => {
+                // 모달 열 때 현재 앨범 정보를 로컬 상태로 복사
+                if (albumInfo) {
+                  setModalAlbumInfo({
+                    name: albumInfo.name || '',
+                    description: albumInfo.description || '',
+                    startDate: albumInfo.startDate || '',
+                    endDate: albumInfo.endDate || ''
+                  })
+                }
+                setIsAlbumInfoModalOpen(true)
+              }}
               className="group relative p-px rounded-xl overflow-hidden bg-gray-700 transition-all duration-300 transform hover:scale-105 hover:bg-gradient-to-r hover:from-blue-500 hover:to-blue-600"
               title="앨범 정보 수정"
             >
@@ -634,6 +648,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
                 </div>
               </div>
             </button>
+            )}
             
             {/* 편집/완료 버튼 */}
             <button
@@ -660,7 +675,56 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       </header>
 
         {/* Main Content */}
-        <main className="pt-20 bg-[#111111]">
+        <main className="pt-20 bg-[#111111] relative">
+        
+        {/* 대표이미지 드롭존 - 편집 모드에서만 표시 (헤더 중앙 아래로 이동) */}
+        {isEditMode && (
+          <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10">
+            <PhotoDropZone
+              onDrop={(dragData) => {
+                const photo: Photo = {
+                  id: dragData.photoId,
+                  thumbnailUrl: dragData.thumbnailUrl || '/placeholder/photo-placeholder.svg',
+                  originalUrl: dragData.originalUrl || '/placeholder/photo-placeholder.svg',
+                  name: dragData.name || `사진 #${dragData.photoId}`
+                }
+                setCoverImage(dragData.photoId, photo)
+              }}
+              dropZoneId="cover-image-drop-zone"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-[#FE7A25]/20 hover:border-[#FE7A25]/70 transition-all duration-300 bg-[#111111]/95 backdrop-blur-sm shadow-lg"
+            >
+              {albumInfo?.coverImage ? (
+                <div className="relative w-32 h-32" style={{ overflow: 'visible' }}>
+                  <div className="w-full h-full rounded-lg overflow-hidden">
+                    <Image
+                      src={albumInfo.coverImage.thumbnailUrl || albumInfo.coverImage.originalUrl}
+                      alt="대표이미지"
+                      fill
+                      sizes="128px"
+                      className="object-cover"
+                      draggable={false}
+                    />
+                  </div>
+                  {/* 제거 버튼 */}
+                  <button
+                    onClick={() => updateAlbumInfo({ coverImage: null, thumbnailId: 0 })}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-sm font-bold hover:bg-red-600 transition-colors shadow-lg border-2 border-white z-20"
+                    title="대표이미지 제거"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <div className="w-32 h-32 rounded-lg border-2 border-dashed border-[#FE7A25]/30 flex flex-col items-center justify-center bg-[#111111] hover:bg-[#111111]/80 transition-colors">
+                  <span className="text-[#FE7A25]/70 text-sm font-medium text-center px-2">
+                    사진을<br />드래그하세요
+                  </span>
+                </div>
+              )}
+              <span className="text-sm text-gray-300 text-center font-medium">대표이미지</span>
+            </PhotoDropZone>
+          </div>
+        )}
         
         {sections.map((section, index) => (
           <TimelineSectionLayout
@@ -683,10 +747,10 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
         
         <div className="max-w-7xl mx-auto px-8 text-center">
           <h2 className="font-keepick-heavy text-3xl md:text-4xl mb-4 tracking-wider">
-            {albumInfo.name}
+            {albumInfo?.name || '제목 없음'}
           </h2>
           <p className="font-keepick-primary text-gray-400 text-sm tracking-wider">
-            {albumInfo.description}
+            {albumInfo?.description || ''}
           </p>
           <div className="mt-8 flex justify-center gap-8 text-sm font-keepick-primary text-gray-500">
             <Link href={`/group/${groupId}`} className="hover:text-white transition-colors">
@@ -703,40 +767,33 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       {/* 앨범정보 수정 모달 */}
       <AlbumInfoEditModal
         isOpen={isAlbumInfoModalOpen}
-        onClose={() => setIsAlbumInfoModalOpen(false)}
-        albumInfo={albumInfo ? {
-          name: albumInfo.name || '',
-          description: albumInfo.description || '',
-          startDate: albumInfo.startDate,
-          endDate: albumInfo.endDate
-        } : null}
-        onAlbumInfoUpdate={(updates) => {
-          if (albumInfo) {
-            updateAlbumInfo({
-              ...albumInfo,
-              ...updates
-            })
-          }
+        onClose={() => {
+          setIsAlbumInfoModalOpen(false)
+          setModalAlbumInfo(null)
         }}
-        coverImage={albumInfo?.coverImage || null}
-        onCoverImageDrop={(dragData) => {
-          const photo: Photo = {
-            id: dragData.photoId,
-            thumbnailUrl: dragData.thumbnailUrl || '/placeholder/photo-placeholder.svg',
-            originalUrl: dragData.originalUrl || '/placeholder/photo-placeholder.svg',
-            name: dragData.name || `사진 #${dragData.photoId}`
-          }
-          setCoverImage(dragData.photoId, photo)
+        albumInfo={modalAlbumInfo}
+        onAlbumInfoUpdate={(updates) => {
+          // 모달 내부에서는 로컬 상태만 업데이트
+          setModalAlbumInfo((prev: any) => ({
+            ...prev,
+            ...updates
+          }))
         }}
         showDateInputs={true}
         onSave={async () => {
-          await save()
+          // 모달에서 저장 시 최신 모달 데이터로 직접 저장
+          if (modalAlbumInfo) {
+            // 먼저 편집 상태를 업데이트
+            updateAlbumInfo(modalAlbumInfo)
+            
+            // 모달 데이터로 직접 저장 요청 (React 상태 업데이트 비동기 이슈 해결)
+            await saveAlbumInfoWithData(modalAlbumInfo)
+          }
         }}
         title="타임라인 앨범 정보 수정"
         albumType="timeline"
       />
 
-      </div>
-    </AppLayout>
+    </div>
   )
 }

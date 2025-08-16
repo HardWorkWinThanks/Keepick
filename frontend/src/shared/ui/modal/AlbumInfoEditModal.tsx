@@ -4,8 +4,7 @@ import React, { useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Check } from 'lucide-react'
 import { Button } from '@/shared/ui/shadcn/button'
-import { PhotoDropZone } from '@/features/photo-drag-drop'
-import type { Photo, DragPhotoData } from '@/entities/photo'
+import type { Photo } from '@/entities/photo'
 import Image from 'next/image'
 
 // 앨범 정보 편집 타입 (기존과 동일)
@@ -22,10 +21,6 @@ interface AlbumInfoEditModalProps {
   albumInfo: EditingAlbumInfo | null
   onAlbumInfoUpdate: (updates: Partial<EditingAlbumInfo>) => void
   
-  // 대표이미지 관련
-  coverImage: Photo | null
-  onCoverImageDrop: (dragData: DragPhotoData) => void
-  onCoverImageRemove?: (dragData: DragPhotoData) => void
   
   // 조건부 기능
   showDateInputs?: boolean  // 타임라인=true, 티어=false
@@ -44,9 +39,6 @@ export function AlbumInfoEditModal({
   onClose, 
   albumInfo,
   onAlbumInfoUpdate,
-  coverImage,
-  onCoverImageDrop,
-  onCoverImageRemove,
   showDateInputs = true,
   onSave,
   onCancel,
@@ -194,61 +186,6 @@ export function AlbumInfoEditModal({
                     )}
                   </div>
                 </div>
-
-                {/* 대표 이미지 섹션 - 타임라인 앨범용 */}
-                {showDateInputs && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-300 mb-3 block">
-                      대표 이미지
-                    </label>
-                    <PhotoDropZone
-                      onDrop={(dragData, e) => onCoverImageDrop(dragData)}
-                      dropZoneId="modal-cover-image-drop"
-                      className="relative w-full aspect-[4/3] bg-[#333333]/50 border-2 border-dashed border-gray-600 rounded-lg overflow-hidden hover:border-[#FE7A25] transition-colors"
-                      draggable={!!coverImage}
-                      onDragStart={(e) => {
-                        if (coverImage) {
-                          const dragData: DragPhotoData = {
-                            photoId: coverImage.id,
-                            source: 'cover-image',
-                            originalUrl: coverImage.originalUrl,
-                            thumbnailUrl: coverImage.thumbnailUrl,
-                            name: coverImage.name
-                          }
-                          e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
-                          e.dataTransfer.effectAllowed = 'move'
-                        }
-                      }}
-                    >
-                      {coverImage ? (
-                        <div className="relative w-full h-full group">
-                          <Image
-                            src={coverImage.originalUrl || "/placeholder/photo-placeholder.svg"}
-                            alt="대표 이미지"
-                            fill
-                            sizes="400px"
-                            className="object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <Image
-                            src="/placeholder/photo-placeholder.svg"
-                            alt="대표 이미지 없음"
-                            width={60}
-                            height={60}
-                            className="opacity-40"
-                          />
-                          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-center text-gray-400">
-                            <div className="text-xs">
-                              대표 이미지 선택
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </PhotoDropZone>
-                  </div>
-                )}
 
                 {/* 티어 앨범 대표이미지 안내 */}
                 {!showDateInputs && (

@@ -130,29 +130,19 @@ export default function AppSidebar({
 
   return (
     <>
-
-      {/* Sidebar Toggle Button - 헤더 바로 아래 좌측 위치, 사이드바 고정시 우측 이동 */}
-      <Button
-        onClick={toggleSidebarPin}
-        variant="ghost" 
-        size="icon"
-        className={`fixed top-16 z-50 transition-all duration-300 hover:bg-white/10 border-0 text-white hover:text-white ${
-          sidebarPinned ? 'left-[254px]' : 'left-4'
-        }`}
-        style={{ zIndex: 60 }}
-        title={sidebarPinned ? "사이드바 숨기기" : "사이드바 고정"}
-      >
-        <motion.div
-          animate={{ rotate: sidebarPinned ? 180 : 0 }}
-          transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+      {/* 사이드바가 숨겨졌을 때 보이는 토글 버튼 */}
+      {!shouldShowSidebar && (
+        <Button
+          onClick={toggleSidebarPin}
+          variant="ghost" 
+          size="icon"
+          className="fixed top-16 left-4 z-50 transition-all duration-300 hover:bg-white/10 border-0 text-white hover:text-white"
+          style={{ zIndex: 60 }}
+          title="사이드바 열기"
         >
-          {sidebarPinned ? (
-            <X size={20} />
-          ) : (
-            <Menu size={20} />
-          )}
-        </motion.div>
-      </Button>
+          <Menu size={20} />
+        </Button>
+      )}
 
       {/* Sidebar */}
       <div 
@@ -173,6 +163,25 @@ export default function AppSidebar({
       >
         <ScrollArea className="h-full">
           <div className="pb-4">
+            {/* 사이드바 토글 버튼 - 사이드바 내부 상단 */}
+            <div className="p-4 border-b border-gray-800">
+              <Button
+                onClick={toggleSidebarPin}
+                variant="ghost" 
+                size="sm"
+                className="w-full justify-start gap-2 hover:bg-gray-800 text-gray-400 hover:text-white"
+                title="사이드바 숨기기"
+              >
+                <motion.div
+                  animate={{ rotate: 0 }}
+                  transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+                >
+                  <X size={16} />
+                </motion.div>
+                <span className="text-sm">사이드바 닫기</span>
+              </Button>
+            </div>
+
             {/* 상단 구역: 그룹챗 (고정) */}
             {showGroupChat && currentGroup && (
               <GroupChatVideoSection
@@ -424,9 +433,10 @@ export default function AppSidebar({
           
           {/* 동적 컨텐츠 영역 - 페이지별로 다른 기능들 */}
           {dynamicContent}
-            </div>
-          </div>
-        </ScrollArea>
+          
+        </div>
+      </div>
+    </ScrollArea>
       </div>
 
       {/* Create Group Modal */}

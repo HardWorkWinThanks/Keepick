@@ -59,11 +59,18 @@ export function useGroupSpace(groupId?: number) {
   useEffect(() => {
     const albumParam = searchParams.get('album')
     if (albumParam) {
-      const albumIndex = albumTypes.findIndex(album => album.id === albumParam)
-      if (albumIndex !== -1) {
-        setCurrentAlbumIndex(albumIndex)
-        setCurrentModeIndex(0) // Album 모드로 설정
+      if (albumParam === 'gallery') {
+        // 갤러리 모드로 전환
+        setCurrentModeIndex(1) // Gallery 모드로 설정
         setCurrentPhotoIndex(0) // 첫 번째 사진으로 리셋
+      } else {
+        // 앨범 모드에서 특정 앨범으로 전환
+        const albumIndex = albumTypes.findIndex(album => album.id === albumParam)
+        if (albumIndex !== -1) {
+          setCurrentAlbumIndex(albumIndex)
+          setCurrentModeIndex(0) // Album 모드로 설정
+          setCurrentPhotoIndex(0) // 첫 번째 사진으로 리셋
+        }
       }
     }
   }, [searchParams])

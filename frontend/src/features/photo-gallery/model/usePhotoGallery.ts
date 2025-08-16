@@ -198,8 +198,8 @@ export function usePhotoGallery(groupId?: string) {
         queryKey: ['timelineAlbums', parseInt(groupId)] 
       })
       
-      // 성공시 해당 앨범 페이지로 라우팅
-      router.push(`/group/${groupId}/timeline/${result.albumId}`)
+      // 성공시 해당 앨범 페이지로 라우팅 (편집 모드로 진입)
+      router.push(`/group/${groupId}/timeline/${result.albumId}?edit=true`)
       
       // 선택 모드 종료는 라우팅 후 해당 페이지에서 처리
     } catch (error) {
