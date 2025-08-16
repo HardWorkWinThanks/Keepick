@@ -7,7 +7,7 @@ import { getTimelineAlbum, updateTimelineAlbum, UpdateTimelineAlbumRequest } fro
 export function useTimelineAlbum(groupId: string, albumId: string) {
   const queryClient = useQueryClient()
 
-  // 타임라인 앨범 조회
+  // 타임라인 앨범 조회 - 성능 최적화
   const {
     data: timelineAlbum,
     isLoading: loading,
@@ -16,6 +16,10 @@ export function useTimelineAlbum(groupId: string, albumId: string) {
   } = useQuery({
     queryKey: ['timeline-album', groupId, albumId],
     queryFn: () => getTimelineAlbum(parseInt(groupId), parseInt(albumId)),
+    staleTime: 5 * 60 * 1000, // 5분간 fresh 상태 유지
+    gcTime: 10 * 60 * 1000, // 10분간 캐시 유지
+    refetchOnWindowFocus: false, // 윈도우 포커스 시 자동 리패치 비활성화
+    refetchOnReconnect: true, // 네트워크 재연결 시에만 리패치
   })
 
   // 타임라인 앨범 수정

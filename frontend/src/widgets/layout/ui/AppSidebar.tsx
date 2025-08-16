@@ -79,14 +79,14 @@ export default function AppSidebar({
     setIsMounted(true)
   }, [])
   
-  // 로그인된 상태에서만 그룹 목록 조회 - enabled 옵션 추가
+  // 로그인된 상태에서만 그룹 목록 조회 - 성능 최적화
   const { data: allGroups = [], isLoading: isGroupsLoading } = useQuery({
     queryKey: groupQueryKeys.lists(),
     queryFn: GroupManagementApi.getMyGroups,
     enabled: isMounted && isLoggedIn, // Hydration 완료 후 로그인된 상태에서만 실행
-    staleTime: 1 * 60 * 1000, // 1분으로 단축 (더 자주 업데이트)
-    gcTime: 5 * 60 * 1000, // 5분 가비지 컬렉션
-    refetchOnWindowFocus: true, // 윈도우 포커스 시 자동 리패치
+    staleTime: 3 * 60 * 1000, // 3분 캐시 (적당한 신선도 유지)
+    gcTime: 10 * 60 * 1000, // 10분 가비지 컬렉션
+    refetchOnWindowFocus: false, // 윈도우 포커스 시 자동 리패치 비활성화
     refetchOnReconnect: true, // 네트워크 재연결 시 자동 리패치
   })
   

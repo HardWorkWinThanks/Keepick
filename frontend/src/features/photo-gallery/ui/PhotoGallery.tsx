@@ -5,7 +5,7 @@ import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, SlidersHorizontal, Check, Trash2, X, ChevronUp, ChevronDown, Upload, Loader2 } from "lucide-react"
 import { useQueryClient } from '@tanstack/react-query'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { usePhotoGallery, useMasonryLayout, useDragScroll } from "../model/usePhotoGallery"
 import { PhotoModal, usePhotoModal } from "@/features/photos-viewing"
 import AiMagicButton from "./AiMagicButton"
@@ -30,6 +30,8 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   const [showAlbumGuide, setShowAlbumGuide] = useState(autoEnterAlbumMode)
   // TanStack Query 클라이언트
   const queryClient = useQueryClient()
+  // 라우터
+  const router = useRouter()
   
   // URL 파라미터 감지 (썸네일 선택 모드, 앨범 추가 모드)
   const searchParams = useSearchParams()

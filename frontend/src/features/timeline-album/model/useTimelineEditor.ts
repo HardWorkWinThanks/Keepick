@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { TimelineAlbum, TimelineSection } from "@/entities/album"
 import { Photo } from "@/entities/photo"
 import { useTimelineAlbum } from "./useTimelineAlbum"
+import { saveEditingState, restoreEditingState, clearEditingState, TimelineEditingState as SavedEditingState } from "@/shared/lib/editingStateManager"
 
 // 편집 중인 앨범 정보 타입
 export interface EditingAlbumInfo {
@@ -131,10 +132,28 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     }
   }, [])
 
-  // 편집 모드 시작
+  // 편집 모드 시작 - 저장된 상태 복원 시도
   const startEditing = useCallback(() => {
     if (timelineAlbum) {
-      setEditingState(convertToEditingState(timelineAlbum))
+      // 먼저 저장된 편집 상태 복원 시도
+      const savedState = restoreEditingState<SavedEditingState>('timeline')
+      
+      if (savedState) {
+        console.log('💾 저장된 편집 상태 복원됨')
+        // 저장된 상태를 현재 에디터 형식으로 변환
+        const restoredEditingState: TimelineEditingState = {
+          albumInfo: savedState.albumInfo,
+          sections: savedState.sections,
+          unusedPhotos: savedState.availablePhotos
+        }
+        setEditingState(restoredEditingState)
+        // 복원 후 저장된 상태는 정리
+        clearEditingState('timeline')
+      } else {
+        // 저장된 상태가 없으면 서버 데이터로 초기화
+        setEditingState(convertToEditingState(timelineAlbum))
+      }
+      
       setIsEditMode(true)
     }
   }, [timelineAlbum, convertToEditingState])
@@ -570,6 +589,19 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     }
   }, [editingState, timelineAlbum, updateTimelineAlbumAsync, refetchTimeline])
 
+  // 편집 상태를 세션에 저장 (갤러리 이동 전)
+  const saveEditingStateToSession = useCallback(() => {
+    if (editingState) {
+      const stateToSave: SavedEditingState = {
+        albumInfo: editingState.albumInfo,
+        sections: editingState.sections,
+        availablePhotos: availablePhotos()
+      }
+      saveEditingState('timeline', stateToSave)
+      console.log('💾 편집 상태가 세션에 저장됨')
+    }
+  }, [editingState, availablePhotos])
+
   // 저장
   const save = useCallback(async () => {
     if (!editingState || !timelineAlbum) {
@@ -652,6 +684,7 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     save,
     saveAlbumInfoOnly,
     saveAlbumInfoWithData,
+    saveEditingStateToSession,
     refetchTimeline,
     
     // 편집 액션들

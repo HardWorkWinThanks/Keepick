@@ -61,6 +61,9 @@ function TimelineEditSidebarContent({ groupId, albumId }: { groupId: string, alb
   
   // 갤러리에서 사진 추가 핸들러
   const handleAddPhotos = () => {
+    // 갤러리로 이동하기 전에 편집 상태 저장 요청
+    window.dispatchEvent(new CustomEvent('saveTimelineEditingState'))
+    
     // 갤러리 페이지로 이동하면서 타임라인 편집 모드임을 표시
     router.push(`/group/${groupId}?album=gallery&mode=add&target=timeline&albumId=${albumId}`)
   }

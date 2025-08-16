@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { useSelector, useDispatch } from "react-redux"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { ArrowLeft, Edit, Plus, Trash2, Settings } from "lucide-react"
+import { ArrowLeft, Edit, Plus, Trash2, Settings, X } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useTimelineEditor, EditingSection } from "../model/useTimelineEditor"
@@ -33,7 +33,8 @@ function TimelineSectionLayout({
   onImageDragOver,
   onImageDragLeave,
   onSectionUpdate,
-  onSectionDelete
+  onSectionDelete,
+  preventPhotoDragDrop
 }: { 
   section: EditingSection
   index: number
@@ -44,6 +45,7 @@ function TimelineSectionLayout({
   onImageDragLeave?: () => void
   onSectionUpdate?: (sectionIndex: number, field: string, value: string) => void
   onSectionDelete?: (sectionIndex: number) => void
+  preventPhotoDragDrop?: any
 }) {
   // 섹션의 사진들 (최대 3개, 인덱스 보존)
   const photos = section.photos || []
@@ -212,6 +214,7 @@ function TimelineSectionLayout({
                   value={section.startDate || ''}
                   onChange={(e) => onSectionUpdate?.(index, 'startDate', e.target.value)}
                   className="text-[#FE7A25] font-keepick-primary text-sm tracking-wider bg-transparent border border-[#FE7A25]/30 rounded px-2 py-1 focus:border-[#FE7A25] focus:outline-none [color-scheme:dark]"
+                  {...preventPhotoDragDrop}
                 />
                 <span className="text-[#FE7A25] font-keepick-primary text-sm">~</span>
                 <input
@@ -219,6 +222,7 @@ function TimelineSectionLayout({
                   value={section.endDate || ''}
                   onChange={(e) => onSectionUpdate?.(index, 'endDate', e.target.value)}
                   className="text-[#FE7A25] font-keepick-primary text-sm tracking-wider bg-transparent border border-[#FE7A25]/30 rounded px-2 py-1 focus:border-[#FE7A25] focus:outline-none [color-scheme:dark]"
+                  {...preventPhotoDragDrop}
                 />
               </div>
             ) : (
@@ -239,6 +243,7 @@ function TimelineSectionLayout({
                 placeholder="섹션 제목을 입력하세요"
                 rows={Math.max(2, section.name.split('\n').length)}
                 style={{ height: 'auto', minHeight: '120px' }}
+                {...preventPhotoDragDrop}
               />
             ) : (
               <h2 className="font-keepick-heavy text-4xl md:text-5xl lg:text-6xl leading-tight tracking-wide">
@@ -260,6 +265,7 @@ function TimelineSectionLayout({
                 placeholder="섹션 설명을 입력하세요"
                 rows={Math.max(3, Math.ceil(section.description.length / 40) + section.description.split('\n').length)}
                 style={{ width: '100%', maxWidth: '28rem', height: 'auto', minHeight: '80px' }}
+                {...preventPhotoDragDrop}
               />
             ) : (
               <p className="font-keepick-primary leading-relaxed text-base md:text-lg max-w-md">
@@ -321,7 +327,8 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     refetchTimeline,
     removePhotosFromState,
     saveAlbumInfoOnly,
-    saveAlbumInfoWithData
+    saveAlbumInfoWithData,
+    saveEditingStateToSession
   } = useTimelineEditor(groupId, albumId)
 
   const [dragOverImage, setDragOverImage] = useState<{ sectionIndex: number; imageIndex: number } | null>(null)
@@ -382,18 +389,29 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     }
   }, [removePhotosFromState])
 
-  // 갤러리에서 돌아온 경우 데이터 새로고침
+  // 갤러리로 이동 전 편집 상태 저장 이벤트 처리
+  useEffect(() => {
+    const handleSaveEditingState = () => {
+      if (isEditMode) {
+        saveEditingStateToSession()
+      }
+    }
+
+    window.addEventListener('saveTimelineEditingState', handleSaveEditingState)
+    
+    return () => {
+      window.removeEventListener('saveTimelineEditingState', handleSaveEditingState)
+    }
+  }, [isEditMode, saveEditingStateToSession])
+
+  // 갤러리에서 돌아온 경우 데이터 새로고침 - 최적화
   useEffect(() => {
     const fromGallery = searchParams.get('from') === 'gallery'
     if (fromGallery) {
-      console.log('갤러리에서 돌아옴 - 타임라인 데이터 새로고침')
+      console.log('갤러리에서 돌아옴 - 편집모드 진입')
       
-      // 타임라인 앨범 데이터 새로고침
-      refetchTimeline().then(() => {
-        // 갤러리에서 돌아온 경우 항상 편집모드로 진입 (앨범 생성/편집 모두 편집모드에서 갤러리로 가므로)
-        console.log('갤러리 복귀 - 편집모드 진입')
-        startEditing()
-      })
+      // 즉시 편집모드 진입 (리패치 없이)
+      startEditing()
       
       // URL에서 from=gallery 파라미터만 제거하고 edit=true는 유지
       const newSearchParams = new URLSearchParams(searchParams)
@@ -401,7 +419,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       const newUrl = `/group/${groupId}/timeline/${albumId}?${newSearchParams.toString()}`
       router.replace(newUrl)
     }
-  }, [searchParams, refetchTimeline, router, groupId, albumId, startEditing])
+  }, [searchParams, router, groupId, albumId, startEditing])
 
   // 빈 앨범 자동 편집 모드 진입 (단순화됨)
   useEffect(() => {
@@ -450,9 +468,19 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
         dispatch(setIsFromGallery(false))
       }
     } catch (error: any) {
-      // 제목 미입력 에러 처리
+      // 제목 미입력 에러 처리 - 앨범 정보 모달 띄우기
       if (error.message === '앨범 제목을 입력해주세요') {
-        titleInputRef.current?.focus()
+        // 모달 열 때 현재 앨범 정보를 로컬 상태로 복사
+        if (albumInfo) {
+          setModalAlbumInfo({
+            name: albumInfo.name || '',
+            description: albumInfo.description || '',
+            startDate: albumInfo.startDate || '',
+            endDate: albumInfo.endDate || ''
+          })
+        }
+        setIsAlbumInfoModalOpen(true)
+        return // alert 표시하지 않고 모달만 띄움
       }
       
       alert(error.message || '앨범 저장에 실패했습니다.')
@@ -508,6 +536,36 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     
     if (renderIndex >= 0 && renderIndex < sections.length) {
       moveSectionToSidebar(renderIndex, imageIndex)
+    }
+  }
+
+  // 텍스트 입력 필드에 사진 드래그 방지 핸들러
+  const preventPhotoDragDrop = {
+    onDragOver: (e: React.DragEvent) => {
+      // 사진 드래그 데이터가 있는지 확인
+      const dragData = e.dataTransfer.types.includes('text/plain')
+      if (dragData) {
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'none'
+        e.currentTarget.style.cursor = 'not-allowed'
+      }
+    },
+    onDragLeave: (e: React.DragEvent) => {
+      e.currentTarget.style.cursor = 'auto'
+    },
+    onDrop: (e: React.DragEvent) => {
+      // 사진 드래그 데이터인지 확인하고 차단
+      try {
+        const data = e.dataTransfer.getData('text/plain')
+        const dragData = JSON.parse(data)
+        if (dragData.photoId) {
+          e.preventDefault()
+          e.stopPropagation()
+        }
+      } catch {
+        // JSON 파싱 실패 시 일반 텍스트로 간주하고 허용
+      }
+      e.currentTarget.style.cursor = 'auto'
     }
   }
 
@@ -570,7 +628,7 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       {/* Header */}
       <header className="fixed top-0 right-0 z-40 bg-[#111111]/95 backdrop-blur-sm border-b border-gray-800 transition-all duration-200"
                style={{ left: '240px', width: 'calc(100% - 240px)' }}>
-        <div className="relative flex items-center py-4 px-8">
+        <div className="relative flex items-center py-2 px-8">
           {/* 왼쪽 영역 - 고정 너비 */}
           <div className="flex items-center" style={{ width: '200px' }}>
             <Link href={`/group/${groupId}?album=timeline`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
@@ -592,14 +650,14 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
             {isEditMode && (
               <button
                 onClick={handleCancelEditing}
-                className="group relative p-px rounded-xl overflow-hidden bg-gray-700 transition-all duration-300 transform hover:scale-105 hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600"
+                className="group relative px-4 py-2 text-white hover:text-red-400 transition-all duration-300"
                 title="편집 취소"
               >
-                <div className="bg-[#111111] rounded-[11px] px-5 py-2.5">
-                  <div className="flex items-center gap-2 text-white">
-                    <span className="font-keepick-primary text-sm tracking-wide">취소</span>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <X size={16} />
+                  <span className="font-keepick-primary text-sm tracking-wide">취소</span>
                 </div>
+                <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-400 group-hover:w-full transition-all duration-300"></div>
               </button>
             )}
             
@@ -607,75 +665,74 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
             {isEditMode && (
               <button
                 onClick={handleAddSection}
-                className="group relative p-px rounded-xl overflow-hidden bg-gray-700 transition-all duration-300 transform hover:scale-105 hover:bg-gradient-to-r hover:from-green-500 hover:to-emerald-600"
+                className="group relative px-4 py-2 text-white hover:text-green-400 transition-all duration-300"
                 title="섹션 추가"
               >
-                <div className="bg-[#111111] rounded-[11px] px-5 py-2.5">
-                  <div className="flex items-center gap-2 text-white">
-                    <Plus size={16} />
-                    <span className="font-keepick-primary text-sm tracking-wide">섹션 추가</span>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <Plus size={16} />
+                  <span className="font-keepick-primary text-sm tracking-wide">섹션 추가</span>
                 </div>
+                <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-green-400 group-hover:w-full transition-all duration-300"></div>
               </button>
             )}
             
             {/* 앨범 정보 수정 버튼 - 편집 모드일 때만 표시 */}
             {isEditMode && (
               <button
-              onClick={() => {
-                // 모달 열 때 현재 앨범 정보를 로컬 상태로 복사
-                if (albumInfo) {
-                  setModalAlbumInfo({
-                    name: albumInfo.name || '',
-                    description: albumInfo.description || '',
-                    startDate: albumInfo.startDate || '',
-                    endDate: albumInfo.endDate || ''
-                  })
-                }
-                setIsAlbumInfoModalOpen(true)
-              }}
-              className="group relative p-px rounded-xl overflow-hidden bg-gray-700 transition-all duration-300 transform hover:scale-105 hover:bg-gradient-to-r hover:from-blue-500 hover:to-blue-600"
-              title="앨범 정보 수정"
-            >
-              <div className="bg-[#111111] rounded-[11px] px-5 py-2.5">
-                <div className="flex items-center gap-2 text-white">
+                onClick={() => {
+                  // 모달 열 때 현재 앨범 정보를 로컬 상태로 복사
+                  if (albumInfo) {
+                    setModalAlbumInfo({
+                      name: albumInfo.name || '',
+                      description: albumInfo.description || '',
+                      startDate: albumInfo.startDate || '',
+                      endDate: albumInfo.endDate || ''
+                    })
+                  }
+                  setIsAlbumInfoModalOpen(true)
+                }}
+                className="group relative px-4 py-2 text-white hover:text-blue-400 transition-all duration-300"
+                title="앨범 정보 수정"
+              >
+                <div className="flex items-center gap-2">
                   <Settings size={16} />
                   <span className="font-keepick-primary text-sm tracking-wide">앨범 정보</span>
                 </div>
-              </div>
-            </button>
+                <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400 group-hover:w-full transition-all duration-300"></div>
+              </button>
             )}
             
             {/* 편집/완료 버튼 */}
             <button
               onClick={handleEditModeToggle}
               disabled={isUpdating}
-              className={`group relative p-px rounded-xl overflow-hidden bg-gray-700 transition-all duration-300 transform hover:scale-105 hover:bg-gradient-to-r ${
+              className={`group relative px-4 py-2 text-white transition-all duration-300 ${
                 isEditMode
-                  ? 'hover:from-green-500 hover:to-emerald-600'
-                  : 'hover:from-[#FE7A25] hover:to-[#FF6B35]'
+                  ? 'hover:text-green-400'
+                  : 'hover:text-[#FE7A25]'
               } ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
               title={isEditMode ? '편집 완료' : '앨범 편집'}
             >
-              <div className="bg-[#111111] rounded-[11px] px-5 py-2.5">
-                <div className="relative flex items-center gap-2 text-white">
-                  <Edit size={16} />
-                  <span className="font-keepick-primary text-sm tracking-wide">
-                    {isUpdating ? '저장 중...' : isEditMode ? '완료' : '수정'}
-                  </span>
-                </div>
+              <div className="flex items-center gap-2">
+                <Edit size={16} />
+                <span className="font-keepick-primary text-sm tracking-wide">
+                  {isUpdating ? '저장 중...' : isEditMode ? '완료' : '수정'}
+                </span>
               </div>
+              <div className={`absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full ${
+                isEditMode ? 'bg-green-400' : 'bg-[#FE7A25]'
+              }`}></div>
             </button>
           </div>
         </div>
       </header>
 
         {/* Main Content */}
-        <main className="pt-20 bg-[#111111] relative">
+        <main className="pt-16 bg-[#111111] relative">
         
         {/* 대표이미지 드롭존 - 편집 모드에서만 표시 (헤더 중앙 아래로 이동) */}
         {isEditMode && (
-          <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10">
+          <div className="absolute top-4 sm:top-6 md:top-8 left-1/2 transform -translate-x-1/2 z-10">
             <PhotoDropZone
               onDrop={(dragData) => {
                 const photo: Photo = {
@@ -722,6 +779,8 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
           </div>
         )}
         
+        {/* 섹션들 컨테이너 - 대표이미지와의 간격 확보 */}
+        <div className={`${isEditMode ? 'mt-12 sm:mt-14 md:mt-16' : ''}`}>
         {sections.map((section, index) => (
           <TimelineSectionLayout
             key={`section-${section.id}-${index}`}
@@ -734,8 +793,10 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
             onImageDragLeave={handleImageDragLeave}
             onSectionUpdate={handleSectionUpdate}
             onSectionDelete={sections.length > 1 ? handleDeleteSection : undefined}
+            preventPhotoDragDrop={preventPhotoDragDrop}
           />
         ))}
+        </div>
       </main>
 
         {/* Footer */}
@@ -784,6 +845,9 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
             
             // 모달 데이터로 직접 저장 요청 (React 상태 업데이트 비동기 이슈 해결)
             await saveAlbumInfoWithData(modalAlbumInfo)
+            
+            // 앨범 정보만 저장하고 편집 모드는 그대로 유지
+            // 사용자가 다시 완료 버튼을 눌러야 전체 완료됨
           }
         }}
         title="타임라인 앨범 정보 수정"

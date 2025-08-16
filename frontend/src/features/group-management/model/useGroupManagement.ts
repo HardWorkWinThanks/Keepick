@@ -183,8 +183,11 @@ export const useGroupInfo = (groupId: number) => {
   return useQuery({
     queryKey: groupQueryKeys.detail(groupId),
     queryFn: () => GroupManagementApi.getGroupInfo(groupId),
-    staleTime: 10 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10분 캐시
+    gcTime: 30 * 60 * 1000, // 30분 가비지 컬렉션  
     enabled: !!groupId,
+    refetchOnWindowFocus: false, // 윈도우 포커스 시 자동 리패치 비활성화
+    refetchOnReconnect: true, // 네트워크 재연결 시에만 리패치
   })
 }
 
@@ -192,7 +195,10 @@ export const useGroupMembers = (groupId: number) => {
   return useQuery({
     queryKey: groupQueryKeys.members(groupId),
     queryFn: () => GroupManagementApi.getGroupMembers(groupId),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5분 캐시
+    gcTime: 15 * 60 * 1000, // 15분 가비지 컬렉션
     enabled: !!groupId,
+    refetchOnWindowFocus: false, // 윈도우 포커스 시 자동 리패치 비활성화
+    refetchOnReconnect: true, // 네트워크 재연결 시에만 리패치
   })
 }
