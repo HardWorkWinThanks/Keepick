@@ -92,6 +92,14 @@ export function setupSocketHandlers(io: Server): void {
       await mediaEventsHandler.handleResumeConsumer(socket, data);
     });
 
+    socket.on("pause_producer", async (data: { producerId: string }) => {
+      await mediaEventsHandler.handlePauseProducer(socket, data);
+    });
+
+    socket.on("resume_producer", async (data: { producerId: string }) => {
+      await mediaEventsHandler.handleResumeProducer(socket, data);
+    });
+
     // Media 관련 이벤트 섹션에 추가
     socket.on("close_producer", async (data: { producerId: string }) => {
       await mediaEventsHandler.handleCloseProducer(socket, data);

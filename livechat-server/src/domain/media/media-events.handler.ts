@@ -225,6 +225,56 @@ export class MediaEventsHandler {
     }
   }
 
+
+  // producer를 일시 중지하는 메서드
+  async handlePauseProducer(socket: Socket, data: { producerId: string }) {
+    const { producerId } = data;
+
+    const room = this.roomService.getRoomByPeerId(socket.id);
+    if (!room) return;
+
+    const peer = room.peers.get(socket.id);
+    if (!peer) return;
+
+    const producer = peer.producers.get(producerId);
+    if (!producer) return;
+
+    // Producer를 일시 중지
+    await producer.pause();
+    logger.info(`Producer ${producerId} paused by ${socket.id}`);
+
+    // 방에 있는 다른 모든 peer에게 producer가 일시 중지되었음을 알림
+    socket.to(room.id).emit("producer_paused", {
+      producerId,
+      socketId: socket.id,
+    });
+  }
+
+  // producer를 다시 시작하는 메서드
+  async handleResumeProducer(socket: Socket, data: { producerId: string }) {
+    const { producerId } = data;
+
+    const room = this.roomService.getRoomByPeerId(socket.id);
+    if (!room) return;
+
+    const peer = room.peers.get(socket.id);
+    if (!peer) return;
+
+    const producer = peer.producers.get(producerId);
+    if (!producer) return;
+
+    // Producer를 다시 시작
+    await producer.resume();
+    logger.info(`Producer ${producerId} resumed by ${socket.id}`);
+
+    // 방에 있는 다른 모든 peer에게 producer가 다시 시작되었음을 알림
+    socket.to(room.id).emit("producer_resumed", {
+      producerId,
+      socketId: socket.id,
+    });
+  }
+
+
   async handleCloseProducer(socket: Socket, data: { producerId: string }) {
     try {
       const { producerId } = data;
