@@ -15,6 +15,7 @@ import com.ssafy.keepick.photo.domain.PhotoTag;
 import com.ssafy.keepick.photo.persistence.PhotoMemberRepository;
 import com.ssafy.keepick.photo.persistence.PhotoRepository;
 import com.ssafy.keepick.photo.persistence.PhotoTagRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,7 +38,7 @@ public class GroupPhotoService {
     private final ImageService imageService;
     private final PhotoTagRepository photoTagRepository;
     private final PhotoMemberRepository photoMemberRepository;
-
+    private final EntityManager entityManager;
 
     @Transactional
     public List<GroupPhotoUploadDto> uploadGroupPhoto(Long groupId, GroupPhotoUploadRequest request) {
@@ -89,11 +90,12 @@ public class GroupPhotoService {
         List<Long> ids = request.getPhotoIds();
         List<Long> deleteIds = photoRepository.findPhotoIdNotInAnyAlbum(ids);
         photoRepository.softDeleteAllById(deleteIds);
-        
+
+        entityManager.flush();
+        entityManager.clear();
+
         // 3. 사진 삭제 후 유사한 그룹이 1개인 사진의 clusterId null로 변경
-        if(!deleteIds.isEmpty()) {
-            photoRepository.clearSinglePhotoClusters(groupId);
-        }
+        photoRepository.clearSinglePhotoClusters(groupId);
 
         return deleteIds.stream().map(GroupPhotoDto::from).collect(Collectors.toList());
     }

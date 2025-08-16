@@ -1,15 +1,5 @@
 package com.ssafy.keepick.photo.application;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.BDDMockito.*;
-
-import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
 import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.group.domain.Group;
@@ -20,6 +10,7 @@ import com.ssafy.keepick.photo.controller.request.GroupPhotoSearchRequest;
 import com.ssafy.keepick.photo.domain.Photo;
 import com.ssafy.keepick.photo.persistence.PhotoRepository;
 import com.ssafy.keepick.support.BaseTest;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -32,10 +23,23 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.BDDMockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("GroupPhotoService 테스트")
 public class PhotoServiceTest extends BaseTest {
+
+    @Mock
+    private EntityManager entityManager;
 
     @Mock
     private GroupRepository groupRepository;
@@ -86,6 +90,8 @@ public class PhotoServiceTest extends BaseTest {
             List<Long> notInAlbumPhotoIds = List.of(1L);
             given(groupRepository.findById(1L)).willReturn(Optional.of(testGroup));
             given(photoRepository.findPhotoIdNotInAnyAlbum(deleteRequest.getPhotoIds())).willReturn(notInAlbumPhotoIds);
+            doNothing().when(entityManager).clear();
+            doNothing().when(entityManager).flush();
             given(photoRepository.clearSinglePhotoClusters(1L)).willReturn(0L);
             doNothing().when(photoRepository).softDeleteAllById(anyList());
 
@@ -138,6 +144,8 @@ public class PhotoServiceTest extends BaseTest {
             List<Long> notInAlbumPhotoIds = List.of(1L);
             given(groupRepository.findById(1L)).willReturn(Optional.of(testGroup));
             given(photoRepository.findPhotoIdNotInAnyAlbum(deleteRequest.getPhotoIds())).willReturn(notInAlbumPhotoIds);
+            doNothing().when(entityManager).clear();
+            doNothing().when(entityManager).flush();
             given(photoRepository.clearSinglePhotoClusters(1L)).willReturn(0L);
             doNothing().when(photoRepository).softDeleteAllById(anyList());
 
