@@ -8,50 +8,52 @@ import { FriendRequests } from "./FriendRequests"
 
 export function FriendsSection() {
   return (
-    <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-800">
-      <Tabs defaultValue="friends" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-gray-800/50 border border-gray-700">
+    <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-800 h-[548px]">
+      <Tabs defaultValue="friends" className="w-full h-full flex flex-col">
+        <TabsList className="grid w-full grid-cols-4 bg-gray-800/50 border border-gray-700 flex-shrink-0">
           <TabsTrigger 
             value="friends" 
             className="data-[state=active]:bg-[#FE7A25] data-[state=active]:text-white text-gray-300 font-keepick-primary"
           >
-            My Friends
+            친구 목록
           </TabsTrigger>
           <TabsTrigger 
             value="search" 
             className="data-[state=active]:bg-[#FE7A25] data-[state=active]:text-white text-gray-300 font-keepick-primary"
           >
-            Find Friends
+            친구 찾기
           </TabsTrigger>
           <TabsTrigger 
             value="received" 
             className="data-[state=active]:bg-[#FE7A25] data-[state=active]:text-white text-gray-300 font-keepick-primary"
           >
-            Received
+            받은 친구 신청
           </TabsTrigger>
           <TabsTrigger 
             value="sent" 
             className="data-[state=active]:bg-[#FE7A25] data-[state=active]:text-white text-gray-300 font-keepick-primary"
           >
-            Sent
+            보낸 친구 신청
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="friends" className="mt-6">
-          <FriendsList />
-        </TabsContent>
+        <div className="flex-1 mt-6">
+          <TabsContent value="friends" className="h-full m-0">
+            <FriendsList />
+          </TabsContent>
 
-        <TabsContent value="search" className="mt-6">
-          <FriendSearch />
-        </TabsContent>
+          <TabsContent value="search" className="h-full m-0">
+            <FriendSearch />
+          </TabsContent>
 
-        <TabsContent value="received" className="mt-6">
-          <FriendRequests type="received" />
-        </TabsContent>
+          <TabsContent value="received" className="h-full m-0">
+            <FriendRequests type="received" />
+          </TabsContent>
 
-        <TabsContent value="sent" className="mt-6">
-          <FriendRequests type="sent" />
-        </TabsContent>
+          <TabsContent value="sent" className="h-full m-0">
+            <FriendRequests type="sent" />
+          </TabsContent>
+        </div>
       </Tabs>
     </div>
   )

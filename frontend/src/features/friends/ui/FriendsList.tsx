@@ -30,7 +30,7 @@ export function FriendsList() {
         <Users size={48} className="text-gray-600 mb-4" />
         <h3 className="text-gray-400 font-keepick-primary text-lg mb-2">아직 친구가 없어요</h3>
         <p className="text-gray-500 text-sm text-center">
-          -Find Friends- 탭에서 친구를 검색해보세요!
+           친구 찾기 탭에서 친구를 검색해보세요!
         </p>
       </div>
     )
