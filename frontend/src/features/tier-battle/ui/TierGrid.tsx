@@ -10,7 +10,6 @@ interface TierGridProps {
   tierPhotos: TierData;
   dragOverPosition: DragOverPosition | null;
   draggingPhotoId: number | null;
-  onImageClick: (photo: Photo) => void;
   onReturnToAvailable: (photoId: number, fromTier: string) => void;
   onDragOverTierArea: (e: React.DragEvent, tier: string) => void;
   onDropTierArea: (e: React.DragEvent, targetTier: string) => void;
@@ -22,6 +21,7 @@ interface TierGridProps {
   ) => void;
   onDragStart: (e: React.DragEvent, photo: Photo, source: string) => void;
   onDragEnd: () => void;
+  onImageClick: (photo: Photo) => void; // 사진 클릭 시 모달 열기
 }
 
 export function TierGrid({
@@ -29,7 +29,6 @@ export function TierGrid({
   tierPhotos,
   dragOverPosition,
   draggingPhotoId,
-  onImageClick,
   onReturnToAvailable,
   onDragOverTierArea,
   onDropTierArea,
@@ -37,6 +36,7 @@ export function TierGrid({
   onDropAtPosition,
   onDragStart,
   onDragEnd,
+  onImageClick,
 }: TierGridProps) {
   return (
     <div className="bg-[#222222] rounded-xl shadow-lg border border-gray-700 p-4 space-y-2">
@@ -99,17 +99,21 @@ export function TierGrid({
                   draggable
                   onDragStart={(e) => onDragStart(e, photo, label)}
                   onDragEnd={onDragEnd}
-                  onClick={() => onImageClick(photo)}
                   className="relative group"
                 >
-                  <Image
-                    src={photo.src}
-                    alt={photo.name || `Photo ${photo.id}`}
-                    width={88}
-                    height={88}
-                    className="rounded-md object-cover cursor-grab w-22 h-22 shadow-md
-  hover:scale-105 transition-transform"
-                  />
+                  {/* 정사각형 컨테이너로 Next.js Image 사용 - 갤러리 선택 사진과 동일한 스타일 */}
+                  <div 
+                    className="relative w-22 h-22 overflow-hidden rounded-md shadow-md cursor-pointer"
+                    onClick={() => onImageClick(photo)}
+                  >
+                    <Image
+                      src={photo.src}
+                      alt={photo.name || `Photo ${photo.id}`}
+                      fill
+                      sizes="88px"
+                      className="object-cover hover:scale-105 transition-transform"
+                    />
+                  </div>
 
                   {label === "S" && index < 3 && (
                     <div

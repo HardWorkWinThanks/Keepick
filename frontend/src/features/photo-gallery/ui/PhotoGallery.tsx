@@ -17,6 +17,7 @@ import { useBlurredPhotosFlat, useSimilarPhotosFlat, useAllPhotosFlat, useAllTag
 import { useInfiniteScroll } from "@/shared/lib"
 import { addPhotosToTimelineAlbum } from "@/features/timeline-album/api/timelineAlbumPhotos"
 import { addPhotosToTierAlbum } from "@/features/tier-album/api/tierAlbumPhotos"
+import { DuplicatePhotoModal } from "@/shared/ui/composite"
 
 interface PhotoGalleryProps {
   groupId: string
@@ -118,6 +119,13 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   
   // 삭제 경고 모달 상태 관리
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  
+  // 중복 사진 에러 모달 상태 관리
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false)
+  const [duplicateErrorInfo, setDuplicateErrorInfo] = useState<{
+    duplicateCount?: number;
+    totalCount?: number;
+  }>({});
   
   // 파일 업로드를 위한 ref
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -561,9 +569,28 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
       
       window.location.href = backUrl
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('앨범에 사진 추가 실패:', error)
-      alert('앨범에 사진을 추가하는데 실패했습니다. 다시 시도해주세요.')
+      
+      // API 에러 응답에서 중복 사진 에러 감지
+      const errorMessage = error?.response?.data?.message || error?.message || '';
+      const responseStatus = error?.response?.status;
+      
+      // 409 Conflict 또는 400 Bad Request에서 '잘못된 요청 파라미터입니다.' 메시지가 중복 에러로 간주
+      const isDuplicatePhotoError = responseStatus === 409 || 
+        (responseStatus === 400 && errorMessage.includes('잘못된 요청 파라미터입니다'));
+      
+      if (isDuplicatePhotoError) {
+        // 중복 사진 에러인 경우 전용 모달 표시
+        setDuplicateErrorInfo({
+          totalCount: selectedPhotos.length,
+          duplicateCount: selectedPhotos.length // 임시: 실제로는 서버에서 중복 개수를 받아야 함
+        });
+        setIsDuplicateModalOpen(true);
+      } else {
+        // 일반 에러인 경우 기존 alert 사용
+        alert('앨범에 사진을 추가하는데 실패했습니다. 다시 시도해주세요.');
+      }
     }
   }
 
@@ -1632,6 +1659,17 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 중복 사진 에러 모달 */}
+      <DuplicatePhotoModal
+        isOpen={isDuplicateModalOpen}
+        onClose={() => {
+          setIsDuplicateModalOpen(false);
+          setDuplicateErrorInfo({});
+        }}
+        duplicateCount={duplicateErrorInfo.duplicateCount}
+        totalCount={duplicateErrorInfo.totalCount}
+      />
     </div>
   )
 }

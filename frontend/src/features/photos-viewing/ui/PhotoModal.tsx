@@ -1,115 +1,99 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
-import { Photo } from "@/entities/photo";
-import { useEffect, useCallback } from "react";
 import { X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Photo } from "@/entities/photo";
 
 /**
- * 사진을 클릭했을 때 전체 화면으로 크게 보여주는 모달 컴포넌트입니다.
+ * 사진 확대 모달 컴포넌트
+ * Portal을 사용하여 사이드바와 헤더 위에 표시됩니다.
  */
 interface PhotoModalProps {
-  photo: Photo | null; // 표시할 사진 객체. null이면 모달이 닫힙니다.
-  isOpen: boolean; // 모달의 열림/닫힘 상태
-  onClose: () => void; // 모달을 닫을 때 호출될 콜백 함수
+  photo: Photo | null;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export function PhotoModal({ photo, isOpen, onClose }: PhotoModalProps) {
-  /**
-   * 키보드의 'Escape' 키를 눌렀을 때 모달을 닫는 핸들러입니다.
-   * `useCallback`으로 감싸 불필요한 함수 재생성을 방지합니다.
-   */
-  const handleEsc = useCallback(
-    (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    },
-    [onClose]
-  );
+  const [mounted, setMounted] = useState(false);
 
-  // 모달이 열리거나 닫힐 때 side effect를 처리합니다.
+  // 컴포넌트가 마운트되었는지 확인
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // ESC 키로 모달 닫기
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && isOpen) {
+        onClose();
+      }
+    };
+
     if (isOpen) {
-      // 모달이 열리면, ESC 키 이벤트 리스너를 추가하고
-      // 뒷 배경의 스크롤을 막습니다.
-      document.addEventListener("keydown", handleEsc, { passive: true });
+      document.addEventListener("keydown", handleEscKey);
+      // 모달이 열릴 때 스크롤 잠금
       document.body.style.overflow = "hidden";
+    } else {
+      // 모달이 닫힐 때 스크롤 잠금 해제
+      document.body.style.overflow = "unset";
     }
 
-    // 컴포넌트가 언마운트되거나, isOpen 상태가 false로 변할 때 실행되는 클린업 함수입니다.
     return () => {
-      document.removeEventListener("keydown", handleEsc);
+      document.removeEventListener("keydown", handleEscKey);
       document.body.style.overflow = "unset";
     };
-  }, [isOpen, handleEsc]);
+  }, [isOpen, onClose]);
 
-  // 모달이 닫혀있거나, 표시할 사진이 없으면 아무것도 렌더링하지 않습니다.
-  if (!isOpen || !photo) return null;
+  // 서버 사이드 렌더링 중에는 Portal을 사용하지 않음
+  if (!mounted) return null;
 
-  return (
-    // 모달 배경 (클릭 시 닫힘)
-    <div
-      className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4"
-      onClick={onClose}
-      style={{
-        animation: "fadeIn 0.15s ease-out",
-      }}
-    >
-      {/* 이미지 컨테이너 (배경 클릭 이벤트 전파 방지) */}
-      <div
-        className="relative"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          animation: "scaleIn 0.2s ease-out",
-        }}
-      >
-        <Image
-          src={photo.src}
-          alt={photo.name || `Photo ${photo.id}`}
-          width={2048}
-          height={1536}
-          className="object-contain rounded-lg shadow-2xl"
-          style={{ 
-            maxHeight: "95vh", 
-            maxWidth: "95vw",
-            minHeight: "60vh", // 최소 크기 보장
-            minWidth: "60vw",
-            width: "auto",
-            height: "auto"
-          }}
-          priority // Next.js 이미지 최적화: 이 이미지를 우선적으로 로드
-        />
-
-        {/* 닫기 버튼 - shadcn 스타일 */}
-        {/* <button
+  const modalContent = (
+    <AnimatePresence>
+      {isOpen && photo && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
           onClick={onClose}
-          className="absolute -top-2 -right-2 w-10 h-10 bg-white/90 hover:bg-white text-black hover:text-gray-800 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white shadow-lg"
-          aria-label="모달 닫기"
         >
-          <X size={18} className="stroke-2" />
-        </button> */}
-      </div>
+          {/* 닫기 버튼 */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-[10000] w-10 h-10 flex items-center justify-center bg-black/50 hover:bg-black/70 text-white rounded-full transition-all"
+          >
+            <X size={20} />
+          </button>
 
-      {/* 간단한 페이드인/스케일인 애니메이션을 위한 인라인 스타일 */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-        @keyframes scaleIn {
-          from {
-            opacity: 0;
-            transform: scale(0.9);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-      `}</style>
-    </div>
+          {/* 이미지 컨테이너 */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.3 }}
+            className="relative flex items-center justify-center max-w-[90vw] max-h-[90vh] p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Image
+              src={photo.src}
+              alt={photo.name || `Photo ${photo.id}`}
+              width={0}
+              height={0}
+              sizes="(max-width: 90vw) 90vw, (max-height: 90vh) 90vh"
+              className="max-w-[85vw] max-h-[85vh] min-w-[200px] min-h-[200px] w-auto h-auto object-contain rounded-lg"
+              priority
+            />
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
+
+  // Portal을 사용하여 document.body에 직접 렌더링
+  return createPortal(modalContent, document.body);
 }

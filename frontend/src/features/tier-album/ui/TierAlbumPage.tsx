@@ -26,7 +26,7 @@ import {
   TierBattleModal,
   TierData,
 } from "@/features/tier-battle"
-import { PhotoModal } from "@/features/photos-viewing"
+import { PhotoModal, usePhotoModal } from "@/features/photos-viewing"
 
 interface TierAlbumPageProps {
   groupId: string
@@ -163,11 +163,10 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
   const {
     availablePhotos,
     setAvailablePhotos,
-    selectedImage,
-    showImageModal,
-    handleImageClick,
-    handleCloseImageModal,
   } = useAlbumState()
+
+  // 사진 모달을 위한 상태 관리
+  const { photo: selectedModalPhoto, isOpen: isPhotoModalOpen, openModal: openPhotoModal, closeModal: closePhotoModal } = usePhotoModal()
 
   const {
     tierPhotos,
@@ -655,7 +654,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
 
       {/* Header */}
       <header 
-        className={`fixed top-0 z-50 bg-[#111111]/95 backdrop-blur-sm border-b border-gray-800 transition-all duration-300 ${
+        className={`fixed top-0 z-50 bg-[#111111] border-b border-gray-800 transition-all duration-300 ${
           isEditMode ? 'left-[320px] right-0' : 'left-0 right-0'
         }`}
       >
@@ -716,7 +715,6 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
                 tierPhotos={tierPhotos}
                 dragOverPosition={dragOverPosition}
                 draggingPhotoId={draggingPhotoId}
-                onImageClick={handleImageClick}
                 onReturnToAvailable={(photoId, fromTier) =>
                   handleReturnToAvailable(photoId, fromTier, (photo) =>
                     setAvailablePhotos((prev) => [...prev, photo])
@@ -728,6 +726,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
                 onDropAtPosition={handleDropAtPosition}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
+                onImageClick={openPhotoModal}
               />
             </div>
 
@@ -740,13 +739,6 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
                   setAvailablePhotos((prev) => prev.filter((p) => p.id !== photoId))
                 )
               }
-              onZoomRequest={handleImageClick}
-            />
-
-            <PhotoModal
-              photo={selectedImage}
-              isOpen={showImageModal}
-              onClose={handleCloseImageModal}
             />
           </div>
         ) : (
@@ -809,7 +801,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
           </div>
 
           {/* Tier Distribution Bar Chart */}
-          <div className="max-w-xs">
+          {/* <div className="max-w-xs">
             <p className="font-keepick-primary text-xs text-gray-500 mb-2">티어별 분포</p>
             <div className="space-y-1">
               {tiers.map((tier) => {
@@ -834,7 +826,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
                 )
               })}
             </div>
-          </div>
+          </div> */}
         </div>
 
         {currentTierPhotos.length > 0 && (
@@ -849,7 +841,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
               <h3 className="font-keepick-heavy text-base mb-2" style={{ color: currentTierInfo.color }}>
                 사진 #{currentPhotoIndex + 1}
               </h3>
-              <p className="font-keepick-primary text-gray-400 text-xs mb-3">{currentPhoto.date}</p>
+              <p className="font-keepick-primary text-gray-400 text-xs mb-3">{currentPhoto?.date || '날짜 정보 없음'}</p>
 
               <div className="space-y-1.5 text-xs font-keepick-primary text-gray-500">
                 <div className="flex justify-between">
@@ -894,7 +886,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
               </motion.div>
 
               {/* Navigation Arrows */}
-              {currentTierPhotos.length > 1 && (
+              {tierAlbumPhotos.length > 1 && (
                 <>
                   <button
                     onClick={goToPrevPhoto}
@@ -957,10 +949,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
         {currentTierPhotos.length === 0 && (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <p className="font-keepick-primary text-gray-400 text-lg mb-4">{currentTierInfo.name}등급에 사진이 없습니다</p>
-              <Link href="/gallery" className="font-keepick-primary text-orange-500 hover:text-orange-400 transition-colors">
-                갤러리에서 선택하기
-              </Link>
+              <p className="font-keepick-primary text-gray-400 text-lg">{currentTierInfo.name}등급에 사진이 없습니다</p>
             </div>
           </div>
         )}
@@ -1007,6 +996,13 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
         albumType="tier"
         groupId={groupId}
         albumId={tierAlbumId}
+      />
+
+      {/* 사진 확대 모달 */}
+      <PhotoModal
+        photo={selectedModalPhoto}
+        isOpen={isPhotoModalOpen}
+        onClose={closePhotoModal}
       />
     </div>
   )
