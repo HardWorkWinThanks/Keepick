@@ -1,3 +1,3 @@
-export { ProfileForm } from './ui/ProfileForm';
-export { useProfileEdit } from './model/useProfileEdit';
+export { ProfileSection } from './ui/ProfileSection';
+export { useProfile } from './model/useProfile.tsx';
 export type { UserProfile } from './model/types';
