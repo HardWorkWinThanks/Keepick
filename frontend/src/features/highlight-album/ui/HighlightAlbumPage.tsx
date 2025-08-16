@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ZoomIn, ArrowLeft, Settings } from "lucide-react"
+import { ZoomIn, ArrowLeft, Settings, Grid3x3, LayoutList } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useHighlightAlbum } from "../model/useHighlightAlbum"
 import { CardStack } from "./CardStack"
+import { GridView } from "./GridView"
 import type { Photo, DragPhotoData } from "@/entities/photo"
 
 interface HighlightAlbumPageProps {
@@ -15,6 +16,7 @@ interface HighlightAlbumPageProps {
 
 export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps) {
   const [isEditMode, setIsEditMode] = useState(false)
+  const [isGridView, setIsGridView] = useState(false)
   
   const {
     album,
@@ -90,6 +92,20 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
           </div>
         </header>
 
+        {/* 뷰 전환 버튼 - 4개 섹션의 교차점 */}
+        <div className="absolute z-50 top-1/2 left-1/2 transform -translate-x-28 -translate-y-1/2" style={{ marginLeft: '86px' }}>
+          <button
+            onClick={() => setIsGridView(!isGridView)}
+            className="bg-black/80 border border-white/20 rounded-full p-3 text-white hover:bg-black/90 transition-all duration-300 hover:scale-110 backdrop-blur-sm"
+            title={isGridView ? "카드 스택 뷰" : "그리드 뷰"}
+          >
+            {isGridView ? (
+              <LayoutList size={24} />
+            ) : (
+              <Grid3x3 size={24} />
+            )}
+          </button>
+        </div>
 
       {/* Four Quadrants with Clear Separation */}
       <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-2 grid-rows-4 md:grid-rows-2 bg-[#111111]">
@@ -97,25 +113,8 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
           return (
             <div
               key={emotion}
-              className="relative h-full"
-              style={{ backgroundColor: emotionColors[emotion as keyof typeof emotionColors] }}
+              className="relative h-full bg-[#111111] border-2 border-white"
             >
-              {/* Zoom Button */}
-              <button
-                onClick={() => handleSectionZoom(emotion)}
-                className="absolute top-4 right-4 z-10 p-2 text-white hover:text-gray-200 transition-all duration-300 hover:scale-110 group"
-                aria-label={`${emotion} 섹션 확대`}
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    handleSectionZoom(emotion)
-                  }
-                }}
-              >
-                <ZoomIn size={18} className="drop-shadow-lg" />
-                <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"></div>
-              </button>
 
               {/* Emotion Label - 상단 고정 */}
               <div className="absolute top-6 left-1/2 transform -translate-x-1/2 flex items-center space-x-3 z-20">
@@ -134,14 +133,25 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
                 </div>
               </div>
 
-              {/* Card Stack Section - 제목 아래 적절한 여백 */}
-              <div className="absolute top-32 left-1/2 transform -translate-x-1/2 -translate-x-25">
-                <CardStack 
-                  photos={photos}
-                  emotion={emotion}
-                  emotionColor={emotionColors[emotion as keyof typeof emotionColors]}
-                />
-              </div>
+              {/* Card Stack / Grid Section - 뷰 모드에 따라 전환 */}
+              {isGridView ? (
+                <div className="absolute top-20 left-0 right-0 bottom-0 flex items-center justify-center">
+                  <GridView 
+                    photos={photos}
+                    emotion={emotion}
+                    emotionColor={emotionColors[emotion as keyof typeof emotionColors]}
+                  />
+                </div>
+              ) : (
+                <div className="absolute top-32 left-1/2 transform -translate-x-24">
+                  <CardStack 
+                    photos={photos}
+                    emotion={emotion}
+                    emotionColor={emotionColors[emotion as keyof typeof emotionColors]}
+                    hideNavigation={isGridView}
+                  />
+                </div>
+              )}
             </div>
           )
         })}

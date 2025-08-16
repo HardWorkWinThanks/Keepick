@@ -10,20 +10,24 @@ interface CardStackProps {
   photos: HighlightPhoto[]
   emotion: string
   emotionColor: string
+  hideNavigation?: boolean
 }
 
-export function CardStack({ photos, emotion, emotionColor }: CardStackProps) {
-  // 카드 순서 상태 (맨 앞이 0번 인덱스)
-  const [cardOrder, setCardOrder] = useState<number[]>(() => 
-    photos.map((_, index) => index)
-  )
+export function CardStack({ photos, emotion, emotionColor, hideNavigation = false }: CardStackProps) {
+  // 현재 보여주는 사진의 시작 인덱스 (원본 배열 기준)
+  const [currentStartIndex, setCurrentStartIndex] = useState(0)
+  
+  // 고정된 카드 순서 (항상 원본 순서 유지)
+  const cardOrder = photos.map((_, index) => index)
   
   
   // 최대 표시할 카드 수 (성능 최적화)
   const MAX_VISIBLE_CARDS = 4
   
-  // 현재 표시할 카드들 (앞의 4장만)
-  const visibleCards = cardOrder.slice(0, MAX_VISIBLE_CARDS)
+  // 현재 시작 인덱스부터 순환하여 표시할 카드들
+  const visibleCards = Array.from({ length: Math.min(MAX_VISIBLE_CARDS, photos.length) }, (_, i) => {
+    return (currentStartIndex + i) % photos.length
+  })
   
   // 카드 스타일 계산 - 21.png 스타일 부채꼴 형태
   const getCardStyle = (index: number) => {
@@ -57,42 +61,25 @@ export function CardStack({ photos, emotion, emotionColor }: CardStackProps) {
     }
   }
   
-  // 카드 클릭 핸들러 - 맨 앞 카드를 맨 뒤로 이동
+  // 카드 클릭 핸들러 - 다음 사진으로 이동 (순서는 유지)
   const handleCardClick = (stackIndex: number) => {
     // 맨 앞 카드만 클릭 가능
     if (stackIndex !== 0) return
     
-    // 맨 앞 카드를 맨 뒤로 이동
-    const newOrder = [...cardOrder]
-    const frontCard = newOrder.shift() // 맨 앞 카드 제거
-    if (frontCard !== undefined) {
-      newOrder.push(frontCard) // 맨 뒤에 추가
-    }
-    
-    setCardOrder(newOrder)
+    // 다음 사진으로 이동 (순환)
+    setCurrentStartIndex((prev) => (prev + 1) % photos.length)
   }
   
-  // 썸네일 선택 핸들러 - 선택된 사진을 맨 앞으로 이동 (부드럽게)
+  // 썸네일 선택 핸들러 - 해당 사진이 맨 앞에 오도록 시작 인덱스 변경
   const handleThumbnailSelect = (targetIndex: number) => {
-    // 현재 맨 앞에 있는 사진의 원본 인덱스
-    const currentFrontIndex = cardOrder[0]
+    if (currentStartIndex === targetIndex) return // 이미 앞에 있음
     
-    if (currentFrontIndex === targetIndex) return // 이미 앞에 있음
-    
-    // 새로운 순서 계산: 선택된 사진을 맨 앞으로
-    const newOrder = [...cardOrder]
-    const targetPosition = newOrder.indexOf(targetIndex)
-    
-    if (targetPosition !== -1) {
-      // 선택된 카드를 배열에서 제거하고 맨 앞에 추가
-      newOrder.splice(targetPosition, 1)
-      newOrder.unshift(targetIndex)
-      setCardOrder(newOrder)
-    }
+    // 선택된 사진이 맨 앞에 오도록 시작 인덱스 변경
+    setCurrentStartIndex(targetIndex)
   }
   
   // 현재 맨 앞 사진의 인덱스 (썸네일 네비게이션용)
-  const currentPhotoIndex = cardOrder[0] || 0
+  const currentPhotoIndex = currentStartIndex
   
   // 카드가 없으면 빈 상태 표시
   if (photos.length === 0) {
@@ -168,14 +155,16 @@ export function CardStack({ photos, emotion, emotionColor }: CardStackProps) {
           })}
         </AnimatePresence>
         
-        {/* 썸네일 네비게이션 */}
-        <ThumbnailNavigation
-          photos={photos}
-          currentPhotoIndex={currentPhotoIndex}
-          onPhotoSelect={handleThumbnailSelect}
-          emotionColor={emotionColor}
-          emotion={emotion}
-        />
+        {/* 썸네일 네비게이션 - hideNavigation이 true면 숨김 */}
+        {!hideNavigation && (
+          <ThumbnailNavigation
+            photos={photos}
+            currentPhotoIndex={currentPhotoIndex}
+            onPhotoSelect={handleThumbnailSelect}
+            emotionColor={emotionColor}
+            emotion={emotion}
+          />
+        )}
       </div>
     </div>
   )

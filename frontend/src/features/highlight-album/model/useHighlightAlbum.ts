@@ -31,7 +31,7 @@ export function useHighlightAlbum(groupId: string, albumId: string) {
         { photoId: 5, memberId: 2, chatSessionId: "session1", photoUrl: "/presentation/surprise_109.jpg", type: "SURPRISE", takenAt: "2025-08-01" },
         { photoId: 6, memberId: 3, chatSessionId: "session1", photoUrl: "/presentation/surprise_154.jpg", type: "SURPRISE", takenAt: "2025-08-01" },
         { photoId: 21, memberId: 3, chatSessionId: "session1", photoUrl: "/dummy/main-dummy4.jpg", type: "SURPRISE", takenAt: "2025-08-01" },
-        { photoId: 21, memberId: 3, chatSessionId: "session1", photoUrl: "/dummy/main-dummy5.jpg", type: "SURPRISE", takenAt: "2025-08-01" },
+        { photoId: 22, memberId: 3, chatSessionId: "session1", photoUrl: "/dummy/main-dummy5.jpg", type: "SURPRISE", takenAt: "2025-08-01" },
         { photoId: 23, memberId: 3, chatSessionId: "session1", photoUrl: "/dummy/main-dummy6.jpg", type: "SURPRISE", takenAt: "2025-08-01" },
       ],
       "TIRED": [
