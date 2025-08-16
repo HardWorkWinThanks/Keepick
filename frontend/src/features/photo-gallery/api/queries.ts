@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import { getGroupBlurredPhotos, getGroupSimilarPhotos, getGroupOverview, getGroupPhotoTags, convertToGalleryPhoto } from './galleryPhotosApi'
+import { getGroupBlurredPhotos, getGroupSimilarPhotos, getGroupOverview, getGroupPhotoTags, getFilteredPhotos, convertToGalleryPhoto } from './galleryPhotosApi'
 
 /**
  * 흐린사진 무한 스크롤 쿼리 훅
@@ -131,4 +131,63 @@ export const useAllTags = (groupId: string) => {
     staleTime: 5 * 60 * 1000, // 5분 캐싱
     enabled: !!groupId, // groupId가 있을 때만 실행
   })
+}
+
+/**
+ * 필터링된 사진 무한 스크롤 쿼리 훅
+ */
+export const useFilteredPhotos = (groupId: string, selectedTags: string[]) => {
+  // 디버깅: 쿼리 실행 조건 확인
+  console.log('🔍 useFilteredPhotos 호출:', {
+    groupId,
+    selectedTags,
+    queryKey: ['filtered-photos', groupId, selectedTags],
+    enabled: !!groupId && selectedTags.length > 0
+  })
+  
+  return useInfiniteQuery({
+    queryKey: ['filtered-photos', groupId, selectedTags],
+    queryFn: ({ pageParam = 0 }) => {
+      console.log('🔄 필터링 API 호출:', {
+        groupId: parseInt(groupId),
+        tags: selectedTags,
+        page: pageParam,
+        size: 20
+      })
+      return getFilteredPhotos(parseInt(groupId), {
+        tags: selectedTags,
+        page: pageParam,
+        size: 20
+      })
+    },
+    getNextPageParam: (lastPage) => 
+      lastPage.pageInfo.hasNext ? lastPage.pageInfo.page + 1 : undefined,
+    initialPageParam: 0,
+    staleTime: 2 * 60 * 1000, // 2분 캐싱 (필터링 결과는 자주 변경될 수 있음)
+    enabled: !!groupId, // groupId가 있을 때 항상 실행 (태그가 없으면 전체 조회)
+  })
+}
+
+/**
+ * 필터링된 사진 데이터를 플래튼된 갤러리 형식으로 변환
+ */
+export const useFilteredPhotosFlat = (groupId: string, selectedTags: string[]) => {
+  const query = useFilteredPhotos(groupId, selectedTags)
+  
+  // 중복 제거를 위해 Map 사용
+  const photosMap = new Map()
+  query.data?.pages.forEach(page => {
+    page.list.forEach(photo => {
+      if (!photosMap.has(photo.photoId)) {
+        photosMap.set(photo.photoId, convertToGalleryPhoto(photo))
+      }
+    })
+  })
+  
+  const photos = Array.from(photosMap.values())
+  
+  return {
+    ...query,
+    photos, // 필터링된 갤러리 사진 배열
+  }
 }

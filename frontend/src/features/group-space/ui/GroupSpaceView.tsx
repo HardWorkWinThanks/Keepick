@@ -390,7 +390,7 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                 >
                   <PhotoGallery 
                     groupId={group.groupId.toString()} 
-                    autoEnterAlbumMode={isFromAlbumCreateButton}
+                    autoEnterAlbumMode={false}
                   />
                 </motion.div>
               </div>

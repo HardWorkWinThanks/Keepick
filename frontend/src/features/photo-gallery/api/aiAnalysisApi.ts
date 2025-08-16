@@ -67,19 +67,7 @@ export const createAnalysisStatusSSE = (
   
   const eventSource = new EventSource(url)
   
-  // 기본 메시지 리스너
-  // eventSource.onmessage = (event) => {
-  //   try {
-  //     console.log('SSE 기본 메시지:', event.data)
-  //     const data: AnalysisStatusMessage = JSON.parse(event.data)
-  //     console.log('SSE 파싱된 데이터:', data)
-  //     onMessage(data)
-  //   } catch (error) {
-  //     console.error('SSE 메시지 파싱 오류:', error, 'Raw data:', event.data)
-  //   }
-  // }
-  
-  // job-status 이벤트 전용 리스너 추가
+  // job-status 이벤트 전용 리스너 (서버에서 event: job-status로 전송)
   eventSource.addEventListener('job-status', (event) => {
     try {
       console.log('SSE job-status 이벤트:', event.data)

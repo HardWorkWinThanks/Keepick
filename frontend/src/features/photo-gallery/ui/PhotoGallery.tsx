@@ -13,7 +13,8 @@ import AiServiceModal from "./AiServiceModal"
 import { uploadGalleryImages } from "../api/galleryUploadApi"
 import { requestAiAnalysis, requestSimilarPhotosAnalysis, createAnalysisStatusSSE, AnalysisStatusMessage } from "../api/aiAnalysisApi"
 import { getGroupPhotos, getGroupOverview, getPhotoTags, convertToGalleryPhoto, deleteGroupPhotos } from "../api/galleryPhotosApi"
-import { useBlurredPhotosFlat, useSimilarPhotosFlat, useAllPhotosFlat, useAllTags } from "../api/queries"
+import { useBlurredPhotosFlat, useSimilarPhotosFlat, useAllPhotosFlat, useAllTags, useFilteredPhotosFlat } from "../api/queries"
+import { translateTag, translateTags, translateTagOrIgnore, translateTagsAndFilter } from "@/shared/lib/tagTranslation"
 import { useInfiniteScroll } from "@/shared/lib"
 import { addPhotosToTimelineAlbum } from "@/features/timeline-album/api/timelineAlbumPhotos"
 import { addPhotosToTierAlbum } from "@/features/tier-album/api/tierAlbumPhotos"
@@ -79,10 +80,18 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   const blurredQuery = useBlurredPhotosFlat(groupId, viewMode)
   const similarQuery = useSimilarPhotosFlat(groupId, viewMode)
   const allTagsQuery = useAllTags(groupId)
-
-  // API에서 가져온 전체 태그
-  const apiTags = allTagsQuery.data || []
+  // 서버 사이드 필터링을 위한 쿼리 (딕셔너리에 있는 태그만 전송)
+  const filteredTagsForServer = selectedTags.filter(tag => translateTagOrIgnore(tag) !== null)
   
+  // 디버깅: 태그 상태 확인
+  // console.log('🔍 태그 상태 디버깅:', {
+  //   selectedTags,
+  //   filteredTagsForServer,
+  //   hasSelectedTags: selectedTags.length > 0
+  // })
+  
+  const filteredQuery = useFilteredPhotosFlat(groupId, filteredTagsForServer)
+
   // 쿼리에서 데이터와 로딩 상태 추출
   const allQueryPhotos = allPhotosQuery.photos
   const allPhotosLoading = allPhotosQuery.isLoading || allPhotosQuery.isFetchingNextPage
@@ -90,6 +99,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   const blurredPhotosLoading = blurredQuery.isLoading || blurredQuery.isFetchingNextPage
   const similarPhotoClusters = similarQuery.clusters
   const similarPhotosLoading = similarQuery.isLoading || similarQuery.isFetchingNextPage
+  const filteredPhotosLoading = filteredQuery.isLoading || filteredQuery.isFetchingNextPage
   
   // 뷰 모드에 따른 표시할 사진 결정 (useMemo로 메모이제이션)
   const displayPhotos = useMemo(() => {
@@ -100,14 +110,16 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         // 유사사진은 클러스터별로 처리하므로 빈 배열 반환
         return []
       default:
-        // 전체 모드에서는 Query 데이터 사용, 태그 필터링 적용
-        const photosToFilter = allQueryPhotos.length > 0 ? allQueryPhotos : allPhotos
-        return selectedTags.length > 0 ? 
-          photosToFilter.filter(photo => 
-            selectedTags.some(tag => photo.tags.includes(tag))
-          ) : photosToFilter
+        // 전체 모드에서는 서버 사이드 필터링 사용
+        if (selectedTags.length > 0) {
+          // 태그가 선택된 경우: 서버 필터링 결과 사용
+          return filteredQuery.photos
+        } else {
+          // 태그가 선택되지 않은 경우: 전체 사진 사용
+          return allQueryPhotos.length > 0 ? allQueryPhotos : allPhotos
+        }
     }
-  }, [viewMode, blurredPhotos, allQueryPhotos, allPhotos, selectedTags])
+  }, [viewMode, blurredPhotos, selectedTags, filteredQuery.photos, allQueryPhotos, allPhotos])
 
   const smallPreviewDrag = useDragScroll()
   const expandedPreviewDrag = useDragScroll()
@@ -141,6 +153,29 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   // 실시간 태그 목록 (API에서 수집)
   const [realTimeTags, setRealTimeTags] = useState<string[]>([])
   
+  // API에서 가져온 전체 태그
+  const apiTags = allTagsQuery.data || []
+  
+  // 현재 사진들로부터 실시간 태그 계산 (보조 태그 목록)
+  const calculatedTags = useMemo(() => {
+    const currentPhotos = selectedTags.length > 0 ? filteredQuery.photos : 
+                         (allQueryPhotos.length > 0 ? allQueryPhotos : allPhotos)
+    
+    // photoTagsCache에서 태그 수집
+    const tagsFromCache = [...new Set(currentPhotos.flatMap(photo => 
+      photoTagsCache[photo.id]?.tags || []
+    ))]
+    
+    return tagsFromCache
+  }, [allQueryPhotos, allPhotos, filteredQuery.photos, selectedTags, photoTagsCache])
+  
+  // 최종 표시할 태그 목록 (API 태그 우선, 없으면 계산된 태그 사용)
+  const displayTags = useMemo(() => {
+    // API 태그가 있으면 우선 사용, 없거나 빈 배열이면 계산된 태그로 보완
+    const combinedTags = apiTags.length > 0 ? apiTags : calculatedTags
+    return [...new Set([...combinedTags, ...realTimeTags])]
+  }, [apiTags, calculatedTags, realTimeTags])
+  
   // 뷰 모드 변경 핸들러
   const handleViewModeChange = (mode: 'all' | 'blurred' | 'similar') => {
     setViewMode(mode)
@@ -161,6 +196,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     totalFiles: number
     uploadedFiles: number
     message: string
+    jobStatus?: 'STARTED' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
   }>({
     isUploading: false,
     currentStep: 'selecting',
@@ -175,22 +211,28 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   
   // 무한 스크롤 적용
   useInfiniteScroll({
-    hasNextPage: viewMode === 'all' ? allPhotosQuery.hasNextPage : 
-                viewMode === 'blurred' ? blurredQuery.hasNextPage : 
-                viewMode === 'similar' ? similarQuery.hasNextPage : false,
+    hasNextPage: viewMode === 'all' ? (
+      selectedTags.length > 0 ? filteredQuery.hasNextPage : allPhotosQuery.hasNextPage
+    ) : viewMode === 'blurred' ? blurredQuery.hasNextPage : 
+        viewMode === 'similar' ? similarQuery.hasNextPage : false,
     fetchNextPage: () => {
-      console.log('🔄 갤러리 무한스크롤 트리거됨 - threshold: 50px')
+      console.log('🔄 갤러리 무한스크롤 트리거됨 - threshold: 200px')
       if (viewMode === 'all') {
-        allPhotosQuery.fetchNextPage()
+        if (selectedTags.length > 0) {
+          filteredQuery.fetchNextPage()
+        } else {
+          allPhotosQuery.fetchNextPage()
+        }
       } else if (viewMode === 'blurred') {
         blurredQuery.fetchNextPage()
       } else if (viewMode === 'similar') {
         similarQuery.fetchNextPage()
       }
     },
-    isFetching: viewMode === 'all' ? allPhotosQuery.isFetchingNextPage : 
-               viewMode === 'blurred' ? blurredQuery.isFetchingNextPage : 
-               viewMode === 'similar' ? similarQuery.isFetchingNextPage : false,
+    isFetching: viewMode === 'all' ? (
+      selectedTags.length > 0 ? filteredQuery.isFetchingNextPage : allPhotosQuery.isFetchingNextPage
+    ) : viewMode === 'blurred' ? blurredQuery.isFetchingNextPage : 
+        viewMode === 'similar' ? similarQuery.isFetchingNextPage : false,
     threshold: 200 
   })
 
@@ -275,7 +317,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         ...prev,
         currentStep: 'processing',
         progress: 30,
-        message: 'AI가 사진을 분석하고 있습니다.'
+        message: '분석을 준비하고 있습니다.'
       }))
       
       // SSE 연결 시작
@@ -351,12 +393,25 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
           // 진행률 계산 (completedJob / totalJob * 100)
           const progress = data.totalJob > 0 ? (data.completedJob / data.totalJob) * 100 : 0
           
-          // 업로드 상태 업데이트
-          setUploadState(prev => ({
-            ...prev,
-            progress,
-            message: data.message
-          }))
+          // 업로드 상태 업데이트 (jobStatus 포함)
+          console.log('setUploadState 호출 전:', { progress, message: data.message, jobStatus: data.jobStatus })
+          setUploadState(prev => {
+            const newState = {
+              ...prev,
+              progress,
+              message: data.message,
+              jobStatus: data.jobStatus
+            }
+            console.log('setUploadState 업데이트:', { 
+              prevMessage: prev.message, 
+              newMessage: newState.message,
+              prevJobStatus: prev.jobStatus,
+              newJobStatus: newState.jobStatus,
+              prevCurrentStep: prev.currentStep,
+              newCurrentStep: newState.currentStep
+            })
+            return newState
+          })
           
           // 상태에 따른 처리
           if (data.jobStatus === 'COMPLETED') {
@@ -524,13 +579,18 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         // 로컬 상태 업데이트 (삭제된 사진만 제거)
         deleteSelectedPhotosBase() // 기존 로직 사용하여 UI 업데이트
         
-        // TanStack Query 캐시 무효화로 모든 관련 데이터 새로고침
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['all-photos', groupId] }),
-          queryClient.invalidateQueries({ queryKey: ['blurred-photos', groupId] }),
-          queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] }),
-          queryClient.invalidateQueries({ queryKey: ['all-tags', groupId] })
-        ])
+        // 즉시 모든 관련 캐시 무효화
+        queryClient.invalidateQueries({ queryKey: ['all-photos', groupId] })
+        queryClient.invalidateQueries({ queryKey: ['blurred-photos', groupId] })
+        queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] })
+        queryClient.invalidateQueries({ queryKey: ['filtered-photos', groupId] })
+        queryClient.invalidateQueries({ queryKey: ['all-tags', groupId] })
+        
+        // 100ms 후 태그 목록 강제 새로고침 (서버 DB 반영 대기)
+        setTimeout(() => {
+          queryClient.refetchQueries({ queryKey: ['all-tags', groupId] })
+          console.log('🔄 태그 목록 지연 새로고침 실행')
+        }, 100)
         
         console.log(`${deleteResult.deletedPhotoIds.length}장 삭제 완료`)
       }
@@ -673,7 +733,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         ...prev,
         currentStep: 'processing',
         progress: 100,
-        message: 'AI 분석을 요청하고 있습니다.'
+        message: '분석을 준비하고 있습니다.'
       }))
       
       // AI 분석 요청
@@ -863,17 +923,26 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
               </div>
 
               {/* Upload Button */}
-              <button 
-                onClick={handleUploadClick}
-                disabled={isSelectionMode}
-                className={`px-6 py-2 bg-transparent border-2 font-keepick-primary text-sm tracking-wider transition-all duration-300 flex items-center justify-center ${
-                  isSelectionMode
-                    ? "border-gray-600 text-gray-600 cursor-not-allowed"
-                    : "border-gray-700 text-gray-400 hover:text-white hover:border-gray-500"
-                }`}
-              >
-                <Upload size={16} />
-              </button>
+              <div className="relative group">
+                <button 
+                  onClick={handleUploadClick}
+                  disabled={isSelectionMode}
+                  className={`px-6 py-2 bg-transparent border-2 font-keepick-primary text-sm tracking-wider transition-all duration-300 flex items-center justify-center ${
+                    isSelectionMode
+                      ? "border-gray-600 text-gray-600 cursor-not-allowed"
+                      : "border-gray-700 text-gray-400 hover:text-white hover:border-gray-500"
+                  }`}
+                >
+                  <Upload size={16} />
+                </button>
+                
+                {/* 호버 툴팁 - 최대 20개 제한 안내 */}
+                {!isSelectionMode && (
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-black/90 text-white text-xs font-keepick-primary rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                    최대 20개 파일까지 업로드 가능
+                  </div>
+                )}
+              </div>
               
               {/* Delete Mode Button - 같은 자리에서 텍스트만 변경 */}
               <button 
@@ -934,9 +1003,13 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {/* API 태그와 실시간 태그 결합 */}
-              {Array.from(new Set([...apiTags, ...realTimeTags])).sort().map((tag) => {
-                const isRealTimeTag = realTimeTags.includes(tag) && !apiTags.includes(tag)
+              {/* 최종 태그 목록 표시 - 딕셔너리에 있는 태그만 표시 */}
+              {displayTags
+                .filter(tag => translateTagOrIgnore(tag) !== null) // 딕셔너리에 있는 태그만 필터링
+                .sort()
+                .map((tag) => {
+                const isRealTimeTag = realTimeTags.includes(tag) && !apiTags.includes(tag) && !calculatedTags.includes(tag)
+                const translatedTag = translateTag(tag) // 이미 필터링됐으므로 일반 translateTag 사용
                 return (
                   <motion.button
                     key={tag}
@@ -951,7 +1024,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    {tag}
+                    {translatedTag}
                     {/* 실시간 태그 표시 */}
                     {isRealTimeTag && !selectedTags.includes(tag) && (
                       <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#FE7A25] rounded-full"></span>
@@ -972,7 +1045,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         {/* Masonry Grid */}
         <div className="max-w-7xl mx-auto">
           {/* 빈 갤러리 상태 */}
-          {displayPhotos.length === 0 && similarPhotoClusters.length === 0 && !loading && !allPhotosLoading && !blurredPhotosLoading && !similarPhotosLoading && (
+          {displayPhotos.length === 0 && similarPhotoClusters.length === 0 && !loading && !allPhotosLoading && !blurredPhotosLoading && !similarPhotosLoading && !filteredPhotosLoading && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1004,12 +1077,12 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
           )}
 
           {/* 로딩 중 표시 */}
-          {(allPhotosLoading || blurredPhotosLoading || similarPhotosLoading) && (
+          {(allPhotosLoading || blurredPhotosLoading || similarPhotosLoading || filteredPhotosLoading) && (
             <div className="flex justify-center py-16">
               <div className="flex items-center gap-3">
                 <div className="animate-spin w-6 h-6 border-2 border-[#FE7A25] border-t-transparent rounded-full"></div>
                 <span className="text-gray-400 font-keepick-primary">
-                  {viewMode === 'all' ? '전체사진 로딩 중...' :
+                  {viewMode === 'all' ? (selectedTags.length > 0 ? '필터링된 사진 로딩 중...' : '전체사진 로딩 중...') :
                    viewMode === 'blurred' ? '흐린사진 로딩 중...' : 
                    viewMode === 'similar' ? '유사사진 로딩 중...' : 
                    '로딩 중...'}
@@ -1116,7 +1189,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
           )}
 
           {/* 사진이 있을 때만 표시 */}
-          {displayPhotos.length > 0 && !allPhotosLoading && !blurredPhotosLoading && !similarPhotosLoading && (
+          {displayPhotos.length > 0 && !allPhotosLoading && !blurredPhotosLoading && !similarPhotosLoading && !filteredPhotosLoading && (
             <AnimatePresence mode="wait">
               <motion.div
                 key={selectedTags.join(",")}
@@ -1211,9 +1284,8 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                         </div>
                       )}
 
-                      {/* Info Overlay (Non-Selection Mode) */}
-                      {!isSelectionMode && (
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/70 transition-all duration-300">
+                      {/* Info Overlay (Always Show) */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/70 transition-all duration-300">
                           <div className="absolute inset-0 flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             <div className="mb-3">
                               <p className="font-keepick-primary text-white text-sm font-medium">{photo.date}</p>
@@ -1224,36 +1296,45 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                                 </p>
                               )}
                             </div>
-                            {/* API에서 받은 태그와 기존 태그 결합 표시 */}
+                            {/* API에서 받은 태그와 기존 태그 결합 표시 - 딕셔너리에 있는 태그만 표시 */}
                             <div className="flex flex-wrap gap-1">
-                              {/* API 태그 (우선 표시) */}
-                              {photoTagsCache[photo.id]?.tags.slice(0, 3).map((tag, index) => (
+                              {/* API 태그 (우선 표시) - 딕셔너리에 있는 태그만 필터링 */}
+                              {translateTagsAndFilter(photoTagsCache[photo.id]?.tags || []).slice(0, 3).map((translatedTag, index) => (
                                 <span
                                   key={`api-${index}`}
                                   className="px-2 py-1 bg-[#FE7A25]/80 backdrop-blur-sm text-white text-xs font-keepick-primary rounded-sm"
                                 >
-                                  {tag}
+                                  {translatedTag}
                                 </span>
                               ))}
-                              {/* 기존 태그 (남은 공간에 표시) */}
-                              {photo.tags.slice(0, Math.max(0, 4 - (photoTagsCache[photo.id]?.tags.length || 0))).map((tag, index) => (
-                                <span
-                                  key={`legacy-${index}`}
-                                  className="px-2 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-keepick-primary rounded-sm"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
+                              {/* 기존 태그 (남은 공간에 표시) - 딕셔너리에 있는 태그만 필터링 */}
+                              {(() => {
+                                const apiTranslatedCount = translateTagsAndFilter(photoTagsCache[photo.id]?.tags || []).length
+                                const remainingSlots = Math.max(0, 4 - Math.min(3, apiTranslatedCount))
+                                return translateTagsAndFilter(photo.tags).slice(0, remainingSlots).map((translatedTag, index) => (
+                                  <span
+                                    key={`legacy-${index}`}
+                                    className="px-2 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-keepick-primary rounded-sm"
+                                  >
+                                    {translatedTag}
+                                  </span>
+                                ))
+                              })()}
                               {/* 더 많은 태그가 있을 때 */}
-                              {((photoTagsCache[photo.id]?.tags.length || 0) + photo.tags.length) > 4 && (
-                                <span className="px-2 py-1 bg-white/10 backdrop-blur-sm text-gray-300 text-xs font-keepick-primary rounded-sm">
-                                  +{((photoTagsCache[photo.id]?.tags.length || 0) + photo.tags.length) - 4}
-                                </span>
-                              )}
+                              {(() => {
+                                const totalTranslatedTags = translateTagsAndFilter(photoTagsCache[photo.id]?.tags || []).length + 
+                                                           translateTagsAndFilter(photo.tags).length
+                                const displayedTags = Math.min(3, translateTagsAndFilter(photoTagsCache[photo.id]?.tags || []).length) + 
+                                                     Math.min(translateTagsAndFilter(photo.tags).length, Math.max(0, 4 - Math.min(3, translateTagsAndFilter(photoTagsCache[photo.id]?.tags || []).length)))
+                                return totalTranslatedTags > displayedTags && (
+                                  <span className="px-2 py-1 bg-white/10 backdrop-blur-sm text-gray-300 text-xs font-keepick-primary rounded-sm">
+                                    +{totalTranslatedTags - displayedTags}
+                                  </span>
+                                )
+                              })()}
                             </div>
                           </div>
                         </div>
-                      )}
 
                       <div className="absolute inset-0 border border-white/5 group-hover:border-white/20 transition-colors duration-300" />
                     </motion.div>
@@ -1302,11 +1383,12 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                   <div>
                     <p className="text-white font-keepick-primary text-sm">
                       {uploadState.currentStep === 'uploading' && '파일 업로드 중'}
-                      {uploadState.currentStep === 'processing' && 'AI 분석 중'}
+                      {uploadState.currentStep === 'processing' && (uploadState.message || 'AI 분석 중')}
                       {uploadState.currentStep === 'completed' && '업로드 완료!'}
                     </p>
                     <p className="text-gray-400 font-keepick-primary text-xs">
-                      {uploadState.message}
+                      {uploadState.currentStep === 'processing' && uploadState.progress > 0 && 
+                        `진행률: ${Math.round(uploadState.progress)}%`}
                     </p>
                   </div>
                 </div>
@@ -1316,7 +1398,11 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                   <div className="flex justify-between text-xs font-keepick-primary text-gray-400 mb-1">
                     <span>
                       {uploadState.currentStep === 'uploading' && `${uploadState.uploadedFiles}/${uploadState.totalFiles} 파일`}
-                      {uploadState.currentStep === 'processing' && 'AI 분석 진행 중'}
+                      {uploadState.currentStep === 'processing' && (
+                        uploadState.message 
+                          ? uploadState.message 
+                          : '분석 진행 중'
+                      )}
                       {uploadState.currentStep === 'completed' && '완료'}
                     </span>
                     <span>{Math.round(uploadState.progress)}%</span>

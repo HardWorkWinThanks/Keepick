@@ -13,6 +13,7 @@ import {
 } from "./photoSelectionSlice"
 import { createTimelineAlbum as createTimelineAlbumAPI } from "@/features/timeline-album/api/timelineAlbumApi"
 import { createTierAlbum as createTierAlbumAPI } from "@/features/tier-album/api/tierAlbumApi"
+import { isTranslatable } from "@/shared/lib/tagTranslation"
 
 // Masonry 레이아웃 훅 - 개선된 균등 분배 알고리즘
 export const useMasonryLayout = (photos: GalleryPhoto[], columnCount: number) => {
@@ -116,9 +117,11 @@ export function usePhotoGallery(groupId?: string) {
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [isPhotosExpanded, setIsPhotosExpanded] = useState(false)
 
-  // 모든 태그 추출 (메모이제이션으로 리렌더링 최적화)
+  // 모든 태그 추출 - 딕셔너리에 있는 태그만 (메모이제이션으로 리렌더링 최적화)
   const allTags = useMemo(() => {
-    return Array.from(new Set(allPhotos.flatMap((photo) => photo.tags))).sort()
+    return Array.from(new Set(
+      allPhotos.flatMap((photo) => photo.tags.filter(tag => isTranslatable(tag)))
+    )).sort()
   }, [allPhotos])
 
   // Redux에서 이미 GalleryPhoto 배열로 관리되므로 별도 변환 불필요
@@ -157,7 +160,11 @@ export function usePhotoGallery(groupId?: string) {
       return allPhotos
     } else {
       return allPhotos.filter((photo) => 
-        selectedTags.some((tag) => photo.tags.includes(tag))
+        selectedTags.some((selectedTag) => {
+          // 사진의 태그 중 딕셔너리에 있는 태그만 추출한 후 매칭
+          const photoTagsInDict = photo.tags.filter(photoTag => isTranslatable(photoTag))
+          return photoTagsInDict.includes(selectedTag)
+        })
       )
     }
   }, [selectedTags, allPhotos])

@@ -3,7 +3,7 @@ import { apiClient, ApiResponse } from "@/shared/api/http";
 // 사진 필터링 요청 타입
 export interface PhotoFilterRequest {
   memberIds?: number[];
-  tags?: string[];
+  tags?: string[]; // ["동물", "바다"] 형태의 문자열 배열
   startDate?: string; // YYYY-MM-DD
   endDate?: string; // YYYY-MM-DD
   page?: number;
@@ -180,6 +180,50 @@ export const getGroupPhotoTags = async (
   );
 
   return response.data.data.tags;
+};
+
+/**
+ * 필터링된 사진 목록 조회
+ */
+export const getFilteredPhotos = async (
+  groupId: number,
+  filters: PhotoFilterRequest
+): Promise<PhotoListResponse> => {
+  // GET 요청에 쿼리 파라미터로 전송
+  const params = new URLSearchParams()
+  
+  // memberIds: 배열인 경우 같은 키로 여러 번 추가
+  if (filters.memberIds && filters.memberIds.length > 0) {
+    filters.memberIds.forEach(id => params.append('memberIds', id.toString()))
+  }
+  
+  // tags: 배열인 경우 같은 키로 여러 번 추가
+  if (filters.tags && filters.tags.length > 0) {
+    filters.tags.forEach(tag => params.append('tags', tag))
+  }
+  
+  // 나머지 파라미터들
+  if (filters.startDate) {
+    params.append('startDate', filters.startDate)
+  }
+  
+  if (filters.endDate) {
+    params.append('endDate', filters.endDate)
+  }
+  
+  if (filters.page !== undefined) {
+    params.append('page', filters.page.toString())
+  }
+  
+  if (filters.size !== undefined) {
+    params.append('size', filters.size.toString())
+  }
+
+  const response = await apiClient.get<ApiResponse<PhotoListResponse>>(
+    `/api/groups/${groupId}/photos?${params.toString()}`
+  );
+
+  return response.data.data;
 };
 
 /**
