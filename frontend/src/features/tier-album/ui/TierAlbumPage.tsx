@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { useSelector, useDispatch } from "react-redux"
 import { motion } from "framer-motion"
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, Settings } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useTierAlbum } from "../model/useTierAlbum"
@@ -15,7 +15,9 @@ import { Photo, DragPhotoData } from "@/entities/photo"
 import { TIER_COLORS } from "@/shared/config/tierColors"
 import type { RootState } from "@/shared/config/store"
 import { clearSelectedPhotos, setIsFromGallery } from "@/features/photo-gallery/model/photoSelectionSlice"
-import { AlbumEditingSidebar, type EditingAlbumInfo } from "@/shared/ui/composite"
+import { AlbumInfoEditModal, type EditingAlbumInfo } from "@/shared/ui/modal/AlbumInfoEditModal"
+import { GalleryPhotosSection } from "@/widgets/layout/ui/GalleryPhotosSection"
+import AppLayout from "@/widgets/layout/ui/AppLayout"
 import {
   useAlbumState,
 } from "@/features/album-management"
@@ -141,6 +143,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
   // 앨범 정보 편집 상태
   const [albumInfo, setAlbumInfo] = useState<EditingAlbumInfo | null>(null)
   const [coverImage, setCoverImage] = useState<Photo | null>(null)
+  const [isAlbumInfoModalOpen, setIsAlbumInfoModalOpen] = useState(false)
   
   const {
     isLoading,
@@ -622,131 +625,205 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
   // 로딩 상태
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-2xl font-keepick-primary mb-4">티어 앨범을 불러오는 중...</div>
-          <div className="w-8 h-8 border-2 border-[#FE7A25] border-t-transparent rounded-full animate-spin mx-auto"></div>
+      <AppLayout
+        sidebarConfig={{
+          showGroupChat: true,
+          dynamicContent: null,
+          currentGroup: {
+            id: groupId,
+            name: "그룹",
+            description: "",
+            thumbnailUrl: ""
+          }
+        }}
+      >
+        <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-2xl font-keepick-primary mb-4">티어 앨범을 불러오는 중...</div>
+            <div className="w-8 h-8 border-2 border-[#FE7A25] border-t-transparent rounded-full animate-spin mx-auto"></div>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     )
   }
 
   // 에러 상태
   if (error) {
     return (
-      <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-2xl font-keepick-primary mb-4 text-red-400">티어 앨범을 불러올 수 없습니다</div>
-          <div className="text-gray-400 mb-4">앨범이 존재하지 않거나 접근 권한이 없습니다.</div>
-          <Link href={`/group/${groupId}?album=tier`} className="text-[#FE7A25] hover:text-orange-400 font-keepick-primary">
-            그룹으로 돌아가기
-          </Link>
+      <AppLayout
+        sidebarConfig={{
+          showGroupChat: true,
+          dynamicContent: null,
+          currentGroup: {
+            id: groupId,
+            name: "그룹",
+            description: "",
+            thumbnailUrl: ""
+          }
+        }}
+      >
+        <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-2xl font-keepick-primary mb-4 text-red-400">티어 앨범을 불러올 수 없습니다</div>
+            <div className="text-gray-400 mb-4">앨범이 존재하지 않거나 접근 권한이 없습니다.</div>
+            <Link href={`/group/${groupId}?album=tier`} className="text-[#FE7A25] hover:text-orange-400 font-keepick-primary">
+              그룹으로 돌아가기
+            </Link>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden relative">
-      <div className="absolute inset-0 opacity-5">
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `radial-gradient(circle at 25% 25%, ${currentTierInfo.color}40 0%, transparent 50%), radial-gradient(circle at 75% 75%, ${currentTierInfo.color}20 0%, transparent 50%)`,
-          }}
-        />
-      </div>
-
-      {/* Header */}
-      <header 
-        className={`fixed top-0 z-50 bg-[#111111] border-b border-gray-800 transition-all duration-300 ${
-          isEditMode ? 'left-[320px] right-0' : 'left-0 right-0'
-        }`}
-      >
-        <div className="flex items-center justify-between px-8 py-4">
-          <Link href={`/group/${groupId}?album=tier`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
-            <ArrowLeft size={20} />
-            <span className="font-keepick-primary text-sm">돌아가기</span>
-          </Link>
-          <div className="text-center">
-            <h1 className="font-keepick-heavy text-xl tracking-wider">
-              {tierAlbumData?.title || `TIER ALBUM ${tierAlbumId}`}
-            </h1>
-          </div>
-          <button 
-            onClick={isEditMode ? handleSave : toggleEditMode}
-            className="px-6 py-2 border-2 border-orange-500 hover:border-orange-400 text-orange-500 hover:text-orange-400 bg-transparent font-keepick-primary text-sm rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-orange-500/25"
-          >
-            {isEditMode ? "티어 완성하기" : "티어 수정하기"}
-          </button>
+    <AppLayout
+      sidebarConfig={{
+        showGroupChat: true,
+        showCreateGroupButton: false, // 그룹 선택 버튼 비활성화
+        showGroupsSection: false,
+        showFriendsSection: false,
+        useDefaultContent: false, // 기본 컨텐츠 비활성화
+        forceInitialPinned: true, // 사이드바 상태 유지
+        dynamicContent: isEditMode ? (
+          <GalleryPhotosSection
+            availablePhotos={availablePhotos}
+            draggingPhotoId={draggingPhotoId}
+            onDragStart={(e, photo) => {
+              // DragPhotoData 형식으로 드래그 시작 - source를 'available'로 통일
+              const dragData: DragPhotoData = {
+                photoId: photo.id,
+                source: 'available',
+                originalUrl: photo.originalUrl,
+                thumbnailUrl: photo.thumbnailUrl,
+                name: photo.name || `사진 #${photo.id}`
+              }
+              e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
+              e.dataTransfer.effectAllowed = 'move'
+              setDraggingPhotoId(photo.id)
+              console.log('티어 앨범 사이드바에서 드래그 시작:', dragData)
+            }}
+            onDragEnd={handleAvailablePhotoDragEnd}
+            onDrop={handleSidebarDrop}
+            onAddPhotos={handleAddPhotos}
+            onDeletePhotos={handleDeletePhotos}
+            title="티어 배틀용 사진"
+          />
+        ) : null,
+        currentGroup: {
+          id: groupId,
+          name: `그룹 ${groupId}`,
+          description: "",
+          thumbnailUrl: ""
+        }
+      }}
+    >
+      <div className="min-h-screen bg-black text-white overflow-hidden relative">
+        <div className="absolute inset-0 opacity-5">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `radial-gradient(circle at 25% 25%, ${currentTierInfo.color}40 0%, transparent 50%), radial-gradient(circle at 75% 75%, ${currentTierInfo.color}20 0%, transparent 50%)`,
+            }}
+          />
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className={`${isEditMode ? 'min-h-screen bg-[#111111] pt-24' : 'h-screen flex flex-col pt-16'} relative z-10`}>
-        {isEditMode ? (
-          // 편집 모드 - 새로운 사이드바 + 티어 그리드 레이아웃
-          <div className="flex gap-6 animate-fade-in pb-8 px-8 h-screen pl-[340px]">
-            {/* 우측: 티어 그리드 */}
-            <div className="flex-1">
-              {/* 메인 섹션 헤더 */}
-              <div className="flex justify-between items-center mb-6">
-                <h1 className="text-4xl font-keepick-heavy text-white tracking-wider">TIER BATTLE</h1>
-                <div className="flex items-center gap-4">
-                  <div className="text-sm text-gray-400 whitespace-nowrap">
-                    <div>• 드래그로 순위 결정</div>
-                    <div>• 정밀배틀: 1대1 토너먼트로 정확한 순위</div>
-                  </div>
-                  <button
-                    onClick={() => setPrecisionTierMode(!precisionTierMode)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 ${
-                      precisionTierMode
-                        ? "bg-[#FE7A25] text-white ring-2 ring-[#FE7A25]"
-                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                    }`}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    <span className="text-sm">
-                      정밀배틀 {precisionTierMode ? "ON" : "OFF"}
-                    </span>
-                  </button>
-                </div>
-              </div>
+        {/* Header */}
+        <header className="fixed top-0 left-0 right-0 z-50 bg-[#111111] border-b border-gray-800">
+          <div className="flex items-center justify-between px-8 py-4">
+            <Link href={`/group/${groupId}?album=tier`} className="flex items-center gap-3 hover:opacity-70 transition-opacity">
+              <ArrowLeft size={20} />
+              <span className="font-keepick-primary text-sm">돌아가기</span>
+            </Link>
+            <div className="text-center">
+              <h1 className="font-keepick-heavy text-xl tracking-wider">
+                {tierAlbumData?.title || `TIER ALBUM ${tierAlbumId}`}
+              </h1>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* 앨범 정보 수정 버튼 */}
+              <button
+                onClick={() => setIsAlbumInfoModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+              >
+                <Settings size={16} />
+                <span className="text-sm">앨범 정보</span>
+              </button>
               
-              <TierGrid
-                tiers={battleTiers}
-                tierPhotos={tierPhotos}
-                dragOverPosition={dragOverPosition}
-                draggingPhotoId={draggingPhotoId}
-                onReturnToAvailable={(photoId, fromTier) =>
-                  handleReturnToAvailable(photoId, fromTier, (photo) =>
-                    setAvailablePhotos((prev) => [...prev, photo])
+              <button 
+                onClick={isEditMode ? handleSave : toggleEditMode}
+                className="px-6 py-2 border-2 border-orange-500 hover:border-orange-400 text-orange-500 hover:text-orange-400 bg-transparent font-keepick-primary text-sm rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-orange-500/25"
+              >
+                {isEditMode ? "티어 완성하기" : "티어 수정하기"}
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className={`${isEditMode ? 'min-h-screen bg-[#111111] pt-24' : 'h-screen flex flex-col pt-16'} relative z-10`}>
+          {isEditMode ? (
+            // 편집 모드 - 티어 그리드 레이아웃 (사이드바는 AppLayout에서 관리)
+            <div className="flex gap-6 animate-fade-in pb-8 px-8 h-screen">
+              {/* 티어 그리드 */}
+              <div className="flex-1">
+                {/* 메인 섹션 헤더 */}
+                <div className="flex justify-between items-center mb-6">
+                  <h1 className="text-4xl font-keepick-heavy text-white tracking-wider">TIER BATTLE</h1>
+                  <div className="flex items-center gap-4">
+                    <div className="text-sm text-gray-400 whitespace-nowrap">
+                      <div>• 드래그로 순위 결정</div>
+                      <div>• 정밀배틀: 1대1 토너먼트로 정확한 순위</div>
+                    </div>
+                    <button
+                      onClick={() => setPrecisionTierMode(!precisionTierMode)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 ${
+                        precisionTierMode
+                          ? "bg-[#FE7A25] text-white ring-2 ring-[#FE7A25]"
+                          : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                      }`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <span className="text-sm">
+                        정밀배틀 {precisionTierMode ? "ON" : "OFF"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+                
+                <TierGrid
+                  tiers={battleTiers}
+                  tierPhotos={tierPhotos}
+                  dragOverPosition={dragOverPosition}
+                  draggingPhotoId={draggingPhotoId}
+                  onReturnToAvailable={(photoId, fromTier) =>
+                    handleReturnToAvailable(photoId, fromTier, (photo) =>
+                      setAvailablePhotos((prev) => [...prev, photo])
+                    )
+                  }
+                  onDragOverTierArea={handleDragOverTierArea}
+                  onDropTierArea={handleDropTierArea}
+                  onDragOverPosition={handleDragOverPosition}
+                  onDropAtPosition={handleDropAtPosition}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onImageClick={openPhotoModal}
+                />
+              </div>
+
+              <TierBattleModal
+                isOpen={showComparisonModal}
+                battleSequence={battleSequence}
+                onClose={handleCloseBattleModal}
+                onDecision={(winnerId) =>
+                  handleBattleDecision(winnerId, tierPhotos, setTierPhotos, (photoId) =>
+                    setAvailablePhotos((prev) => prev.filter((p) => p.id !== photoId))
                   )
                 }
-                onDragOverTierArea={handleDragOverTierArea}
-                onDropTierArea={handleDropTierArea}
-                onDragOverPosition={handleDragOverPosition}
-                onDropAtPosition={handleDropAtPosition}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                onImageClick={openPhotoModal}
+                onZoomRequest={openPhotoModal}
               />
             </div>
-
-            <TierBattleModal
-              isOpen={showComparisonModal}
-              battleSequence={battleSequence}
-              onClose={handleCloseBattleModal}
-              onDecision={(winnerId) =>
-                handleBattleDecision(winnerId, tierPhotos, setTierPhotos, (photoId) =>
-                  setAvailablePhotos((prev) => prev.filter((p) => p.id !== photoId))
-                )
-              }
-              onZoomRequest={openPhotoModal}
-            />
-          </div>
         ) : (
           // 뷰 모드 - 기존 티어 앨범 뷰어
           <>
@@ -963,52 +1040,55 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
         )}
       </main>
 
-      {/* Album Editing Sidebar */}
-      <AlbumEditingSidebar 
-        isOpen={isEditMode}
-        onClose={() => setIsEditMode(false)}
-        availablePhotos={availablePhotos}
-        draggingPhotoId={draggingPhotoId}
-        onDragStart={(e, photo) => {
-          // DragPhotoData 형식으로 드래그 시작 - source를 'available'로 통일
-          const dragData: DragPhotoData = {
-            photoId: photo.id,
-            source: 'available',
-            originalUrl: photo.originalUrl,
-            thumbnailUrl: photo.thumbnailUrl,
-            name: photo.name || `사진 #${photo.id}`
-          }
-          e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
-          e.dataTransfer.effectAllowed = 'move'
-          setDraggingPhotoId(photo.id)
-          console.log('티어 앨범 사이드바에서 드래그 시작:', dragData)
-        }}
-        onDragEnd={handleAvailablePhotoDragEnd}
-        onDrop={handleSidebarDrop}
-        albumInfo={albumInfo}
-        onAlbumInfoUpdate={handleAlbumInfoUpdate}
-        coverImage={coverImage}
-        onCoverImageDrop={handleCoverImageDrop}
-        onCoverImageRemove={handleCoverImageRemove}
-        showDateInputs={false}
-        title="티어 앨범 수정"
-        description="앨범 정보와 사진을 수정하세요."
-        instructions={[
-          "드래그&드롭으로 앨범을 자유롭게 꾸미세요!"
-        ]}
-        onAddPhotos={handleAddPhotos}
-        onDeletePhotos={handleDeletePhotos}
-        albumType="tier"
-        groupId={groupId}
-        albumId={tierAlbumId}
-      />
+        {/* 앨범 정보 수정 모달 */}
+        <AlbumInfoEditModal
+          isOpen={isAlbumInfoModalOpen}
+          onClose={() => setIsAlbumInfoModalOpen(false)}
+          albumInfo={albumInfo}
+          onAlbumInfoUpdate={handleAlbumInfoUpdate}
+          coverImage={coverImage}
+          onCoverImageDrop={handleCoverImageDrop}
+          onCoverImageRemove={handleCoverImageRemove}
+          showDateInputs={false}
+          title="티어 앨범 정보 수정"
+          albumType="tier"
+          onSave={async () => {
+            // 앨범 정보만 저장 (티어 구성은 별도 저장)
+            if (tierAlbumData && albumInfo) {
+              try {
+                // 현재 티어 구성을 유지하면서 정보만 업데이트
+                const currentPhotos = {
+                  S: tierAlbumData.photos.S?.map(photo => photo.photoId) || [],
+                  A: tierAlbumData.photos.A?.map(photo => photo.photoId) || [],
+                  B: tierAlbumData.photos.B?.map(photo => photo.photoId) || [],
+                  C: tierAlbumData.photos.C?.map(photo => photo.photoId) || [],
+                  D: tierAlbumData.photos.D?.map(photo => photo.photoId) || [],
+                }
+                
+                await updateTierAlbum(parseInt(groupId), parseInt(tierAlbumId), {
+                  name: albumInfo.name,
+                  description: albumInfo.description,
+                  thumbnailId: coverImage?.id || null,
+                  photos: currentPhotos
+                })
+                
+                // 최신 데이터 새로고침
+                await refreshTierAlbumData()
+              } catch (error) {
+                console.error("앨범 정보 저장 실패:", error)
+                throw error
+              }
+            }
+          }}
+        />
 
-      {/* 사진 확대 모달 */}
-      <PhotoModal
-        photo={selectedModalPhoto}
-        isOpen={isPhotoModalOpen}
-        onClose={closePhotoModal}
-      />
-    </div>
+        {/* 사진 확대 모달 */}
+        <PhotoModal
+          photo={selectedModalPhoto}
+          isOpen={isPhotoModalOpen}
+          onClose={closePhotoModal}
+        />
+      </div>
+    </AppLayout>
   )
 }

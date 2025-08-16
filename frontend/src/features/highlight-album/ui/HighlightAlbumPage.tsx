@@ -3,6 +3,7 @@
 import { ZoomIn, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import AppLayout from "@/widgets/layout/ui/AppLayout"
 import { useHighlightAlbum } from "../model/useHighlightAlbum"
 
 interface HighlightAlbumPageProps {
@@ -24,20 +25,37 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
   } = useHighlightAlbum(groupId, albumId)
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#111111]/95 backdrop-blur-sm border-b border-gray-800">
-        <div className="flex items-center justify-between px-8 py-4">
-          <Link href={`/group/${groupId}?album=highlight`} className="flex items-center gap-3 hover:opacity-70 transition-opacity text-white">
-            <ArrowLeft size={20} className="text-white" />
-            <span className="font-keepick-primary text-sm text-white">돌아가기</span>
-          </Link>
-          <div className="text-center">
-            <h1 className="font-keepick-heavy text-xl tracking-wider text-white">HIGHLIGHT ALBUM {albumId}</h1>
+    <AppLayout
+      sidebarConfig={{
+        showGroupChat: true,
+        showCreateGroupButton: false, // 그룹 선택 버튼 비활성화
+        showGroupsSection: false,
+        showFriendsSection: false,
+        useDefaultContent: false, // 기본 컨텐츠 비활성화
+        forceInitialPinned: true, // 사이드바 상태 유지
+        dynamicContent: null, // 하이라이트 앨범은 그룹챗만 사용
+        currentGroup: {
+          id: groupId,
+          name: `그룹 ${groupId}`,
+          description: "",
+          thumbnailUrl: ""
+        }
+      }}
+    >
+      <div className="min-h-screen bg-black relative overflow-hidden">
+        {/* Header */}
+        <header className="fixed top-0 left-0 right-0 z-50 bg-[#111111]/95 backdrop-blur-sm border-b border-gray-800">
+          <div className="flex items-center justify-between px-8 py-4">
+            <Link href={`/group/${groupId}?album=highlight`} className="flex items-center gap-3 hover:opacity-70 transition-opacity text-white">
+              <ArrowLeft size={20} className="text-white" />
+              <span className="font-keepick-primary text-sm text-white">돌아가기</span>
+            </Link>
+            <div className="text-center">
+              <h1 className="font-keepick-heavy text-xl tracking-wider text-white">HIGHLIGHT ALBUM {albumId}</h1>
+            </div>
+            <div className="w-24"></div> {/* 균형을 위한 빈 공간 */}
           </div>
-          <div className="w-24"></div> {/* 균형을 위한 빈 공간 */}
-        </div>
-      </header>
+        </header>
 
       {/* Cross Lines */}
       <div className="absolute inset-0 flex items-center justify-center">
@@ -182,6 +200,7 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
           )
         })}
       </div>
-    </div>
+      </div>
+    </AppLayout>
   )
 }

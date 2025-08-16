@@ -32,9 +32,11 @@ export default function GroupPage({ params }: GroupPageProps) {
     return (
       <AppLayout
         sidebarConfig={{
-          showCreateGroupButton: true,
+          showCreateGroupButton: false, // useDefaultContent가 있으므로 중복 방지
           showGroupsSection: false,
-          showFriendsSection: true,
+          showFriendsSection: false,
+          showGroupChat: true,
+          useDefaultContent: true,
           forceInitialPinned: true
         }}
       >
@@ -50,9 +52,11 @@ export default function GroupPage({ params }: GroupPageProps) {
     return (
       <AppLayout
         sidebarConfig={{
-          showCreateGroupButton: true,
+          showCreateGroupButton: false, // useDefaultContent가 있으므로 중복 방지
           showGroupsSection: false,
-          showFriendsSection: true,
+          showFriendsSection: false,
+          showGroupChat: true,
+          useDefaultContent: true,
           forceInitialPinned: true
         }}
       >
@@ -76,9 +80,11 @@ export default function GroupPage({ params }: GroupPageProps) {
   return (
     <AppLayout
       sidebarConfig={{
-        showCreateGroupButton: true,
+        showCreateGroupButton: false, // useDefaultContent가 있으므로 중복 방지
         showGroupsSection: false,
-        showFriendsSection: true,
+        showFriendsSection: false,
+        showGroupChat: true,
+        useDefaultContent: true,
         currentGroup: {
           id: groupData.groupId.toString(),
           name: groupData.name,
