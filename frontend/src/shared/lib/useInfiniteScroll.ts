@@ -22,11 +22,16 @@ export const useInfiniteScroll = ({
     if (isFetching || !hasNextPage) return
 
     // 스크롤이 하단 임계값에 도달했는지 확인
-    const isNearBottom = 
-      window.innerHeight + document.documentElement.scrollTop >= 
-      document.documentElement.offsetHeight - threshold
+    const currentScroll = window.innerHeight + document.documentElement.scrollTop
+    const documentHeight = document.documentElement.offsetHeight
+    const distanceFromBottom = documentHeight - currentScroll
+    
+    console.log(`📏 스크롤 디버깅: 하단까지 거리=${distanceFromBottom}px, 임계값=${threshold}px`)
+    
+    const isNearBottom = distanceFromBottom <= threshold
 
     if (isNearBottom) {
+      console.log(`🚀 무한스크롤 트리거! (거리: ${distanceFromBottom}px <= 임계값: ${threshold}px)`)
       fetchNextPage()
     }
   }, [hasNextPage, fetchNextPage, isFetching, threshold])

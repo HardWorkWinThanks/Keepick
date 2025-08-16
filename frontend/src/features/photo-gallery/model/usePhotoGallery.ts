@@ -14,18 +14,35 @@ import {
 import { createTimelineAlbum as createTimelineAlbumAPI } from "@/features/timeline-album/api/timelineAlbumApi"
 import { createTierAlbum as createTierAlbumAPI } from "@/features/tier-album/api/tierAlbumApi"
 
-// Masonry 레이아웃 훅 (useMemo로 변경하여 무한 루프 방지)
+// Masonry 레이아웃 훅 - 개선된 균등 분배 알고리즘
 export const useMasonryLayout = (photos: GalleryPhoto[], columnCount: number) => {
   const columns = useMemo(() => {
     if (photos.length === 0) return []
 
+    // 컬럼별 높이 추적 (더 정확한 계산)
     const columnHeights = new Array(columnCount).fill(0)
     const newColumns: GalleryPhoto[][] = Array.from({ length: columnCount }, () => [])
 
     photos.forEach((photo) => {
-      const shortestColumnIndex = columnHeights.indexOf(Math.min(...columnHeights))
+      // 실제 렌더링될 높이 계산 (aspectRatio 기반)
+      // 컨테이너 너비를 고려한 실제 높이 계산 (gap 2px * (columnCount-1) = 총 gap)
+      const totalGapWidth = 8 * (columnCount - 1) // gap-2 = 8px
+      const availableWidth = window.innerWidth - 64 // 좌우 패딩 고려
+      const estimatedWidth = (availableWidth - totalGapWidth) / columnCount
+      const actualHeight = estimatedWidth / photo.aspectRatio
+      
+      // 가장 짧은 컬럼 찾기 (더 나은 균등 분배를 위해 여러 후보 고려)
+      const minHeight = Math.min(...columnHeights)
+      const shortestColumns = columnHeights
+        .map((height, index) => ({ height, index }))
+        .filter(col => col.height <= minHeight + 50) // 50px 허용 범위
+        .sort((a, b) => newColumns[a.index].length - newColumns[b.index].length) // 사진 개수가 적은 컬럼 우선
+      
+      const shortestColumnIndex = shortestColumns[0].index
       newColumns[shortestColumnIndex].push(photo)
-      columnHeights[shortestColumnIndex] += photo.height + 16
+      
+      // 16px gap 포함하여 높이 누적
+      columnHeights[shortestColumnIndex] += actualHeight + 16
     })
 
     return newColumns
@@ -107,19 +124,31 @@ export function usePhotoGallery(groupId?: string) {
   // Redux에서 이미 GalleryPhoto 배열로 관리되므로 별도 변환 불필요
   const selectedPhotoData = selectedPhotos
 
-  // 반응형 컬럼 수 계산
+  // 반응형 컬럼 수 계산 (디바운스 적용)
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+    
     const updateColumnCount = () => {
-      const width = window.innerWidth
-      if (width < 640) setColumnCount(2)
-      else if (width < 1024) setColumnCount(3)
-      else if (width < 1280) setColumnCount(4)
-      else setColumnCount(5)
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        const width = window.innerWidth
+        let newColumnCount
+        if (width < 640) newColumnCount = 2
+        else if (width < 1024) newColumnCount = 3
+        else if (width < 1280) newColumnCount = 4
+        else newColumnCount = 5
+        
+        // 컬럼 수가 실제로 변경될 때만 업데이트
+        setColumnCount(prev => prev !== newColumnCount ? newColumnCount : prev)
+      }, 150) // 150ms 디바운스
     }
 
     updateColumnCount()
     window.addEventListener("resize", updateColumnCount)
-    return () => window.removeEventListener("resize", updateColumnCount)
+    return () => {
+      window.removeEventListener("resize", updateColumnCount)
+      clearTimeout(timeoutId)
+    }
   }, [])
 
   // 태그 필터링 (useMemo로 변경하여 무한 루프 방지)

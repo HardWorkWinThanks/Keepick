@@ -170,13 +170,14 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   
   // 전체 사진 개수 상태 (페이징 정보에서 가져옴) - 레거시 데이터용
   const [totalPhotosCount, setTotalPhotosCount] = useState(0)
-
-  // 무한 스크롤 적용 (갤러리는 더 큰 임계값 사용)
+  
+  // 무한 스크롤 적용
   useInfiniteScroll({
     hasNextPage: viewMode === 'all' ? allPhotosQuery.hasNextPage : 
                 viewMode === 'blurred' ? blurredQuery.hasNextPage : 
                 viewMode === 'similar' ? similarQuery.hasNextPage : false,
     fetchNextPage: () => {
+      console.log('🔄 갤러리 무한스크롤 트리거됨 - threshold: 50px')
       if (viewMode === 'all') {
         allPhotosQuery.fetchNextPage()
       } else if (viewMode === 'blurred') {
@@ -188,8 +189,9 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     isFetching: viewMode === 'all' ? allPhotosQuery.isFetchingNextPage : 
                viewMode === 'blurred' ? blurredQuery.isFetchingNextPage : 
                viewMode === 'similar' ? similarQuery.isFetchingNextPage : false,
-    threshold: 800 // 기본 200px → 800px로 증가 (의도적인 스크롤에서만 로드)
+    threshold: 200 
   })
+
 
   // 자동으로 갤러리 모드로 전환하고 선택모드 활성화
   useEffect(() => {
@@ -1067,6 +1069,8 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                             sizes="200px"
                             className="object-cover group-hover:scale-110 transition-transform duration-300"
                             quality={75}
+                            priority={false}
+                            loading="lazy"
                             placeholder="blur"
                             blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                             draggable={false}
@@ -1118,10 +1122,19 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
-                className="flex gap-4 items-start"
+                className="flex gap-2 items-start w-full"
               >
                 {columns.map((column, columnIndex) => (
-                  <div key={columnIndex} className="flex-1 flex flex-col gap-4">
+                  <motion.div 
+                    key={columnIndex} 
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.4, delay: columnIndex * 0.1 }}
+                    className="flex flex-col gap-4 min-w-0" 
+                    style={{ 
+                      flex: '1 1 0%',
+                      width: `calc(${100 / columns.length}% - ${8 * (columns.length - 1) / columns.length}px)`
+                    }}>
                     {column.map((photo, photoIndex) => (
                     <motion.div
                       key={photo.id}
@@ -1161,8 +1174,9 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                         className={`object-cover transition-all duration-500 ${
                           isSelectionMode ? "group-hover:scale-105" : "group-hover:scale-110"
                         } ${selectedPhotos.some(selected => selected.id === photo.id) ? "brightness-75" : ""}`}
-                        quality={85}
-                        priority={photoIndex < 8}
+                        quality={75}
+                        priority={false}
+                        loading="lazy"
                         placeholder="blur"
                         blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                         draggable={false}
@@ -1242,7 +1256,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                       <div className="absolute inset-0 border border-white/5 group-hover:border-white/20 transition-colors duration-300" />
                     </motion.div>
                   ))}
-                </div>
+                </motion.div>
               ))}
             </motion.div>
           </AnimatePresence>
@@ -1424,6 +1438,8 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                                   sizes="12.5vw"
                                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                                   quality={75}
+                                  priority={false}
+                                  loading="lazy"
                                   placeholder="blur"
                                   blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                                   draggable={false}
