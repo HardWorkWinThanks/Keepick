@@ -37,7 +37,7 @@ public interface FriendshipRepository  extends JpaRepository<Friendship, Long> {
         SELECT f
         FROM Friendship f JOIN FETCH f.receiver
         WHERE f.sender.id = :memberId
-            AND f.status IN (FriendshipStatus.PENDING, FriendshipStatus.REJECTED)
+            AND f.status IN (FriendshipStatus.PENDING)
     """)
     List<Friendship> findReceivedAllByMemberId(Long memberId);
 

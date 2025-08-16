@@ -136,11 +136,11 @@ public class FriendshipRepositoryTest extends BaseRepositoryTest {
         List<Friendship> list = friendshipRepository.findReceivedAllByMemberId(receiver.getId());
 
         // then
-        assertThat(list.size()).isEqualTo(2);
-        assertThat(list).contains(friendship1, friendship3);
-        assertThat(list).doesNotContain(friendship2);
+        assertThat(list.size()).isEqualTo(1);
+        assertThat(list).contains(friendship1);
+        assertThat(list).doesNotContain(friendship2, friendship3);
 
-        assertThat(list).extracting("receiver").contains(sender1, sender3);
+        assertThat(list).extracting("receiver").contains(sender1);
         assertThat(list).extracting("status").doesNotContain(FriendshipStatus.ACCEPTED);
     }
 
