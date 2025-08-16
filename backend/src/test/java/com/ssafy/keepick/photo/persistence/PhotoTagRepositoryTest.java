@@ -47,11 +47,14 @@ class PhotoTagRepositoryTest extends BaseRepositoryTest {
         Member member = memberRepository.save(createMember());
         Group group = groupRepository.save(Group.createGroup("그룹 이름", member));
         Photo photo = photoRepository.save(Photo.builder().group(group).build());
+        Photo deletedPhoto = photoRepository.save(Photo.builder().group(group).build());
+        deletedPhoto.delete();
 
         photoTagRepository.save(PhotoTag.of(photo, "태그1"));
         photoTagRepository.save(PhotoTag.of(photo, "태그2"));
         photoTagRepository.save(PhotoTag.of(photo, "태그3"));
         photoTagRepository.save(PhotoTag.of(photo, "태그3"));
+        photoTagRepository.save(PhotoTag.of(deletedPhoto, "태그4"));
 
         // when
         List<String> photoTags = photoTagRepository.findTagsByGroupId(group.getId());

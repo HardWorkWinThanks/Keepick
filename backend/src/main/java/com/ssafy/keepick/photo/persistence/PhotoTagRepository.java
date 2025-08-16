@@ -12,6 +12,7 @@ public interface PhotoTagRepository extends JpaRepository<PhotoTag, Long> {
 
     @Query("SELECT DISTINCT pt.tag " +
             "FROM PhotoTag pt JOIN pt.photo p " +
-            "WHERE p.group.id = :groupId")
+            "WHERE p.deletedAt IS NULL " +
+            "AND p.group.id = :groupId")
     List<String> findTagsByGroupId(Long groupId);
 }
