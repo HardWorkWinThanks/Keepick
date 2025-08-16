@@ -228,6 +228,8 @@ export function useTimelineEditor(groupId: string, albumId: string) {
 
   // 갤러리에서 섹션으로 사진 이동
   const moveSidebarToSection = useCallback((photoId: number, sectionIndex: number, imageIndex: number) => {
+    let existingPhotoToReturn: Photo | null = null
+    
     setEditingState(prev => {
       if (!prev) return prev
 
@@ -238,16 +240,23 @@ export function useTimelineEditor(groupId: string, albumId: string) {
       const newSection = { ...newSections[sectionIndex] }
       newSection.photos = [...newSection.photos]
       
-      // 해당 위치에 사진 배치
+      // 기존 사진이 있으면 unusedPhotos로 되돌리기 (교체 로직)
+      const existingPhoto = newSection.photos[imageIndex]
+      const newUnusedPhotos = prev.unusedPhotos.filter(p => p.id !== photoId)
+      
+      if (existingPhoto && !newUnusedPhotos.some(p => p.id === existingPhoto.id)) {
+        console.log('🔄 기존 사진을 편집용 사진으로 되돌림:', existingPhoto.name)
+        newUnusedPhotos.push(existingPhoto)
+        existingPhotoToReturn = existingPhoto // 나중에 availablePhotos에 추가하기 위해 저장
+      }
+      
+      // 새 사진을 해당 위치에 배치
       newSection.photos[imageIndex] = photo
       
       // photoIds 배열 실시간 동기화
       newSection.photoIds = syncPhotoIds(newSection.photos)
       
       newSections[sectionIndex] = newSection
-
-      // unusedPhotos에서 사용된 사진 제거
-      const newUnusedPhotos = prev.unusedPhotos.filter(p => p.id !== photoId)
 
       const newState = {
         ...prev,
@@ -273,8 +282,18 @@ export function useTimelineEditor(groupId: string, albumId: string) {
       return newState
     })
     
-    // availablePhotos에서 해당 사진 즉시 제거
-    setAvailablePhotos(prev => prev.filter(p => p.id !== photoId))
+    // availablePhotos 상태 즉시 동기화
+    setAvailablePhotos(prev => {
+      let newAvailablePhotos = prev.filter(p => p.id !== photoId)
+      
+      // 기존 사진이 있었다면 편집용 사진 목록에 추가
+      if (existingPhotoToReturn && !newAvailablePhotos.some(p => p.id === existingPhotoToReturn!.id)) {
+        console.log('📸 기존 사진을 availablePhotos에 즉시 추가:', existingPhotoToReturn.name)
+        newAvailablePhotos = [...newAvailablePhotos, existingPhotoToReturn]
+      }
+      
+      return newAvailablePhotos
+    })
   }, [syncPhotoIds, queryClient, groupId, albumId])
 
   // 섹션에서 갤러리로 사진 이동
@@ -302,7 +321,7 @@ export function useTimelineEditor(groupId: string, albumId: string) {
 
       // 제거된 사진을 unusedPhotos에 다시 추가
       const newUnusedPhotos = [...prev.unusedPhotos]
-      if (photoToRemove && !newUnusedPhotos.some(p => p.id === photoToRemove.id)) {
+      if (photoToRemove && !newUnusedPhotos.some(p => p.id === photoToRemove!.id)) {
         newUnusedPhotos.push(photoToRemove)
       }
 

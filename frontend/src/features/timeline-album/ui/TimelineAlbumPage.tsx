@@ -792,13 +792,13 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
               className="flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-[#FE7A25]/20 hover:border-[#FE7A25]/70 transition-all duration-300 bg-[#111111]/95 backdrop-blur-sm shadow-lg"
             >
               {albumInfo?.coverImage ? (
-                <div className="relative w-32 h-32" style={{ overflow: 'visible' }}>
+                <div className="relative w-20 h-20" style={{ overflow: 'visible' }}>
                   <div className="w-full h-full rounded-lg overflow-hidden">
                     <Image
                       src={albumInfo.coverImage.thumbnailUrl || albumInfo.coverImage.originalUrl}
                       alt="대표이미지"
                       fill
-                      sizes="128px"
+                      sizes="80px"
                       className="object-cover"
                       draggable={false}
                     />
@@ -806,15 +806,15 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
                   {/* 제거 버튼 */}
                   <button
                     onClick={() => updateAlbumInfo({ coverImage: null, thumbnailId: 0 })}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-sm font-bold hover:bg-red-600 transition-colors shadow-lg border-2 border-white z-20"
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold hover:bg-red-600 transition-colors shadow-lg border-2 border-white z-20"
                     title="대표이미지 제거"
                   >
                     ×
                   </button>
                 </div>
               ) : (
-                <div className="w-32 h-32 rounded-lg border-2 border-dashed border-[#FE7A25]/30 flex flex-col items-center justify-center bg-[#111111] hover:bg-[#111111]/80 transition-colors">
-                  <span className="text-[#FE7A25]/70 text-sm font-medium text-center px-2">
+                <div className="w-20 h-20 rounded-lg border-2 border-dashed border-[#FE7A25]/30 flex flex-col items-center justify-center bg-[#111111] hover:bg-[#111111]/80 transition-colors">
+                  <span className="text-[#FE7A25]/70 text-xs font-medium text-center px-1">
                     사진을<br />드래그하세요
                   </span>
                 </div>
