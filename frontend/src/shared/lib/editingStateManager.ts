@@ -3,6 +3,8 @@
  * 갤러리에서 사진을 추가하러 나갔다가 돌아올 때 편집 중인 상태를 유지하기 위함
  */
 
+import { Photo } from "@/entities/photo"
+
 export type AlbumType = 'timeline' | 'tier'
 
 /**
@@ -18,7 +20,7 @@ export interface TimelineEditingState {
     thumbnailId?: number
   } | null
   sections: any[] // 섹션 데이터
-  availablePhotos: any[] // 사이드바 사진들
+  availablePhotos: Photo[] // 사이드바 사진들
 }
 
 /**
@@ -30,13 +32,13 @@ export interface TierEditingState {
     description: string
   } | null
   tierPhotos: {
-    S: any[]
-    A: any[]
-    B: any[]
-    C: any[]
-    D: any[]
+    S: Photo[]
+    A: Photo[]
+    B: Photo[]
+    C: Photo[]
+    D: Photo[]
   }
-  availablePhotos: any[] // 사이드바 사진들
+  availablePhotos: Photo[] // 사이드바 사진들
 }
 
 /**

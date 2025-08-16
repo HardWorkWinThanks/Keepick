@@ -236,9 +236,8 @@ export function AlbumEditingSidebar({
                             const dragData: DragPhotoData = {
                               photoId: coverImage.id,
                               source: 'cover-image',
-                              src: coverImage.src,
-                              thumbnailUrl: coverImage.thumbnailUrl,
                               originalUrl: coverImage.originalUrl,
+                              thumbnailUrl: coverImage.thumbnailUrl,
                               name: coverImage.name
                             }
                             e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
@@ -250,7 +249,7 @@ export function AlbumEditingSidebar({
                         {coverImage ? (
                           <div className="relative w-full h-full group">
                             <Image
-                              src={coverImage.originalUrl || coverImage.src || "/placeholder/photo-placeholder.svg"}
+                              src={coverImage.originalUrl || "/placeholder/photo-placeholder.svg"}
                               alt="대표 이미지"
                               fill
                               sizes="280px"
@@ -388,7 +387,7 @@ export function AlbumEditingSidebar({
                             }}
                           >
                             <Image
-                              src={photo.thumbnailUrl || photo.src || "/placeholder/photo-placeholder.svg"}
+                              src={photo.thumbnailUrl || "/placeholder/photo-placeholder.svg"}
                               alt={photo.name || `Photo ${photo.id}`}
                               fill
                               sizes="80px"

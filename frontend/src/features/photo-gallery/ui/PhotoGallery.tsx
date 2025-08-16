@@ -600,7 +600,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     
     // 임시로 사이드바의 썸네일을 즉시 변경하기 위해
     // window.postMessage를 사용해 AppSidebar에 알림
-    const thumbnailUrl = photo.thumbnailUrl || photo.originalUrl || photo.src
+    const thumbnailUrl = photo.thumbnailUrl || photo.originalUrl
     window.postMessage({
       type: 'THUMBNAIL_SELECTED',
       data: { thumbnailUrl, groupId }
@@ -1043,7 +1043,8 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                             } else {
                               openPhotoModal({ 
                                 id: photo.photoId, 
-                                src: photo.originalUrl, 
+                                originalUrl: photo.originalUrl,
+                                thumbnailUrl: photo.thumbnailUrl,
                                 name: `사진 #${photo.photoId}` 
                               })
                             }
@@ -1138,13 +1139,13 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                           togglePhotoSelection(photo)
                         } else {
                           // 선택 모드가 아닐 때는 사진 모달 열기
-                          openPhotoModal({ id: photo.id, src: photo.src || "/placeholder.svg", name: photo.title })
+                          openPhotoModal({ id: photo.id, originalUrl: photo.originalUrl, thumbnailUrl: photo.thumbnailUrl, name: photo.title })
                         }
                       }}
                     >
                       <Image
-                        src={photo.src || "/placeholder.svg"}
-                        alt={photo.title}
+                        src={photo.originalUrl || "/placeholder.svg"}
+                        alt={photo.title || `Photo ${photo.id}`}
                         fill
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
                         className={`object-cover transition-all duration-500 ${
@@ -1408,7 +1409,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                               >
                                 <Image
                                   src={photo.thumbnailUrl || "/placeholder.svg"}
-                                  alt={photo.title}
+                                  alt={photo.title || `Photo ${photo.id}`}
                                   fill
                                   sizes="12.5vw"
                                   className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -1471,7 +1472,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                           <div key={photo.id} className="w-10 h-10 flex-shrink-0 rounded overflow-hidden relative">
                             <Image
                               src={photo.thumbnailUrl || "/placeholder.svg"}
-                              alt={photo.title}
+                              alt={photo.title || `Photo ${photo.id}`}
                               fill
                               sizes="40px"
                               className="object-cover"

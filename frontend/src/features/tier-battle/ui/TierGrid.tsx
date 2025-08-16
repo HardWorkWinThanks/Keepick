@@ -107,7 +107,7 @@ export function TierGrid({
                     onClick={() => onImageClick(photo)}
                   >
                     <Image
-                      src={photo.src}
+                      src={photo.thumbnailUrl}
                       alt={photo.name || `Photo ${photo.id}`}
                       fill
                       sizes="88px"

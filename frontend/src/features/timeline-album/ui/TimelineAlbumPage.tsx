@@ -109,7 +109,7 @@ function TimelineSectionLayout({
       <>
         {photo ? (
           <Image
-            src={photo.originalUrl || photo.src || "/placeholder/photo-placeholder.svg"}
+            src={photo.originalUrl || "/placeholder/photo-placeholder.svg"}
             alt={`${section.name} ${imageIndex === 0 ? 'main' : `detail ${imageIndex}`}`}
             fill
             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
@@ -145,9 +145,8 @@ function TimelineSectionLayout({
               const dragData: DragPhotoData = {
                 photoId: photo.id,
                 source: `section-${index}-${imageIndex}`, // index는 렌더링 순서
-                src: photo.src,
-                thumbnailUrl: photo.thumbnailUrl,
                 originalUrl: photo.originalUrl,
+                thumbnailUrl: photo.thumbnailUrl,
                 name: photo.name
               }
               e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
@@ -456,12 +455,12 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
     // 현재 편집 상태를 sessionStorage에 저장
     const currentState: TimelineEditingState = {
       albumInfo: {
-        name: albumInfo.name || '',
-        description: albumInfo.description || '',
-        startDate: albumInfo.startDate,
-        endDate: albumInfo.endDate,
-        coverImage: albumInfo.coverImage,
-        thumbnailId: albumInfo.coverImage?.id
+        name: albumInfo?.name || '',
+        description: albumInfo?.description || '',
+        startDate: albumInfo?.startDate,
+        endDate: albumInfo?.endDate,
+        coverImage: albumInfo?.coverImage,
+        thumbnailId: albumInfo?.coverImage?.id
       },
       sections: sections,
       availablePhotos: availablePhotos
@@ -652,9 +651,8 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
           const dragData: DragPhotoData = {
             photoId: photo.id,
             source: 'gallery',
-            src: photo.src || '',
+            originalUrl: photo.originalUrl || '',
             thumbnailUrl: photo.thumbnailUrl,
-            originalUrl: photo.originalUrl,
             name: photo.name || `사진 #${photo.id}`
           }
           e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
@@ -680,9 +678,8 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
           // DragPhotoData를 Photo로 변환
           const photo: Photo = {
             id: dragData.photoId,
-            src: dragData.originalUrl || dragData.src || '/placeholder/photo-placeholder.svg',
-            thumbnailUrl: dragData.thumbnailUrl,
-            originalUrl: dragData.originalUrl,
+            thumbnailUrl: dragData.thumbnailUrl || '/placeholder/photo-placeholder.svg',
+            originalUrl: dragData.originalUrl || '/placeholder/photo-placeholder.svg',
             name: dragData.name || `사진 #${dragData.photoId}`
           }
           

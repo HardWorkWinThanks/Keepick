@@ -26,7 +26,7 @@ export function useAlbumStorage() {
       localStorage.setItem(`album_${albumId}`, JSON.stringify(data));
       // 대표 이미지가 있으면, 별도의 키로 이미지 URL을 저장합니다.
       if (coverPhoto) {
-        localStorage.setItem(`albumCover_${albumId}`, coverPhoto.src);
+        localStorage.setItem(`albumCover_${albumId}`, coverPhoto.originalUrl);
       }
       return true;
     } catch (error) {

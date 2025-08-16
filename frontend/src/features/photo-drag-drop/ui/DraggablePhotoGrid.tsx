@@ -36,8 +36,9 @@ export function DraggablePhotoGrid({
     const dragData: DragPhotoData = {
       photoId: photo.id,
       source: sourceId,
-      src: photo.src, // 사진 URL 추가 (썸네일용)
-      originalUrl: (photo as any).originalUrl, // 원본 URL 추가 (그룹 썸네일 변경용)
+      originalUrl: photo.originalUrl, // 원본 URL 추가 (그룹 썸네일 변경용)
+      thumbnailUrl: photo.thumbnailUrl, // 썸네일 URL 추가 (썸네일용)
+      name: photo.name
     };
     e.dataTransfer.setData("text/plain", JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = "move";
@@ -59,7 +60,7 @@ export function DraggablePhotoGrid({
           onClick={() => onPhotoClick?.(photo)}
           className={`cursor-grab transition-opacity duration-200 ${draggingPhotoId === photo.id ? "opacity-40" : "opacity-100"}`}>
           <Image
-            src={photo.src || '/placeholder/photo-placeholder.svg'}
+            src={photo.thumbnailUrl || '/placeholder/photo-placeholder.svg'}
             alt={photo.name || `Photo ${photo.id}`}
             width={88}
             height={88}

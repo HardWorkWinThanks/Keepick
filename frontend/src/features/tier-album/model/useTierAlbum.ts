@@ -2,12 +2,18 @@
 
 import { useState, useEffect } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import type { TierPhoto } from "../types"
+import type { Photo } from "@/entities/photo"
 import { getTierAlbum, type TierAlbum } from "../api/tierAlbumApi"
 
 // 티어 순서 정의 (네비게이션용)
 const TIER_ORDER = ["S", "A", "B", "C", "D"] as const
 type TierType = typeof TIER_ORDER[number]
+
+// 티어 정보가 포함된 사진 타입
+interface TierPhoto extends Photo {
+  tier: TierType;
+  date: string;
+}
 
 export function useTierAlbum(groupId: string, tierAlbumId: string) {
   const queryClient = useQueryClient()
@@ -30,12 +36,11 @@ export function useTierAlbum(groupId: string, tierAlbumId: string) {
       .flatMap(([tier, photos]) =>
         photos.map(photo => ({
           id: photo.photoId,
-          src: photo.originalUrl,  // 메인 표시용 고화질 이미지
-          thumbnailUrl: photo.thumbnailUrl,  // 썸네일용 저화질 이미지
-          originalUrl: photo.originalUrl,  // 원본 이미지 URL 보존
-          title: `사진 #${photo.photoId}`,
+          originalUrl: photo.originalUrl,  // 원본 고화질 이미지 URL
+          thumbnailUrl: photo.thumbnailUrl,  // 썸네일 저화질 이미지 URL
+          name: `사진 #${photo.photoId}`,
           date: new Date().toISOString().split('T')[0].replace(/-/g, '.'), // 임시 날짜 (API에 없음)
-          tier: tier as "S" | "A" | "B" | "C" | "D",
+          tier: tier as TierType,
         }))
       ) : []
 

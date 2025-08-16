@@ -42,7 +42,7 @@ export interface GroupPhoto {
   id: number;
   title: string;
   subtitle: string;
-  image: string;
+  originalUrl: string; // 앨범 카드용 고화질 이미지
   startDate?: string;
   endDate?: string;
 }

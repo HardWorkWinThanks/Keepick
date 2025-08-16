@@ -89,8 +89,9 @@ export function useDragAndDrop({
     // 사진 객체를 찾기 위한 콜백 (실제 구현에서는 상위 컴포넌트에서 제공)
     const draggedPhoto: Photo = {
       id: dragData.photoId,
-      src: "", // 실제로는 상위에서 제공되어야 함
-      name: "",
+      originalUrl: dragData.originalUrl || "", // 실제로는 상위에서 제공되어야 함
+      thumbnailUrl: dragData.thumbnailUrl || "",
+      name: dragData.name || "",
     };
 
     // 같은 위치로 드랍하는 경우 무시

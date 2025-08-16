@@ -11,7 +11,13 @@ import { TierData, DragOverPosition, TierConfig } from "./types";
  */
 export function useTierGrid() {
   // 전체 티어의 사진 데이터를 관리하는 상태. { "S": [photo1], "A": [photo2, photo3] } 형태.
-  const [tierPhotos, setTierPhotos] = useState<TierData>({});
+  const [tierPhotos, setTierPhotos] = useState<TierData>({
+    S: [],
+    A: [],
+    B: [],
+    C: [],
+    D: []
+  });
 
   // 사진을 드래그할 때, 마우스가 올라간 위치(티어, 인덱스)를 추적하는 상태
   const [dragOverPosition, setDragOverPosition] =

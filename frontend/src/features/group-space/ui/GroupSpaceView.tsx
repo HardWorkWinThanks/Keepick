@@ -313,7 +313,7 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                               }}
                             >
                               <Image
-                                src={photo.image && photo.image.trim() ? photo.image : "/placeholder/photo-placeholder.svg"}
+                                src={photo.originalUrl && photo.originalUrl.trim() ? photo.originalUrl : "/placeholder/photo-placeholder.svg"}
                                 alt={photo.title || '앨범 제목을 작성해주세요'}
                                 fill
                                 sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"

@@ -72,9 +72,8 @@ export function useTimelineEditor(groupId: string, albumId: string) {
                 const photoId = photo.photoId || photo.id // 서버는 photoId 사용
                 normalizedPhotos[idx] = {
                   id: photoId,
-                  src: photo.thumbnailUrl || photo.originalUrl || '/placeholder/photo-placeholder.svg',
-                  thumbnailUrl: photo.thumbnailUrl,
-                  originalUrl: photo.originalUrl,
+                  thumbnailUrl: photo.thumbnailUrl || '/placeholder/photo-placeholder.svg',
+                  originalUrl: photo.originalUrl || '/placeholder/photo-placeholder.svg',
                   name: photo.name || photo.title || `사진 #${photoId}`
                 }
               }
@@ -113,7 +112,6 @@ export function useTimelineEditor(groupId: string, albumId: string) {
     
     const coverImage: Photo | null = hasCoverImage ? {
       id: album.thumbnailId || 0, // 실제 thumbnailId 사용
-      src: album.thumbnailUrl,
       thumbnailUrl: album.thumbnailUrl,
       originalUrl: album.originalUrl || album.thumbnailUrl,
       name: `${album.name} 대표이미지`
@@ -175,7 +173,7 @@ export function useTimelineEditor(groupId: string, albumId: string) {
       .filter((photo): photo is Photo => {
         if (photo === null) return false
         if (typeof photo.id !== 'number' || photo.id <= 0) return false
-        if (!photo.src && !photo.thumbnailUrl && !photo.originalUrl) return false
+        if (!photo.thumbnailUrl && !photo.originalUrl) return false
         return true
       })
       .map(photo => photo.id)

@@ -80,7 +80,7 @@ export function PhotoModal({ photo, isOpen, onClose }: PhotoModalProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <Image
-              src={photo.src}
+              src={photo.originalUrl}
               alt={photo.name || `Photo ${photo.id}`}
               width={0}
               height={0}

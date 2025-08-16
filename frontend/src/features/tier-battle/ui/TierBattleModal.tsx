@@ -89,7 +89,7 @@ export default function TierBattleModal({
                 }`}
               >
                 <Image
-                  src={currentOpponent.src}
+                  src={currentOpponent.originalUrl}
                   alt="기존 사진"
                   fill
                   sizes="(max-width: 768px) 50vw, 400px"
@@ -139,7 +139,7 @@ export default function TierBattleModal({
                 }`}
               >
                 <Image
-                  src={newPhoto.src}
+                  src={newPhoto.originalUrl}
                   alt="새로운 사진"
                   fill
                   sizes="(max-width: 768px) 50vw, 400px"

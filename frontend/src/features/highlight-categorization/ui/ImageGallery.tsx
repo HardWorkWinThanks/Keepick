@@ -26,7 +26,7 @@ export function ImageGallery({ category, onImageClick }: ImageGalleryProps) {
             onClick={() => onImageClick(image)}
           >
             <Image
-              src={image.src}
+              src={image.thumbnailUrl}
               alt={image.name || `Image ${image.id}`}
               layout="fill"
               objectFit="cover"

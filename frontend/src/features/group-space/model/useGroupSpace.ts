@@ -28,21 +28,21 @@ export const samplePhotos = {
   timeline: [], // API 연동으로 더미 데이터 제거
   tier: [], // API 연동으로 더미 데이터 제거
   highlight: [
-    { id: 1, title: "올해의 베스트", subtitle: "2024 하이라이트", image: "/dummy/main-dummy9.jpg" },
-    { id: 2, title: "가족 모임", subtitle: "전체 가족 사진", image: "/dummy/main-dummy10.jpg" },
-    { id: 3, title: "성취의 순간", subtitle: "졸업식", image: "/dummy/ssafy-dummy1.jpg" },
-    { id: 4, title: "첫 걸음", subtitle: "아기 첫걸음", image: "/dummy/main-dummy11.jpg" },
-    { id: 5, title: "제주 여행", subtitle: "아름다운 풍경", image: "/dummy/jeju-dummy4.jpg" },
+    { id: 1, title: "올해의 베스트", subtitle: "2024 하이라이트", originalUrl: "/dummy/main-dummy9.jpg" },
+    { id: 2, title: "가족 모임", subtitle: "전체 가족 사진", originalUrl: "/dummy/main-dummy10.jpg" },
+    { id: 3, title: "성취의 순간", subtitle: "졸업식", originalUrl: "/dummy/ssafy-dummy1.jpg" },
+    { id: 4, title: "첫 걸음", subtitle: "아기 첫걸음", originalUrl: "/dummy/main-dummy11.jpg" },
+    { id: 5, title: "제주 여행", subtitle: "아름다운 풍경", originalUrl: "/dummy/jeju-dummy4.jpg" },
   ],
   gallery: [
-    { id: 1, title: "포트레이트", subtitle: "가족 인물 사진", image: "/dummy/main-dummy12.jpg" },
-    { id: 2, title: "풍경 사진", subtitle: "여행지 풍경", image: "/dummy/jeju-dummy5.jpg" },
-    { id: 3, title: "일상 스냅", subtitle: "자연스러운 순간", image: "/dummy/main-dummy13.jpg" },
-    { id: 4, title: "이벤트 사진", subtitle: "특별한 행사", image: "/dummy/ssafy-dummy2.jpg" },
-    { id: 5, title: "아트 사진", subtitle: "창작 사진", image: "/dummy/dummy7.png" },
-    { id: 6, title: "빈티지 사진", subtitle: "옛날 사진", image: "/dummy/main-dummy14.jpg" },
-    { id: 7, title: "SSAFY 생활", subtitle: "교육 과정", image: "/dummy/ssafy-dummy3.jpg" },
-    { id: 8, title: "제주 바다", subtitle: "푸른 바다", image: "/dummy/jeju-dummy6.jpg" },
+    { id: 1, title: "포트레이트", subtitle: "가족 인물 사진", originalUrl: "/dummy/main-dummy12.jpg" },
+    { id: 2, title: "풍경 사진", subtitle: "여행지 풍경", originalUrl: "/dummy/jeju-dummy5.jpg" },
+    { id: 3, title: "일상 스냅", subtitle: "자연스러운 순간", originalUrl: "/dummy/main-dummy13.jpg" },
+    { id: 4, title: "이벤트 사진", subtitle: "특별한 행사", originalUrl: "/dummy/ssafy-dummy2.jpg" },
+    { id: 5, title: "아트 사진", subtitle: "창작 사진", originalUrl: "/dummy/dummy7.png" },
+    { id: 6, title: "빈티지 사진", subtitle: "옛날 사진", originalUrl: "/dummy/main-dummy14.jpg" },
+    { id: 7, title: "SSAFY 생활", subtitle: "교육 과정", originalUrl: "/dummy/ssafy-dummy3.jpg" },
+    { id: 8, title: "제주 바다", subtitle: "푸른 바다", originalUrl: "/dummy/jeju-dummy6.jpg" },
   ],
 }
 
@@ -147,7 +147,7 @@ export function useGroupSpace(groupId?: number) {
       id: album.albumId,
       title: album.name,
       subtitle: album.description || `${album.photoCount}장의 사진`,
-      image: album.originalUrl || album.thumbnailUrl || "/placeholder.svg",
+      originalUrl: album.originalUrl || album.thumbnailUrl || "/placeholder.svg",
       startDate: album.startDate,
       endDate: album.endDate
     }))
@@ -159,7 +159,7 @@ export function useGroupSpace(groupId?: number) {
       id: album.id,
       title: album.name,
       subtitle: album.description || `${album.photoCount}장의 사진`,
-      image: album.originalUrl || album.thumbnailUrl || "/placeholder.svg",
+      originalUrl: album.originalUrl || album.thumbnailUrl || "/placeholder.svg",
       // 티어 앨범은 날짜 정보가 없음
       startDate: undefined,
       endDate: undefined

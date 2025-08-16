@@ -72,12 +72,12 @@ export function TierAlbumWidget({
     } else {
       // 기본 데이터 설정
       setTierPhotos({
-        S: [{ id: 600, src: "/presentation/target_photo", name: "S급 사진1" }  ,
-             {id: 601, src: "/presentation/target_photo1", name: "S급 사진2"} ,
-             {id: 602, src: "/presentation/target_photo2", name: "S급 사진3"} ,
-             {id: 603, src: "/presentation/target_photo3", name: "S급 사진4"} ,
-             {id: 604, src: "/presentation/target_photo4", name: "S급 사진5"} ,
-             {id: 605, src: "/presentation/target_photo5", name: "S급 사진6"} ,],
+        S: [{ id: 600, originalUrl: "/presentation/target_photo", thumbnailUrl: "/presentation/target_photo", name: "S급 사진1" }  ,
+             {id: 601, originalUrl: "/presentation/target_photo1", thumbnailUrl: "/presentation/target_photo1", name: "S급 사진2"} ,
+             {id: 602, originalUrl: "/presentation/target_photo2", thumbnailUrl: "/presentation/target_photo2", name: "S급 사진3"} ,
+             {id: 603, originalUrl: "/presentation/target_photo3", thumbnailUrl: "/presentation/target_photo3", name: "S급 사진4"} ,
+             {id: 604, originalUrl: "/presentation/target_photo4", thumbnailUrl: "/presentation/target_photo4", name: "S급 사진5"} ,
+             {id: 605, originalUrl: "/presentation/target_photo5", thumbnailUrl: "/presentation/target_photo5", name: "S급 사진6"} ,],
         A: [],
         B: [],
         C: [],
@@ -98,7 +98,7 @@ export function TierAlbumWidget({
     if (success) {
       // 커버 이미지 저장
       if (tierPhotos.S?.[0]) {
-        localStorage.setItem(`tierAlbumCover_${albumId}`, tierPhotos.S[0].src);
+        localStorage.setItem(`tierAlbumCover_${albumId}`, tierPhotos.S[0].originalUrl);
       }
       alert("✅ 티어 앨범이 성공적으로 저장되었습니다!");
       onBack();

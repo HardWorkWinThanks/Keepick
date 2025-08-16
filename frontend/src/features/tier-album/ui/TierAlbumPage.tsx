@@ -215,9 +215,8 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
       if (firstPhoto) {
         setCoverImage({
           id: firstPhoto.photoId,
-          src: firstPhoto.originalUrl,
-          thumbnailUrl: firstPhoto.thumbnailUrl,
           originalUrl: firstPhoto.originalUrl,
+          thumbnailUrl: firstPhoto.thumbnailUrl,
           name: `사진 #${firstPhoto.photoId}`
         })
       }
@@ -239,7 +238,8 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
         // 갤러리에서 선택된 사진들을 사용 가능한 사진으로 설정
         const photosToUse = selectedPhotos.map(photo => ({
           id: photo.id,
-          src: photo.src,
+          originalUrl: photo.originalUrl,
+          thumbnailUrl: photo.thumbnailUrl,
           name: photo.title || `사진 #${photo.id}`
         }))
         setAvailablePhotos(photosToUse)
@@ -257,27 +257,32 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
         const convertedTierPhotos: TierData = {
           S: tierAlbumData.photos.S?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
             id: photo.photoId,
-            src: photo.originalUrl,
+            originalUrl: photo.originalUrl,
+            thumbnailUrl: photo.thumbnailUrl,
             name: `사진 #${photo.photoId}`
           })) || [],
           A: tierAlbumData.photos.A?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
             id: photo.photoId,
-            src: photo.originalUrl,
+            originalUrl: photo.originalUrl,
+            thumbnailUrl: photo.thumbnailUrl,
             name: `사진 #${photo.photoId}`
           })) || [],
           B: tierAlbumData.photos.B?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
             id: photo.photoId,
-            src: photo.originalUrl,
+            originalUrl: photo.originalUrl,
+            thumbnailUrl: photo.thumbnailUrl,
             name: `사진 #${photo.photoId}`
           })) || [],
           C: tierAlbumData.photos.C?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
             id: photo.photoId,
-            src: photo.originalUrl,
+            originalUrl: photo.originalUrl,
+            thumbnailUrl: photo.thumbnailUrl,
             name: `사진 #${photo.photoId}`
           })) || [],
           D: tierAlbumData.photos.D?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
             id: photo.photoId,
-            src: photo.originalUrl,
+            originalUrl: photo.originalUrl,
+            thumbnailUrl: photo.thumbnailUrl,
             name: `사진 #${photo.photoId}`
           })) || [],
         }
@@ -286,7 +291,8 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
         // UNASSIGNED 사진들을 사용 가능한 사진으로 설정
         const unassignedPhotos = tierAlbumData.photos.UNASSIGNED?.sort((a, b) => a.sequence - b.sequence).map(photo => ({
           id: photo.photoId,
-          src: photo.originalUrl,
+          originalUrl: photo.originalUrl,
+          thumbnailUrl: photo.thumbnailUrl,
           name: `사진 #${photo.photoId}`
         })) || []
         setAvailablePhotos(unassignedPhotos)
@@ -336,9 +342,8 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
   const handleCoverImageDrop = (dragData: DragPhotoData) => {
     const photo: Photo = {
       id: dragData.photoId,
-      src: dragData.originalUrl || dragData.src || '/placeholder/photo-placeholder.svg',
-      thumbnailUrl: dragData.thumbnailUrl,
-      originalUrl: dragData.originalUrl,
+      originalUrl: dragData.originalUrl || '/placeholder/photo-placeholder.svg',
+      thumbnailUrl: dragData.thumbnailUrl || '/placeholder/photo-placeholder.svg',
       name: dragData.name || `사진 #${dragData.photoId}`
     }
     setCoverImage(photo)
@@ -357,9 +362,8 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
     // 사용가능한 사진 목록에 추가
     const photo: Photo = {
       id: dragData.photoId,
-      src: dragData.originalUrl || dragData.src || '/placeholder/photo-placeholder.svg',
-      thumbnailUrl: dragData.thumbnailUrl,
-      originalUrl: dragData.originalUrl,
+      originalUrl: dragData.originalUrl || '/placeholder/photo-placeholder.svg',
+      thumbnailUrl: dragData.thumbnailUrl || '/placeholder/photo-placeholder.svg',
       name: dragData.name || `사진 #${dragData.photoId}`
     }
     setAvailablePhotos((prev) => [...prev, photo])
@@ -393,9 +397,8 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
     const dragData: DragPhotoData = {
       photoId: photo.id,
       source: source,
-      src: photo.src || '',
-      thumbnailUrl: photo.thumbnailUrl,
       originalUrl: photo.originalUrl,
+      thumbnailUrl: photo.thumbnailUrl,
       name: photo.name || `사진 #${photo.id}`
     }
     e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
@@ -572,7 +575,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
         name: albumInfo?.name || '',
         description: albumInfo?.description || ''
       },
-      tierPhotos: tierPhotos,
+      tierPhotos: tierPhotos as { S: Photo[]; A: Photo[]; B: Photo[]; C: Photo[]; D: Photo[]; },
       availablePhotos: availablePhotos
     }
     
@@ -739,6 +742,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
                   setAvailablePhotos((prev) => prev.filter((p) => p.id !== photoId))
                 )
               }
+              onZoomRequest={openPhotoModal}
             />
           </div>
         ) : (
@@ -877,8 +881,8 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
               >
                 <TiltShineCard tierColor={currentTierInfo.color} className="max-w-4xl max-h-[70vh]">
                   <img
-                    src={currentPhoto.src || "/placeholder.svg"}
-                    alt={currentPhoto.title}
+                    src={currentPhoto.originalUrl || "/placeholder.svg"}
+                    alt={currentPhoto.name || `Photo ${currentPhoto.id}`}
                     className="w-full h-full object-contain max-w-4xl max-h-[70vh]"
                     draggable={false}
                   />
@@ -921,8 +925,8 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
                 } as React.CSSProperties}
               >
                 <Image 
-                  src={photo.src || "/placeholder.svg"} 
-                  alt={photo.title} 
+                  src={photo.thumbnailUrl || "/placeholder.svg"} 
+                  alt={photo.name || `Photo ${photo.id}`} 
                   width={48}
                   height={48}
                   sizes="48px"
@@ -968,9 +972,8 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
           const dragData: DragPhotoData = {
             photoId: photo.id,
             source: 'available',
-            src: photo.src || '',
-            thumbnailUrl: photo.thumbnailUrl,
             originalUrl: photo.originalUrl,
+            thumbnailUrl: photo.thumbnailUrl,
             name: photo.name || `사진 #${photo.id}`
           }
           e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
