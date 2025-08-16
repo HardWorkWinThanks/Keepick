@@ -6,7 +6,7 @@ import { User, Camera, Upload } from "lucide-react"
 import { Input } from "@/shared/ui/shadcn/input"
 import { Label } from "@/shared/ui/shadcn/label"
 import { InteractiveHoverButton } from "@/shared/ui/composite/InteractiveHoverButton"
-import { useProfile } from "../model/useProfile.tsx"
+import { useProfile } from "../model/useProfile"
 
 export function ProfileSection() {
   const {

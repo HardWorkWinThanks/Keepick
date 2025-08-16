@@ -84,7 +84,7 @@ export function useProfile() {
       throw new Error("닉네임 중복 확인을 먼저 해주세요.")
     }
     
-    return updateNicknameMutation.mutateAsync(nicknameInput)
+    await updateNicknameMutation.mutateAsync(nicknameInput)
   }
 
   // 이미지 업로드 뮤테이션
