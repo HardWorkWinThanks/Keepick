@@ -390,22 +390,18 @@ export default function TimelineAlbumPage({ groupId, albumId }: TimelineAlbumPag
       
       // 타임라인 앨범 데이터 새로고침
       refetchTimeline().then(() => {
-        // 데이터 새로고침 후 편집 모드가 켜져 있다면 편집 상태 다시 초기화
-        if (isEditMode) {
-          console.log('편집 모드 상태 새로고침')
-          startEditing()
-        }
+        // 갤러리에서 돌아온 경우 항상 편집모드로 진입 (앨범 생성/편집 모두 편집모드에서 갤러리로 가므로)
+        console.log('갤러리 복귀 - 편집모드 진입')
+        startEditing()
       })
       
-      // URL에서 from=gallery 파라미터 제거
+      // URL에서 from=gallery 파라미터만 제거하고 edit=true는 유지
       const newSearchParams = new URLSearchParams(searchParams)
-      newSearchParams.delete('from')
-      const newUrl = newSearchParams.toString() 
-        ? `/group/${groupId}/timeline/${albumId}?${newSearchParams.toString()}`
-        : `/group/${groupId}/timeline/${albumId}`
+      newSearchParams.delete('from') // from=gallery만 제거
+      const newUrl = `/group/${groupId}/timeline/${albumId}?${newSearchParams.toString()}`
       router.replace(newUrl)
     }
-  }, [searchParams, refetchTimeline, router, groupId, albumId, isEditMode, startEditing])
+  }, [searchParams, refetchTimeline, router, groupId, albumId, startEditing])
 
   // 빈 앨범 자동 편집 모드 진입 (단순화됨)
   useEffect(() => {

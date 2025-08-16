@@ -171,7 +171,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   // 전체 사진 개수 상태 (페이징 정보에서 가져옴) - 레거시 데이터용
   const [totalPhotosCount, setTotalPhotosCount] = useState(0)
 
-  // 무한 스크롤 적용
+  // 무한 스크롤 적용 (갤러리는 더 큰 임계값 사용)
   useInfiniteScroll({
     hasNextPage: viewMode === 'all' ? allPhotosQuery.hasNextPage : 
                 viewMode === 'blurred' ? blurredQuery.hasNextPage : 
@@ -188,6 +188,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     isFetching: viewMode === 'all' ? allPhotosQuery.isFetchingNextPage : 
                viewMode === 'blurred' ? blurredQuery.isFetchingNextPage : 
                viewMode === 'similar' ? similarQuery.isFetchingNextPage : false,
+    threshold: 800 // 기본 200px → 800px로 증가 (의도적인 스크롤에서만 로드)
   })
 
   // 자동으로 갤러리 모드로 전환하고 선택모드 활성화

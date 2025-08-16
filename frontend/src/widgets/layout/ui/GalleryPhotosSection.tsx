@@ -121,7 +121,34 @@ export function GalleryPhotosSection({
         dropZoneId="sidebar-photos-grid"
         className="min-h-[300px] max-h-[400px] rounded-lg transition-colors border-2 border-transparent hover:border-[#FE7A25]/20 data-[drag-over=true]:border-[#FE7A25]/50 data-[drag-over=true]:bg-[#FE7A25]/5"
       >
-        <ScrollArea className="h-full max-h-[400px]">
+        <div 
+          className="h-full max-h-[400px] overflow-y-auto pr-2"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#FE7A25 rgba(34, 34, 34, 0.5)',
+          }}
+        >
+          <style jsx>{`
+            div {
+              scrollbar-width: thin;
+              scrollbar-color: #FE7A25 rgba(34, 34, 34, 0.5);
+            }
+            div::-webkit-scrollbar {
+              width: 6px;
+            }
+            div::-webkit-scrollbar-track {
+              background: rgba(34, 34, 34, 0.5);
+              border-radius: 6px;
+            }
+            div::-webkit-scrollbar-thumb {
+              background: linear-gradient(180deg, #FE7A25 0%, #FF6B35 100%);
+              border-radius: 6px;
+              transition: background 0.2s ease;
+            }
+            div::-webkit-scrollbar-thumb:hover {
+              background: linear-gradient(180deg, #FF8A35 0%, #FF7B45 100%);
+            }
+          `}</style>
           {availablePhotos.length > 0 ? (
             <div className="grid grid-cols-3 gap-3 pr-2">
               {availablePhotos.map((photo) => {
@@ -203,7 +230,7 @@ export function GalleryPhotosSection({
               </div>
             </div>
           )}
-        </ScrollArea>
+        </div>
       </PhotoDropZone>
     </div>
   )
