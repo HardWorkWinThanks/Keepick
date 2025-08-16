@@ -11,9 +11,11 @@ interface CardStackProps {
   emotion: string
   emotionColor: string
   hideNavigation?: boolean
+  onPhotoClick?: (photoId: number, photoUrl: string) => void
+  isSelectingCoverImage?: boolean
 }
 
-export function CardStack({ photos, emotion, emotionColor, hideNavigation = false }: CardStackProps) {
+export function CardStack({ photos, emotion, emotionColor, hideNavigation = false, onPhotoClick, isSelectingCoverImage }: CardStackProps) {
   // 현재 보여주는 사진의 시작 인덱스 (원본 배열 기준)
   const [currentStartIndex, setCurrentStartIndex] = useState(0)
   
@@ -61,13 +63,20 @@ export function CardStack({ photos, emotion, emotionColor, hideNavigation = fals
     }
   }
   
-  // 카드 클릭 핸들러 - 다음 사진으로 이동 (순서는 유지)
+  // 카드 클릭 핸들러 - 대표이미지 선택 모드 또는 일반 네비게이션
   const handleCardClick = (stackIndex: number) => {
-    // 맨 앞 카드만 클릭 가능
-    if (stackIndex !== 0) return
+    const cardIndex = visibleCards[stackIndex]
+    const photo = photos[cardIndex]
     
-    // 다음 사진으로 이동 (순환)
-    setCurrentStartIndex((prev) => (prev + 1) % photos.length)
+    if (isSelectingCoverImage && onPhotoClick && photo) {
+      // 대표이미지 선택 모드: 어떤 카드든 클릭 가능
+      onPhotoClick(photo.photoId, photo.photoUrl)
+    } else {
+      // 일반 모드: 맨 앞 카드만 클릭 가능
+      if (stackIndex !== 0) return
+      // 다음 사진으로 이동 (순환)
+      setCurrentStartIndex((prev) => (prev + 1) % photos.length)
+    }
   }
   
   // 썸네일 선택 핸들러 - 해당 사진이 맨 앞에 오도록 시작 인덱스 변경
@@ -106,7 +115,9 @@ export function CardStack({ photos, emotion, emotionColor, hideNavigation = fals
               <motion.div
                 key={`${emotion}-${cardIndex}`}
                 className={`absolute top-0 left-0 ${
-                  isTopCard ? 'cursor-pointer' : 'cursor-default'
+                  isSelectingCoverImage 
+                    ? 'cursor-pointer hover:scale-105' 
+                    : isTopCard ? 'cursor-pointer' : 'cursor-default'
                 }`}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{
@@ -137,8 +148,10 @@ export function CardStack({ photos, emotion, emotionColor, hideNavigation = fals
                 } : {}}
               >
                 <div 
-                  className="w-52 h-72 md:w-56 md:h-80 rounded-xl overflow-hidden shadow-xl border-2"
-                  style={{ borderColor: emotionColor }}
+                  className={`w-52 h-72 md:w-56 md:h-80 rounded-xl overflow-hidden shadow-xl border-2 transition-all duration-300 ${
+                    isSelectingCoverImage ? 'hover:ring-4 hover:ring-white/50' : ''
+                  }`}
+                  style={{ borderColor: isSelectingCoverImage ? '#FE7A25' : emotionColor }}
                 >
                   <Image
                     src={photo.photoUrl || "/presentation/surprise_018.jpg"}

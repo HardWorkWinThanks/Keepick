@@ -8,14 +8,20 @@ interface GridViewProps {
   photos: HighlightPhoto[]
   emotion: string
   emotionColor: string
+  onPhotoClick?: (photoId: number, photoUrl: string) => void
+  isSelectingCoverImage?: boolean
 }
 
-export function GridView({ photos, emotion, emotionColor }: GridViewProps) {
+export function GridView({ photos, emotion, emotionColor, onPhotoClick, isSelectingCoverImage }: GridViewProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<HighlightPhoto | null>(null)
   
   // 사진 클릭 핸들러
   const handlePhotoClick = (photo: HighlightPhoto) => {
-    setSelectedPhoto(photo)
+    if (isSelectingCoverImage && onPhotoClick) {
+      onPhotoClick(photo.photoId, photo.photoUrl)
+    } else {
+      setSelectedPhoto(photo)
+    }
   }
   
   // 모달 닫기
@@ -49,8 +55,12 @@ export function GridView({ photos, emotion, emotionColor }: GridViewProps) {
             <button
               key={photo.photoId}
               onClick={() => handlePhotoClick(photo)}
-              className="relative aspect-square rounded-lg overflow-hidden hover:scale-105 transition-all duration-300 border-2 hover:shadow-lg"
-              style={{ borderColor: emotionColor }}
+              className={`relative aspect-square rounded-lg overflow-hidden transition-all duration-300 border-2 hover:shadow-lg ${
+                isSelectingCoverImage 
+                  ? 'hover:scale-110 hover:ring-4 hover:ring-white/50 cursor-pointer' 
+                  : 'hover:scale-105'
+              }`}
+              style={{ borderColor: isSelectingCoverImage ? '#FE7A25' : emotionColor }}
             >
               <Image
                 src={photo.photoUrl || "/placeholder.svg"}

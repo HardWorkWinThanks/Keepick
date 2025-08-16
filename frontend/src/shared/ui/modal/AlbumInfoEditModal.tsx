@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Check } from 'lucide-react'
+import { X, Check, Grid3x3 } from 'lucide-react'
 import { Button } from '@/shared/ui/shadcn/button'
 import type { Photo } from '@/entities/photo'
 import Image from 'next/image'
@@ -32,6 +32,11 @@ interface AlbumInfoEditModalProps {
   // 커스터마이징
   title?: string
   albumType?: 'timeline' | 'tier'
+  
+  // 하이라이트 앨범용 대표이미지
+  coverImageUrl?: string | null
+  onCoverImageClick?: () => void
+  isSelectingCoverImage?: boolean
 }
 
 export function AlbumInfoEditModal({ 
@@ -43,7 +48,10 @@ export function AlbumInfoEditModal({
   onSave,
   onCancel,
   title = "앨범 정보 수정",
-  albumType = 'timeline'
+  albumType = 'timeline',
+  coverImageUrl,
+  onCoverImageClick,
+  isSelectingCoverImage = false
 }: AlbumInfoEditModalProps) {
   const titleInputRef = useRef<HTMLInputElement>(null)
 
@@ -187,22 +195,62 @@ export function AlbumInfoEditModal({
                   </div>
                 </div>
 
-                {/* 티어 앨범 대표이미지 안내 */}
+                {/* 대표이미지 섹션 */}
                 {!showDateInputs && (
                   <div>
                     <label className="text-sm font-medium text-gray-300 mb-2 block">
                       대표 이미지
                     </label>
-                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                      <div className="flex items-center gap-2">
-                        <svg className="w-4 h-4 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                        </svg>
-                        <p className="text-blue-300 text-xs font-medium">
-                          S티어 1위가 앨범 대표이미지가 됩니다!
-                        </p>
+                    {/* 하이라이트 앨범: 대표이미지 선택 */}
+                    {coverImageUrl !== undefined ? (
+                      <div className="flex items-center gap-4">
+                        {/* 왼쪽 안내 텍스트 */}
+                        <div className="flex-1 text-xs text-gray-400">
+                          <p>① 대표이미지 클릭 후<br/>② 원하는 사진 클릭</p>
+                        </div>
+                        
+                        {/* 가운데 대표이미지 버튼 */}
+                        <button
+                          onClick={onCoverImageClick}
+                          className="aspect-square w-24 h-24 rounded-lg overflow-hidden border-2 border-[#FE7A25]/30 hover:border-[#FE7A25] transition-colors cursor-pointer bg-gray-800 flex items-center justify-center flex-shrink-0"
+                        >
+                        {coverImageUrl ? (
+                          <Image
+                            src={coverImageUrl}
+                            alt="대표이미지"
+                            width={96}
+                            height={96}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="text-center text-gray-400">
+                            <svg className="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            <p className="text-xs">클릭하여<br/>선택</p>
+                          </div>
+                        )}
+                        </button>
+                        
+                        {/* 오른쪽 안내 텍스트 */}
+                        <div className="flex-1 text-xs text-gray-400 flex items-center gap-1">
+                          <Grid3x3 size={12} />
+                          <p>그리드뷰 추천</p>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      /* 티어 앨범: 기존 안내 */
+                      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
+                          <p className="text-blue-300 text-xs font-medium">
+                            S티어 1위가 앨범 대표이미지가 됩니다!
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ZoomIn, ArrowLeft, Settings, Grid3x3, LayoutList } from "lucide-react"
+import { ZoomIn, ArrowLeft, Settings, Grid3x3, LayoutList, Edit } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useHighlightAlbum } from "../model/useHighlightAlbum"
 import { CardStack } from "./CardStack"
 import { GridView } from "./GridView"
+import { AlbumInfoEditModal, type EditingAlbumInfo } from "@/shared/ui/modal/AlbumInfoEditModal"
 import type { Photo, DragPhotoData } from "@/entities/photo"
 
 interface HighlightAlbumPageProps {
@@ -17,6 +18,18 @@ interface HighlightAlbumPageProps {
 export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps) {
   const [isEditMode, setIsEditMode] = useState(false)
   const [isGridView, setIsGridView] = useState(false)
+  const [isAlbumInfoModalOpen, setIsAlbumInfoModalOpen] = useState(false)
+  const [isSelectingCoverImage, setIsSelectingCoverImage] = useState(false)
+  const [tempCoverImageId, setTempCoverImageId] = useState<number | null>(null)
+  
+  // 앨범 정보 상태 (실제로는 API에서 가져와야 함)
+  const [albumInfo, setAlbumInfo] = useState<EditingAlbumInfo>({
+    name: "즐거운 화상통화",
+    description: "친구들과의 재미있는 시간들"
+  })
+  
+  // 현재 대표이미지 상태
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null)
   
   const {
     album,
@@ -33,6 +46,33 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
   // 편집 모드 토글
   const toggleEditMode = () => {
     setIsEditMode(!isEditMode)
+  }
+  
+  // 앨범 정보 업데이트 핸들러
+  const handleAlbumInfoUpdate = (updates: Partial<EditingAlbumInfo>) => {
+    setAlbumInfo(prev => ({ ...prev, ...updates }))
+  }
+  
+  // 대표이미지 선택 모드 시작
+  const handleStartCoverImageSelection = () => {
+    setIsSelectingCoverImage(true)
+    setIsAlbumInfoModalOpen(false) // 모달 닫기
+  }
+  
+  // 사진 클릭으로 대표이미지 선택
+  const handlePhotoClick = (photoId: number, photoUrl: string) => {
+    if (isSelectingCoverImage) {
+      setTempCoverImageId(photoId)
+      setCoverImageUrl(photoUrl)
+      setIsSelectingCoverImage(false)
+      setIsAlbumInfoModalOpen(true) // 모달 다시 열기
+    }
+  }
+  
+  // 대표이미지 선택 취소
+  const handleCancelCoverImageSelection = () => {
+    setIsSelectingCoverImage(false)
+    setIsAlbumInfoModalOpen(true) // 모달 다시 열기
   }
   
   // 편집 모드 변경 시 URL 업데이트
@@ -63,30 +103,24 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
             {/* 중앙 제목 - 절대 위치로 중앙 고정 */}
             <div className="absolute left-1/2 transform -translate-x-1/2">
               <h1 className="font-keepick-heavy text-xl tracking-wider text-center text-white">
-                {album.name || 'HIGHLIGHT ALBUM'}
+                {albumInfo.name || 'HIGHLIGHT ALBUM'}
               </h1>
             </div>
             
             {/* 오른쪽 영역 - 버튼들 */}
             <div className="flex gap-2 ml-auto">
               <button
-                onClick={toggleEditMode}
-                className={`group relative px-4 py-2 text-white transition-all duration-300 ${
-                  isEditMode
-                    ? 'hover:text-green-400'
-                    : 'hover:text-[#FE7A25]'
-                }`}
-                title={isEditMode ? '편집 완료' : '앨범 편집'}
+                onClick={() => setIsAlbumInfoModalOpen(true)}
+                className="group relative px-4 py-2 text-white hover:text-[#FE7A25] transition-all duration-300"
+                title="앨범 정보 수정"
               >
                 <div className="flex items-center gap-2">
-                  <Settings size={16} />
+                  <Edit size={16} />
                   <span className="font-keepick-primary text-sm tracking-wide">
-                    {isEditMode ? '완료' : '수정'}
+                    수정
                   </span>
                 </div>
-                <div className={`absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full ${
-                  isEditMode ? 'bg-green-400' : 'bg-[#FE7A25]'
-                }`}></div>
+                <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FE7A25] transition-all duration-300 group-hover:w-full"></div>
               </button>
             </div>
           </div>
@@ -140,6 +174,8 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
                     photos={photos}
                     emotion={emotion}
                     emotionColor={emotionColors[emotion as keyof typeof emotionColors]}
+                    onPhotoClick={handlePhotoClick}
+                    isSelectingCoverImage={isSelectingCoverImage}
                   />
                 </div>
               ) : (
@@ -149,6 +185,8 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
                     emotion={emotion}
                     emotionColor={emotionColors[emotion as keyof typeof emotionColors]}
                     hideNavigation={isGridView}
+                    onPhotoClick={handlePhotoClick}
+                    isSelectingCoverImage={isSelectingCoverImage}
                   />
                 </div>
               )}
@@ -156,6 +194,27 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
           )
         })}
       </div>
+      
+      {/* 앨범 정보 수정 모달 */}
+      <AlbumInfoEditModal
+        isOpen={isAlbumInfoModalOpen}
+        onClose={() => setIsAlbumInfoModalOpen(false)}
+        albumInfo={albumInfo}
+        onAlbumInfoUpdate={handleAlbumInfoUpdate}
+        showDateInputs={false}
+        title="하이라이트 앨범 정보 수정"
+        albumType="tier"
+        coverImageUrl={coverImageUrl}
+        onCoverImageClick={handleStartCoverImageSelection}
+        isSelectingCoverImage={isSelectingCoverImage}
+        onSave={async () => {
+          // 실제로는 API 호출이 필요
+          console.log('앨범 정보 저장:', albumInfo)
+          console.log('대표이미지 ID:', tempCoverImageId)
+          setIsAlbumInfoModalOpen(false)
+        }}
+      />
+      
       </div>
   )
 }

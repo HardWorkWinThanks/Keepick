@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { ArrowLeft, ChevronLeft, ChevronRight, Settings, Check } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, Settings, Check, Edit } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useTierEditor } from "../model/useTierEditor"
@@ -597,7 +597,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
                   title="앨범 정보 수정"
                 >
                   <div className="flex items-center gap-2">
-                    <Settings size={16} />
+                    <Edit size={16} />
                     <span className="font-keepick-primary text-sm tracking-wide">앨범 정보</span>
                   </div>
                   <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400 group-hover:w-full transition-all duration-300"></div>
