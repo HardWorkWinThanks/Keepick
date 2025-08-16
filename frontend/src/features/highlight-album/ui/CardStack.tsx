@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import type { HighlightPhoto } from "@/entities/highlight"
+import { ThumbnailNavigation } from "./ThumbnailNavigation"
 
 interface CardStackProps {
   photos: HighlightPhoto[]
@@ -70,6 +71,28 @@ export function CardStack({ photos, emotion, emotionColor }: CardStackProps) {
     
     setCardOrder(newOrder)
   }
+  
+  // 썸네일 선택 핸들러 - 선택된 사진을 맨 앞으로 이동 (부드럽게)
+  const handleThumbnailSelect = (targetIndex: number) => {
+    // 현재 맨 앞에 있는 사진의 원본 인덱스
+    const currentFrontIndex = cardOrder[0]
+    
+    if (currentFrontIndex === targetIndex) return // 이미 앞에 있음
+    
+    // 새로운 순서 계산: 선택된 사진을 맨 앞으로
+    const newOrder = [...cardOrder]
+    const targetPosition = newOrder.indexOf(targetIndex)
+    
+    if (targetPosition !== -1) {
+      // 선택된 카드를 배열에서 제거하고 맨 앞에 추가
+      newOrder.splice(targetPosition, 1)
+      newOrder.unshift(targetIndex)
+      setCardOrder(newOrder)
+    }
+  }
+  
+  // 현재 맨 앞 사진의 인덱스 (썸네일 네비게이션용)
+  const currentPhotoIndex = cardOrder[0] || 0
   
   // 카드가 없으면 빈 상태 표시
   if (photos.length === 0) {
@@ -145,12 +168,14 @@ export function CardStack({ photos, emotion, emotionColor }: CardStackProps) {
           })}
         </AnimatePresence>
         
-        {/* 카드 개수 표시 */}
-        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
-          <span className="text-sm text-gray-400 font-medium">
-            {Math.min(cardOrder.length, MAX_VISIBLE_CARDS)}/{photos.length}
-          </span>
-        </div>
+        {/* 썸네일 네비게이션 */}
+        <ThumbnailNavigation
+          photos={photos}
+          currentPhotoIndex={currentPhotoIndex}
+          onPhotoSelect={handleThumbnailSelect}
+          emotionColor={emotionColor}
+          emotion={emotion}
+        />
       </div>
     </div>
   )

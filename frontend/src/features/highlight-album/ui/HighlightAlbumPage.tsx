@@ -92,7 +92,7 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
 
 
       {/* Four Quadrants with Clear Separation */}
-      <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-2 grid-rows-4 md:grid-rows-2 bg-[#111111]" style={{ top: '0px' }}>
+      <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-2 grid-rows-4 md:grid-rows-2 bg-[#111111]">
         {Object.entries(album.photos).map(([emotion, photos], index) => {
           return (
             <div
