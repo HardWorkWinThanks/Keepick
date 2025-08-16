@@ -33,8 +33,8 @@ public class GroupInvitationService {
     private final MemberRepository memberRepository;
     private final RedisService redisService;
 
-    @Value("${app.frontend.url}")
-    private String frontendUrl;
+    @Value("${app.redirect.defaultBase}")
+    private String defaultBase;
 
     public List<GroupMemberDto> createInvitation(GroupInviteRequest request, Long groupId) {
         Group group = groupRepository.findById(groupId).orElseThrow(() -> new BaseException(GROUP_NOT_FOUND));
@@ -77,7 +77,7 @@ public class GroupInvitationService {
         String encodedInviteToken = encodeInviteToken(group, inviteToken);
 
         // 초대 링크 반환
-        String link = frontendUrl + "/invite/" + encodedInviteToken;
+        String link = defaultBase + "/invite/" + encodedInviteToken;
         return link;
     }
 

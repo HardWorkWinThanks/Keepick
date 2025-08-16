@@ -23,6 +23,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -36,8 +37,8 @@ public class SecurityConfig {
     private final OAuth2StateFilter oauth2StateFilter;
     private final OriginAwareAuthorizationRequestResolver originAwareAuthorizationRequestResolver;
 
-    @Value("${app.frontend.url}")
-    private String frontendUrl;
+    @Value("#{'${app.redirect.allowed}'.split('\\s*,\\s*')}")
+    private List<String> allowedOrigins;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -104,9 +105,10 @@ public class SecurityConfig {
         return request -> {
             CorsConfiguration config = new CorsConfiguration();
 
-            config.setAllowedOrigins(Collections.singletonList(frontendUrl)); // 프론트 주소
-            config.setAllowedMethods(Collections.singletonList("*")); // 모든 HTTP 메서드 허용
-            config.setAllowedHeaders(Collections.singletonList("*")); // 모든 헤더 허용
+            // 허용된 origin 목록 사용
+            config.setAllowedOrigins(allowedOrigins);
+            config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")); // 허용할 HTTP 메서드
+            config.setAllowedHeaders(Arrays.asList("*")); // 모든 헤더 허용
             config.setAllowCredentials(true); // 쿠키 전송 허용
             config.setMaxAge(3600L); // pre-flight 요청 캐싱 시간
             config.setExposedHeaders(Arrays.asList("Set-Cookie", "Authorization")); // 클라이언트에서 접근 가능한 헤더
