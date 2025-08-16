@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { ChevronRight, ChevronDown, Settings, Check, Menu, X } from 'lucide-react'
+import { ChevronRight, ChevronDown, ChevronLeft, Settings, Check, PanelLeft, PanelRight } from 'lucide-react'
 import { AnimatePresence, motion } from "framer-motion"
 import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
@@ -130,19 +130,52 @@ export default function AppSidebar({
 
   return (
     <>
-      {/* 사이드바가 숨겨졌을 때 보이는 토글 버튼 */}
-      {!shouldShowSidebar && (
-        <Button
-          onClick={toggleSidebarPin}
-          variant="ghost" 
-          size="icon"
-          className="fixed top-16 left-4 z-50 transition-all duration-300 hover:bg-white/10 border-0 text-white hover:text-white"
-          style={{ zIndex: 60 }}
-          title="사이드바 열기"
-        >
-          <Menu size={20} />
-        </Button>
-      )}
+      {/* 사이드바 토글 버튼 - 사이드바 상태에 따라 위치 변경 */}
+      <Button
+        onClick={toggleSidebarPin}
+        variant="ghost" 
+        size="icon"
+        className="fixed top-16 transition-all duration-300 border-0 text-white hover:text-white group"
+        style={{ 
+          zIndex: 70,
+          left: shouldShowSidebar ? '256px' : '16px' // 240px(사이드바) + 16px(여백)
+        }}
+        title={shouldShowSidebar ? "사이드바 숨기기" : "사이드바 열기"}
+      >
+        {!shouldShowSidebar ? (
+          <motion.div
+            className="flex items-center"
+            whileHover={{ scale: 1.1 }}
+            transition={{ duration: 0.2 }}
+          >
+            <PanelLeft size={20} />
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              whileHover={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2 }}
+              className="ml-1"
+            >
+              <ChevronRight size={16} />
+            </motion.div>
+          </motion.div>
+        ) : (
+          <motion.div
+            className="flex items-center"
+            whileHover={{ scale: 1.1 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              whileHover={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mr-1"
+            >
+              <ChevronLeft size={16} />
+            </motion.div>
+            <PanelRight size={20} />
+          </motion.div>
+        )}
+      </Button>
 
       {/* Sidebar */}
       <div 
@@ -163,24 +196,6 @@ export default function AppSidebar({
       >
         <ScrollArea className="h-full">
           <div className="pb-4">
-            {/* 사이드바 토글 버튼 - 사이드바 내부 상단 */}
-            <div className="p-4 border-b border-gray-800">
-              <Button
-                onClick={toggleSidebarPin}
-                variant="ghost" 
-                size="sm"
-                className="w-full justify-start gap-2 hover:bg-gray-800 text-gray-400 hover:text-white"
-                title="사이드바 숨기기"
-              >
-                <motion.div
-                  animate={{ rotate: 0 }}
-                  transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-                >
-                  <X size={16} />
-                </motion.div>
-                <span className="text-sm">사이드바 닫기</span>
-              </Button>
-            </div>
 
             {/* 상단 구역: 그룹챗 (고정) */}
             {showGroupChat && currentGroup && (
