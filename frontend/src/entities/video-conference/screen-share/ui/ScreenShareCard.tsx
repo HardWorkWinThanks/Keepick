@@ -77,7 +77,7 @@ export const ScreenShareCard = ({
           await video.play();
           console.log(`✅ [ScreenShareCard] ${userName} - 비디오 재생 시작됨`);
         } catch (error) {
-          if (error.name !== 'AbortError') {
+          if (error instanceof Error && error.name !== 'AbortError') {
             console.error(`❌ [ScreenShareCard] ${userName} - 자동 재생 실패:`, error);
           }
         }

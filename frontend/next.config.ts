@@ -49,6 +49,22 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  webpack: (config) => {
+    // node_modules/@mediapipe/face_mesh/face_mesh.js 파일을 대상으로
+    config.module.rules.push({
+      test: require.resolve("@mediapipe/face_mesh/face_mesh.js"),
+      // exports-loader를 사용하여 FaceMesh를 CommonJS 모듈로 내보냅니다.
+      use: {
+        loader: "exports-loader",
+        options: {
+          type: "commonjs",
+          exports: "FaceMesh",
+        },
+      },
+    });
+
+    return config;
+  },
 };
 
 export default nextConfig;

@@ -335,12 +335,12 @@ export const VideoGrid = () => {
                     <ScreenShareCard
                       userName={participant.userName}
                       isLocal={participant.isLocal}
-                      socketId={participant.socketId}
+                      socketId={(participant as any).socketId || ""}
                       onFullscreenToggle={() => {}}
                     />
                   ) : (
                     <UserVideoCard
-                      socketId={participant.socketId}
+                      socketId={(participant as any).socketId || ""}
                       userName={participant.userName}
                       isLocal={participant.isLocal}
                     />
@@ -408,12 +408,12 @@ export const VideoGrid = () => {
               <ScreenShareCard
                 userName={item.userName}
                 isLocal={item.isLocal}
-                socketId={item.socketId}
+                socketId={(item as any).socketId || ""}
                 onFullscreenToggle={() => {}}
               />
             ) : (
               <UserVideoCard
-                socketId={item.socketId}
+                socketId={(item as any).socketId || ""}
                 userName={item.userName}
                 isLocal={item.isLocal}
               />

@@ -19,10 +19,15 @@ export async function generateMetadata({
 
 // 이 컴포넌트는 서버에서 실행됩니다.
 const GroupChatPage = async ({ params }: PageProps) => {
-  const { groupId: roomId } = await params;
-
-  // 서버에서 얻은 roomId를 클라이언트 컴포넌트에 prop으로 전달합니다.
-  return <ConferenceClientPage roomId={roomId} />;
+  try {
+    const { groupId: roomId } = await params;
+    
+    // 서버에서 얻은 roomId를 클라이언트 컴포넌트에 prop으로 전달합니다.
+    return <ConferenceClientPage roomId={roomId} />;
+  } catch (error) {
+    console.error('GroupChatPage error:', error);
+    return <div>페이지 로딩 중 오류가 발생했습니다.</div>;
+  }
 };
 
 export default GroupChatPage;

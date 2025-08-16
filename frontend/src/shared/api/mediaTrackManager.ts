@@ -18,6 +18,8 @@ import { webrtcHandler } from "./socket";
 import { RecoveryManager, RecoveryContext, recoveryManager } from "./managers/RecoveryManager";
 import { DuplicateValidator, TrackMaps, duplicateValidator } from "./managers/DuplicateValidator";
 import { UserFeedbackManager, userFeedbackManager } from "./managers/UserFeedbackManager";
+import { frontendAiProcessor } from "./ai/frontendAiProcessor";
+import { AiSystemConfig } from "@/shared/types/ai.types";
 
 export interface TrackInfo {
   trackId: string;
@@ -175,6 +177,44 @@ class MediaTrackManager {
     } catch (error) {
       console.error(`❌ Failed to add local ${trackType} ${track.kind} track:`, error);
       throw error;
+    }
+  }
+
+  // 🆕 AI 기능이 포함된 로컬 트랙 추가 (주요 수정)
+  public async addLocalTrackWithAI(
+    track: MediaStreamTrack,
+    peerId: string,
+    trackType: "camera" | "screen" = "camera",
+    peerName?: string,
+    aiConfig?: Partial<AiSystemConfig> // AI 설정을 추가 파라미터로 받음
+  ): Promise<string> {
+    if (!this.sendTransport || !this.dispatch) {
+      throw new Error("Transport or dispatch not initialized");
+    }
+
+    // AI 처리 활성화 조건: 비디오 트랙, 카메라 타입, AI 기능 켜짐
+    const enableAI = aiConfig?.gesture?.static.enabled || aiConfig?.gesture?.dynamic.enabled || aiConfig?.emotion?.enabled || aiConfig?.beauty?.enabled;
+
+    if (track.kind === "video" && trackType === "camera" && enableAI) {
+      console.log('🤖 Applying AI processing to video track.');
+      // FrontendAiProcessor에 현재 AI 설정 업데이트 (이모지 오버레이, 뷰티 필터 등)
+      frontendAiProcessor.updateConfig(aiConfig || {});
+      
+      try {
+        // AI 처리된 트랙을 받아옴 (이모지 등이 합성된 트랙)
+        const processedTrack = await frontendAiProcessor.processVideoTrack(track);
+        console.log('✅ AI-processed track received. Proceeding to add local track.');
+        // 기존 addLocalTrack을 호출하여 AI 처리된 트랙을 Producer로 등록
+        return await this.addLocalTrack(processedTrack, peerId, trackType, peerName);
+      } catch (aiProcessingError) {
+        console.error('❌ Failed to process video track with AI. Falling back to original track:', aiProcessingError);
+        // AI 처리 실패 시, AI 없이 원본 트랙을 사용합니다.
+        return await this.addLocalTrack(track, peerId, trackType, peerName);
+      }
+    } else {
+      console.log('🚫 AI processing skipped for this track (not video, not camera, or AI disabled).');
+      // AI 처리가 필요 없으면 원본 트랙을 그대로 추가합니다.
+      return await this.addLocalTrack(track, peerId, trackType, peerName);
     }
   }
 

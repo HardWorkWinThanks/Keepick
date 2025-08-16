@@ -13,6 +13,7 @@ import gestureReducer from "@/entities/video-conference/gesture/model/slice";
 import { chatReducer } from "@/entities/chat/model/slice"; // 채팅 상태
 import { emojiReactionReducer } from "@/entities/emoji-reaction/model/slice"; // 이모지 반응 상태
 import { screenShareReducer } from "@/entities/screen-share/model/slice"; // 화면 공유 상태
+import aiReducer from "@/entities/video-conference/ai/model/aiSlice"; // AI 상태
 
 // 스토어를 생성하는 makeStore 함수
 export const makeStore = () => {
@@ -29,6 +30,7 @@ export const makeStore = () => {
       chat: chatReducer, // 채팅 상태 추가
       emojiReaction: emojiReactionReducer, // 이모지 반응 상태 추가
       screenShare: screenShareReducer, // 화면 공유 상태 추가
+      ai: aiReducer, // AI 상태 추가
     },
     // 3. 두 개의 미들웨어 설정을 하나로 합칩니다.
     middleware: (getDefaultMiddleware) =>
@@ -49,6 +51,8 @@ export const makeStore = () => {
             "emojiReaction.reactionHistory",
             "screenShare.localScreenShare.startedAt",
             "screenShare.remoteScreenShares",
+            "ai.capturedEmotionFrames",
+            "ai.detectedEmotions",
           ],
         },
       }),

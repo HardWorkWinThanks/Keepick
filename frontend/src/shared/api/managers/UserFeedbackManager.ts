@@ -95,13 +95,11 @@ export class UserFeedbackManager {
     };
     
     console.log(messages[status], details);
-    this.dispatchEvent('transport:recovery', {
+    this.dispatchEvent('recovery:progress', {
       producerId: 'transport',
       userMessage: status === 'start' ? '연결을 복구하고 있습니다...' :
                    status === 'success' ? '연결이 복구되었습니다.' :
-                   '연결 복구에 실패했습니다.',
-      status,
-      details
+                   '연결 복구에 실패했습니다.'
     });
   }
 
