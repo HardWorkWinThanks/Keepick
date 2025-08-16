@@ -9,7 +9,7 @@ interface MediaState {
 
 const initialState: MediaState = {
   isCameraOn: true,
-  isMicOn: true,
+  isMicOn: false,
   isProducing: false,
 };
 
@@ -28,12 +28,11 @@ const mediaSlice = createSlice({
     },
     resetMediaState: (state) => {
       state.isCameraOn = true;
-      state.isMicOn = true;
+      state.isMicOn = false;
       state.isProducing = false;
     },
   },
 });
 
-export const { toggleCamera, toggleMic, setIsProducing, resetMediaState } =
-  mediaSlice.actions;
+export const { toggleCamera, toggleMic, setIsProducing, resetMediaState } = mediaSlice.actions;
 export default mediaSlice.reducer;

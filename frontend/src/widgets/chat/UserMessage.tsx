@@ -15,8 +15,13 @@ export const UserMessage = ({
   message,
   isTemporary = false,
 }: UserMessageProps) => {
-  const currentUserId = "current-user";
-  const isOwnMessage = message.sender?.id === currentUserId;
+  const { userName } = useAppSelector((state) => state.session);
+  
+  // 내 메시지 판별: sender.name과 현재 사용자 이름 비교
+  const isOwnMessage = message.sender?.name === userName || message.sender?.id === "current-user";
+  
+  // 디버깅용 로그 (필요시 주석 해제)
+  // console.log(`💬 [UserMessage] Message from ${message.sender?.name}, current user: ${userName}, isOwnMessage: ${isOwnMessage}`);
 
   const formatTime = (timestamp: Date | string | number) => {
     try {
@@ -66,7 +71,7 @@ export const UserMessage = ({
       <div
         className={`flex max-w-xs lg:max-w-md ${
           isOwnMessage ? "flex-row-reverse" : "flex-row"
-        } items-start space-x-2`}
+        } items-start ${isOwnMessage ? "space-x-reverse space-x-2" : "space-x-2"}`}
       >
         {/* 프로필 아이콘 (상대방 메시지일 때만) */}
         {!isOwnMessage && (
@@ -121,7 +126,7 @@ export const UserMessage = ({
 
         {/* 프로필 아이콘 (내 메시지일 때) */}
         {isOwnMessage && (
-          <div className="flex-shrink-0 w-8 h-8 bg-[#FE7A25] rounded-full flex items-center justify-center ml-2">
+          <div className="flex-shrink-0 w-8 h-8 bg-[#FE7A25] rounded-full flex items-center justify-center">
             <UserIcon className="w-5 h-5 text-white" />
           </div>
         )}

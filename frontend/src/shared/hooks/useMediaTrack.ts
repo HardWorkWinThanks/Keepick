@@ -77,15 +77,21 @@ export const useLocalMediaControls = () => {
   const audioTrack = useLocalMediaTrack('audio');
   const videoTrack = useLocalMediaTrack('video');
   
-  const toggleAudio = () => {
+  const toggleAudio = async () => {
     if (audioTrack.trackInfo) {
-      mediaTrackManager.toggleLocalTrack(audioTrack.trackInfo.trackId);
+      // trackId를 사용하여 특정 트랙 토글
+      await mediaTrackManager.toggleLocalTrack(audioTrack.trackInfo.trackId);
+    } else {
+      console.warn('❌ No audio track available to toggle');
     }
   };
   
-  const toggleVideo = () => {
+  const toggleVideo = async () => {
     if (videoTrack.trackInfo) {
-      mediaTrackManager.toggleLocalTrack(videoTrack.trackInfo.trackId);
+      // trackId를 사용하여 특정 트랙 토글
+      await mediaTrackManager.toggleLocalTrack(videoTrack.trackInfo.trackId);
+    } else {
+      console.warn('❌ No video track available to toggle');
     }
   };
   

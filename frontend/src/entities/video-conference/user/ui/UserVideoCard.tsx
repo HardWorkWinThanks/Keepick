@@ -19,6 +19,7 @@ interface UserVideoCardProps {
 
 export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideoCardProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   // Hook을 통해 트랙 가져오기
   const localVideo = useLocalMediaTrack('video');
@@ -71,6 +72,39 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
     };
   }, [videoTrack, userName]);
 
+  // 오디오 트랙을 audio 엘리먼트에 연결 (원격 피어만)
+  useEffect(() => {
+    if (isLocal) return; // 로컬 오디오는 재생하지 않음 (에코 방지)
+
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (audioTrack) {
+      // 원격 오디오 트랙을 별도 스트림으로 연결
+      const audioStream = new MediaStream([audioTrack]);
+      audio.srcObject = audioStream;
+      audio.muted = false; // 원격 오디오는 소리 출력
+      audio.autoplay = true;
+      
+      console.log(`🔊 [UserVideoCard] ${userName} - 오디오 트랙 연결됨`);
+      
+      audio.play().catch(error => {
+        if (error.name !== 'AbortError') {
+          console.error(`❌ [UserVideoCard] ${userName} - 오디오 재생 실패:`, error);
+        }
+      });
+    } else {
+      audio.srcObject = null;
+      console.log(`🔊 [UserVideoCard] ${userName} - 오디오 트랙 없음`);
+    }
+
+    return () => {
+      if (audio.srcObject) {
+        audio.srcObject = null;
+      }
+    };
+  }, [audioTrack, userName, isLocal]);
+
 
   const isSpeaking = hasAudio && !isMuted;
 
@@ -86,6 +120,16 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
         className={`w-full h-full object-cover`}
       />
 
+      {/* 숨겨진 오디오 엘리먼트 (원격 피어만) */}
+      {!isLocal && (
+        <audio
+          ref={audioRef}
+          autoPlay
+          playsInline
+          style={{ display: 'none' }}
+        />
+      )}
+
 
       {/* 비디오 없을 때 아바타 */}
       {!hasVideo && (
@@ -97,18 +141,6 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
       )}
 
 
-      {/* 발언자 표시 UI (히트 스타일) */}
-      <AnimatePresence>
-        {isSpeaking && (
-          <motion.div
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-1/4 h-1 bg-[#FE7A25] rounded-b-full shadow-[0_0_10px_rgba(254,122,37,0.8)] z-20"
-            initial={{ opacity: 0, y: -5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -5 }}
-            transition={{ duration: 0.2 }}
-          />
-        )}
-      </AnimatePresence>
 
 
       {/* 반응 오버레이 */}
@@ -142,19 +174,75 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
         <div className="flex items-center justify-between">
           <span className="text-white font-medium truncate">{userName}</span>
           <div className="flex items-center space-x-2">
-            {hasAudio ? (
-              <div className="p-1 bg-[#FE7A25]/20 rounded-full">
-                <MicrophoneIcon className="w-4 h-4 text-[#FE7A25]" />
-              </div>
-            ) : (
-              <div className="p-1 bg-[#D22016]/20 rounded-full">
-                <MicrophoneIcon className="w-4 h-4 text-[#D22016] opacity-50" />
-              </div>
-            )}
+            {/* 개선된 마이크 상태 표시 컴포넌트 */}
+            <motion.div
+              className={`relative p-1 rounded-full transition-all duration-300 ${
+                !hasAudio 
+                  ? 'bg-gray-800/60 border border-gray-600' 
+                  : isSpeaking 
+                    ? 'bg-green-500/30 border border-green-400' 
+                    : 'bg-green-500/20 border border-green-500'
+              }`}
+              animate={{
+                scale: isSpeaking ? [1, 1.1, 1] : 1,
+                backgroundColor: !hasAudio 
+                  ? 'rgba(31, 41, 55, 0.6)' 
+                  : isSpeaking 
+                    ? 'rgba(34, 197, 94, 0.3)'
+                    : 'rgba(34, 197, 94, 0.2)'
+              }}
+              transition={{
+                scale: {
+                  repeat: isSpeaking ? Infinity : 0,
+                  duration: 1.2,
+                  ease: "easeInOut"
+                },
+                backgroundColor: { duration: 0.3 }
+              }}
+            >
+              <motion.div
+                animate={{
+                  color: !hasAudio 
+                    ? '#6B7280' 
+                    : isSpeaking 
+                      ? '#22C55E'
+                      : '#10B981'
+                }}
+                transition={{ duration: 0.3 }}
+              >
+                <MicrophoneIcon 
+                  className={`w-4 h-4 transition-opacity duration-300 ${
+                    !hasAudio ? 'opacity-50' : 'opacity-100'
+                  }`} 
+                />
+              </motion.div>
+              
+              {/* 말하는 중일 때 추가 효과 */}
+              {isSpeaking && (
+                <motion.div
+                  className="absolute inset-0 rounded-full border-2 border-green-400"
+                  animate={{
+                    scale: [1, 1.4, 1],
+                    opacity: [0.6, 0, 0.6]
+                  }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 1.5,
+                    ease: "easeInOut"
+                  }}
+                />
+              )}
+            </motion.div>
+
             {!hasVideo && (
-              <div className="p-1 bg-[#D22016]/20 rounded-full">
-                <VideoCameraIcon className="w-4 h-4 text-[#D22016] opacity-50" />
-              </div>
+              <motion.div 
+                className="p-1 bg-gray-800/60 rounded-full border border-gray-600"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <VideoCameraIcon className="w-4 h-4 text-gray-400 opacity-50" />
+              </motion.div>
             )}
           </div>
         </div>

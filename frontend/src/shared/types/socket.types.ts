@@ -31,6 +31,7 @@ export interface SendMessageData {
   roomId: string;
   content: string;
   messageType?: string;
+  userName?: string;
 }
 
 export interface EditMessageData {
@@ -47,6 +48,7 @@ export interface DeleteMessageData {
 export interface TypingData {
   roomId: string;
   isTyping: boolean;
+  userName?: string;
 }
 
 export interface GetMessagesData {

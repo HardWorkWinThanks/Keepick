@@ -11,18 +11,33 @@ export interface ChatMessage {
   };
   timestamp: string; // Date 대신 string으로 변경
   isTemporary?: boolean; // 임시 메시지 표시용
+  isError?: boolean; // 에러 상태
+  isSending?: boolean; // 전송중 상태
+  tempId?: string;
+}
+
+export interface ChatParticipant {
+  id: string;
+  name: string;
+  joinedAt: string;
+  isTyping?: boolean;
+  lastSeen?: string;
 }
 
 interface ChatState {
   isChatOpen: boolean;
   messages: ChatMessage[];
   unreadCount: number;
+  participants: ChatParticipant[];
+  participantsCount: number;
 }
 
 const initialState: ChatState = {
   isChatOpen: true,
   messages: [],
   unreadCount: 0,
+  participants: [],
+  participantsCount: 0,
 };
 
 const chatSlice = createSlice({
@@ -108,8 +123,14 @@ const chatSlice = createSlice({
     },
     removeTemporaryMessage: (state, action: PayloadAction<string>) => {
       const tempId = action.payload;
-      state.messages = state.messages.filter((msg) => msg.id !== tempId);
-      console.log(`💬 [REDUX] Removed temporary message: ${tempId}`);
+      if (tempId === "all") {
+        // 모든 임시 메시지 제거
+        state.messages = state.messages.filter((msg) => !msg.isTemporary);
+        console.log(`💬 [REDUX] Removed all temporary messages`);
+      } else {
+        state.messages = state.messages.filter((msg) => msg.id !== tempId);
+        console.log(`💬 [REDUX] Removed temporary message: ${tempId}`);
+      }
     },
     addSystemMessage: (state, action: PayloadAction<string>) => {
       const systemMessage: ChatMessage = {
@@ -157,6 +178,39 @@ const chatSlice = createSlice({
 
       console.log(`💬 [REDUX] Set ${state.messages.length} messages (deduped)`);
     },
+    // 🆕 참가자 관리 액션들
+    setParticipants: (state, action: PayloadAction<ChatParticipant[]>) => {
+      state.participants = action.payload;
+      state.participantsCount = action.payload.length;
+      console.log(`💬 [REDUX] Set ${action.payload.length} participants`);
+    },
+    addParticipant: (state, action: PayloadAction<ChatParticipant>) => {
+      const existingIndex = state.participants.findIndex((p) => p.id === action.payload.id);
+      if (existingIndex === -1) {
+        state.participants.push(action.payload);
+        state.participantsCount = state.participants.length;
+        console.log(`💬 [REDUX] Added participant: ${action.payload.name}`);
+      }
+    },
+    removeParticipant: (state, action: PayloadAction<string>) => {
+      state.participants = state.participants.filter((p) => p.id !== action.payload);
+      state.participantsCount = state.participants.length;
+      console.log(`💬 [REDUX] Removed participant: ${action.payload}`);
+    },
+    updateParticipantTyping: (state, action: PayloadAction<{ id: string; isTyping: boolean }>) => {
+      const participant = state.participants.find((p) => p.id === action.payload.id);
+      if (participant) {
+        participant.isTyping = action.payload.isTyping;
+      }
+    },
+    setChatInfo: (
+      state,
+      action: PayloadAction<{ participantsCount: number; participants: ChatParticipant[] }>
+    ) => {
+      state.participantsCount = action.payload.participantsCount;
+      state.participants = action.payload.participants;
+      console.log(`💬 [REDUX] Updated chat info: ${action.payload.participantsCount} participants`);
+    },
   },
 });
 
@@ -171,6 +225,11 @@ export const {
   clearMessages,
   markAsRead,
   setMessages,
+  setParticipants,
+  addParticipant,
+  removeParticipant,
+  updateParticipantTyping,
+  setChatInfo,
 } = chatSlice.actions;
 
 export const chatReducer = chatSlice.reducer;

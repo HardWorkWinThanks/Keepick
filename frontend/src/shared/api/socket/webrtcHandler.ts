@@ -48,7 +48,15 @@ class WebRTCHandler {
       console.log("✅ [WebRTCHandler] 'joined_room' event received.", data);
       this.initializeMediasoupWithProducers(data.rtpCapabilities, data.peers, dispatch);
       dispatch(setInRoom(true));
+
+      // 채팅 룸 정보는 joinRoomThunk에서 이미 설정됨
+
       chatSocketHandler.handleRoomJoined();
+
+      // 🆕 기존 화면공유 정보 요청
+      setTimeout(() => {
+        this.socket?.emit("get_active_screen_shares", { roomId: this.getCurrentRoomId() });
+      }, 1000); // MediaSoup 초기화 완료 후 요청
     });
 
     this.socket.on("user_joined", (user: User) => {
@@ -74,7 +82,10 @@ class WebRTCHandler {
       this.processingProducers.add(data.producerId);
 
       // appData.type을 확인하여 화면 공유인지 판단
-      const isScreenShare = data.appData?.type === "screen" || data.appData?.type === "screenshare" || data.appData?.trackType === "screen";
+      const isScreenShare =
+        data.appData?.type === "screen" ||
+        data.appData?.type === "screenshare" ||
+        data.appData?.trackType === "screen";
 
       // mediasoupManager의 consumeProducer를 항상 호출
       // consumeProducer 내부에서 trackType에 따라 다르게 처리하도록 책임을 위임
@@ -105,6 +116,53 @@ class WebRTCHandler {
       // mediasoupManager가 producerId를 받아 알아서 처리하도록 위임
       mediasoupManager.handleProducerClosed(data.producerId);
     });
+
+    // 🆕 Producer pause/resume 이벤트 처리
+    this.socket.on("producer_paused", (data: { producerId: string; socketId: string }) => {
+      console.log("⏸️ [WebRTCHandler] 'producer_paused' event received.", data);
+      mediasoupManager.handleRemoteProducerPaused(data.producerId, data.socketId);
+    });
+
+    this.socket.on("producer_resumed", (data: { producerId: string; socketId: string }) => {
+      console.log("▶️ [WebRTCHandler] 'producer_resumed' event received.", data);
+      mediasoupManager.handleRemoteProducerResumed(data.producerId, data.socketId);
+    });
+
+    // 🆕 기존 화면공유 목록 수신 처리
+    this.socket.on(
+      "active_screen_shares",
+      (data: {
+        screenShares: Array<{
+          socketId: string;
+          producerId: string;
+          peerName: string;
+          startedAt: string;
+        }>;
+      }) => {
+        console.log("📺 [WebRTCHandler] 'active_screen_shares' event received.", data);
+
+        // 각 기존 화면공유에 대해 consume 요청
+        data.screenShares.forEach(async (screenShare) => {
+          try {
+            console.log(
+              `🔄 [WebRTCHandler] Consuming existing screen share from ${screenShare.peerName}`
+            );
+
+            // 화면공유 consume 요청
+            this.socket?.emit("consume_screen_share", {
+              roomId: this.getCurrentRoomId(),
+              producerId: screenShare.producerId,
+              producerSocketId: screenShare.socketId,
+            });
+          } catch (error) {
+            console.error(
+              `❌ Failed to consume existing screen share from ${screenShare.peerName}:`,
+              error
+            );
+          }
+        });
+      }
+    );
   }
 
   // [수정] mediasoup 초기화 로직 변경 -> 순환 참조 문제 해결
@@ -148,6 +206,15 @@ class WebRTCHandler {
     mediasoupManager.cleanup();
     this.mediasoupInitialized = false;
     this.socket?.emit("leave_room");
+  };
+
+  // 🆕 Producer 상태 변화를 서버에 알림
+  public emitProducerStateChange = (producerId: string, enabled: boolean) => {
+    if (this.socket) {
+      const eventName = enabled ? "resume_producer" : "pause_producer";
+      this.socket.emit(eventName, { producerId });
+      console.log(`📡 [WebRTCHandler] Emitted ${eventName} for producer ${producerId}`);
+    }
   };
 
   public createProducerTransport = (data: { roomId: string }): Promise<TransportOptions> =>

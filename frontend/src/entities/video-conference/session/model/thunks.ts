@@ -2,8 +2,9 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { RootState } from "@/shared/config/store";
 import { webrtcHandler } from "@/shared/api/socket";
 import { mediasoupManager } from "@/shared/api/mediasoupManager";
+import { chatSocketHandler } from "@/entities/chat/model/socketEvents";
 import { consumeNewProducerThunk } from "@/entities/video-conference/consume-stream/model/thunks";
-import { resetRoomState, setUsers, setRoomId } from "./slice"; // setRoomId, setUsers를 같은 폴더의 slice에서 가져옴
+import { resetRoomState, setUsers, setRoomId, setUserName } from "./slice"; // setRoomId, setUsers를 같은 폴더의 slice에서 가져옴
 import { resetMediaState } from "@/entities/video-conference/media/model/slice";
 import { resetWebrtcState } from "@/entities/video-conference/webrtc/model/slice";
 import { RtpCapabilities } from "mediasoup-client/types";
@@ -24,12 +25,19 @@ export const joinRoomThunk = createAsyncThunk(
       // 새로운 구조에서는 자동으로 처리됨
       // await mediasoupManager.startLocalMedia();
 
-      // 방에 참여하기 전에 Redux 상태에 roomId를 먼저 저장합니다.
+      // 방에 참여하기 전에 Redux 상태에 roomId와 userName을 먼저 저장합니다.
       dispatch(setRoomId(roomId));
+      dispatch(setUserName(userName));
 
       console.log("[2] joinRoomThunk: webrtcHandler.joinRoom 호출 (요청만 보냄)");
       // 서버에 방 참여를 요청합니다. 반환값을 기다리지 않습니다. (Fire-and-Forget)
       webrtcHandler.joinRoom({ roomId, userName });
+      
+      // 🆕 채팅 룸 정보 미리 설정 (Redux 상태가 설정된 후)
+      console.log("[2.1] joinRoomThunk: 채팅 룸 정보 설정 시작");
+      console.log("[2.1] joinRoomThunk: roomId =", roomId, ", userName =", userName);
+      chatSocketHandler.setRoomInfo(roomId, userName);
+      console.log("[2.1] joinRoomThunk: 채팅 룸 정보 설정 완료");
 
       // Thunk는 성공적으로 요청을 보냈다는 사실만 반환합니다.
       return { roomId, userName };

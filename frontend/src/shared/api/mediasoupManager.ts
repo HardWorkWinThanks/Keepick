@@ -266,6 +266,46 @@ class MediasoupManager {
     }
   }
 
+  // 🆕 원격 Producer pause 처리
+  public handleRemoteProducerPaused(producerId: string, socketId: string): void {
+    console.log(`⏸️ Remote producer ${producerId} paused from ${socketId}`);
+    
+    const consumerInfo = mediaTrackManager.getRemoteTrackByProducerId(producerId);
+    if (consumerInfo) {
+      try {
+        if (consumerInfo.consumer) {
+          consumerInfo.consumer.pause();
+          console.log(`⏸️ Consumer paused for producer ${producerId}`);
+          
+          // Redux 상태 업데이트
+          mediaTrackManager.updateRemoteTrackState(socketId, consumerInfo.kind, { enabled: false });
+        }
+      } catch (error) {
+        console.error(`❌ Failed to pause consumer for producer ${producerId}:`, error);
+      }
+    }
+  }
+
+  // 🆕 원격 Producer resume 처리
+  public handleRemoteProducerResumed(producerId: string, socketId: string): void {
+    console.log(`▶️ Remote producer ${producerId} resumed from ${socketId}`);
+    
+    const consumerInfo = mediaTrackManager.getRemoteTrackByProducerId(producerId);
+    if (consumerInfo) {
+      try {
+        if (consumerInfo.consumer) {
+          consumerInfo.consumer.resume();
+          console.log(`▶️ Consumer resumed for producer ${producerId}`);
+          
+          // Redux 상태 업데이트
+          mediaTrackManager.updateRemoteTrackState(socketId, consumerInfo.kind, { enabled: true });
+        }
+      } catch (error) {
+        console.error(`❌ Failed to resume consumer for producer ${producerId}:`, error);
+      }
+    }
+  }
+
 
   // 로컬 트랙 토글
   public toggleLocalTrack(kind: "audio" | "video"): void {

@@ -23,6 +23,7 @@ export const VideoGrid = () => {
     userName: string;
     isLocal: boolean;
     socketId?: string;
+    priority: number;
   } | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
@@ -156,6 +157,19 @@ export const VideoGrid = () => {
       setCurrentPage(paginationInfo.totalPages - 1);
     }
   }, [currentPage, paginationInfo.totalPages]);
+
+  // 스포트라이트된 화면 공유가 끝났을 때 자동으로 그리드 뷰로 돌아가기
+  useEffect(() => {
+    if (spotlightVideo && spotlightVideo.type === "screen-share") {
+      // 현재 스포트라이트된 항목이 그리드 아이템 목록에 있는지 확인
+      const currentSpotlightExists = gridItems.some(item => item.id === spotlightVideo.id);
+      
+      if (!currentSpotlightExists) {
+        console.log(`🔄 [VideoGrid] Spotlight item ${spotlightVideo.id} no longer exists, returning to grid view`);
+        setSpotlightVideo(null);
+      }
+    }
+  }, [gridItems, spotlightVideo]);
 
   // ESC 키로 모드 전환
   useEffect(() => {

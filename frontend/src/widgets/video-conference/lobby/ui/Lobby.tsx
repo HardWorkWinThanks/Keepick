@@ -11,6 +11,8 @@ import {
   UserIcon, // 사용자 이름 입력을 위한 아이콘 추가
 } from "@heroicons/react/24/solid";
 import { Button } from "@/shared/ui/shadcn/button";
+import { useAppDispatch, useAppSelector } from "@/shared/hooks/redux";
+import { toggleCamera, toggleMic } from "@/entities/video-conference/media/model/slice";
 
 interface LobbyProps {
   onJoin: (userName: string) => void;
@@ -24,9 +26,10 @@ interface MediaPermissions {
 }
 
 export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
+  const dispatch = useAppDispatch();
+  const { isCameraOn, isMicOn } = useAppSelector((state) => state.re_media);
+  
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [isCameraOn, setIsCameraOn] = useState(true);
-  const [isMicOn, setIsMicOn] = useState(true);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<MediaPermissions>({
     camera: false,
@@ -82,8 +85,13 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
         }
         const videoTrack = stream.getVideoTracks()[0];
         const audioTrack = stream.getAudioTracks()[0];
-        if (videoTrack) setIsCameraOn(videoTrack.enabled);
-        if (audioTrack) setIsMicOn(audioTrack.enabled);
+        if (videoTrack) {
+          videoTrack.enabled = isCameraOn; // Redux 상태에 맞춰 설정
+        }
+        if (audioTrack) {
+          // 마이크는 기본적으로 꺼진 상태로 시작 (Redux 상태에 맞춰)
+          audioTrack.enabled = isMicOn;
+        }
       } catch (err: any) {
         console.error("미디어 장치 접근 오류:", err);
         if (err.name === "NotAllowedError") {
@@ -101,8 +109,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
         } else {
           setMediaError(`미디어 장치 오류: ${err.message || "알 수 없는 오류"}`);
         }
-        setIsCameraOn(false);
-        setIsMicOn(false);
+        // 에러 발생 시에는 Redux 상태를 건드리지 않음 (이미 false로 초기화되어 있음)
       } finally {
         setIsInitializing(false);
       }
@@ -135,27 +142,34 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
           if (videoRef.current) {
             videoRef.current.srcObject = localStream;
           }
-          setIsCameraOn(true);
+          // 카메라가 새로 켜짐 - Redux 상태는 handleToggleCamera에서 업데이트
         }
       } catch (err) {
         console.error("카메라 켜기 실패:", err);
         setMediaError("카메라를 켤 수 없습니다.");
       }
     } else {
+      // Redux 상태 먼저 업데이트
+      dispatch(toggleCamera());
+      
+      // 실제 트랙 상태도 업데이트 (Redux 상태와 반대로 설정)
       videoTracks.forEach((track) => {
         track.enabled = !isCameraOn;
       });
-      setIsCameraOn(!isCameraOn);
     }
   };
 
   const handleToggleMic = () => {
     if (!localStream) return;
+    
+    // Redux 상태 먼저 업데이트
+    dispatch(toggleMic());
+    
+    // 실제 트랙 상태도 업데이트 (Redux 상태와 반대로 설정)
     const audioTracks = localStream.getAudioTracks();
     audioTracks.forEach((track) => {
       track.enabled = !isMicOn;
     });
-    setIsMicOn(!isMicOn);
   };
 
   const handleJoinClick = () => {

@@ -11,6 +11,7 @@ import {
   updateLocalTrack,
   removeLocalTrack,
   setRemoteTrack,
+  updateRemoteTrack,
   removeRemoteTrack,
 } from "@/entities/video-conference/media/model/mediaSlice";
 import { webrtcHandler } from "./socket";
@@ -44,7 +45,7 @@ class MediaTrackManager {
   // Race condition 방지를 위한 consume 큐 및 락
   private consumeQueue: Promise<string | null> = Promise.resolve(null);
   private processingProducers = new Set<string>(); // 현재 처리 중인 producer들
-  
+
   // 타임아웃 보호
   private operationTimeouts = new Map<string, NodeJS.Timeout>(); // producerId -> timeout
   private maxOperationTimeout = 30000; // 30초 최대 대기 시간
@@ -60,7 +61,6 @@ class MediaTrackManager {
       this.currentRoomId = roomId;
     }
   }
-
   // 🆕 화면 공유 트랙 생성 (통합 메서드)
   async addLocalTrack(
     track: MediaStreamTrack,
@@ -83,6 +83,7 @@ class MediaTrackManager {
         trackType,
         peerId
       );
+
       if (existingLocalTrack) {
         // 기존 트랙이 있으면 해당 trackId 찾아서 반환
         for (const [existingTrackId, trackInfo] of this.localTracks) {
@@ -99,6 +100,14 @@ class MediaTrackManager {
       // 새로운 트랙 생성 - 원본 트랙을 그대로 사용 (복제하지 않음)
       const processedTrack = track;
       console.log(`🎯 Using original track for ${trackType} ${track.kind}: ${track.id}`);
+
+      if (processedTrack.kind === "audio") {
+        processedTrack.enabled = false;
+        console.log(`[Audio] Audio track starts disabled: ${trackId}`);
+      }
+      console.log(
+        `🎯 Using original track for ${trackType} ${processedTrack.kind}: ${processedTrack.id}`
+      );
 
       // 🆕 Producer 생성 (타입 지정된 appData)
       const appData = createProducerAppData(
@@ -188,19 +197,23 @@ class MediaTrackManager {
   ): Promise<string | null> {
     // 사용자에게 처리 시작 알림
     userFeedbackManager.notifyOperationStart(producerId, trackType);
-    
+
     // 타임아웃 보호 설정
     const timeoutId = setTimeout(() => {
-      console.error(`⏰ Operation timeout for producer ${producerId} after ${this.maxOperationTimeout}ms`);
+      console.error(
+        `⏰ Operation timeout for producer ${producerId} after ${this.maxOperationTimeout}ms`
+      );
       userFeedbackManager.notifyOperationTimeout(producerId);
       this.cleanupConsumeOperation(producerId);
     }, this.maxOperationTimeout);
-    
+
     this.operationTimeouts.set(producerId, timeoutId);
-    
+
     // 모든 consume 요청을 순차적으로 처리하는 큐에 추가
     this.consumeQueue = this.consumeQueue
-      .then(() => this._executeConsumeSequentially(producerId, socketId, kind, rtpCapabilities, trackType))
+      .then(() =>
+        this._executeConsumeSequentially(producerId, socketId, kind, rtpCapabilities, trackType)
+      )
       .catch((error) => {
         console.error(`❌ Consume queue error for producer ${producerId}:`, error);
         userFeedbackManager.notifyOperationFailed(producerId, error);
@@ -214,7 +227,7 @@ class MediaTrackManager {
           this.operationTimeouts.delete(producerId);
         }
       });
-    
+
     return this.consumeQueue;
   }
 
@@ -235,11 +248,15 @@ class MediaTrackManager {
       remoteTracks: this.remoteTracks,
       consumerMap: this.consumerMap,
       remoteProducerMap: this.remoteProducerMap,
-      processingProducers: this.processingProducers
+      processingProducers: this.processingProducers,
     };
 
     const validation = duplicateValidator.validateDuplicates(
-      producerId, socketId, kind, trackType, trackMaps
+      producerId,
+      socketId,
+      kind,
+      trackType,
+      trackMaps
     );
 
     if (validation.isDuplicate) {
@@ -294,19 +311,26 @@ class MediaTrackManager {
       return trackId;
     } catch (error) {
       console.error(`❌ Failed to add remote ${trackType} ${kind} track:`, error);
-      
+
       // 알려진 중복 에러인 경우 무시
       if (this.isKnownDuplicateError(error)) {
         console.warn(`⚠️ Producer ${producerId} seems to be already consumed, ignoring error.`);
         return null;
       }
-      
+
       // 복구 로직 시작
       if (recoveryManager.shouldRetryError(error, producerId)) {
         console.log(`🔄 Attempting recovery for producer ${producerId}`);
-        return await this.executeRecovery(producerId, socketId, kind, rtpCapabilities, trackType, error);
+        return await this.executeRecovery(
+          producerId,
+          socketId,
+          kind,
+          rtpCapabilities,
+          trackType,
+          error
+        );
       }
-      
+
       throw error;
     } finally {
       // 🔓 처리 완료 후 락 해제
@@ -429,12 +453,30 @@ class MediaTrackManager {
     }
   }
 
-  // 기존 메서드들... (변경 없음)
-  enableLocalTrack(trackId: string, enabled: boolean): void {
+  // 🆕 개선된 로컬 트랙 활성화/비활성화 (Producer pause/resume 포함)
+  async enableLocalTrack(trackId: string, enabled: boolean): Promise<void> {
     const trackInfo = this.localTracks.get(trackId);
     if (!trackInfo || !this.dispatch) return;
 
     trackInfo.track.enabled = enabled;
+
+    // Producer pause/resume 처리
+    if (trackInfo.producer) {
+      try {
+        if (enabled) {
+          await trackInfo.producer.resume();
+          console.log(`▶️ Producer resumed for ${trackInfo.kind} track`);
+        } else {
+          await trackInfo.producer.pause();
+          console.log(`⏸️ Producer paused for ${trackInfo.kind} track`);
+        }
+
+        // 서버에 상태 변화 알림
+        this.notifyProducerStateChange(trackInfo.producer.id, enabled);
+      } catch (error) {
+        console.error(`❌ Failed to ${enabled ? "resume" : "pause"} producer:`, error);
+      }
+    }
 
     // Redux 상태 업데이트 (카메라 트랙만)
     if (trackInfo.trackType === "camera") {
@@ -454,10 +496,18 @@ class MediaTrackManager {
     );
   }
 
-  toggleLocalTrack(trackId: string): void {
+  // 🆕 서버에 Producer 상태 변화 알림
+  private notifyProducerStateChange(producerId: string, enabled: boolean): void {
+    const eventName = enabled ? "resume_producer" : "pause_producer";
+    console.log(`📡 Notifying server: ${eventName} for producer ${producerId}`);
+
+    webrtcHandler.emitProducerStateChange(producerId, enabled);
+  }
+
+  async toggleLocalTrack(trackId: string): Promise<void> {
     const trackInfo = this.localTracks.get(trackId);
     if (trackInfo) {
-      this.enableLocalTrack(trackId, !trackInfo.track.enabled);
+      await this.enableLocalTrack(trackId, !trackInfo.track.enabled);
     }
   }
 
@@ -632,6 +682,34 @@ class MediaTrackManager {
     return this.localTracks.get(trackId) || this.remoteTracks.get(trackId) || null;
   }
 
+  // 🆕 원격 Producer ID로 트랙 정보 조회
+  getRemoteTrackByProducerId(producerId: string): TrackInfo | null {
+    for (const trackInfo of this.remoteTracks.values()) {
+      if (trackInfo.consumer?.id === producerId || trackInfo.producer?.id === producerId) {
+        return trackInfo;
+      }
+    }
+    return null;
+  }
+
+  // 🆕 원격 트랙 상태 업데이트
+  updateRemoteTrackState(
+    socketId: string,
+    kind: "audio" | "video",
+    updates: { enabled: boolean }
+  ): void {
+    if (this.dispatch) {
+      this.dispatch(
+        updateRemoteTrack({
+          socketId,
+          kind,
+          updates,
+        })
+      );
+      console.log(`🔄 Updated remote ${kind} track state for ${socketId}:`, updates);
+    }
+  }
+
   // Producer ID로 트랙 제거 (완전한 동기화 보장)
   removeTrackByProducerId(producerId: string): void {
     const trackInfo = this.getTrackByProducerId(producerId);
@@ -768,12 +846,12 @@ class MediaTrackManager {
     // Race condition 방지 상태 정리
     this.processingProducers.clear();
     this.consumeQueue = Promise.resolve(null);
-    
+
     // 복구 로직 상태 정리
     recoveryManager.cleanup();
-    
+
     // 타임아웃 정리
-    this.operationTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.operationTimeouts.forEach((timeout) => clearTimeout(timeout));
     this.operationTimeouts.clear();
 
     console.log("✅ Track cleanup completed");
@@ -786,9 +864,15 @@ class MediaTrackManager {
     this.remoteProducerMap.set(producerId, trackInfo.trackId);
   }
 
-  private updateReduxState(socketId: string, kind: "audio" | "video", trackInfo: TrackInfo, producerId: string, consumerId: string): void {
+  private updateReduxState(
+    socketId: string,
+    kind: "audio" | "video",
+    trackInfo: TrackInfo,
+    producerId: string,
+    consumerId: string
+  ): void {
     if (!this.dispatch) return;
-    
+
     this.dispatch(
       setRemoteTrack({
         socketId,
@@ -806,10 +890,12 @@ class MediaTrackManager {
   }
 
   private isKnownDuplicateError(error: any): boolean {
-    return error instanceof Error &&
+    return (
+      error instanceof Error &&
       (error.message.includes("Duplicate a=msid") ||
-       error.message.includes("already consumed") ||
-       error.message.includes("Consumer already exists"));
+        error.message.includes("already consumed") ||
+        error.message.includes("Consumer already exists"))
+    );
   }
 
   private async executeRecovery(
@@ -832,7 +918,7 @@ class MediaTrackManager {
         this.saveTrackInfo(trackInfo, producerId, trackInfo.consumer!.id);
         this.updateReduxState(socketId, kind, trackInfo, producerId, trackInfo.consumer!.id);
       },
-      onStateCleanup: this.cleanupInconsistentState.bind(this)
+      onStateCleanup: this.cleanupInconsistentState.bind(this),
     };
 
     try {
@@ -847,11 +933,9 @@ class MediaTrackManager {
     }
   }
 
-
-
   private async cleanupInconsistentState(producerId: string): Promise<void> {
     console.log(`🧹 Cleaning up inconsistent state for producer ${producerId}`);
-    
+
     // 기존 중복된 상태 제거
     const existingTrack = this.getTrackByProducerId(producerId);
     if (existingTrack) {
@@ -860,10 +944,10 @@ class MediaTrackManager {
         try {
           existingTrack.consumer.close();
         } catch (e) {
-          console.warn('Consumer already closed:', e);
+          console.warn("Consumer already closed:", e);
         }
       }
-      
+
       // 맵에서 제거
       this.remoteTracks.delete(existingTrack.trackId);
       if (existingTrack.consumer) {
@@ -873,22 +957,19 @@ class MediaTrackManager {
     }
   }
 
-
-
-
   private cleanupConsumeOperation(producerId: string): void {
     console.log(`🧹 [Cleanup] Cleaning up failed operation for producer ${producerId}`);
-    
+
     // 처리 중 상태 제거
     this.processingProducers.delete(producerId);
-    
+
     // 타임아웃 정리
     const timeout = this.operationTimeouts.get(producerId);
     if (timeout) {
       clearTimeout(timeout);
       this.operationTimeouts.delete(producerId);
     }
-    
+
     // 불완전한 상태 정리
     this.cleanupInconsistentState(producerId);
   }
@@ -898,7 +979,15 @@ class MediaTrackManager {
     track: MediaStreamTrack,
     trackType: "camera" | "screen",
     appData: ProducerAppData
-  ): { track: MediaStreamTrack; appData: any; encodings?: Array<{maxBitrate?: number; maxFramerate?: number; scaleResolutionDownBy?: number}> } {
+  ): {
+    track: MediaStreamTrack;
+    appData: any;
+    encodings?: Array<{
+      maxBitrate?: number;
+      maxFramerate?: number;
+      scaleResolutionDownBy?: number;
+    }>;
+  } {
     const baseOptions = {
       track,
       appData,

@@ -8,6 +8,8 @@ import { ConferenceLayout } from "@/widgets/video-conference/ConferenceLayout";
 import { Lobby } from "@/widgets/video-conference/lobby/ui/Lobby";
 import { mediasoupManager } from "@/shared/api/mediasoupManager";
 import { initializeSocketApi, webrtcHandler, chatHandler } from "@/shared/api/socket";
+import { setRoomId } from "@/entities/video-conference/session/model/slice";
+import { joinRoomThunk } from "@/entities/video-conference/session/model/thunks";
 
 interface ConferenceClientPageProps {
   roomId: string;
@@ -21,6 +23,9 @@ export const ConferenceClientPage = ({ roomId }: ConferenceClientPageProps) => {
   useEffect(() => {
     const initializeSystems = async () => {
       try {
+        // Redux에 roomId 설정 (페이지 로드 시)
+        dispatch(setRoomId(roomId));
+        
         await mediasoupManager.init(dispatch);
         initializeSocketApi(dispatch);
         console.log("✅ All systems initialized successfully.");
@@ -42,7 +47,8 @@ export const ConferenceClientPage = ({ roomId }: ConferenceClientPageProps) => {
     if (roomId && userName) {
       try {
         console.log(`🚀 Joining room: ${roomId}, user: ${userName}`);
-        webrtcHandler.joinRoom({ roomId, userName });
+        // joinRoomThunk를 사용하여 Redux 상태와 채팅 초기화를 모두 처리
+        dispatch(joinRoomThunk({ roomId, userName }));
       } catch (e) {
         console.error("❌ Failed to join room:", e);
       }
