@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react"
 import { ScrollArea } from "@/shared/ui/shadcn/scroll-area"
@@ -80,9 +80,15 @@ export function AlbumEditingSidebar({
   groupId,
   albumId
 }: AlbumEditingSidebarProps) {
-  const [isAlbumInfoExpanded, setIsAlbumInfoExpanded] = useState(!albumInfo?.name || albumInfo.name.trim() === '') // 앨범 제목이 없을 때만 드롭다운 열림
+  const [isAlbumInfoExpanded, setIsAlbumInfoExpanded] = useState(false) // 기본값을 false로 설정
   const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]) // 삭제를 위한 사진 선택
   const [isDeleteMode, setIsDeleteMode] = useState(false) // 삭제 모드
+
+  // albumInfo가 변경될 때마다 드롭다운 상태를 업데이트
+  useEffect(() => {
+    // 앨범 제목이 없거나 비어있으면 드롭다운 열림, 있으면 닫힘
+    setIsAlbumInfoExpanded(!albumInfo?.name || albumInfo.name.trim() === '')
+  }, [albumInfo?.name])
 
   return (
     <>
@@ -290,51 +296,67 @@ export function AlbumEditingSidebar({
               </div>
               
               {/* 사진 추가/삭제 버튼들 */}
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {/* 갤러리에서 사진 추가 버튼 */}
                 {onAddPhotos && (
                   <button
                     onClick={onAddPhotos}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded text-green-400 hover:bg-green-500/20 hover:border-green-500/40 transition-colors text-xs font-medium"
+                    className="flex items-center justify-center gap-1 px-3 py-2 bg-gray-800/50 border border-gray-600/30 rounded text-white hover:bg-green-500/20 hover:border-green-500/40 hover:text-green-400 transition-colors text-xs font-medium"
                   >
-                    <Plus size={12} />
-                    갤러리에서 추가
+                    <Plus size={14} />
+                    추가
                   </button>
                 )}
                 
-                {/* 삭제 모드 토글 버튼 */}
+                {/* 삭제 모드 - 조건부 렌더링 */}
                 {onDeletePhotos && availablePhotos.length > 0 && (
-                  <button
-                    onClick={() => {
-                      setIsDeleteMode(!isDeleteMode)
-                      setSelectedPhotos([])
-                    }}
-                    className={`flex items-center gap-1 px-3 py-1.5 border rounded text-xs font-medium transition-colors ${
-                      isDeleteMode
-                        ? "bg-red-500/20 border-red-500/40 text-red-300"
-                        : "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20 hover:border-red-500/40"
-                    }`}
-                  >
-                    <Trash2 size={12} />
-                    {isDeleteMode ? '취소' : '삭제 모드'}
-                  </button>
-                )}
-                
-                {/* 선택된 사진 삭제 실행 버튼 */}
-                {isDeleteMode && selectedPhotos.length > 0 && (
-                  <button
-                    onClick={() => {
-                      if (onDeletePhotos) {
-                        onDeletePhotos(selectedPhotos)
-                        setSelectedPhotos([])
-                        setIsDeleteMode(false)
-                      }
-                    }}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-red-600 border border-red-500 rounded text-white hover:bg-red-700 transition-colors text-xs font-medium"
-                  >
-                    <Trash2 size={12} />
-                    {selectedPhotos.length}장 삭제
-                  </button>
+                  <>
+                    {!isDeleteMode ? (
+                      <button
+                        onClick={() => {
+                          setIsDeleteMode(true)
+                          setSelectedPhotos([])
+                        }}
+                        className="flex items-center justify-center gap-1 px-3 py-2 bg-gray-800/50 border border-gray-600/30 rounded text-white hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400 transition-colors text-xs font-medium"
+                      >
+                        <Trash2 size={14} />
+                        삭제
+                      </button>
+                    ) : (
+                      <>
+                        {/* 취소 버튼 */}
+                        <button
+                          onClick={() => {
+                            setIsDeleteMode(false)
+                            setSelectedPhotos([])
+                          }}
+                          className="flex items-center justify-center gap-1 px-3 py-2 bg-gray-500/10 border border-gray-500/20 rounded text-gray-400 hover:bg-gray-500/20 hover:border-gray-500/40 transition-colors text-xs font-medium"
+                        >
+                          취소
+                        </button>
+                        
+                        {/* 확인 버튼 */}
+                        <button
+                          onClick={() => {
+                            if (onDeletePhotos && selectedPhotos.length > 0) {
+                              onDeletePhotos(selectedPhotos)
+                              setSelectedPhotos([])
+                              setIsDeleteMode(false)
+                            }
+                          }}
+                          disabled={selectedPhotos.length === 0}
+                          className={`flex items-center justify-center gap-1 px-3 py-2 border rounded transition-colors text-xs font-medium ${
+                            selectedPhotos.length > 0
+                              ? "bg-red-600 border-red-500 text-white hover:bg-red-700"
+                              : "bg-gray-600/20 border-gray-600/20 text-gray-500 cursor-not-allowed"
+                          }`}
+                        >
+                          <Trash2 size={14} />
+                          확인
+                        </button>
+                      </>
+                    )}
+                  </>
                 )}
               </div>
             </div>

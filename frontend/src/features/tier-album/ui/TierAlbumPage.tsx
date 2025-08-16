@@ -522,15 +522,17 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
       )
         return
 
-      // 정밀 배틀 모드 체크
-      if (
-        precisionTierMode &&
-        tierPhotos[targetTier]?.length > 0 &&
-        source !== targetTier
-      ) {
-        const opponents = [...tierPhotos[targetTier]]
-          .slice(0, targetIndex)
+      // 정밀 배틀 모드 체크 - 같은 티어 내 순위 변경도 포함
+      if (precisionTierMode && tierPhotos[targetTier]?.length > 0) {
+        // 같은 티어 내에서는 드래그하는 사진을 제외한 상대들만 고려
+        const availableOpponents = source === targetTier 
+          ? [...tierPhotos[targetTier]].filter(p => p.id !== draggedPhoto.id)
+          : [...tierPhotos[targetTier]]
+        
+        const opponents = availableOpponents
+          .slice(0, source === targetTier ? Math.min(targetIndex, availableOpponents.length) : targetIndex)
           .reverse()
+        
         if (opponents.length > 0) {
           setBattleSequence({
             newPhoto: draggedPhoto,
