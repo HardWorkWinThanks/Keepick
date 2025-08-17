@@ -157,7 +157,7 @@ export function usePhotoGallery(groupId?: string) {
     }
   }, [])
 
-  // 태그 및 사람 필터링 (useMemo로 변경하여 무한 루프 방지)
+  // 클라이언트 사이드 필터링 (백업용 - PhotoGallery에서 서버사이드 필터링 우선 사용)
   const filteredPhotos = useMemo(() => {
     if (selectedTags.length === 0 && selectedMemberNames.length === 0) {
       return allPhotos

@@ -36,8 +36,20 @@ export const useInfiniteScroll = ({
     }
   }, [hasNextPage, fetchNextPage, isFetching, threshold])
 
-  useEffect(() => {
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
+  // 스로틀링을 적용한 스크롤 핸들러
+  const throttledHandleScroll = useCallback(() => {
+    let timeoutId: NodeJS.Timeout
+    return () => {
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(handleScroll, 100) // 100ms 스로틀링
+    }
   }, [handleScroll])
+
+  useEffect(() => {
+    const scrollHandler = throttledHandleScroll()
+    window.addEventListener('scroll', scrollHandler, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', scrollHandler)
+    }
+  }, [throttledHandleScroll])
 }

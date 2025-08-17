@@ -115,26 +115,29 @@ export const useAllTags = (groupId: string) => {
 /**
  * 필터링된 사진 무한 스크롤 쿼리 훅
  */
-export const useFilteredPhotos = (groupId: string, selectedTags: string[]) => {
+export const useFilteredPhotos = (groupId: string, selectedTags: string[], selectedMemberIds?: number[]) => {
   // 디버깅: 쿼리 실행 조건 확인
   console.log('🔍 useFilteredPhotos 호출:', {
     groupId,
     selectedTags,
-    queryKey: ['filtered-photos', groupId, selectedTags],
-    enabled: !!groupId && selectedTags.length > 0
+    selectedMemberIds,
+    queryKey: ['filtered-photos', groupId, selectedTags, selectedMemberIds],
+    enabled: !!groupId
   })
   
   return useInfiniteQuery({
-    queryKey: ['filtered-photos', groupId, selectedTags],
+    queryKey: ['filtered-photos', groupId, selectedTags, selectedMemberIds],
     queryFn: ({ pageParam = 0 }) => {
       console.log('🔄 필터링 API 호출:', {
         groupId: parseInt(groupId),
         tags: selectedTags,
+        memberIds: selectedMemberIds,
         page: pageParam,
         size: 20
       })
       return getFilteredPhotos(parseInt(groupId), {
         tags: selectedTags,
+        memberIds: selectedMemberIds,
         page: pageParam,
         size: 20
       })
@@ -143,15 +146,15 @@ export const useFilteredPhotos = (groupId: string, selectedTags: string[]) => {
       lastPage.pageInfo.hasNext ? lastPage.pageInfo.page + 1 : undefined,
     initialPageParam: 0,
     staleTime: 2 * 60 * 1000, // 2분 캐싱 (필터링 결과는 자주 변경될 수 있음)
-    enabled: !!groupId, // groupId가 있을 때 항상 실행 (태그가 없으면 전체 조회)
+    enabled: !!groupId, // groupId가 있을 때 항상 실행 (태그나 멤버가 없으면 전체 조회)
   })
 }
 
 /**
  * 필터링된 사진 데이터를 플래튼된 갤러리 형식으로 변환
  */
-export const useFilteredPhotosFlat = (groupId: string, selectedTags: string[]) => {
-  const query = useFilteredPhotos(groupId, selectedTags)
+export const useFilteredPhotosFlat = (groupId: string, selectedTags: string[], selectedMemberIds?: number[]) => {
+  const query = useFilteredPhotos(groupId, selectedTags, selectedMemberIds)
   
   // 중복 제거를 위해 Map 사용
   const photosMap = new Map()

@@ -7,7 +7,9 @@ import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, SlidersHorizontal, Check, Trash2, X, ChevronUp, ChevronDown, Upload, Loader2 } from "lucide-react"
 import { useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useDispatch } from 'react-redux'
 import { usePhotoGallery, useMasonryLayout, useDragScroll } from "../model/usePhotoGallery"
+import { selectAllPhotos as selectAllPhotosAction } from "../model/photoSelectionSlice"
 import { PhotoModal, usePhotoModal } from "@/features/photos-viewing"
 import AiMagicButton from "./AiMagicButton"
 import AiServiceModal from "./AiServiceModal"
@@ -34,6 +36,8 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   const queryClient = useQueryClient()
   // 라우터
   const router = useRouter()
+  // Redux dispatch
+  const dispatch = useDispatch()
   
   // URL 파라미터 감지 (썸네일 선택 모드, 앨범 추가 모드)
   const searchParams = useSearchParams()
@@ -62,7 +66,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     enterSelectionMode: enterBaseSelectionMode,
     exitSelectionMode: exitBaseSelectionMode,
     togglePhotoSelection,
-    selectAllPhotos,
+    selectAllPhotos: selectAllPhotosHook,
     deselectAllPhotos,
     deleteSelectedPhotos: deleteSelectedPhotosBase,
     createTimelineAlbum,
@@ -91,14 +95,24 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   // 서버 사이드 필터링을 위한 쿼리 (딕셔너리에 있는 태그만 전송)
   const filteredTagsForServer = selectedTags.filter(tag => translateTagOrIgnore(tag) !== null)
   
-  // 디버깅: 태그 상태 확인
-  // console.log('🔍 태그 상태 디버깅:', {
-  //   selectedTags,
-  //   filteredTagsForServer,
-  //   hasSelectedTags: selectedTags.length > 0
-  // })
+  // 서버 사이드 인물 필터링을 위한 memberIds 매핑
+  const apiMembers = allTagsQuery.data?.members || []
+  const selectedMemberIds = useMemo(() => {
+    return selectedMemberNames
+      .map(memberName => apiMembers.find(member => member.nickname === memberName)?.memberId)
+      .filter((id): id is number => id !== undefined)
+  }, [selectedMemberNames, apiMembers])
   
-  const filteredQuery = useFilteredPhotosFlat(groupId, filteredTagsForServer)
+  // 디버깅: 태그 및 멤버 상태 확인
+  console.log('🔍 필터링 상태 디버깅:', {
+    selectedTags,
+    filteredTagsForServer,
+    selectedMemberNames,
+    selectedMemberIds,
+    apiMembers: apiMembers.map(m => ({ id: m.memberId, nickname: m.nickname }))
+  })
+  
+  const filteredQuery = useFilteredPhotosFlat(groupId, filteredTagsForServer, selectedMemberIds)
 
   // 쿼리에서 데이터와 로딩 상태 추출
   const allQueryPhotos = allPhotosQuery.photos
@@ -146,36 +160,34 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         // 유사사진은 클러스터별로 처리하므로 빈 배열 반환
         return []
       default:
-        // 전체 모드에서는 클라이언트 사이드 필터링 적용
-        let basePhotos = allQueryPhotos.length > 0 ? allQueryPhotos : allPhotos
+        // 전체 모드에서는 서버 사이드 필터링 우선 사용
+        const hasFilters = selectedTags.length > 0 || selectedMemberNames.length > 0
         
-        // 서버 사이드 태그 필터링이 있는 경우 우선 사용
-        if (selectedTags.length > 0 && filteredQuery.photos.length > 0) {
-          basePhotos = filteredQuery.photos
+        if (hasFilters) {
+          // 필터링이 있으면 서버 사이드 필터링 결과 사용
+          return filteredQuery.photos
+        } else {
+          // 필터링이 없으면 전체 사진 사용
+          return allQueryPhotos.length > 0 ? allQueryPhotos : allPhotos
         }
-        
-        // 사람 필터링 적용 (클라이언트 사이드)
-        if (selectedMemberNames.length > 0) {
-          basePhotos = basePhotos.filter((photo) => {
-            // photoTagsCache에서 멤버 정보 확인
-            const photoMembers = photoTagsCache[photo.id]?.members || []
-            return selectedMemberNames.some(selectedMember => photoMembers.includes(selectedMember))
-          })
-        }
-        
-        return basePhotos
     }
-  }, [viewMode, blurredPhotos, selectedTags, selectedMemberNames, filteredQuery.photos, allQueryPhotos, allPhotos, photoTagsCache])
+  }, [viewMode, blurredPhotos, selectedTags, selectedMemberNames, filteredQuery.photos, allQueryPhotos, allPhotos])
   
   // Masonry layout 계산
   const columns = useMasonryLayout(displayPhotos, columnCount)
+  
+  // 로컬 전체 선택/해제 함수 (displayPhotos 기준)
+  const selectAllPhotos = useCallback(() => {
+    if (!baseSelectionMode) return
+    // Redux에서 전체 선택 액션 사용하되 displayPhotos를 전달
+    dispatch(selectAllPhotosAction(displayPhotos))
+  }, [baseSelectionMode, displayPhotos, dispatch])
   
   // 실시간 태그 목록 (API에서 수집)
   const [realTimeTags, setRealTimeTags] = useState<string[]>([])
   
   // API에서 가져온 전체 태그와 인물 정보
   const apiTags = allTagsQuery.data?.tags || []
-  const apiMembers = allTagsQuery.data?.members || []
   
   // 현재 사진들로부터 실시간 태그 계산 (보조 태그 목록)
   const calculatedTags = useMemo(() => {
@@ -247,18 +259,23 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   // 전체 사진 개수 상태 (페이징 정보에서 가져옴) - 레거시 데이터용
   const [totalPhotosCount, setTotalPhotosCount] = useState(0)
   
+  // 필터링 활성화 여부 확인 (displayPhotos 로직과 동일하게)
+  const hasFilters = selectedTags.length > 0 || selectedMemberNames.length > 0
+  
   // 무한 스크롤 적용
   useInfiniteScroll({
     hasNextPage: viewMode === 'all' ? (
-      selectedTags.length > 0 ? filteredQuery.hasNextPage : allPhotosQuery.hasNextPage
+      hasFilters ? filteredQuery.hasNextPage : allPhotosQuery.hasNextPage
     ) : viewMode === 'blurred' ? blurredQuery.hasNextPage : 
         viewMode === 'similar' ? similarQuery.hasNextPage : false,
     fetchNextPage: () => {
-      console.log('🔄 갤러리 무한스크롤 트리거됨 - threshold: 200px')
+      console.log('🔄 갤러리 무한스크롤 트리거됨 - threshold: 200px, hasFilters:', hasFilters)
       if (viewMode === 'all') {
-        if (selectedTags.length > 0) {
+        if (hasFilters) {
+          console.log('🔄 필터링된 사진 다음 페이지 로드')
           filteredQuery.fetchNextPage()
         } else {
+          console.log('🔄 전체 사진 다음 페이지 로드')
           allPhotosQuery.fetchNextPage()
         }
       } else if (viewMode === 'blurred') {
@@ -268,7 +285,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
       }
     },
     isFetching: viewMode === 'all' ? (
-      selectedTags.length > 0 ? filteredQuery.isFetchingNextPage : allPhotosQuery.isFetchingNextPage
+      hasFilters ? filteredQuery.isFetchingNextPage : allPhotosQuery.isFetchingNextPage
     ) : viewMode === 'blurred' ? blurredQuery.isFetchingNextPage : 
         viewMode === 'similar' ? similarQuery.isFetchingNextPage : false,
     threshold: 200 
