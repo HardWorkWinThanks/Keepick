@@ -21,7 +21,12 @@ export function useProfile() {
     refetch: refetchUserData 
   } = useQuery({
     queryKey: ['user', 'me'],
-    queryFn: profileApi.getCurrentUserInfo,
+    queryFn: async () => {
+      console.log('🔍 getCurrentUserInfo API 호출 시작');
+      const result = await profileApi.getCurrentUserInfo();
+      console.log('✅ getCurrentUserInfo API 응답:', result);
+      return result;
+    },
     staleTime: 1000 * 60 * 60 * 3, // 3시간간 신선함 유지
     retry: 2,
   })
@@ -63,11 +68,12 @@ export function useProfile() {
   // 닉네임 업데이트 뮤테이션
   const updateNicknameMutation = useMutation({
     mutationFn: (nickname: string) => profileApi.updateUserInfo({ nickname }),
-    onSuccess: (updatedUser) => {
-      // 쿼리 캐시 업데이트
-      queryClient.setQueryData(['user', 'me'], updatedUser)
-      // Redux도 동기화
-      dispatch(updateUser(updatedUser))
+    onSuccess: async () => {
+      console.log('✅ 닉네임 업데이트 완료, 잠시 후 최신 데이터 가져오기');
+      // PATCH 완료 후 잠시 대기한 다음 최신 데이터 가져오기
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['user', 'me'] })
+      }, 2000); // 2초로 늘려서 서버 DB 커밋 시간 확보
       setNicknameCheckResult({ available: false, checked: false })
     },
     onError: (error) => {
@@ -93,13 +99,15 @@ export function useProfile() {
       const updateData = imageType === "profile" 
         ? { profileUrl: publicUrl } 
         : { identificationUrl: publicUrl }
+      console.log(`🖼️ ${imageType} 이미지 업로드 시작:`, updateData);
       return profileApi.updateUserInfo(updateData)
     },
-    onSuccess: (updatedUser) => {
-      // 쿼리 캐시 업데이트
-      queryClient.setQueryData(['user', 'me'], updatedUser)
-      // Redux도 동기화
-      dispatch(updateUser(updatedUser))
+    onSuccess: () => {
+      console.log('✅ 이미지 업로드 완료, 잠시 후 최신 데이터 가져오기');
+      // PATCH 완료 후 잠시 대기한 다음 최신 데이터 가져오기
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['user', 'me'] })
+      }, 2000); // 2초로 늘려서 서버 DB 커밋 시간 확보
     },
     onError: (error) => {
       console.error("이미지 업로드 실패:", error)

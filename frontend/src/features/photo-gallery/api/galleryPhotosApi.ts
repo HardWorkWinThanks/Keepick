@@ -273,5 +273,6 @@ export const convertToGalleryPhoto = (photoInfo: PhotoInfo): any => {
     date: formatPhotoDate(photoInfo.takenAt), // S3 메타데이터에서 추출된 촬영 일시 사용
     originalTakenAt: photoInfo.takenAt, // 원본 ISO 날짜 정보도 보존
     tags: [], // 초기에는 빈 배열, 별도 API로 로드
+    memberNicknames: [], // AI 인식 사람 태그도 초기에는 빈 배열, 별도 API로 로드
   };
 };

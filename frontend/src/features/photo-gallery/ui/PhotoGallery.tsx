@@ -45,6 +45,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     allPhotos,
     selectedPhotoData,
     selectedTags,
+    selectedMemberNames,
     loading,
     hasMore,
     columnCount,
@@ -53,6 +54,9 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     isPhotosExpanded,
     toggleTag,
     clearAllTags,
+    toggleMemberName,
+    clearAllMemberNames,
+    clearAllFilters,
     enterSelectionMode: enterBaseSelectionMode,
     exitSelectionMode: exitBaseSelectionMode,
     togglePhotoSelection,
@@ -167,6 +171,19 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     ))]
     
     return tagsFromCache
+  }, [allQueryPhotos, allPhotos, filteredQuery.photos, selectedTags, photoTagsCache])
+
+  // 현재 사진들로부터 사람 태그(memberNicknames) 계산
+  const calculatedMemberNicknames = useMemo(() => {
+    const currentPhotos = selectedTags.length > 0 ? filteredQuery.photos : 
+                         (allQueryPhotos.length > 0 ? allQueryPhotos : allPhotos)
+    
+    // photoTagsCache에서 멤버 닉네임 수집
+    const membersFromCache = [...new Set(currentPhotos.flatMap(photo => 
+      photoTagsCache[photo.id]?.members || []
+    ))]
+    
+    return membersFromCache
   }, [allQueryPhotos, allPhotos, filteredQuery.photos, selectedTags, photoTagsCache])
   
   // 최종 표시할 태그 목록 (API 태그 우선, 없으면 계산된 태그 사용)
@@ -586,12 +603,6 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         queryClient.invalidateQueries({ queryKey: ['filtered-photos', groupId] })
         queryClient.invalidateQueries({ queryKey: ['all-tags', groupId] })
         
-        // 100ms 후 태그 목록 강제 새로고침 (서버 DB 반영 대기)
-        setTimeout(() => {
-          queryClient.refetchQueries({ queryKey: ['all-tags', groupId] })
-          console.log('🔄 태그 목록 지연 새로고침 실행')
-        }, 100)
-        
         console.log(`${deleteResult.deletedPhotoIds.length}장 삭제 완료`)
       }
       
@@ -992,9 +1003,9 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                   </span>
                 )}
               </h3>
-              {selectedTags.length > 0 && (
+              {(selectedTags.length > 0 || selectedMemberNames.length > 0) && (
                 <button
-                  onClick={clearAllTags}
+                  onClick={clearAllFilters}
                   className="text-xs text-[#FE7A25] hover:text-orange-400 transition-colors font-keepick-primary"
                 >
                   전체 해제
@@ -1014,12 +1025,12 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                   <motion.button
                     key={tag}
                     onClick={() => toggleTag(tag)}
-                    className={`px-3 py-1.5 text-xs font-keepick-primary tracking-wide transition-all duration-300 relative ${ 
+                    className={`px-3 py-1.5 text-sm font-keepick-primary tracking-wide transition-all duration-300 relative ${ 
                       selectedTags.includes(tag)
-                        ? "bg-[#FE7A25] text-white shadow-lg border border-[#FE7A25]"
+                        ? "bg-[#111111] text-[#FFFFFF] shadow-lg border border-[#111111]"
                         : isRealTimeTag
-                        ? "bg-[#FE7A25]/20 text-[#FE7A25] border border-[#FE7A25]/50 hover:bg-[#FE7A25]/30"
-                        : "bg-gray-900 text-gray-300 border border-gray-700 hover:border-gray-500 hover:text-white"
+                        ? "bg-[#111111]/20 text-[#111111] border border-[#111111]/50 hover:bg-[#111111]/30"
+                        : "bg-gray-800 text-gray-300 border border-gray-600 hover:border-[#111111] hover:text-[#FFFFFF] hover:bg-[#111111]"
                     }`}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -1034,9 +1045,45 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
               })}
             </div>
 
-            {selectedTags.length > 0 && (
+            {/* 사람 태그 섹션 */}
+            {calculatedMemberNicknames.length > 0 && (
+              <>
+                <div className="flex items-center gap-4 mb-3 mt-6">
+                  <h3 className="font-keepick-primary text-sm text-gray-400 tracking-wider">
+                    사람 태그
+                    <span className="ml-2 text-xs text-[#F5E7C6]">
+                      {calculatedMemberNicknames.length}명
+                    </span>
+                  </h3>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {calculatedMemberNicknames.map((memberName) => (
+                    <motion.button
+                      key={`member-${memberName}`}
+                      onClick={() => toggleMemberName(memberName)}
+                      className={`px-3 py-1.5 text-sm font-keepick-primary tracking-wide transition-all duration-300 border ${ 
+                        selectedMemberNames.includes(memberName)
+                          ? "bg-[#F5E7C6] text-[#111111] border-[#F5E7C6] shadow-lg"
+                          : "bg-[#F5E7C6]/30 text-[#111111] border-[#F5E7C6]/50 hover:bg-[#F5E7C6]/60"
+                      }`}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      👤 {memberName}
+                    </motion.button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {(selectedTags.length > 0 || selectedMemberNames.length > 0) && (
               <p className="text-xs text-gray-500 mt-3 font-keepick-primary">
-                {selectedTags.length}개 태그 선택됨 • {displayPhotos.length}장의 사진
+                {selectedTags.length > 0 && `${selectedTags.length}개 태그`}
+                {selectedTags.length > 0 && selectedMemberNames.length > 0 && " • "}
+                {selectedMemberNames.length > 0 && `${selectedMemberNames.length}명 사람`}
+                {" 선택됨 • "}
+                {displayPhotos.length}장의 사진
               </p>
             )}
           </div>
@@ -1289,46 +1336,41 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                           <div className="absolute inset-0 flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             <div className="mb-3">
                               <p className="font-keepick-primary text-white text-sm font-medium">{photo.date}</p>
-                              {/* 멤버 닉네임 표시 */}
-                              {photoTagsCache[photo.id]?.members.length > 0 && (
-                                <p className="font-keepick-primary text-gray-300 text-xs mt-1">
-                                  👥 {photoTagsCache[photo.id].members.join(', ')}
-                                </p>
-                              )}
                             </div>
-                            {/* API에서 받은 태그와 기존 태그 결합 표시 - 딕셔너리에 있는 태그만 표시 */}
+                            {/* 태그 표시 영역 - 사람 태그와 일반 태그 통합 */}
                             <div className="flex flex-wrap gap-1">
-                              {/* API 태그 (우선 표시) - 딕셔너리에 있는 태그만 필터링 */}
-                              {translateTagsAndFilter(photoTagsCache[photo.id]?.tags || []).slice(0, 3).map((translatedTag, index) => (
+                              {/* 사람 태그 (우선 표시) */}
+                              {(photoTagsCache[photo.id]?.members || []).slice(0, 2).map((memberName, index) => (
+                                <span
+                                  key={`member-${index}`}
+                                  className="px-2 py-1 bg-[#F5E7C6]/90 backdrop-blur-sm text-[#111111] text-xs font-keepick-primary rounded-sm"
+                                >
+                                  👤 {memberName}
+                                </span>
+                              ))}
+                              {/* API 태그 (일반 태그) - 딕셔너리에 있는 태그만 필터링 */}
+                              {translateTagsAndFilter(photoTagsCache[photo.id]?.tags || []).slice(0, Math.max(0, 3 - (photoTagsCache[photo.id]?.members || []).slice(0, 2).length)).map((translatedTag, index) => (
                                 <span
                                   key={`api-${index}`}
-                                  className="px-2 py-1 bg-[#FE7A25]/80 backdrop-blur-sm text-white text-xs font-keepick-primary rounded-sm"
+                                  className="px-2 py-1 bg-[#111111]/80 backdrop-blur-sm text-[#FFFFFF] text-xs font-keepick-primary rounded-sm"
                                 >
                                   {translatedTag}
                                 </span>
                               ))}
-                              {/* 기존 태그 (남은 공간에 표시) - 딕셔너리에 있는 태그만 필터링 */}
+                              {/* 더 많은 태그가 있을 때 - 사람 태그와 일반 태그 모두 고려 */}
                               {(() => {
-                                const apiTranslatedCount = translateTagsAndFilter(photoTagsCache[photo.id]?.tags || []).length
-                                const remainingSlots = Math.max(0, 4 - Math.min(3, apiTranslatedCount))
-                                return translateTagsAndFilter(photo.tags).slice(0, remainingSlots).map((translatedTag, index) => (
-                                  <span
-                                    key={`legacy-${index}`}
-                                    className="px-2 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-keepick-primary rounded-sm"
-                                  >
-                                    {translatedTag}
-                                  </span>
-                                ))
-                              })()}
-                              {/* 더 많은 태그가 있을 때 */}
-                              {(() => {
-                                const totalTranslatedTags = translateTagsAndFilter(photoTagsCache[photo.id]?.tags || []).length + 
-                                                           translateTagsAndFilter(photo.tags).length
-                                const displayedTags = Math.min(3, translateTagsAndFilter(photoTagsCache[photo.id]?.tags || []).length) + 
-                                                     Math.min(translateTagsAndFilter(photo.tags).length, Math.max(0, 4 - Math.min(3, translateTagsAndFilter(photoTagsCache[photo.id]?.tags || []).length)))
-                                return totalTranslatedTags > displayedTags && (
+                                const memberCount = (photoTagsCache[photo.id]?.members || []).length
+                                const apiTagCount = translateTagsAndFilter(photoTagsCache[photo.id]?.tags || []).length
+                                const legacyTagCount = translateTagsAndFilter(photo.tags).length
+                                const totalTagCount = memberCount + apiTagCount + legacyTagCount
+                                
+                                const displayedMemberCount = Math.min(2, memberCount)
+                                const displayedApiTagCount = Math.min(3 - displayedMemberCount, apiTagCount)
+                                const totalDisplayed = displayedMemberCount + displayedApiTagCount
+                                
+                                return totalTagCount > totalDisplayed && (
                                   <span className="px-2 py-1 bg-white/10 backdrop-blur-sm text-gray-300 text-xs font-keepick-primary rounded-sm">
-                                    +{totalTranslatedTags - displayedTags}
+                                    +{totalTagCount - totalDisplayed}
                                   </span>
                                 )
                               })()}

@@ -26,7 +26,8 @@ export interface GalleryPhoto {
   width: number;
   height: number;
   date: string;
-  tags: string[];
+  tags: string[]; // 일반 AI 분석 태그
+  memberNicknames?: string[]; // AI 인식 사람 태그 (닉네임 배열)
 }
 
 export interface PhotoTag {

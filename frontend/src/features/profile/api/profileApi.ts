@@ -30,10 +30,22 @@ export const profileApi = {
 
   // 사용자 정보 업데이트 (모든 필드 지원)
   updateUserInfo: async (updateData: UserUpdateRequest): Promise<User> => {
-    const response = await apiClient.patch<ApiResponse<User>>(
-      "/api/members/me",
-      updateData
-    );
-    return response.data.data;
+    try {
+      console.log('프로필 업데이트 요청 데이터:', updateData);
+      const response = await apiClient.patch<ApiResponse<User>>(
+        "/api/members/me",
+        updateData
+      );
+      console.log('프로필 업데이트 응답:', response.data);
+      return response.data.data;
+    } catch (error: any) {
+      console.error('프로필 업데이트 실패:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        updateData
+      });
+      throw error;
+    }
   },
 };

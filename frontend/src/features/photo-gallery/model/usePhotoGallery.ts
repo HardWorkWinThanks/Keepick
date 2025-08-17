@@ -109,6 +109,7 @@ export function usePhotoGallery(groupId?: string) {
   // 실제 데이터 사용을 위해 빈 배열로 초기화
   const [allPhotos, setAllPhotos] = useState<GalleryPhoto[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [selectedMemberNames, setSelectedMemberNames] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [columnCount, setColumnCount] = useState(4)
@@ -154,20 +155,33 @@ export function usePhotoGallery(groupId?: string) {
     }
   }, [])
 
-  // 태그 필터링 (useMemo로 변경하여 무한 루프 방지)
+  // 태그 및 사람 필터링 (useMemo로 변경하여 무한 루프 방지)
   const filteredPhotos = useMemo(() => {
-    if (selectedTags.length === 0) {
+    if (selectedTags.length === 0 && selectedMemberNames.length === 0) {
       return allPhotos
     } else {
-      return allPhotos.filter((photo) => 
-        selectedTags.some((selectedTag) => {
+      return allPhotos.filter((photo) => {
+        // 태그 조건 확인
+        const tagMatches = selectedTags.length === 0 || selectedTags.some((selectedTag) => {
           // 사진의 태그 중 딕셔너리에 있는 태그만 추출한 후 매칭
           const photoTagsInDict = photo.tags.filter(photoTag => isTranslatable(photoTag))
           return photoTagsInDict.includes(selectedTag)
         })
-      )
+        
+        // 사람 태그 조건 확인
+        const memberMatches = selectedMemberNames.length === 0 || selectedMemberNames.some((selectedMember) => {
+          return (photo.memberNicknames || []).includes(selectedMember)
+        })
+        
+        // 둘 다 선택된 경우는 AND 조건, 하나만 선택된 경우는 해당 조건만 확인
+        if (selectedTags.length > 0 && selectedMemberNames.length > 0) {
+          return tagMatches && memberMatches
+        } else {
+          return tagMatches && memberMatches
+        }
+      })
     }
-  }, [selectedTags, allPhotos])
+  }, [selectedTags, selectedMemberNames, allPhotos])
 
   // 태그 토글
   const toggleTag = (tag: string) => {
@@ -179,6 +193,24 @@ export function usePhotoGallery(groupId?: string) {
   // 모든 태그 해제
   const clearAllTags = () => {
     setSelectedTags([])
+  }
+
+  // 사람 태그 토글
+  const toggleMemberName = (memberName: string) => {
+    setSelectedMemberNames((prev) => 
+      prev.includes(memberName) ? prev.filter((m) => m !== memberName) : [...prev, memberName]
+    )
+  }
+
+  // 모든 사람 태그 해제
+  const clearAllMemberNames = () => {
+    setSelectedMemberNames([])
+  }
+
+  // 모든 필터 해제 (태그 + 사람)
+  const clearAllFilters = () => {
+    setSelectedTags([])
+    setSelectedMemberNames([])
   }
 
   // 선택 모드 관리
@@ -314,6 +346,7 @@ export function usePhotoGallery(groupId?: string) {
     
     // 상태
     selectedTags,
+    selectedMemberNames,
     loading,
     hasMore,
     columnCount,
@@ -325,6 +358,9 @@ export function usePhotoGallery(groupId?: string) {
     // 액션
     toggleTag,
     clearAllTags,
+    toggleMemberName,
+    clearAllMemberNames,
+    clearAllFilters,
     enterSelectionMode,
     exitSelectionMode,
     togglePhotoSelection,
