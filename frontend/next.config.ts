@@ -34,7 +34,7 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
       {
-        protocol: "http", // HTTP도 지원
+        protocol: "http",
         hostname: "k.kakaocdn.net",
         port: "",
         pathname: "/**",
@@ -49,19 +49,18 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  webpack: (config) => {
-    // node_modules/@mediapipe/face_mesh/face_mesh.js 파일을 대상으로
-    config.module.rules.push({
-      test: require.resolve("@mediapipe/face_mesh/face_mesh.js"),
-      // exports-loader를 사용하여 FaceMesh를 CommonJS 모듈로 내보냅니다.
-      use: {
-        loader: "exports-loader",
-        options: {
-          type: "commonjs",
-          exports: "FaceMesh",
-        },
-      },
-    });
+  // 🔥 간단한 해결: 서버 사이드에서 MediaPipe 모듈들을 완전히 제외
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // 서버 사이드에서는 MediaPipe 관련 모듈들을 externals로 처리
+      config.externals = config.externals || [];
+      config.externals.push({
+        '@mediapipe/face_mesh': 'commonjs @mediapipe/face_mesh',
+        '@mediapipe/tasks-vision': 'commonjs @mediapipe/tasks-vision',
+        '@mediapipe/camera_utils': 'commonjs @mediapipe/camera_utils',
+        '@mediapipe/drawing_utils': 'commonjs @mediapipe/drawing_utils'
+      });
+    }
 
     return config;
   },
