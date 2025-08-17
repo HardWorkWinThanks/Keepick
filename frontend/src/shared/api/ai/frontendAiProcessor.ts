@@ -508,7 +508,7 @@ class FrontendAiProcessor {
     }
   }
 
-  // ✨ 🚨 수정: app.py와 동일하게 fist/open_palm 필터링
+  // ✨ 수정: 실제 손 위치를 사용한 제스처 오버레이
   private addGestureOverlay(gestureResult: GestureResult, timestamp: number): void {
     const processGesture = (
         gesture: { label: string; confidence: number } | null,
@@ -521,11 +521,34 @@ class FrontendAiProcessor {
         const image = this.getImageForLabel(gesture.label);
         if (!image) return; // 🚨 app.py처럼 이미지 없으면 오버레이 안 함
 
+        // ✨ 실제 손 위치 추출
+        let handX = 0.5; // 기본값 (중앙)
+        let handY = 0; // 기본값 (중앙)
+        
+        if (gestureResult.landmarks && gestureResult.landmarks.length > 0) {
+          // 첫 번째 손의 손목 좌표 (랜드마크 0번)를 사용
+          // landmarks는 [hand1_landmark0, hand1_landmark1, ...] 형태
+          // 각 랜드마크는 [x, y, z] 배열
+          const wristLandmark = gestureResult.landmarks[0]; // 손목 (landmark 0)
+          if (wristLandmark && wristLandmark.length >= 2) {
+            handX = wristLandmark[0]; // 정규화된 x 좌표 (0-1)
+            handY = wristLandmark[1]; // 정규화된 y 좌표 (0-1)
+            
+            // 손목에서 손 위쪽으로 오버레이 위치 조정 (Y축 위로 이동)
+            handY = handY - 0.15; // 손목에서 위로 15% 올리기
+            
+            // 화면 경계 체크 및 보정 (오버레이가 화면 밖으로 나가지 않도록)
+            const margin = 0.1; // 10% 여백
+            handX = Math.max(margin, Math.min(1 - margin, handX));
+            handY = Math.max(margin, Math.min(1 - margin, handY));
+          }
+        }
+
         const key = `${type}_${gesture.label}_${timestamp}`;
         this.activeOverlays.set(key, {
             image,
-            x: 0.3 + Math.random() * 0.4,
-            y: 0.3 + Math.random() * 0.4,
+            x: handX, // 실제 손 위치 사용
+            y: handY, // 실제 손 위치 사용
             timestamp,
             duration: type === 'static' ? this.STATIC_GESTURE_DURATION : this.DYNAMIC_GESTURE_DURATION,
             opacity: 0,
