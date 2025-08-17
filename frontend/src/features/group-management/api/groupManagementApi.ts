@@ -55,16 +55,34 @@ interface GetGroupMembersResponse {
 // ===== API =====
 
 export const GroupManagementApi = {
-  // 그룹 목록 조회 (가입된 그룹만)
-  async getMyGroups(): Promise<GroupListItem[]> {
+  // 그룹 목록 조회 (상태별 필터링 가능)
+  async getMyGroups(status?: "PENDING" | "ACCEPTED" | "REJECTED"): Promise<GroupListItem[]> {
+    // 파라미터 타입 검증
+    if (status && typeof status !== 'string') {
+      console.error('getMyGroups: status must be a string', status);
+      status = undefined;
+    }
     
-      const response = await apiClient.get<GroupListResponse>("/api/groups");
-      // ACCEPTED 상태인 그룹만 필터링
+    // 허용된 값인지 확인
+    const validStatuses = ['PENDING', 'ACCEPTED', 'REJECTED'];
+    if (status && !validStatuses.includes(status)) {
+      console.error('getMyGroups: invalid status value', status);
+      status = undefined;
+    }
+    
+    const queryParam = status ? `?status=${status}` : '';
+    const response = await apiClient.get<GroupListResponse>(`/api/groups${queryParam}`);
+    
+    // 쿼리 파라미터가 없으면 ACCEPTED만 반환 (기존 동작 유지)
+    if (!status) {
       const apiGroups = response.data.data.filter(
         (group) => group.invitationStatus === "ACCEPTED"
       );
-
       return apiGroups;
+    }
+    
+    // 쿼리 파라미터가 있으면 API 응답을 그대로 반환 (서버에서 필터링)
+    return response.data.data;
   },
 
   // 그룹 생성

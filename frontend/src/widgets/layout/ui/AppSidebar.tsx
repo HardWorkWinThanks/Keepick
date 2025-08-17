@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { ChevronRight, ChevronDown, ChevronLeft, Settings, Check, PanelLeft, PanelRight } from 'lucide-react'
+import { ChevronRight, ChevronDown, ChevronUp, ChevronLeft, Settings, Check, PanelLeft, PanelRight, ExternalLink } from 'lucide-react'
 import { AnimatePresence, motion } from "framer-motion"
 import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
@@ -18,6 +18,8 @@ import { useQuery } from "@tanstack/react-query"
 import { groupListSelectors, groupFormatters } from "@/entities/group"
 import type { GroupListItem } from "@/entities/group"
 import { useModal } from "@/shared/ui/modal/Modal"
+import { ReceivedInvitationsSection } from "@/features/group-invitation-response"
+import { GroupInviteModal } from "@/features/group-invite"
 
 interface AppSidebarProps {
   sidebarHovered: boolean
@@ -60,12 +62,12 @@ export default function AppSidebar({
   groupChatProps = {},
   dynamicContent
 }: AppSidebarProps) {
+  // const [friendsSectionExpanded, setFriendsSectionExpanded] = useState(false) // 친구 기능 제거
   const [expandedGroups, setExpandedGroups] = useState<number[]>([])
   const [groupsSectionExpanded, setGroupsSectionExpanded] = useState(true)
-  // const [friendsSectionExpanded, setFriendsSectionExpanded] = useState(false) // 친구 기능 제거
   const [groupMembersExpanded, setGroupMembersExpanded] = useState(true) // 그룹원 드롭다운 항상 열림
-  const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false)
   const [leaveGroupTarget, setLeaveGroupTarget] = useState<GroupListItem | null>(null)
+  const [inviteGroupTarget, setInviteGroupTarget] = useState<GroupListItem | null>(null)
   const router = useRouter()
   const pathname = usePathname()
   const createGroupModal = useModal()
@@ -82,7 +84,7 @@ export default function AppSidebar({
   // 로그인된 상태에서만 그룹 목록 조회 - 성능 최적화
   const { data: allGroups = [], isLoading: isGroupsLoading } = useQuery({
     queryKey: groupQueryKeys.lists(),
-    queryFn: GroupManagementApi.getMyGroups,
+    queryFn: () => GroupManagementApi.getMyGroups(),
     enabled: isMounted && isLoggedIn, // Hydration 완료 후 로그인된 상태에서만 실행
     staleTime: 3 * 60 * 1000, // 3분 캐시 (적당한 신선도 유지)
     gcTime: 10 * 60 * 1000, // 10분 가비지 컬렉션
@@ -99,6 +101,7 @@ export default function AppSidebar({
   const { data: groupMembers = [], isLoading: isLoadingMembers } = useGroupMembers(
     currentGroup ? parseInt(currentGroup.id) : 0
   )
+
 
   const toggleGroup = (groupId: number) => {
     setExpandedGroups(prev => 
@@ -207,97 +210,41 @@ export default function AppSidebar({
             </div>
           )}
           
-          {/* 하단 구역: 동적 컨텐츠 (스크롤 가능) */}
-          <div className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full sidebar-scroll">
-              <div className="pb-4">
-          {/* Group Selector - 그룹 스페이스에서는 그룹 선택 드롭다운 */}
-          {shouldShowSidebar && showCreateGroupButton && (
-            <div 
-              className={`p-4 border-b border-gray-800 transition-all duration-300 ${
-                sidebarPinned ? 'opacity-100' : 'opacity-90'
-              } ${
-                !sidebarPinned ? 'border-t border-gray-800' : ''
-              }`}
-            >
-              {currentGroup ? (
-                <div className="relative">
-                  <button 
-                    onClick={() => setIsGroupDropdownOpen(!isGroupDropdownOpen)}
-                    className="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all duration-200 text-sm font-medium flex items-center justify-between"
-                  >
-                    <span>{currentGroup.name}</span>
-                    {isGroupDropdownOpen ? (
-                      <ChevronDown size={16} className="text-gray-400" />
-                    ) : (
-                      <ChevronRight size={16} className="text-gray-400" />
-                    )}
-                  </button>
-                  
-                  {isGroupDropdownOpen && (
-                    <div 
-                      className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto"
-                      style={{
-                        scrollbarWidth: 'thin',
-                        scrollbarColor: 'rgba(156, 163, 175, 0.3) transparent'
-                      }}
-                    >
-                      <style jsx>{`
-                        div::-webkit-scrollbar {
-                          width: 6px;
-                        }
-                        div::-webkit-scrollbar-track {
-                          background: transparent;
-                          border-radius: 3px;
-                        }
-                        div::-webkit-scrollbar-thumb {
-                          background: rgba(156, 163, 175, 0.3);
-                          border-radius: 3px;
-                        }
-                        div::-webkit-scrollbar-thumb:hover {
-                          background: rgba(156, 163, 175, 0.5);
-                        }
-                      `}</style>
-                      {myGroups.map((group) => (
-                        <button
-                          key={group.groupId}
-                          onClick={() => {
-                            // 그룹 ID로 직접 이동
-                            window.location.href = `/group/${group.groupId}`
-                            setIsGroupDropdownOpen(false)
-                          }}
-                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                            currentGroup?.id === group.groupId.toString() 
-                              ? 'bg-orange-500/20 text-orange-400' 
-                              : 'text-gray-300'
-                          }`}
-                        >
-                          <div className="flex justify-between items-center">
-                            <span>{group.name}</span>
-                            <span className="text-xs text-gray-500">
-                              {groupFormatters.formatMemberCount(group.memberCount || 0)}
-                            </span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <button 
-                  onClick={createGroupModal.onOpen}
-                  className="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-all duration-200 text-sm font-medium hover:scale-105 active:scale-95"
-                >
-                  + 새 그룹 만들기
-                </button>
-              )}
+          {/* 동적 컨텐츠 영역 - 그룹챗 바로 아래, 스크롤 가능 */}
+          {dynamicContent && (
+            <div className="flex-1 overflow-hidden">
+              <ScrollArea className="h-full sidebar-scroll">
+                {dynamicContent}
+              </ScrollArea>
             </div>
           )}
+          
+          {/* 하단 구역: 스크롤 가능 컨텐츠 (메인/프로필 페이지에서만) */}
+          {!currentGroup && (
+            <div className="flex-1 overflow-hidden">
+              <ScrollArea className="h-full sidebar-scroll">
+                <div className="pb-4">
+                  {/* 새 그룹 만들기 버튼 */}
+                  {shouldShowSidebar && showCreateGroupButton && (
+                    <div className={`p-4 border-b border-gray-800 transition-all duration-300 ${
+                      sidebarPinned ? 'opacity-100' : 'opacity-90'
+                    } ${
+                      !sidebarPinned ? 'border-t border-gray-800' : ''
+                    }`}>
+                      <button 
+                        onClick={createGroupModal.onOpen}
+                        className="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-all duration-200 text-sm font-medium hover:scale-105 active:scale-95"
+                      >
+                        + 새 그룹 만들기
+                      </button>
+                    </div>
+                  )}
 
-          {/* Current Group Details - 제거됨 (이제 dynamicContent로 사용) */}
+                  {/* Received Invitations Section */}
+                  <ReceivedInvitationsSection />
 
-          {/* Groups List */}
-          {!currentGroup && showGroupsSection && (
+                  {/* Groups List */}
+                  {showGroupsSection && (
             <div className="p-4 border-b border-gray-800">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium text-gray-400">그룹</h3>
@@ -328,25 +275,17 @@ export default function AppSidebar({
                         {/* Group Item */}
                         <div className="flex items-center justify-between group">
                           <button 
-                            className="flex-1 text-left px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm cursor-pointer text-white"
+                            className="flex-1 text-left px-3 py-3 rounded-lg hover:bg-gray-800 transition-colors text-base cursor-pointer text-white group"
                             onClick={() => {
-                              // 그룹 ID로 직접 이동
-                              window.location.href = `/group/${group.groupId}`
+                              // Next.js 라우터로 SPA 방식 이동
+                              router.push(`/group/${group.groupId}`)
                             }}
                           >
-                            <div className="flex items-center gap-2">
-                              {group.thumbnailUrl && (
-                                <div className="w-4 h-4 relative rounded-full overflow-hidden">
-                                  <Image
-                                    src={group.thumbnailUrl || "/placeholder/photo-placeholder.svg"}
-                                    alt={`${group.name} 썸네일`}
-                                    fill
-                                    sizes="16px"
-                                    className="object-cover"
-                                  />
-                                </div>
-                              )}
-                              <span>{group.name}</span>
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">{group.name}</span>
+                              <span className="text-xs text-gray-500">
+                                {groupFormatters.formatMemberCount(group.memberCount || 0)}
+                              </span>
                             </div>
                           </button>
                           <button
@@ -379,8 +318,9 @@ export default function AppSidebar({
                                 ease: [0.32, 0.72, 0, 1], // 부드러운 이징
                                 opacity: { duration: 0.25 }
                               }}
-                              className="ml-4 pl-3 border-l border-gray-700 overflow-hidden"
+                              className="ml-4 overflow-hidden"
                             >
+                              {/* 관리 버튼들 */}
                               <motion.div 
                                 initial={{ y: -10, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
@@ -392,7 +332,10 @@ export default function AppSidebar({
                                 }}
                                 className="space-y-1 py-2"
                               >
-                                <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm text-gray-300">
+                                <button 
+                                  onClick={() => setInviteGroupTarget(group)}
+                                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm text-gray-300"
+                                >
                                   그룹 초대
                                 </button>
                                 <button 
@@ -449,13 +392,10 @@ export default function AppSidebar({
             </div>
           )}
           */}
-          
-          {/* 동적 컨텐츠 영역 - 페이지별로 다른 기능들 */}
-          {dynamicContent}
-          
+                </div>
+              </ScrollArea>
             </div>
-            </ScrollArea>
-          </div>
+          )}
         </div>
       </div>
 
@@ -474,6 +414,16 @@ export default function AppSidebar({
             setLeaveGroupTarget(null)
           }}
           group={leaveGroupTarget}
+        />
+      )}
+
+      {/* Group Invite Modal */}
+      {inviteGroupTarget && (
+        <GroupInviteModal
+          groupId={inviteGroupTarget.groupId}
+          groupName={inviteGroupTarget.name}
+          isOpen={!!inviteGroupTarget}
+          onClose={() => setInviteGroupTarget(null)}
         />
       )}
     </>

@@ -13,6 +13,8 @@ import { AlbumEditSidebar } from '@/widgets/layout'
 import { useModal } from "@/shared/ui/modal/Modal"
 import { CreateGroupModal, useGroupManagement } from "@/features/group-management"
 import { useGroupInfo } from "@/features/group-management"
+import { GroupInviteModal } from "@/features/group-invite"
+import type { GroupListItem } from "@/entities/group"
 import { useAuthGuard } from "@/features/auth/model/useAuthGuard"
 import { useTimelineEditor } from '@/features/timeline-album/model/useTimelineEditor'
 import { useTimelinePhotos } from '@/features/timeline-album/model/useTimelinePhotos'
@@ -294,6 +296,9 @@ function GroupLayoutContent({ children }: GroupLayoutProps) {
   const { updateGroup } = useGroupManagement()
   const createGroupModal = useModal()
   
+  // 그룹 초대 모달
+  const [inviteGroupTarget, setInviteGroupTarget] = useState<GroupListItem | null>(null)
+  
   // 그룹 정보 편집 상태
   const [isEditingGroup, setIsEditingGroup] = useState(false)
   const [editedGroupName, setEditedGroupName] = useState('')
@@ -349,6 +354,7 @@ function GroupLayoutContent({ children }: GroupLayoutProps) {
             showCreateGroupButton={true}
             isMounted={isMounted}
             createGroupModal={createGroupModal}
+            onInviteGroup={setInviteGroupTarget}
           />
           
           <GroupInfoSection 
@@ -460,6 +466,16 @@ function GroupLayoutContent({ children }: GroupLayoutProps) {
         isOpen={createGroupModal.isOpen}
         onClose={createGroupModal.onClose}
       />
+      
+      {/* 그룹 초대 모달 */}
+      {inviteGroupTarget && (
+        <GroupInviteModal
+          groupId={inviteGroupTarget.groupId}
+          groupName={inviteGroupTarget.name}
+          isOpen={!!inviteGroupTarget}
+          onClose={() => setInviteGroupTarget(null)}
+        />
+      )}
     </div>
   )
 }

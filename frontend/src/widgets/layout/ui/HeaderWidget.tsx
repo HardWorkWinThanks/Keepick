@@ -41,7 +41,7 @@ export default function HeaderWidget({
 
   const user = {
     name: currentUser?.nickname || "사용자", // Guest → 사용자로 변경
-    imageUrl: currentUser?.profileUrl || "/basic_profile.webp",
+    imageUrl: currentUser?.profileUrl || "/placeholder/basic_profile.webp",
   };
 
   return (
