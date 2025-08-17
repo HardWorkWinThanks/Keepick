@@ -1,4 +1,5 @@
 import type { Group, GroupListItem, GroupMember } from './types'
+import { PLACEHOLDERS } from '@/shared/constants/placeholders'
 
 /**
  * 그룹 엔티티 관련 셀렉터 함수들
@@ -33,7 +34,7 @@ export const groupSelectors = {
   },
 
   // 그룹 썸네일 URL 가져오기 (fallback 포함)
-  getThumbnailUrl: (group: Group, fallback: string = "/images/default-group.png"): string => {
+  getThumbnailUrl: (group: Group, fallback: string = PLACEHOLDERS.GROUP_THUMBNAIL): string => {
     return group.thumbnailUrl || fallback
   }
 }
@@ -96,7 +97,7 @@ export const groupMemberSelectors = {
   },
 
   // 멤버 프로필 이미지 가져오기 (fallback 포함)
-  getProfileImage: (member: GroupMember, fallback: string = "/images/default-avatar.png"): string => {
+  getProfileImage: (member: GroupMember, fallback: string = PLACEHOLDERS.USER_PROFILE): string => {
     return member.profileUrl || fallback
   },
 

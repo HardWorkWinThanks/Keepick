@@ -61,7 +61,7 @@ export function useHighlightAlbum(groupId: string, albumId: string) {
   }
 
   const emotionLabels = {
-    "LAUGH": "FUN",
+    "LAUGH": "LAUGH",
     "SURPRISE": "SURPRISE", 
     "TIRED": "TIRED",
     "SERIOUS": "SERIOUS",

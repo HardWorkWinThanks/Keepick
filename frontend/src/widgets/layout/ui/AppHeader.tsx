@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { User, LogOut } from "lucide-react";
 import { useMainAuth } from "@/features/main-integration/model/useMainAuth";
 import { SocialLoginButton } from "@/features/auth";
@@ -109,9 +110,14 @@ export default function AppHeader({
               onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
               className="hover:scale-105 transition-transform duration-200"
             >
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white text-xs sm:text-sm font-semibold">
-                {user?.name?.charAt(0) || "K"}
-              </div>
+              <Image
+                src={user?.imageUrl || "/placeholder/basic_profile.webp"}
+                alt="프로필 사진"
+                width={32}
+                height={32}
+                className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover border border-gray-600"
+                quality={90}
+              />
             </button>
 
             {/* 프로필 드롭다운 메뉴 - 절대 위치로 고정 */}

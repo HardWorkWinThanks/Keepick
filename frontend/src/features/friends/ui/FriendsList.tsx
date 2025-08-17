@@ -3,6 +3,7 @@
 import Image from "next/image"
 import { Users, UserCheck } from "lucide-react"
 import { useFriends } from "../model/useFriends"
+import { getProfilePlaceholder } from "@/shared/constants/placeholders"
 
 export function FriendsList() {
   const { useFriendsList } = useFriends()
@@ -53,7 +54,7 @@ export function FriendsList() {
           >
             {/* 프로필 이미지 */}
             <Image
-              src={friend.profileUrl || "/placeholder/basic_profile.webp"}
+              src={getProfilePlaceholder(friend.profileUrl)}
               alt={`${friend.nickname} 프로필`}
               width={48}
               height={48}

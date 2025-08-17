@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useParams, usePathname, useSearchParams } from 'next/navigation'
+import { DUMMY_IMAGES } from '@/shared/constants/placeholders'
 import { useSidebar } from '@/widgets/layout/model/useSidebar'
 import { useMainAuth } from "@/features/main-integration/model/useMainAuth"
 import AppHeader from '@/widgets/layout/ui/AppHeader'
@@ -157,6 +158,7 @@ function TimelineEditSidebarContent({ groupId, albumId }: { groupId: string, alb
     window.dispatchEvent(new CustomEvent('timelineSidebarDrop', { detail: dragData }))
   }
   
+  
   if (!isEditModeFromURL) {
     return null
   }
@@ -259,6 +261,7 @@ function TierEditSidebarContent({ groupId, albumId }: { groupId: string, albumId
     window.dispatchEvent(new CustomEvent('tierSidebarDrop', { detail: dragData }))
   }
   
+  
   if (!isEditModeFromURL) {
     return null
   }
@@ -342,7 +345,7 @@ function GroupLayoutContent({ children }: GroupLayoutProps) {
       id: groupData.groupId.toString(),
       name: groupData.name,
       description: groupData.description,
-      thumbnailUrl: groupData.thumbnailUrl || "/dummy/jeju-dummy1.webp"
+      thumbnailUrl: groupData.thumbnailUrl || DUMMY_IMAGES.GROUP_DEFAULT
     }
 
     // 그룹스페이스 - 그룹 선택 + 그룹 정보
@@ -440,7 +443,7 @@ function GroupLayoutContent({ children }: GroupLayoutProps) {
           id: groupData.groupId.toString(),
           name: groupData.name,
           description: groupData.description,
-          thumbnailUrl: groupData.thumbnailUrl || "/dummy/jeju-dummy1.webp"
+          thumbnailUrl: groupData.thumbnailUrl || DUMMY_IMAGES.GROUP_DEFAULT
         }}
         dynamicContent={getDynamicContent()}
       />

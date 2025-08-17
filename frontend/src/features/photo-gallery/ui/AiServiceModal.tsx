@@ -2,15 +2,17 @@
 
 import React from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Sparkles, Eye, Users, Zap, ImageIcon } from "lucide-react"
+import { X, Sparkles, Eye, Users, Zap, ImageIcon, Brain } from "lucide-react"
 
 interface AiServiceModalProps {
   isOpen: boolean
   onClose: () => void
   onSimilarPhotosSort: () => void
+  onAnalyzeAllPhotos: () => void
+  isAnalyzing?: boolean
 }
 
-export default function AiServiceModal({ isOpen, onClose, onSimilarPhotosSort }: AiServiceModalProps) {
+export default function AiServiceModal({ isOpen, onClose, onSimilarPhotosSort, onAnalyzeAllPhotos, isAnalyzing = false }: AiServiceModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -110,17 +112,35 @@ export default function AiServiceModal({ isOpen, onClose, onSimilarPhotosSort }:
                   </div>
                 </div>
 
-                {/* 유사한 사진 분류 버튼 */}
-                <div className="border-t border-gray-700 pt-4">
+                {/* AI 분석 실행 버튼들 */}
+                <div className="border-t border-gray-700 pt-4 space-y-3">
+                  {/* 전체 AI 분석 버튼 */}
+                  <motion.button
+                    onClick={onAnalyzeAllPhotos}
+                    disabled={isAnalyzing}
+                    className="w-full px-4 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-keepick-primary text-sm transition-all duration-300 flex items-center justify-center gap-2"
+                    whileHover={{ scale: isAnalyzing ? 1 : 1.01 }}
+                    whileTap={{ scale: isAnalyzing ? 1 : 0.99 }}
+                  >
+                    <Brain size={16} />
+                    {isAnalyzing ? "분석 중..." : "전체 AI 분석 시작하기"}
+                  </motion.button>
+                  <p className="text-gray-500 text-xs font-keepick-primary text-center">
+                    모든 사진에 대해 객체 인식, 얼굴 매칭, 품질 분석을 일괄 실행합니다
+                  </p>
+                  
+                  {/* 유사한 사진 분류 버튼 */}
                   <motion.button
                     onClick={onSimilarPhotosSort}
-                    className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-keepick-primary text-sm transition-all duration-300"
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
+                    disabled={isAnalyzing}
+                    className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-keepick-primary text-sm transition-all duration-300 flex items-center justify-center gap-2"
+                    whileHover={{ scale: isAnalyzing ? 1 : 1.01 }}
+                    whileTap={{ scale: isAnalyzing ? 1 : 0.99 }}
                   >
+                    <ImageIcon size={16} />
                     유사한 사진 분류 시작하기
                   </motion.button>
-                  <p className="text-gray-500 text-xs font-keepick-primary mt-2 text-center">
+                  <p className="text-gray-500 text-xs font-keepick-primary text-center">
                     현재 갤러리의 사진들을 분석하여 유사한 사진끼리 그룹화합니다
                   </p>
                 </div>

@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react'
 import { ChevronDown, ChevronRight, Check, X } from 'lucide-react'
+import { getPhotoPlaceholder } from '@/shared/constants/placeholders'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
@@ -121,7 +122,7 @@ export function ReceivedInvitationsSection({ className = '' }: ReceivedInvitatio
                         {invitation.thumbnailUrl && (
                           <div className="w-8 h-8 relative rounded-full overflow-hidden flex-shrink-0 mt-0.5">
                             <Image
-                              src={invitation.thumbnailUrl || "/placeholder/photo-placeholder.svg"}
+                              src={getPhotoPlaceholder(invitation.thumbnailUrl)}
                               alt={`${invitation.name} 썸네일`}
                               fill
                               sizes="32px"

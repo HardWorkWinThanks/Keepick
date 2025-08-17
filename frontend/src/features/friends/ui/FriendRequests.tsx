@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { UserCheck, UserX, Clock, Send, Inbox } from "lucide-react"
+import { getProfilePlaceholder } from "@/shared/constants/placeholders"
 import { InteractiveHoverButton } from "@/shared/ui/composite/InteractiveHoverButton"
 import { useFriends } from "../model/useFriends"
 
@@ -137,7 +138,7 @@ export function FriendRequests({ type }: FriendRequestsProps) {
           >
             {/* 프로필 이미지 */}
             <Image
-              src={request.profileUrl || "/placeholder/basic_profile.webp"}
+              src={getProfilePlaceholder(request.profileUrl)}
               alt={`${request.nickname} 프로필`}
               width={48}
               height={48}
