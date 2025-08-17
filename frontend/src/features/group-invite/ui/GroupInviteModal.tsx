@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import { X, Link, Users, Check, Copy, UserPlus } from 'lucide-react'
 import Image from 'next/image'
+import { getProfilePlaceholder } from '@/shared/constants/placeholders'
 import { Button } from '@/shared/ui/shadcn/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/shadcn/tabs'
 import { Checkbox } from '@/shared/ui/shadcn/checkbox'
@@ -214,7 +215,7 @@ export function GroupInviteModal({
                                 isSelected ? 'ring-2 ring-[#FE7A25]/50' : ''
                               }`}>
                                 <Image
-                                  src={friend.profileUrl || "/placeholder/basic_profile.webp"}
+                                  src={getProfilePlaceholder(friend.profileUrl)}
                                   alt={`${friend.nickname} 프로필`}
                                   fill
                                   sizes="32px"

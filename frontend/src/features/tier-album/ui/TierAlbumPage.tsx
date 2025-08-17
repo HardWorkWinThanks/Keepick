@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
+import { getPhotoPlaceholder } from "@/shared/constants/placeholders"
 import { motion } from "framer-motion"
 import { ArrowLeft, ChevronLeft, ChevronRight, Settings, Check, Edit } from "lucide-react"
 import Link from "next/link"
@@ -702,7 +703,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
               >
                 <TiltShineCard tierColor={currentTierInfo.color} className="max-w-4xl max-h-[70vh]">
                   <img
-                    src={currentPhoto.originalUrl || "/placeholder.svg"}
+                    src={currentPhoto.originalUrl || getPhotoPlaceholder()}
                     alt={currentPhoto.name || `Photo ${currentPhoto.id}`}
                     className="w-full h-full object-contain max-w-4xl max-h-[70vh]"
                     draggable={false}
@@ -746,7 +747,7 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
                 } as React.CSSProperties}
               >
                 <Image 
-                  src={photo.thumbnailUrl || "/placeholder.svg"} 
+                  src={photo.thumbnailUrl || getPhotoPlaceholder()} 
                   alt={photo.name || `Photo ${photo.id}`} 
                   width={48}
                   height={48}

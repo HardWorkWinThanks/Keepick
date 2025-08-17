@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import Image from "next/image"
+import { getPhotoPlaceholder } from "@/shared/constants/placeholders"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, SlidersHorizontal, Check, Trash2, X, ChevronUp, ChevronDown, Upload, Loader2 } from "lucide-react"
 import { useQueryClient } from '@tanstack/react-query'
@@ -1198,7 +1199,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                           }}
                         >
                           <Image
-                            src={photo.originalUrl || "/placeholder.svg"}
+                            src={photo.originalUrl || getPhotoPlaceholder()}
                             alt={`사진 #${photo.photoId}`}
                             fill
                             sizes="200px"
@@ -1302,7 +1303,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                       }}
                     >
                       <Image
-                        src={photo.originalUrl || "/placeholder.svg"}
+                        src={photo.originalUrl || getPhotoPlaceholder()}
                         alt={photo.title || `Photo ${photo.id}`}
                         fill
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
@@ -1575,7 +1576,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                                 className="relative overflow-hidden rounded cursor-pointer group aspect-square"
                               >
                                 <Image
-                                  src={photo.thumbnailUrl || "/placeholder.svg"}
+                                  src={photo.thumbnailUrl || getPhotoPlaceholder()}
                                   alt={photo.title || `Photo ${photo.id}`}
                                   fill
                                   sizes="12.5vw"
@@ -1640,7 +1641,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                         return (
                           <div key={photo.id} className="w-10 h-10 flex-shrink-0 rounded overflow-hidden relative">
                             <Image
-                              src={photo.thumbnailUrl || "/placeholder.svg"}
+                              src={photo.thumbnailUrl || getPhotoPlaceholder()}
                               alt={photo.title || `Photo ${photo.id}`}
                               fill
                               sizes="40px"

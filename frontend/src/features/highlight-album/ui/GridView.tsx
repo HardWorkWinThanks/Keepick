@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import type { HighlightPhoto } from "@/entities/highlight"
 

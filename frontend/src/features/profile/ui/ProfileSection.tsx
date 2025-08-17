@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Image from "next/image"
 import { User, Camera, Upload } from "lucide-react"
+import { getProfilePlaceholder, DUMMY_IMAGES } from "@/shared/constants/placeholders"
 import { Input } from "@/shared/ui/shadcn/input"
 import { Label } from "@/shared/ui/shadcn/label"
 import { InteractiveHoverButton } from "@/shared/ui/composite/InteractiveHoverButton"
@@ -57,13 +58,10 @@ export function ProfileSection() {
   }
 
   // 안전한 이미지 URL
-  const safeProfileUrl = currentUser?.profileUrl?.trim() 
-    ? currentUser.profileUrl 
-    : "/placeholder/basic_profile.webp"
-
-  const safeIdentificationUrl = currentUser?.identificationUrl?.trim()
-    ? currentUser.identificationUrl
-    : "/dummy/dummy2.jpg"
+  const safeProfileUrl = getProfilePlaceholder(currentUser?.profileUrl)
+  const safeIdentificationUrl = currentUser?.identificationUrl?.trim() 
+    ? currentUser.identificationUrl 
+    : DUMMY_IMAGES.PROFILE_ID
 
   // 로딩 중일 때 스켈레톤 UI 표시
   if (isUserDataLoading) {

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Settings, Check, ChevronRight } from 'lucide-react'
+import { getPhotoPlaceholder, getProfilePlaceholder } from '@/shared/constants/placeholders'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
@@ -172,7 +173,7 @@ export function GroupInfoSection({
               {/* 실제 썸네일 이미지 (tempThumbnailUrl 우선 사용) */}
               {(tempThumbnailUrl || currentGroup.thumbnailUrl) ? (
                 <Image
-                  src={tempThumbnailUrl || currentGroup.thumbnailUrl || "/placeholder/photo-placeholder.svg"}
+                  src={getPhotoPlaceholder(tempThumbnailUrl || currentGroup.thumbnailUrl)}
                   alt={`${currentGroup.name} 썸네일`}
                   fill
                   sizes="240px"
@@ -196,7 +197,7 @@ export function GroupInfoSection({
             <div className={`aspect-square w-full bg-[#333333] rounded-lg overflow-hidden border border-white/10 relative`}>
               {currentGroup.thumbnailUrl ? (
                 <Image
-                  src={currentGroup.thumbnailUrl || "/placeholder/photo-placeholder.svg"}
+                  src={getPhotoPlaceholder(currentGroup.thumbnailUrl)}
                   alt={`${currentGroup.name} 썸네일`}
                   fill
                   sizes="240px"
@@ -328,7 +329,7 @@ export function GroupInfoSection({
                           <div className="w-6 h-6 bg-gray-700 rounded-full flex items-center justify-center text-xs relative overflow-hidden">
                             {(member.profileUrl || member.profileImageUrl) ? (
                               <Image 
-                                src={member.profileUrl || member.profileImageUrl || ''} 
+                                src={getProfilePlaceholder(member.profileUrl || member.profileImageUrl)} 
                                 alt={member.nickname || member.name}
                                 fill
                                 sizes="24px"

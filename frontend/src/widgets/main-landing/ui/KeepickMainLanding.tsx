@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle, memo, useMemo, useCallback } from "react"
 import Image from "next/image"
+import { DUMMY_IMAGES } from "@/shared/constants/placeholders"
 
 interface KeepickMainLandingRef {
   spillPhotos: () => void
@@ -55,7 +56,7 @@ const AlbumCover = memo(({ album, mounted, windowWidth, animationKey, getRespons
         }}
       >
         <Image
-          src={`/dummy/main-dummy${album.id}.jpg`}
+          src={DUMMY_IMAGES.MAIN(album.id)}
           alt={`Main Dummy ${album.id}`}
           width={responsiveWidth}
           height={responsiveHeight}
