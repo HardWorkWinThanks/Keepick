@@ -238,23 +238,41 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     // 뷰 모드 변경 시 쿼리는 enabled 조건에 따라 자동 실행됨
   }
   
-  // 업로드 상태 관리
-  const [uploadState, setUploadState] = useState<{
-    isUploading: boolean
-    currentStep: 'selecting' | 'uploading' | 'processing' | 'completed'
-    progress: number
-    totalFiles: number
-    uploadedFiles: number
-    message: string
-    jobStatus?: 'STARTED' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
-  }>({
+  // ✅ 개선된 업로드 상태 관리 (useRef + useState 조합)
+  // ref로 최신 상태를 항상 유지하고, useState로 UI 렌더링 트리거
+  const uploadStateRef = useRef({
     isUploading: false,
-    currentStep: 'selecting',
+    currentStep: 'selecting' as 'selecting' | 'uploading' | 'processing' | 'completed',
     progress: 0,
     totalFiles: 0,
     uploadedFiles: 0,
-    message: ''
+    message: '',
+    jobStatus: undefined as 'STARTED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | undefined,
+    completedJob: 0,
+    totalJob: 0
   })
+
+  // UI 렌더링을 위한 useState (ref 상태의 복사본)
+  const [uploadState, setUploadState] = useState(uploadStateRef.current)
+
+  // ✅ 상태 업데이트 함수 - ref와 state를 동시에 업데이트하여 일관성 보장
+  const updateUploadState = useCallback((updater: (prev: typeof uploadStateRef.current) => typeof uploadStateRef.current) => {
+    const newState = updater(uploadStateRef.current)
+    uploadStateRef.current = newState  // ref 즉시 업데이트 (SSE 콜백에서 최신 값 참조 가능)
+    setUploadState({ ...newState })    // UI 렌더링을 위한 state 업데이트
+    
+    console.log('📊 업로드 상태 업데이트:', {
+      step: newState.currentStep,
+      progress: newState.progress,
+      message: newState.message,
+      jobStatus: newState.jobStatus
+    })
+    
+    return newState
+  }, [])
+
+  // ✅ 최신 상태 조회 함수 - SSE 콜백에서 사용
+  const getCurrentUploadState = useCallback(() => uploadStateRef.current, [])
   
   // 전체 사진 개수 상태 (페이징 정보에서 가져옴) - 레거시 데이터용
   const [totalPhotosCount, setTotalPhotosCount] = useState(0)
@@ -290,6 +308,125 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         viewMode === 'similar' ? similarQuery.isFetchingNextPage : false,
     threshold: 200 
   })
+
+  // ✅ 개선된 SSE 연결 시작 함수 - ref 기반으로 상태 관리
+  const startSSEConnection = useCallback((groupId: number, jobId: string, photoIds: number[]): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      console.log('🔌 SSE 연결 시작:', { groupId, jobId, photoCount: photoIds.length })
+      
+      // 기존 연결이 있으면 종료
+      if (sseConnectionRef.current) {
+        console.log('🔌 기존 SSE 연결 종료')
+        sseConnectionRef.current.close()
+      }
+      
+      const eventSource = createAnalysisStatusSSE(
+        groupId,
+        jobId,
+        // ✅ onMessage: SSE 메시지 수신 시 - ref를 통해 항상 최신 상태 참조
+        (data: AnalysisStatusMessage) => {
+          console.log('📨 SSE 메시지 수신:', data)
+          
+          // 현재 상태를 ref에서 가져와서 최신 값 보장
+          const currentState = getCurrentUploadState()
+          
+          // 진행률 계산 (completedJob / totalJob * 100)
+          const progress = data.totalJob > 0 ? Math.round((data.completedJob / data.totalJob) * 100) : 0
+          
+          // jobStatus에 따른 메시지와 상태 결정
+          let displayMessage = data.message || '분석 진행 중'
+          let currentStep = currentState.currentStep
+          
+          switch (data.jobStatus) {
+            case 'STARTED':
+              displayMessage = data.message || 'AI 분석을 시작합니다'
+              currentStep = 'processing'
+              break
+            case 'PROCESSING':
+              displayMessage = data.message || `AI 분석 중 (${data.completedJob}/${data.totalJob})`
+              currentStep = 'processing'
+              break
+            case 'COMPLETED':
+              displayMessage = 'AI 분석이 완료되었습니다'
+              currentStep = 'completed'
+              break
+            case 'FAILED':
+              displayMessage = data.message || 'AI 분석에 실패했습니다'
+              currentStep = 'completed' // 실패도 완료 상태로 처리
+              break
+          }
+
+          setTimeout(() => {
+            // ✅ ref와 state 동시 업데이트로 즉시 반영
+            updateUploadState(prev => ({
+              ...prev,
+              progress,
+              message: displayMessage,
+              jobStatus: data.jobStatus,
+              currentStep,
+              completedJob: data.completedJob,
+              totalJob: data.totalJob
+            }))
+          }, 0)
+                  
+          
+          
+          // 상태에 따른 후처리
+          if (data.jobStatus === 'COMPLETED') {
+            console.log('✅ AI 분석 완료 - 태그 캐시 무효화 시작')
+            
+            // 분석 대상 사진들의 캐시 무효화
+            setPhotoTagsCache(prev => {
+              const updated = { ...prev }
+              photoIds.forEach(photoId => {
+                delete updated[photoId] // 해당 사진의 캐시 삭제
+              })
+              console.log('🗑️ 태그 캐시 무효화 완료:', photoIds.length, '개 사진')
+              return updated
+            })
+            
+            // 전체 태그 목록도 새로고침
+            allTagsQuery.refetch()
+            
+            // 연결을 닫기 전에 약간의 지연을 줌 (상태 업데이트 완료 대기)
+            setTimeout(() => {
+              eventSource.close()
+              resolve()
+            }, 500)
+            
+          } else if (data.jobStatus === 'FAILED') {
+            console.error('❌ AI 분석 실패:', data.message)
+            eventSource.close()
+            reject(new Error(`AI 분석 실패: ${displayMessage}`))
+          }
+          // STARTED, PROCESSING 상태는 계속 대기
+        },
+        
+        // ✅ onError: SSE 연결 오류 시 - ref 기반 상태 업데이트
+        (error: Event) => {
+          console.error('🔌❌ SSE 연결 오류:', error)
+          
+          updateUploadState(prev => ({
+            ...prev,
+            currentStep: 'completed',
+            message: 'SSE 연결에 문제가 발생했습니다',
+            jobStatus: 'FAILED'
+          }))
+          
+          sseConnectionRef.current = null
+          reject(new Error('SSE 연결 오류'))
+        },
+        
+        // onClose: SSE 연결 종료 시
+        () => {
+          console.log('🔌 SSE 연결 종료')
+          sseConnectionRef.current = null
+        }
+      )
+      
+      sseConnectionRef.current = eventSource
+    })
+  }, [updateUploadState, getCurrentUploadState, setPhotoTagsCache, allTagsQuery])
 
 
   // 자동으로 갤러리 모드로 전환하고 선택모드 활성화
@@ -348,15 +485,15 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     setIsAiModalOpen(true)
   }
   
-  // 전체 AI 분석 핸들러
-  const handleAnalyzeAllPhotos = async () => {
+  // ✅ 개선된 전체 AI 분석 핸들러도 ref 기반으로 수정
+  const handleAnalyzeAllPhotos = useCallback(async () => {
     try {
       setIsAiModalOpen(false)
       
       // 현재 갤러리의 모든 사진 ID 수집
       const currentPhotos = viewMode === 'all' ? allPhotos : 
-                           viewMode === 'blurred' ? blurredQuery.data?.pages.flatMap(page => page.list) || [] :
-                           viewMode === 'similar' ? similarQuery.data?.pages.flatMap(page => page.list.flatMap(cluster => cluster.photos)) || [] : []
+                          viewMode === 'blurred' ? blurredQuery.data?.pages.flatMap(page => page.list) || [] :
+                          viewMode === 'similar' ? similarQuery.data?.pages.flatMap(page => page.list.flatMap(cluster => cluster.photos)) || [] : []
       
       const photoIds = currentPhotos.map(photo => 'photoId' in photo ? photo.photoId : photo.id)
       
@@ -365,33 +502,28 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         return
       }
       
-      // 분석 상태 업데이트
-      setUploadState(prev => ({
+      // ✅ 분석 상태 업데이트 - ref 기반으로 즉시 반영
+      updateUploadState(prev => ({
         ...prev,
         isUploading: true,
         currentStep: 'processing',
         progress: 0,
-        message: `${photoIds.length}장의 사진에 대한 AI 분석을 요청하고 있습니다.`
+        message: `${photoIds.length}장의 사진에 대한 AI 분석을 요청하고 있습니다.`,
+        totalJob: photoIds.length,
+        completedJob: 0
       }))
       
-      console.log(`전체 AI 분석 시작... (${photoIds.length}장)`)
+      console.log(`🤖 전체 AI 분석 시작... (${photoIds.length}장)`)
       
       // AI 분석 요청 (태깅, 얼굴매칭, 흐린사진 판별)
       const analysisResult = await requestAiAnalysis(parseInt(groupId), photoIds)
-      console.log('전체 AI 분석 요청 완료:', analysisResult)
+      console.log('🤖 전체 AI 분석 요청 완료:', analysisResult)
       
-      setUploadState(prev => ({
-        ...prev,
-        progress: 50,
-        message: '분석을 준비하고 있습니다.'
-      }))
-      
-      // jobId 확인
       if (!analysisResult.jobId) {
         throw new Error('AI 분석 요청 응답에서 jobId를 받지 못했습니다.')
       }
       
-      // SSE 연결 시작
+      // ✅ SSE 연결 시작 - ref 기반으로 실시간 진행률 업데이트
       await startSSEConnection(parseInt(groupId), analysisResult.jobId, photoIds)
       
       // TanStack Query 캐시 무효화로 모든 관련 데이터 새로고침
@@ -402,75 +534,79 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         queryClient.invalidateQueries({ queryKey: ['group-tags', groupId] }),
       ])
       
-      setUploadState(prev => ({
-        ...prev,
-        isUploading: false,
-        currentStep: 'completed',
-        progress: 100,
-        message: 'AI 분석이 완료되었습니다!'
-      }))
+      console.log('🎉 전체 AI 분석 완료!')
       
       // 완료 메시지 후 상태 초기화
       setTimeout(() => {
-        setUploadState({
+        updateUploadState(prev => ({
+          ...prev,
           isUploading: false,
-          currentStep: 'completed',
+          currentStep: 'selecting',
           progress: 0,
           totalFiles: 0,
           uploadedFiles: 0,
-          message: ''
-        })
+          message: '',
+          jobStatus: undefined,
+          completedJob: 0,
+          totalJob: 0
+        }))
       }, 3000)
       
     } catch (error) {
-      console.error('전체 AI 분석 실패:', error)
+      console.error('❌ 전체 AI 분석 실패:', error)
       
-      setUploadState({
+      // ✅ 에러 상태 설정
+      updateUploadState(prev => ({
+        ...prev,
         isUploading: false,
-        currentStep: 'completed',
+        currentStep: 'selecting',
         progress: 0,
         totalFiles: 0,
         uploadedFiles: 0,
-        message: ''
-      })
+        message: '',
+        jobStatus: 'FAILED'
+      }))
       
-      // 에러 알림
       alert(`AI 분석에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
     }
-  }
+  }, [
+    viewMode, 
+    allPhotos, 
+    blurredQuery.data?.pages, 
+    similarQuery.data?.pages, 
+    groupId, 
+    updateUploadState, 
+    startSSEConnection, 
+    queryClient
+  ])
   
-  // 유사한 사진 분류 핸들러
-  const handleSimilarPhotosSort = async () => {
+  // ✅ 개선된 유사사진 분류 핸들러도 ref 기반으로 수정
+  const handleSimilarPhotosSort = useCallback(async () => {
     try {
       setIsAiModalOpen(false)
       
-      // 분석 상태 업데이트
-      setUploadState(prev => ({
+      // ✅ 분석 상태 업데이트 - ref 기반으로 즉시 반영
+      updateUploadState(prev => ({
         ...prev,
         isUploading: true,
         currentStep: 'processing',
         progress: 0,
-        message: '유사사진 분석을 요청하고 있습니다.'
+        message: '유사사진 분석을 요청하고 있습니다.',
+        totalJob: 0, // 유사사진 분석은 전체 대상이므로 정확한 수량 모름
+        completedJob: 0
       }))
 
-      console.log('유사사진 분류 시작...')
+      console.log('🤖 유사사진 분류 시작...')
       
       // 유사사진 분석 요청
       const analysisResult = await requestSimilarPhotosAnalysis(parseInt(groupId))
-      console.log('유사사진 분석 요청 완료:', analysisResult)
+      console.log('🤖 유사사진 분석 요청 완료:', analysisResult)
       
-      setUploadState(prev => ({
-        ...prev,
-        currentStep: 'processing',
-        progress: 30,
-        message: '분석을 준비하고 있습니다.'
-      }))
-      
-      // SSE 연결 시작 (유사사진 분석은 전체 대상이므로 빈 배열)
+      // ✅ SSE 연결 시작 - ref 기반으로 실시간 진행률 업데이트 (유사사진 분석은 전체 대상이므로 빈 배열)
       await startSSEConnection(parseInt(groupId), analysisResult.jobId, [])
       
       // 분석 완료 후 유사사진 탭으로 이동 및 캐시 새로고침
-      console.log('유사사진 분석 완료! 유사사진 탭으로 이동합니다.')
+      console.log('🎉 유사사진 분석 완료! 유사사진 탭으로 이동합니다.')
       setViewMode('similar')
       
       // TanStack Query 캐시 무효화
@@ -478,20 +614,24 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
       await queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] })
       await queryClient.invalidateQueries({ queryKey: ['all-tags', groupId] })
       
-      setUploadState(prev => ({
-        ...prev,
-        currentStep: 'completed',
-        progress: 100,
-        message: '유사사진 분류가 완료되었습니다!'
-      }))
-      
       // 3초 후 상태 초기화
       setTimeout(() => {
-        setUploadState(prev => ({ ...prev, isUploading: false }))
+        updateUploadState(prev => ({
+          ...prev,
+          isUploading: false,
+          currentStep: 'selecting',
+          progress: 0,
+          totalFiles: 0,
+          uploadedFiles: 0,
+          message: '',
+          jobStatus: undefined,
+          completedJob: 0,
+          totalJob: 0
+        }))
       }, 3000)
       
     } catch (error) {
-      console.error('유사사진 분류 실패:', error)
+      console.error('❌ 유사사진 분류 실패:', error)
       
       // 에러 타입에 따른 메시지 처리
       let errorMessage = '유사사진 분류에 실패했습니다.'
@@ -505,105 +645,22 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         }
       }
       
-      setUploadState(prev => ({
+      // ✅ 에러 상태 설정
+      updateUploadState(prev => ({
         ...prev,
-        currentStep: 'completed',
+        isUploading: false,
+        currentStep: 'selecting',
         progress: 0,
-        message: errorMessage
+        totalFiles: 0,
+        uploadedFiles: 0,
+        message: '',
+        jobStatus: 'FAILED'
       }))
       
-      // 에러 알림 표시
       alert(errorMessage)
-      
-      setTimeout(() => {
-        setUploadState(prev => ({ ...prev, isUploading: false }))
-      }, 5000) // 에러 시 더 오래 표시
     }
-  }
-  
-  // SSE 연결 시작
-  const startSSEConnection = (groupId: number, jobId: string, photoIds: number[]): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      // 기존 연결이 있으면 종료
-      if (sseConnectionRef.current) {
-        sseConnectionRef.current.close()
-      }
-      
-      const eventSource = createAnalysisStatusSSE(
-        groupId,
-        jobId,
-        // onMessage: SSE 메시지 수신 시
-        (data: AnalysisStatusMessage) => {
-          console.log('SSE 메시지 수신:', data)
-          
-          // 진행률 계산 (completedJob / totalJob * 100)
-          const progress = data.totalJob > 0 ? (data.completedJob / data.totalJob) * 100 : 0
-          
-          // 업로드 상태 업데이트 (jobStatus 포함)
-          console.log('setUploadState 호출 전:', { progress, message: data.message, jobStatus: data.jobStatus })
-          setUploadState(prev => {
-            const newState = {
-              ...prev,
-              progress,
-              message: data.message,
-              jobStatus: data.jobStatus
-            }
-            console.log('setUploadState 업데이트:', { 
-              prevMessage: prev.message, 
-              newMessage: newState.message,
-              prevJobStatus: prev.jobStatus,
-              newJobStatus: newState.jobStatus,
-              prevCurrentStep: prev.currentStep,
-              newCurrentStep: newState.currentStep
-            })
-            return newState
-          })
-          
-          // 상태에 따른 처리
-          if (data.jobStatus === 'COMPLETED') {
-            console.log('AI 분석 완료 - 태그 캐시 무효화 시작')
-            
-            // 분석 대상 사진들의 캐시 무효화
-            setPhotoTagsCache(prev => {
-              const updated = { ...prev }
-              photoIds.forEach(photoId => {
-                delete updated[photoId] // 해당 사진의 캐시 삭제
-              })
-              console.log('태그 캐시 무효화 완료:', photoIds.length, '개 사진')
-              return updated
-            })
-            
-            // 전체 태그 목록도 새로고침
-            allTagsQuery.refetch()
-            
-            // 연결을 닫기 전에 약간의 지연을 줌
-            setTimeout(() => {
-              eventSource.close()
-              resolve()
-            }, 100)
-          } else if (data.jobStatus === 'FAILED') {
-            console.error('AI 분석 실패')
-            eventSource.close()
-            reject(new Error(`AI 분석 실패: ${data.message}`))
-          }
-          // STARTED, PROCESSING 상태는 계속 대기
-        },
-        // onError: SSE 연결 오류 시
-        (error: Event) => {
-          console.error('SSE 연결 오류:', error)
-          sseConnectionRef.current = null
-          reject(new Error('SSE 연결 오류'))
-        },
-        // onClose: SSE 연결 종료 시
-        () => {
-          console.log('SSE 연결 종료')
-          sseConnectionRef.current = null
-        }
-      )
-      
-      sseConnectionRef.current = eventSource
-    })
-  }
+  }, [groupId, updateUploadState, startSSEConnection, queryClient])
+
   
   // 사진 태그 정보 로드
   const loadPhotoTags = async (photoId: number): Promise<void> => {
@@ -840,8 +897,8 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     fileInputRef.current?.click()
   }
   
-  // 파일 선택 핸들러
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // ✅ 개선된 파일 업로드 핸들러 - ref 기반 상태 관리
+  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (!files || files.length === 0) return
     
@@ -855,22 +912,26 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
       return
     }
     
-    // 업로드 시작
-    setUploadState({
-      isUploading: true,
-      currentStep: 'uploading',
-      progress: 0,
-      totalFiles: imageFiles.length,
-      uploadedFiles: 0,
-      message: `${imageFiles.length}개 파일을 업로드합니다.`
-    })
-    
     try {
+      // ✅ 업로드 시작 상태 설정 - ref와 state 동시 업데이트
+      updateUploadState(prev => ({
+        ...prev,
+        isUploading: true,
+        currentStep: 'uploading',
+        progress: 0,
+        totalFiles: imageFiles.length,
+        uploadedFiles: 0,
+        message: `${imageFiles.length}개 파일을 업로드합니다.`,
+        jobStatus: undefined
+      }))
+      
+      console.log('📤 업로드 시작:', imageFiles.length, '개 파일')
+      
       // S3 업로드 실행
       const uploadResults = await uploadGalleryImages(parseInt(groupId), imageFiles)
       
-      // 업로드 완료
-      setUploadState(prev => ({
+      // ✅ 업로드 완료 상태 업데이트
+      updateUploadState(prev => ({
         ...prev,
         currentStep: 'uploading',
         progress: 100,
@@ -878,28 +939,31 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         message: '파일 업로드가 완료되었습니다.'
       }))
       
-      console.log('업로드 완료:', uploadResults)
+      console.log('📤✅ 업로드 완료:', uploadResults)
       
       // AI 처리 요청 단계로 이동
       const photoIds = uploadResults.map(result => result.imageId)
       
-      setUploadState(prev => ({
+      // ✅ AI 분석 준비 상태 설정
+      updateUploadState(prev => ({
         ...prev,
         currentStep: 'processing',
-        progress: 100,
-        message: '분석을 준비하고 있습니다.'
+        progress: 0, // AI 분석은 0부터 다시 시작
+        message: '분석을 준비하고 있습니다.',
+        totalJob: photoIds.length,
+        completedJob: 0
       }))
       
       // AI 분석 요청
       const aiResult = await requestAiAnalysis(parseInt(groupId), photoIds)
-      console.log('AI 분석 요청 완료:', aiResult)
+      console.log('🤖 AI 분석 요청 완료:', aiResult)
       
       // jobId 확인
       if (!aiResult.jobId) {
         throw new Error('AI 분석 요청 응답에서 jobId를 받지 못했습니다.')
       }
       
-      // SSE 연결 시작
+      // ✅ SSE 연결 시작 - 이제 ref 기반으로 실시간 상태 업데이트
       await startSSEConnection(parseInt(groupId), aiResult.jobId, photoIds)
       
       // TanStack Query 캐시 무효화로 모든 관련 데이터 새로고침
@@ -910,42 +974,47 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         queryClient.invalidateQueries({ queryKey: ['all-tags', groupId] })
       ])
       
-      // 완료 상태로 설정
-      setUploadState(prev => ({
-        ...prev,
-        currentStep: 'completed',
-        message: '모든 작업이 완료되었습니다.'
-      }))
+      console.log('🎉 모든 작업 완료!')
       
       // 3초 후 상태 초기화 (사용자가 결과를 볼 시간 제공)
       setTimeout(() => {
-        setUploadState({
+        updateUploadState(prev => ({
+          ...prev,
           isUploading: false,
           currentStep: 'selecting',
           progress: 0,
           totalFiles: 0,
           uploadedFiles: 0,
-          message: ''
-        })
+          message: '',
+          jobStatus: undefined,
+          completedJob: 0,
+          totalJob: 0
+        }))
       }, 3000)
       
     } catch (error) {
-      console.error('업로드 실패:', error)
-      setUploadState({
+      console.error('❌ 업로드 또는 분석 실패:', error)
+      
+      // ✅ 에러 상태 설정
+      updateUploadState(prev => ({
+        ...prev,
         isUploading: false,
         currentStep: 'selecting',
         progress: 0,
         totalFiles: 0,
         uploadedFiles: 0,
-        message: ''
-      })
+        message: '',
+        jobStatus: 'FAILED'
+      }))
+      
       alert('업로드에 실패했습니다. 다시 시도해주세요.')
     }
     
     // input 초기화
     event.target.value = ''
-  }
-  
+  }, [groupId, updateUploadState, startSSEConnection, queryClient])
+
+    
 
   return (
     <div className="min-h-screen bg-[#111111] text-white">
@@ -1551,56 +1620,99 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         </div>
       </main>
 
-      {/* 업로드 진행 상태 헤더 */}
       <AnimatePresence>
-        {uploadState.isUploading && (
-          <motion.div
-            initial={{ y: -100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -100, opacity: 0 }}
-            className="fixed top-0 left-0 right-0 z-50 bg-[#1a1a1a]/95 backdrop-blur-sm border-b border-[#FE7A25]"
-          >
-            <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
-              <div className="flex items-center justify-between">
-                {/* 왼쪽: 상태 정보 */}
-                <div className="flex items-center gap-3">
-                  <Loader2 className="animate-spin text-[#FE7A25]" size={18} />
-                  <div>
-                    <p className="text-white font-keepick-primary text-sm">
-                      {uploadState.currentStep === 'uploading' && '파일 업로드 중'}
-                      {uploadState.currentStep === 'processing' && (uploadState.message || 'AI 분석 중')}
-                      {uploadState.currentStep === 'completed' && '업로드 완료!'}
-                    </p>
-                    <p className="text-gray-400 font-keepick-primary text-xs">
-                      {uploadState.currentStep === 'processing' && uploadState.progress > 0 && 
-                        `진행률: ${Math.round(uploadState.progress)}%`}
-                    </p>
-                  </div>
-                </div>
+  {uploadState.isUploading && (
+    <motion.div
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: -100, opacity: 0 }}
+      className="fixed top-0 left-0 right-0 z-50 bg-[#1a1a1a]/95 backdrop-blur-sm border-b border-[#FE7A25]"
+    >
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
+        <div className="flex items-center justify-between">
+          {/* 왼쪽: 상태 정보 */}
+          <div className="flex items-center gap-3">
+            {/* ✅ 상태별 아이콘 개선 */}
+            {uploadState.currentStep === 'completed' ? (
+              <div className="text-green-500">
+                <svg className="w-[18px] h-[18px]" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+            ) : (
+              <Loader2 className="animate-spin text-[#FE7A25]" size={18} />
+            )}
+            <div>
+              <p className="text-white font-keepick-primary text-sm">
+                {uploadState.currentStep === 'uploading' && '파일 업로드 중'}
+                {uploadState.currentStep === 'processing' && (uploadState.message || 'AI 분석 중')}
+                {uploadState.currentStep === 'completed' && '업로드 완료!'}
+              </p>
+              {/* ✅ 더 상세한 진행 정보 표시 */}
+              <p className="text-gray-400 font-keepick-primary text-xs">
+                {uploadState.currentStep === 'uploading' && (
+                  `${uploadState.uploadedFiles}/${uploadState.totalFiles} 파일 업로드됨`
+                )}
+                {uploadState.currentStep === 'processing' && uploadState.totalJob > 0 && (
+                  `${uploadState.completedJob || 0}/${uploadState.totalJob} 완료 (${Math.round(uploadState.progress)}%)`
+                )}
+                {uploadState.currentStep === 'completed' && (
+                  uploadState.jobStatus === 'FAILED' ? '작업이 실패했습니다' : '모든 작업이 완료되었습니다'
+                )}
+              </p>
+            </div>
+          </div>
 
-                {/* 가운데: 진행률 바 */}
-                <div className="flex-1 max-w-md mx-6">
-                  <div className="flex justify-between text-xs font-keepick-primary text-gray-400 mb-1">
-                    <span>
-                      {uploadState.currentStep === 'uploading' && `${uploadState.uploadedFiles}/${uploadState.totalFiles} 파일`}
-                      {uploadState.currentStep === 'processing' && (
-                        uploadState.message 
-                          ? uploadState.message 
-                          : '분석 진행 중'
-                      )}
-                      {uploadState.currentStep === 'completed' && '완료'}
-                    </span>
-                    <span>{Math.round(uploadState.progress)}%</span>
-                  </div>
-                  <div className="w-full bg-gray-700 rounded-full h-1.5">
-                    <motion.div
-                      className="bg-[#FE7A25] h-1.5 rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${uploadState.progress}%` }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </div>
-                </div>
+          {/* 가운데: 진행률 바 */}
+          <div className="flex-1 max-w-md mx-6">
+            <div className="flex justify-between text-xs font-keepick-primary text-gray-400 mb-1">
+              <span className="truncate pr-2">
+                {uploadState.currentStep === 'uploading' && `${uploadState.uploadedFiles}/${uploadState.totalFiles} 파일`}
+                {uploadState.currentStep === 'processing' && (
+                  uploadState.message || '분석 진행 중'
+                )}
+                {uploadState.currentStep === 'completed' && '완료'}
+              </span>
+              <span className="text-white font-medium">
+                {Math.round(uploadState.progress)}%
+              </span>
+            </div>
+            
+            {/* ✅ 상태별 프로그레스바 색상 개선 */}
+            <div className="relative w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+              <motion.div
+                className={`h-full rounded-full transition-colors ${
+                  uploadState.currentStep === 'completed' 
+                    ? uploadState.jobStatus === 'FAILED'
+                      ? 'bg-red-500'
+                      : 'bg-green-500'
+                    : 'bg-[#FE7A25]'
+                }`}
+                initial={{ width: 0 }}
+                animate={{ 
+                  width: `${uploadState.progress}%`,
+                  transition: { duration: 0.5, ease: 'easeOut' }
+                }}
+              />
+              
+              {/* ✅ 진행 중일 때 애니메이션 효과 추가 */}
+              {(uploadState.currentStep === 'processing' || uploadState.currentStep === 'uploading') && 
+               uploadState.progress < 100 && (
+                <motion.div
+                  className="absolute top-0 left-0 h-full bg-[#FE7A25] opacity-30"
+                  animate={{
+                    x: ['-100%', '100%'],
+                    transition: {
+                      repeat: Infinity,
+                      duration: 2,
+                      ease: 'easeInOut'
+                    }
+                  }}
+                  style={{ width: '30%' }}
+                />
+              )}
+            </div>
+          </div>
 
                 {/* 오른쪽: 닫기 버튼 (완료 시에만) */}
                 {uploadState.currentStep === 'completed' && (
