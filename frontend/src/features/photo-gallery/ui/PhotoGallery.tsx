@@ -62,6 +62,8 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     enterSelectionMode: enterBaseSelectionMode,
     exitSelectionMode: exitBaseSelectionMode,
     togglePhotoSelection,
+    selectAllPhotos,
+    deselectAllPhotos,
     deleteSelectedPhotos: deleteSelectedPhotosBase,
     createTimelineAlbum,
     createTierAlbum,
@@ -1727,10 +1729,24 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                 <div className="flex items-center justify-between gap-4">
                   {/* Left */}
                   <div className="flex items-center gap-4 flex-1">
-                    <div className="w-20 flex-shrink-0">
+                    <div className="flex items-center gap-3 flex-shrink-0">
                       <span className="font-keepick-primary text-sm text-gray-300 whitespace-nowrap">
                         {selectedPhotos.length}장 선택됨
                       </span>
+                      
+                      {/* 전체 선택/해제 버튼 */}
+                      <button
+                        onClick={() => {
+                          if (selectedPhotos.length === displayPhotos.length) {
+                            deselectAllPhotos()
+                          } else {
+                            selectAllPhotos()
+                          }
+                        }}
+                        className="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded transition-colors font-keepick-primary"
+                      >
+                        {selectedPhotos.length === displayPhotos.length ? "전체 해제" : "전체 선택"}
+                      </button>
                     </div>
 
                     <div

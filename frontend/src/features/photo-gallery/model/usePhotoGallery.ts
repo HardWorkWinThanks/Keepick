@@ -9,6 +9,8 @@ import type { GalleryPhoto, PhotoTag, PhotoFilter, PhotoSelection } from "@/enti
 import { 
   toggleSelectedPhoto, 
   clearSelectedPhotos, 
+  selectAllPhotos as selectAllPhotosAction,
+  deselectAllPhotos as deselectAllPhotosAction,
   setIsFromGallery 
 } from "./photoSelectionSlice"
 import { createTimelineAlbum as createTimelineAlbumAPI } from "@/features/timeline-album/api/timelineAlbumApi"
@@ -237,6 +239,18 @@ export function usePhotoGallery(groupId?: string) {
     dispatch(toggleSelectedPhoto(photo))
   }
 
+  // 전체 사진 선택
+  const selectAllPhotos = () => {
+    if (!isSelectionMode) return
+    dispatch(selectAllPhotosAction(filteredPhotos))
+  }
+
+  // 전체 사진 선택 해제
+  const deselectAllPhotos = () => {
+    if (!isSelectionMode) return
+    dispatch(deselectAllPhotosAction())
+  }
+
   // 선택된 사진들 삭제
   const deleteSelectedPhotos = () => {
     if (selectedPhotos.length === 0) return
@@ -364,6 +378,8 @@ export function usePhotoGallery(groupId?: string) {
     enterSelectionMode,
     exitSelectionMode,
     togglePhotoSelection,
+    selectAllPhotos,
+    deselectAllPhotos,
     deleteSelectedPhotos,
     createTimelineAlbum,
     createTierAlbum,

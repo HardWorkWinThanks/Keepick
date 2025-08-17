@@ -38,6 +38,12 @@ const photoSelectionSlice = createSlice({
     clearSelectedPhotos: (state) => {
       state.selectedPhotos = [];
     },
+    selectAllPhotos: (state, action: PayloadAction<GalleryPhoto[]>) => {
+      state.selectedPhotos = action.payload;
+    },
+    deselectAllPhotos: (state) => {
+      state.selectedPhotos = [];
+    },
     setIsFromGallery: (state, action: PayloadAction<boolean>) => {
       state.isFromGallery = action.payload;
     },
@@ -50,6 +56,8 @@ export const {
   removeSelectedPhoto,
   toggleSelectedPhoto,
   clearSelectedPhotos,
+  selectAllPhotos,
+  deselectAllPhotos,
   setIsFromGallery,
 } = photoSelectionSlice.actions;
 
