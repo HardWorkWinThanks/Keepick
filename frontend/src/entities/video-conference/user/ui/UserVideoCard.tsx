@@ -55,7 +55,7 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
 
     if (videoTrack) {
       // 1. 기존에 srcObject가 없거나, 트랙이 다르면 새로 할당합니다.
-      if (!videoElement.srcObject || (videoElement.srcObject as MediaStream).getVideoTracks() !== videoTrack) {
+      if (!videoElement.srcObject || (videoElement.srcObject as MediaStream).getVideoTracks()[0] !== videoTrack) {
         const newStream = new MediaStream([videoTrack]);
         videoElement.srcObject = newStream;
         videoElement.muted = true; // 로컬 비디오는 항상 음소거
