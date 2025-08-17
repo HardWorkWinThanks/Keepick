@@ -339,7 +339,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                            viewMode === 'blurred' ? blurredQuery.data?.pages.flatMap(page => page.list) || [] :
                            viewMode === 'similar' ? similarQuery.data?.pages.flatMap(page => page.list.flatMap(cluster => cluster.photos)) || [] : []
       
-      const photoIds = currentPhotos.map(photo => photo.photoId)
+      const photoIds = currentPhotos.map(photo => 'photoId' in photo ? photo.photoId : photo.id)
       
       if (photoIds.length === 0) {
         alert('분석할 사진이 없습니다.')
@@ -397,6 +397,8 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
           isUploading: false,
           currentStep: 'completed',
           progress: 0,
+          totalFiles: 0,
+          uploadedFiles: 0,
           message: ''
         })
       }, 3000)
@@ -408,6 +410,8 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         isUploading: false,
         currentStep: 'completed',
         progress: 0,
+        totalFiles: 0,
+        uploadedFiles: 0,
         message: ''
       })
       
