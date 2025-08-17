@@ -63,6 +63,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
   const dispatch = useAppDispatch();
   const { isCameraOn, isMicOn } = useAppSelector((state) => state.re_media);
   const aiState = useAppSelector((state) => state.ai); // AI 상태 가져오기
+  const { currentUser } = useAppSelector((state) => state.user); // 로그인된 사용자 정보 가져오기
 
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [aiProcessedStream, setAiProcessedStream] = useState<MediaStream | null>(null);
@@ -85,7 +86,14 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const aiVideoRef = useRef<HTMLVideoElement>(null); // AI 처리된 비디오를 보여줄 ref
-  const [userName, setUserName] = useState("");
+  const [userName, setUserName] = useState(currentUser?.nickname || "");
+
+  // 로그인된 사용자 정보가 변경될 때 userName 업데이트
+  useEffect(() => {
+    if (currentUser?.nickname && !userName) {
+      setUserName(currentUser.nickname);
+    }
+  }, [currentUser?.nickname, userName]);
 
   // AI 결과 콜백 함수들
   const handleGestureResult = useCallback((result: GestureResult) => {
@@ -374,7 +382,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
     <div className="min-h-screen bg-[#222222] flex items-center justify-center p-4 font-body">
       <div className="w-full max-w-7xl">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-[#FE7A25] font-header mb-2">회의 준비</h1>
+          <h1 className="text-4xl font-bold text-[#FE7A25] font-header mb-2">그룹챗 참여</h1>
           <p className="text-[#A0A0A5]">카메라와 마이크를 확인하고 AI 기능을 테스트해보세요</p>
         </div>
 
