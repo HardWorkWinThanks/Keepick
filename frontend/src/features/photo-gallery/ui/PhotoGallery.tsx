@@ -373,7 +373,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
       }
       
       // SSE 연결 시작
-      await startSSEConnection(parseInt(groupId), analysisResult.jobId)
+      await startSSEConnection(parseInt(groupId), analysisResult.jobId, photoIds)
       
       // TanStack Query 캐시 무효화로 모든 관련 데이터 새로고침
       await Promise.all([
@@ -447,8 +447,8 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         message: '분석을 준비하고 있습니다.'
       }))
       
-      // SSE 연결 시작
-      await startSSEConnection(parseInt(groupId), analysisResult.jobId)
+      // SSE 연결 시작 (유사사진 분석은 전체 대상이므로 빈 배열)
+      await startSSEConnection(parseInt(groupId), analysisResult.jobId, [])
       
       // 분석 완료 후 유사사진 탭으로 이동 및 캐시 새로고침
       console.log('유사사진 분석 완료! 유사사진 탭으로 이동합니다.')
@@ -503,7 +503,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   }
   
   // SSE 연결 시작
-  const startSSEConnection = (groupId: number, jobId: string): Promise<void> => {
+  const startSSEConnection = (groupId: number, jobId: string, photoIds: number[]): Promise<void> => {
     return new Promise((resolve, reject) => {
       // 기존 연결이 있으면 종료
       if (sseConnectionRef.current) {
@@ -542,7 +542,21 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
           
           // 상태에 따른 처리
           if (data.jobStatus === 'COMPLETED') {
-            console.log('AI 분석 완료')
+            console.log('AI 분석 완료 - 태그 캐시 무효화 시작')
+            
+            // 분석 대상 사진들의 캐시 무효화
+            setPhotoTagsCache(prev => {
+              const updated = { ...prev }
+              photoIds.forEach(photoId => {
+                delete updated[photoId] // 해당 사진의 캐시 삭제
+              })
+              console.log('태그 캐시 무효화 완료:', photoIds.length, '개 사진')
+              return updated
+            })
+            
+            // 전체 태그 목록도 새로고침
+            allTagsQuery.refetch()
+            
             // 연결을 닫기 전에 약간의 지연을 줌
             setTimeout(() => {
               eventSource.close()
@@ -867,7 +881,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
       }
       
       // SSE 연결 시작
-      await startSSEConnection(parseInt(groupId), aiResult.jobId)
+      await startSSEConnection(parseInt(groupId), aiResult.jobId, photoIds)
       
       // TanStack Query 캐시 무효화로 모든 관련 데이터 새로고침
       await Promise.all([
@@ -1137,10 +1151,10 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                     onClick={() => toggleTag(tag)}
                     className={`px-3 py-1.5 text-sm font-keepick-primary tracking-wide transition-all duration-300 relative ${ 
                       selectedTags.includes(tag)
-                        ? "bg-[#111111] text-[#FFFFFF] shadow-lg border border-[#111111]"
+                        ? "bg-[#F5E7C6] text-[#111111] shadow-lg border border-[#F5E7C6]"
                         : isRealTimeTag
-                        ? "bg-[#111111]/20 text-[#111111] border border-[#111111]/50 hover:bg-[#111111]/30"
-                        : "bg-gray-800 text-gray-300 border border-gray-600 hover:border-[#111111] hover:text-[#FFFFFF] hover:bg-[#111111]"
+                        ? "bg-[#FE7A25]/90 text-white border border-[#FE7A25] hover:bg-[#FE7A25] hover:shadow-md"
+                        : "bg-[#FE7A25]/80 text-white border border-[#FE7A25] hover:bg-[#FE7A25] hover:shadow-md"
                     }`}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -1462,7 +1476,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                               {translateTagsAndFilter(photoTagsCache[photo.id]?.tags || []).slice(0, Math.max(0, 3 - (photoTagsCache[photo.id]?.members || []).slice(0, 2).length)).map((translatedTag, index) => (
                                 <span
                                   key={`api-${index}`}
-                                  className="px-2 py-1 bg-[#111111]/80 backdrop-blur-sm text-[#FFFFFF] text-xs font-keepick-primary rounded-sm"
+                                  className="px-2 py-1 bg-[#FE7A25]/90 backdrop-blur-sm text-white text-xs font-keepick-primary rounded-sm"
                                 >
                                   {translatedTag}
                                 </span>
@@ -1479,7 +1493,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                                 const totalDisplayed = displayedMemberCount + displayedApiTagCount
                                 
                                 return totalTagCount > totalDisplayed && (
-                                  <span className="px-2 py-1 bg-white/10 backdrop-blur-sm text-gray-300 text-xs font-keepick-primary rounded-sm">
+                                  <span className="px-2 py-1 bg-[#F5E7C6]/80 backdrop-blur-sm text-[#111111] text-xs font-keepick-primary rounded-sm">
                                     +{totalTagCount - totalDisplayed}
                                   </span>
                                 )
