@@ -151,8 +151,17 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
     try {
       if (!aiState.isAiEnabled) {
         // AI 기능 활성화
+        console.log("🤖 AI 프리뷰 활성화 시작...");
+        
+        // Redux 상태 먼저 업데이트
         dispatch(setAiEnabled(true));
         setIsAiPreviewOpen(true);
+
+        // frontendAiProcessor가 초기화되었는지 확인
+        if (!frontendAiProcessor.initialized) {
+          console.log("🔄 frontendAiProcessor 초기화 중...");
+          await frontendAiProcessor.init(dispatch);
+        }
 
         // 로비용 AI 콜백 설정
         frontendAiProcessor.setGestureCallback(handleGestureResult);
@@ -161,48 +170,227 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
         // 로컬 스트림이 있으면 AI 처리 시작
         if (localStream?.getVideoTracks()[0]) {
           const videoTrack = localStream.getVideoTracks()[0];
-          console.log("🤖 Starting AI processing for lobby preview...");
+          console.log("🎯 AI 비디오 처리 시작...");
           
           // AI 처리된 스트림 생성
           const processedTrack = await frontendAiProcessor.processVideoTrack(videoTrack);
           const processedStream = new MediaStream([processedTrack]);
           setAiProcessedStream(processedStream);
           
-          // AI 처리된 비디오 엘리먼트에 스트림 설정
-          if (aiVideoRef.current) {
-            aiVideoRef.current.srcObject = processedStream;
-          }
+          // AI 처리된 비디오 엘리먼트에 스트림 설정 (약간의 지연 후)
+          setTimeout(() => {
+            if (aiVideoRef.current && processedStream) {
+              aiVideoRef.current.srcObject = processedStream;
+              console.log("📺 AI 비디오 스트림 설정 완료");
+            }
+          }, 100);
         }
 
-        console.log("✅ AI 프리뷰 활성화");
+        console.log("✅ AI 프리뷰 활성화 완료");
       } else {
         // AI 기능 비활성화
+        console.log("🛑 AI 프리뷰 비활성화 시작...");
+        
+        // Redux 상태 먼저 업데이트
         dispatch(setAiEnabled(false));
         setIsAiPreviewOpen(false);
         
-        // AI 처리된 스트림 정리
+        // AI 처리된 스트림 완전 정리
         if (aiProcessedStream) {
-          aiProcessedStream.getTracks().forEach(track => track.stop());
+          console.log("🧹 AI 처리된 스트림 정리 중...");
+          aiProcessedStream.getTracks().forEach(track => {
+            track.stop();
+            console.log("🛑 AI 트랙 정지:", track.label);
+          });
           setAiProcessedStream(null);
         }
         
+        // frontendAiProcessor 완전 정리 (백그라운드 처리 중단)
+        console.log("🧹 frontendAiProcessor 정리 중...");
+        frontendAiProcessor.cleanup();
+
+        // AI 비디오 엘리먼트 안전하게 정리
         if (aiVideoRef.current) {
+          console.log("📺 AI 비디오 엘리먼트 정리 중...");
+          // ScreenShareViewer 패턴 적용: srcObject를 null로 설정하고 정리
           aiVideoRef.current.srcObject = null;
+          aiVideoRef.current.load(); // 비디오 엘리먼트 상태 리셋
         }
 
-        // 원본 비디오 스트림이 화면에서 사라지는 문제 해결
+        // 원본 비디오 스트림 안전하게 복원
         if (videoRef.current && localStream) {
-          videoRef.current.srcObject = localStream;
+          console.log("📺 원본 비디오 스트림 복원 중...");
+          
+          // 트랙 상태 검증 및 복구
+          const restoreStream = async () => {
+            if (!videoRef.current || !localStream) return;
+            
+            // 로컬 스트림의 비디오 트랙 상태 검증
+            const videoTracks = localStream.getVideoTracks();
+            const activeVideoTracks = videoTracks.filter(track => track.readyState === 'live');
+            
+            console.log("🔍 트랙 상태 검증:", {
+              totalTracks: videoTracks.length,
+              activeTracks: activeVideoTracks.length,
+              trackStates: videoTracks.map(t => ({ id: t.id, state: t.readyState, enabled: t.enabled }))
+            });
+            
+            if (activeVideoTracks.length === 0) {
+              console.warn("⚠️ 활성 비디오 트랙이 없음, 새로운 스트림 생성 중...");
+              try {
+                // 새로운 카메라 스트림 생성
+                const newStream = await navigator.mediaDevices.getUserMedia({
+                  video: {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: "user",
+                  },
+                  audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                  },
+                });
+                
+                // 기존 스트림의 트랙 제거
+                localStream.getTracks().forEach(track => {
+                  localStream.removeTrack(track);
+                  if (track.readyState === 'live') {
+                    track.stop();
+                  }
+                });
+                
+                // 새로운 트랙 추가
+                newStream.getTracks().forEach(track => {
+                  localStream.addTrack(track);
+                });
+                
+                setLocalStream(localStream); // 상태 업데이트
+                console.log("✅ 새로운 스트림으로 복구 완료");
+              } catch (error) {
+                console.error("❌ 스트림 복구 실패:", error);
+                setMediaError("카메라 스트림을 복구할 수 없습니다.");
+                return;
+              }
+            }
+            
+            // 비디오 엘리먼트에 스트림 설정
+            videoRef.current.srcObject = localStream;
+            
+            // AbortError 방지를 위한 안전한 play 처리
+            const playPromise = videoRef.current.play();
+            if (playPromise !== undefined) {
+              playPromise.catch((error) => {
+                // AbortError는 무시 (정상적인 중단)
+                if (error.name !== 'AbortError') {
+                  console.warn("비디오 재생 실패:", error);
+                }
+              });
+            }
+            
+            console.log("✅ 원본 비디오 스트림 복원 완료");
+          };
+
+          // 약간의 지연을 두고 스트림 복원 (안정성 향상)
+          setTimeout(restoreStream, 100);
         }
 
-        console.log("✅ AI 프리뷰 비활성화");
+        // AI 결과 상태 초기화
+        setRealtimeGestureResults([]);
+        setRealtimeEmotionResults([]);
+        setLatestGestureWithLandmarks(null);
+        setLatestEmotionWithLandmarks(null);
+
+        console.log("✅ AI 프리뷰 비활성화 완료");
       }
     } catch (error) {
-      console.error("AI 프리뷰 토글 오류:", error);
-      setMediaError("AI 기능을 시작할 수 없습니다.");
+      console.error("❌ AI 프리뷰 토글 오류:", error);
+      
+      // 에러 발생 시 안전한 상태로 복원
       dispatch(setAiEnabled(false));
-      setAiProcessedStream(null);
       setIsAiPreviewOpen(false);
+      setAiProcessedStream(null);
+      
+      // AI 리소스 정리
+      frontendAiProcessor.cleanup();
+      
+      // AI 비디오 엘리먼트 정리
+      if (aiVideoRef.current) {
+        aiVideoRef.current.srcObject = null;
+        aiVideoRef.current.load();
+      }
+      
+      // 원본 비디오 안전하게 복원 (에러 복구 시에도 동일한 로직 적용)
+      if (videoRef.current && localStream) {
+        const restoreStreamOnError = async () => {
+          if (!videoRef.current || !localStream) return;
+          
+          // 트랙 상태 검증
+          const videoTracks = localStream.getVideoTracks();
+          const activeVideoTracks = videoTracks.filter(track => track.readyState === 'live');
+          
+          console.log("🔍 에러 복구 시 트랙 상태:", {
+            activeTracks: activeVideoTracks.length,
+            trackStates: videoTracks.map(t => ({ id: t.id, state: t.readyState }))
+          });
+          
+          if (activeVideoTracks.length === 0) {
+            console.warn("⚠️ 에러 복구: 활성 트랙 없음, 새 스트림 생성 중...");
+            try {
+              const newStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                  facingMode: "user",
+                },
+                audio: {
+                  echoCancellation: true,
+                  noiseSuppression: true,
+                  autoGainControl: true,
+                },
+              });
+              
+              // 기존 트랙 정리 및 새 트랙 추가
+              localStream.getTracks().forEach(track => {
+                localStream.removeTrack(track);
+                if (track.readyState === 'live') track.stop();
+              });
+              
+              newStream.getTracks().forEach(track => {
+                localStream.addTrack(track);
+              });
+              
+              setLocalStream(localStream);
+              console.log("✅ 에러 복구: 새 스트림 생성 완료");
+            } catch (recoveryError) {
+              console.error("❌ 에러 복구 실패:", recoveryError);
+              return;
+            }
+          }
+          
+          videoRef.current.srcObject = localStream;
+          
+          const playPromise = videoRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise.catch((error) => {
+              if (error.name !== 'AbortError') {
+                console.warn("에러 복구 중 비디오 재생 실패:", error);
+              }
+            });
+          }
+          
+          console.log("✅ 에러 복구: 비디오 스트림 복원 완료");
+        };
+        
+        setTimeout(restoreStreamOnError, 100);
+      }
+      
+      setMediaError("AI 기능을 시작할 수 없습니다. 다시 시도해주세요.");
+      
+      // 3초 후 에러 메시지 자동 제거
+      setTimeout(() => {
+        setMediaError(null);
+      }, 3000);
     }
   };
 
@@ -285,18 +473,31 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
 
     // 컴포넌트 언마운트 시 미디어 트랙 중지 및 스트림 해제
     return () => {
+      console.log("🧹 Lobby 컴포넌트 정리 시작...");
+      
+      // 로컬 스트림 안전하게 정리
       if (localStream) {
         localStream.getTracks().forEach((track) => {
           track.stop();
+          console.log("🛑 로컬 트랙 정지:", track.label);
         });
       }
+      
+      // AI 처리된 스트림 안전하게 정리
       if (aiProcessedStream) {
         aiProcessedStream.getTracks().forEach((track) => {
           track.stop();
+          console.log("🛑 AI 처리된 트랙 정지:", track.label);
         });
       }
-      // AI cleanup은 ConferenceClientPage 언마운트 시 처리됩니다.
-      // aiState.isAiEnabled 상태는 Redux에서 관리하므로 여기서 직접 cleanup을 호출하지 않습니다.
+      
+      // AI 프로세서가 활성화되어 있다면 정리
+      if (frontendAiProcessor.initialized) {
+        console.log("🧹 Lobby 언마운트 시 frontendAiProcessor 정리");
+        frontendAiProcessor.cleanup();
+      }
+      
+      console.log("✅ Lobby 컴포넌트 정리 완료");
     };
   }, []); // 의존성 배열을 비워 컴포넌트 마운트 시 한 번만 실행되도록 합니다.
 
