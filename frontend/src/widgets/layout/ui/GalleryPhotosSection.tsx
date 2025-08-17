@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Brain, Search } from 'lucide-react'
 import { ScrollArea } from '@/shared/ui/shadcn/scroll-area'
 import { PhotoDropZone } from '@/features/photo-drag-drop'
 import type { Photo, DragPhotoData } from '@/entities/photo'
@@ -19,6 +19,11 @@ interface GalleryPhotosSectionProps {
   onAddPhotos?: () => void
   onDeletePhotos?: (photoIds: number[]) => void
   
+  // AI 기능
+  onAnalyzeAllPhotos?: (photoIds: number[]) => void
+  onAnalyzeSimilarPhotos?: () => void
+  isAnalyzing?: boolean
+  
   // 커스터마이징
   title?: string
   showControls?: boolean
@@ -32,6 +37,9 @@ export function GalleryPhotosSection({
   onDrop,
   onAddPhotos,
   onDeletePhotos,
+  onAnalyzeAllPhotos,
+  onAnalyzeSimilarPhotos,
+  isAnalyzing = false,
   title = "갤러리에서 선택한 사진",
   showControls = true
 }: GalleryPhotosSectionProps) {
@@ -173,67 +181,105 @@ export function GalleryPhotosSection({
         
         {/* 사진 추가/삭제 버튼들 */}
         {showControls && (
-          <div className="grid grid-cols-2 gap-2">
-            {/* 갤러리에서 사진 추가 버튼 */}
-            {onAddPhotos && (
-              <button
-                onClick={onAddPhotos}
-                className="flex items-center justify-center gap-1 px-3 py-2 bg-[#111111] border border-gray-600/30 rounded text-white hover:bg-green-500/20 hover:border-green-500/40 hover:text-green-400 transition-colors text-xs font-medium"
-              >
-                <Plus size={14} />
-                추가
-              </button>
-            )}
-            
-            {/* 삭제 모드 - 조건부 렌더링 */}
-            {onDeletePhotos && availablePhotos.length > 0 && (
-              <>
-                {!isDeleteMode ? (
-                  <button
-                    onClick={() => {
-                      setIsDeleteMode(true)
-                      setSelectedPhotos([])
-                    }}
-                    className="flex items-center justify-center gap-1 px-3 py-2 bg-[#111111] border border-gray-600/30 rounded text-white hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400 transition-colors text-xs font-medium"
-                  >
-                    <Trash2 size={14} />
-                    삭제
-                  </button>
-                ) : (
-                  <>
-                    {/* 취소 버튼 */}
+          <div className="space-y-3">
+            {/* 기본 기능 버튼들 */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* 갤러리에서 사진 추가 버튼 */}
+              {onAddPhotos && (
+                <button
+                  onClick={onAddPhotos}
+                  className="flex items-center justify-center gap-1 px-3 py-2 bg-[#111111] border border-gray-600/30 rounded text-white hover:bg-green-500/20 hover:border-green-500/40 hover:text-green-400 transition-colors text-xs font-medium"
+                >
+                  <Plus size={14} />
+                  추가
+                </button>
+              )}
+              
+              {/* 삭제 모드 - 조건부 렌더링 */}
+              {onDeletePhotos && availablePhotos.length > 0 && (
+                <>
+                  {!isDeleteMode ? (
                     <button
                       onClick={() => {
-                        setIsDeleteMode(false)
+                        setIsDeleteMode(true)
                         setSelectedPhotos([])
                       }}
-                      className="flex items-center justify-center gap-1 px-3 py-2 bg-[#111111] border border-gray-500/20 rounded text-gray-400 hover:bg-gray-500/20 hover:border-gray-500/40 transition-colors text-xs font-medium"
-                    >
-                      취소
-                    </button>
-                    
-                    {/* 확인 버튼 */}
-                    <button
-                      onClick={() => {
-                        if (onDeletePhotos && selectedPhotos.length > 0) {
-                          onDeletePhotos(selectedPhotos)
-                          setSelectedPhotos([])
-                          setIsDeleteMode(false)
-                        }
-                      }}
-                      disabled={selectedPhotos.length === 0}
-                      className={`flex items-center justify-center gap-1 px-3 py-2 border rounded transition-colors text-xs font-medium ${
-                        selectedPhotos.length > 0
-                          ? "bg-red-600 border-red-500 text-white hover:bg-red-700"
-                          : "bg-gray-600/20 border-gray-600/20 text-gray-500 cursor-not-allowed"
-                      }`}
+                      className="flex items-center justify-center gap-1 px-3 py-2 bg-[#111111] border border-gray-600/30 rounded text-white hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400 transition-colors text-xs font-medium"
                     >
                       <Trash2 size={14} />
-                      확인
+                      삭제
                     </button>
-                  </>
-                )}
-              </>
+                  ) : (
+                    <>
+                      {/* 취소 버튼 */}
+                      <button
+                        onClick={() => {
+                          setIsDeleteMode(false)
+                          setSelectedPhotos([])
+                        }}
+                        className="flex items-center justify-center gap-1 px-3 py-2 bg-[#111111] border border-gray-500/20 rounded text-gray-400 hover:bg-gray-500/20 hover:border-gray-500/40 transition-colors text-xs font-medium"
+                      >
+                        취소
+                      </button>
+                      
+                      {/* 확인 버튼 */}
+                      <button
+                        onClick={() => {
+                          if (onDeletePhotos && selectedPhotos.length > 0) {
+                            onDeletePhotos(selectedPhotos)
+                            setSelectedPhotos([])
+                            setIsDeleteMode(false)
+                          }
+                        }}
+                        disabled={selectedPhotos.length === 0}
+                        className={`flex items-center justify-center gap-1 px-3 py-2 border rounded transition-colors text-xs font-medium ${
+                          selectedPhotos.length > 0
+                            ? "bg-red-600 border-red-500 text-white hover:bg-red-700"
+                            : "bg-gray-600/20 border-gray-600/20 text-gray-500 cursor-not-allowed"
+                        }`}
+                      >
+                        <Trash2 size={14} />
+                        확인
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* AI 기능 버튼들 */}
+            {(onAnalyzeSimilarPhotos || onAnalyzeAllPhotos) && availablePhotos.length > 0 && !isDeleteMode && (
+              <div className="border-t border-gray-700/50 pt-3">
+                <div className="text-xs text-gray-400 mb-2 font-medium">AI 분석</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* 유사한 사진 분류 버튼 */}
+                  {onAnalyzeSimilarPhotos && (
+                    <button
+                      onClick={onAnalyzeSimilarPhotos}
+                      disabled={isAnalyzing}
+                      className="flex items-center justify-center gap-1 px-3 py-2 bg-[#111111] border border-blue-600/30 rounded text-white hover:bg-blue-500/20 hover:border-blue-500/40 hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                    >
+                      <Search size={14} />
+                      유사사진 분류
+                    </button>
+                  )}
+                  
+                  {/* 전체 AI 분석 버튼 */}
+                  {onAnalyzeAllPhotos && (
+                    <button
+                      onClick={() => {
+                        const photoIds = availablePhotos.map(photo => photo.id)
+                        onAnalyzeAllPhotos(photoIds)
+                      }}
+                      disabled={isAnalyzing}
+                      className="flex items-center justify-center gap-1 px-3 py-2 bg-[#111111] border border-purple-600/30 rounded text-white hover:bg-purple-500/20 hover:border-purple-500/40 hover:text-purple-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                    >
+                      <Brain size={14} />
+                      {isAnalyzing ? "분석 중..." : "전체 AI 분석"}
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         )}

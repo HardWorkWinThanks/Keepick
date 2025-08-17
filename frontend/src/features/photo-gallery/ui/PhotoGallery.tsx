@@ -171,8 +171,9 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   // 실시간 태그 목록 (API에서 수집)
   const [realTimeTags, setRealTimeTags] = useState<string[]>([])
   
-  // API에서 가져온 전체 태그
-  const apiTags = allTagsQuery.data || []
+  // API에서 가져온 전체 태그와 인물 정보
+  const apiTags = allTagsQuery.data?.tags || []
+  const apiMembers = allTagsQuery.data?.members || []
   
   // 현재 사진들로부터 실시간 태그 계산 (보조 태그 목록)
   const calculatedTags = useMemo(() => {
@@ -187,7 +188,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     return tagsFromCache
   }, [allQueryPhotos, allPhotos, filteredQuery.photos, selectedTags, photoTagsCache])
 
-  // 현재 사진들로부터 사람 태그(memberNicknames) 계산
+  // 현재 사진들로부터 인물 태그(memberNicknames) 계산
   const calculatedMemberNicknames = useMemo(() => {
     // 필터링되지 않은 전체 사진에서 멤버 닉네임 수집 (필터링 옵션 표시용)
     const currentPhotos = allQueryPhotos.length > 0 ? allQueryPhotos : allPhotos
@@ -197,8 +198,12 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
       photoTagsCache[photo.id]?.members || []
     ))]
     
-    return membersFromCache
-  }, [allQueryPhotos, allPhotos, photoTagsCache])
+    // API에서 가져온 인물 정보와 통합
+    const apiMemberNicknames = apiMembers.map(member => member.nickname)
+    const combinedMembers = [...new Set([...apiMemberNicknames, ...membersFromCache])]
+    
+    return combinedMembers
+  }, [allQueryPhotos, allPhotos, photoTagsCache, apiMembers])
   
   // 최종 표시할 태그 목록 (API 태그 우선, 없으면 계산된 태그 사용)
   const displayTags = useMemo(() => {
@@ -322,6 +327,93 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   // AI 버튼 클릭 핸들러
   const handleAiServiceClick = () => {
     setIsAiModalOpen(true)
+  }
+  
+  // 전체 AI 분석 핸들러
+  const handleAnalyzeAllPhotos = async () => {
+    try {
+      setIsAiModalOpen(false)
+      
+      // 현재 갤러리의 모든 사진 ID 수집
+      const currentPhotos = viewMode === 'all' ? allPhotos : 
+                           viewMode === 'blurred' ? blurredQuery.data?.pages.flatMap(page => page.list) || [] :
+                           viewMode === 'similar' ? similarQuery.data?.pages.flatMap(page => page.list.flatMap(cluster => cluster.photos)) || [] : []
+      
+      const photoIds = currentPhotos.map(photo => photo.photoId)
+      
+      if (photoIds.length === 0) {
+        alert('분석할 사진이 없습니다.')
+        return
+      }
+      
+      // 분석 상태 업데이트
+      setUploadState(prev => ({
+        ...prev,
+        isUploading: true,
+        currentStep: 'processing',
+        progress: 0,
+        message: `${photoIds.length}장의 사진에 대한 AI 분석을 요청하고 있습니다.`
+      }))
+      
+      console.log(`전체 AI 분석 시작... (${photoIds.length}장)`)
+      
+      // AI 분석 요청 (태깅, 얼굴매칭, 흐린사진 판별)
+      const analysisResult = await requestAiAnalysis(parseInt(groupId), photoIds)
+      console.log('전체 AI 분석 요청 완료:', analysisResult)
+      
+      setUploadState(prev => ({
+        ...prev,
+        progress: 50,
+        message: '분석을 준비하고 있습니다.'
+      }))
+      
+      // jobId 확인
+      if (!analysisResult.jobId) {
+        throw new Error('AI 분석 요청 응답에서 jobId를 받지 못했습니다.')
+      }
+      
+      // SSE 연결 시작
+      await startSSEConnection(parseInt(groupId), analysisResult.jobId)
+      
+      // TanStack Query 캐시 무효화로 모든 관련 데이터 새로고침
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['all-photos', groupId] }),
+        queryClient.invalidateQueries({ queryKey: ['blurred-photos', groupId] }),
+        queryClient.invalidateQueries({ queryKey: ['similar-photos', groupId] }),
+        queryClient.invalidateQueries({ queryKey: ['group-tags', groupId] }),
+      ])
+      
+      setUploadState(prev => ({
+        ...prev,
+        isUploading: false,
+        currentStep: 'completed',
+        progress: 100,
+        message: 'AI 분석이 완료되었습니다!'
+      }))
+      
+      // 완료 메시지 후 상태 초기화
+      setTimeout(() => {
+        setUploadState({
+          isUploading: false,
+          currentStep: 'completed',
+          progress: 0,
+          message: ''
+        })
+      }, 3000)
+      
+    } catch (error) {
+      console.error('전체 AI 분석 실패:', error)
+      
+      setUploadState({
+        isUploading: false,
+        currentStep: 'completed',
+        progress: 0,
+        message: ''
+      })
+      
+      // 에러 알림
+      alert(`AI 분석에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
+    }
   }
   
   // 유사한 사진 분류 핸들러
@@ -1064,7 +1156,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
               <>
                 <div className="flex items-center gap-4 mb-3 mt-6">
                   <h3 className="font-keepick-primary text-sm text-gray-400 tracking-wider">
-                    사람 태그
+                    인물 태그
                     <span className="ml-2 text-xs text-[#F5E7C6]">
                       {calculatedMemberNicknames.length}명
                     </span>
@@ -1351,9 +1443,9 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                             <div className="mb-3">
                               <p className="font-keepick-primary text-white text-sm font-medium">{photo.date}</p>
                             </div>
-                            {/* 태그 표시 영역 - 사람 태그와 일반 태그 통합 */}
+                            {/* 태그 표시 영역 - 인물 태그와 일반 태그 통합 */}
                             <div className="flex flex-wrap gap-1">
-                              {/* 사람 태그 (우선 표시) */}
+                              {/* 인물 태그 (우선 표시) */}
                               {(photoTagsCache[photo.id]?.members || []).slice(0, 2).map((memberName, index) => (
                                 <span
                                   key={`member-${index}`}
@@ -1371,7 +1463,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
                                   {translatedTag}
                                 </span>
                               ))}
-                              {/* 더 많은 태그가 있을 때 - 사람 태그와 일반 태그 모두 고려 */}
+                              {/* 더 많은 태그가 있을 때 - 인물 태그와 일반 태그 모두 고려 */}
                               {(() => {
                                 const memberCount = (photoTagsCache[photo.id]?.members || []).length
                                 const apiTagCount = translateTagsAndFilter(photoTagsCache[photo.id]?.tags || []).length
@@ -1758,6 +1850,8 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
         isOpen={isAiModalOpen}
         onClose={() => setIsAiModalOpen(false)}
         onSimilarPhotosSort={handleSimilarPhotosSort}
+        onAnalyzeAllPhotos={handleAnalyzeAllPhotos}
+        isAnalyzing={uploadState.isUploading}
       />
       
       {/* 삭제 확인 모달 */}

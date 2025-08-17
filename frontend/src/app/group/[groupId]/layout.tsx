@@ -158,6 +158,7 @@ function TimelineEditSidebarContent({ groupId, albumId }: { groupId: string, alb
     window.dispatchEvent(new CustomEvent('timelineSidebarDrop', { detail: dragData }))
   }
   
+  
   if (!isEditModeFromURL) {
     return null
   }
@@ -259,6 +260,7 @@ function TierEditSidebarContent({ groupId, albumId }: { groupId: string, albumId
     // window 이벤트로 TierAlbumPage에 알림
     window.dispatchEvent(new CustomEvent('tierSidebarDrop', { detail: dragData }))
   }
+  
   
   if (!isEditModeFromURL) {
     return null

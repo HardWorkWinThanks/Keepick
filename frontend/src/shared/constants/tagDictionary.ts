@@ -10,7 +10,7 @@ export const TAG_DICTIONARY = {
   'Statue of Liberty': '자유의여신상',
   'Stonehenge': '스톤헨지',
   'tajimahal': '타지마할',
-  'bruj-khalifa': '브루즈할리파',
+  'bruj_khalifa': '브루즈할리파',
   'eiffel_tower': '에펠탑',
   'pyramid': '피라미드',
 

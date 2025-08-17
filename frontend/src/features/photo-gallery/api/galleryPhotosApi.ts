@@ -77,6 +77,10 @@ export interface DeletePhotosResponse {
 // 전체 태그 조회 응답 타입
 export interface GroupTagsResponse {
   tags: string[];
+  members: {
+    memberId: number;
+    nickname: string;
+  }[];
 }
 
 /**
@@ -174,12 +178,12 @@ export const deleteGroupPhotos = async (
  */
 export const getGroupPhotoTags = async (
   groupId: number
-): Promise<string[]> => {
+): Promise<GroupTagsResponse> => {
   const response = await apiClient.get<ApiResponse<GroupTagsResponse>>(
     `/api/groups/${groupId}/photos/tags`
   );
 
-  return response.data.data.tags;
+  return response.data.data;
 };
 
 /**
