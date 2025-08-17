@@ -160,12 +160,10 @@ class FrontendAiProcessor {
         this.beautyFilterProcessor.init(FACE_MESH_WASM_PATH),
         this.gestureProcessor.init(TASKS_VISION_WASM_PATH),
       ]);
-  }
 
       console.log("🔄 Loading gesture models...");
       console.log(`- Static gesture model: ${STATIC_GESTURE_MODEL_PATH}`);
       console.log(`- Dynamic gesture model: ${DYNAMIC_GESTURE_MODEL_PATH}`);
-  }
 
       this.isInitialized = true;
       console.log("✅ FrontendAiProcessor initialized successfully.");
@@ -173,10 +171,7 @@ class FrontendAiProcessor {
     } catch (error) {
       console.error("❌ FrontendAiProcessor: Failed to initialize AI models:", error);
       this.isInitialized = false;
-      });
     }
-  }
-
   }
 
   // 초기화 상태 업데이트 (모든 필요한 모듈이 로딩되었는지 확인)
