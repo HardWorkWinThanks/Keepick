@@ -115,7 +115,7 @@ export default function AiServiceModal({ isOpen, onClose, onSimilarPhotosSort, o
                 {/* AI 분석 실행 버튼들 */}
                 <div className="border-t border-gray-700 pt-4 space-y-3">
                   {/* 전체 AI 분석 버튼 */}
-                  <motion.button
+                  {/* <motion.button
                     onClick={onAnalyzeAllPhotos}
                     disabled={isAnalyzing}
                     className="w-full px-4 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-keepick-primary text-sm transition-all duration-300 flex items-center justify-center gap-2"
@@ -127,7 +127,7 @@ export default function AiServiceModal({ isOpen, onClose, onSimilarPhotosSort, o
                   </motion.button>
                   <p className="text-gray-500 text-xs font-keepick-primary text-center">
                     모든 사진에 대해 객체 인식, 얼굴 매칭, 품질 분석을 일괄 실행합니다
-                  </p>
+                  </p> */}
                   
                   {/* 유사한 사진 분류 버튼 */}
                   <motion.button

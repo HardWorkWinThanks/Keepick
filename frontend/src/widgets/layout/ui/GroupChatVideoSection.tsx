@@ -70,7 +70,7 @@ export function GroupChatVideoSection({
         className="w-full flex items-center justify-between p-4 hover:bg-gray-800/50 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <h3 className="text-base font-semibold text-white">그룹챗 비디오</h3>
+          <h3 className="text-base font-semibold text-white">그룹챗</h3>
           {isInCall && (
             <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full">
               연결됨
