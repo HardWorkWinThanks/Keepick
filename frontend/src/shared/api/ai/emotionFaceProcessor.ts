@@ -4,7 +4,7 @@ import * as tf from "@tensorflow/tfjs";
 import { EmotionResult, AiSystemConfig } from "@/shared/types/ai.types";
 
 // Dynamic import types
-type FaceMeshModule = typeof import("@mediapipe/face_mesh");
+// type FaceMeshModule = typeof import("@mediapipe/face_mesh");
 type FaceMeshInstance = import("@mediapipe/face_mesh").FaceMesh;
 type Results = import("@mediapipe/face_mesh").Results;
 
@@ -68,7 +68,6 @@ const EMOTION_COOLDOWN = {
 
 export class EmotionFaceProcessor {
   private faceMesh: FaceMeshInstance | null = null;
-  private faceMeshModule: FaceMeshModule | null = null;
   private expressionModel: tf.LayersModel | null = null;
   private expressionScalerMean: number[] | null = null;
   private expressionScalerScale: number[] | null = null;
@@ -105,13 +104,13 @@ export class EmotionFaceProcessor {
 
     try {
       // Dynamic import of MediaPipe Face Mesh
-      this.faceMeshModule = await import("@mediapipe/face_mesh");
-      
-      // Face Mesh 초기화 (app.py와 동일한 설정)
-      this.faceMesh = new this.faceMeshModule.FaceMesh({
-        locateFile: (file) => {
-          return `${wasmPath}/${file}`;
-        },
+      const { FaceMesh } = await import("@mediapipe/face_mesh");
+
+            // 수정: 가져온 FaceMesh 클래스를 직접 사용하여 인스턴스를 생성합니다.
+      this.faceMesh = new FaceMesh({
+          locateFile: (file) => {
+              return `${wasmPath}/${file}`;
+          },
       });
 
       this.faceMesh.setOptions({
@@ -148,7 +147,6 @@ export class EmotionFaceProcessor {
       console.error("EmotionFaceProcessor: Failed to load Face Mesh or models:", error);
       this.aiConfig.emotion.enabled = false;
       this.faceMesh = null;
-      this.faceMeshModule = null;
     }
   }
 

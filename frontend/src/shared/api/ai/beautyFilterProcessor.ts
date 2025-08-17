@@ -2,7 +2,6 @@
 import { AiSystemConfig } from "@/shared/types/ai.types"; // AiSystemConfig 임포트
 
 // Dynamic import types
-type FaceMeshModule = typeof import("@mediapipe/face_mesh");
 type FaceMeshInstance = import("@mediapipe/face_mesh").FaceMesh;
 type Results = import("@mediapipe/face_mesh").Results;
 
@@ -17,7 +16,6 @@ const LIPS_IDX = [
 
 export class BeautyFilterProcessor {
   private faceMesh: FaceMeshInstance | null = null; // 뷰티 필터용 Face Mesh 인스턴스 (따로 관리)
-  private faceMeshModule: FaceMeshModule | null = null;
   private beautyGammaLUT: Uint8Array | null = null;
   private lastBeautyGamma = 1.4; // Initial gamma value, from app.py
 
@@ -45,10 +43,13 @@ export class BeautyFilterProcessor {
 
     try {
       // Dynamic import of MediaPipe Face Mesh
-      this.faceMeshModule = await import("@mediapipe/face_mesh");
-      
-      this.faceMesh = new this.faceMeshModule.FaceMesh({
-        locateFile: (file) => `${wasmPath}/${file}`,
+      const { FaceMesh } = await import("@mediapipe/face_mesh");
+
+            // 수정: 가져온 FaceMesh 클래스를 직접 사용하여 인스턴스를 생성합니다.
+      this.faceMesh = new FaceMesh({
+          locateFile: (file) => {
+              return `${wasmPath}/${file}`;
+          },
       });
 
       this.faceMesh.setOptions({
@@ -69,7 +70,6 @@ export class BeautyFilterProcessor {
       console.error("BeautyFilterProcessor: Failed to load Face Mesh:", error);
       this.aiConfig.beauty.enabled = false;
       this.faceMesh = null;
-      this.faceMeshModule = null;
     }
   }
 
@@ -300,7 +300,6 @@ export class BeautyFilterProcessor {
       // this.faceMesh.close(); // FaceMesh에 명시적인 close 메서드가 없을 수 있음
       this.faceMesh = null;
     }
-    this.faceMeshModule = null;
     this.beautyGammaLUT = null;
   }
 }
