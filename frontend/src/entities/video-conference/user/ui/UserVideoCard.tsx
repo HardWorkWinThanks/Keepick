@@ -38,39 +38,47 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
   const activeReactions = useAppSelector(
     (state) => state.emojiReaction.activeReactions
   );
-  const currentCardUserId = socketId || "local-user";
+  const currentCardUserId = isLocal ? "local" : socketId || "unknown";
   const activeReaction = activeReactions[currentCardUserId];
+
+  // Redux 상태 디버깅
+  useEffect(() => {
+    console.log(`🎭 [UserVideoCard] ${userName} - currentCardUserId:`, currentCardUserId);
+    console.log(`🎭 [UserVideoCard] ${userName} - activeReactions:`, activeReactions);
+    console.log(`🎭 [UserVideoCard] ${userName} - activeReaction:`, activeReaction);
+  }, [activeReactions, activeReaction, currentCardUserId, userName]);
 
   // 비디오 트랙을 video 엘리먼트에 연결
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
 
     if (videoTrack) {
-      // 새로운 스트림 생성하여 연결
-      const stream = new MediaStream([videoTrack]);
-      video.srcObject = stream;
-      video.muted = true; // 브라우저 정책상 필수
-      
-      console.log(`🎥 [UserVideoCard] ${userName} - 비디오 트랙 연결됨`);
-      
-      video.play().catch(error => {
-        if (error.name !== 'AbortError') {
-          console.error(`❌ [UserVideoCard] ${userName} - 자동 재생 실패:`, error);
-        }
-      });
+      // 1. 기존에 srcObject가 없거나, 트랙이 다르면 새로 할당합니다.
+      if (!videoElement.srcObject || (videoElement.srcObject as MediaStream).getVideoTracks() !== videoTrack) {
+        const newStream = new MediaStream([videoTrack]);
+        videoElement.srcObject = newStream;
+        videoElement.muted = true; // 로컬 비디오는 항상 음소거
+        
+        console.log(`🎥 [UserVideoCard] ${userName} - 비디오 트랙을 새로 연결합니다.`);
+        
+        // play()는 스트림이 설정된 후 호출되어야 합니다.
+        videoElement.play().catch(error => {
+          if (error.name !== 'AbortError') {
+            console.error(`❌ [UserVideoCard] ${userName} - 자동 재생 실패:`, error);
+          }
+        });
+      }
     } else {
-      video.srcObject = null;
-      console.log(`🎥 [UserVideoCard] ${userName} - 비디오 트랙 없음`);
+      // 2. 트랙이 없으면 srcObject를 비웁니다.
+      videoElement.srcObject = null;
+      console.log(`🎥 [UserVideoCard] ${userName} - 비디오 트랙이 없습니다.`);
     }
 
-    return () => {
-      if (video.srcObject) {
-        // 트랙은 정지하지 않음 (다른 곳에서 사용 중일 수 있음)
-        video.srcObject = null;
-      }
-    };
-  }, [videoTrack, userName]);
+    // 클린업 함수는 불필요하므로 제거해도 됩니다.
+    // React가 컴포넌트 언마운트 시 video 엘리먼트를 정리합니다.
+
+  }, [videoTrack, userName]); // 의존성 배열은 그대로 유지
 
   // 오디오 트랙을 audio 엘리먼트에 연결 (원격 피어만)
   useEffect(() => {
@@ -145,7 +153,7 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
 
       {/* 반응 오버레이 */}
       <AnimatePresence>
-        {activeReaction && !isLocal && (
+        {activeReaction && (
           <motion.div
             key="dynamic-reaction"
             className="absolute inset-0 flex flex-col items-center justify-center gap-4 pointer-events-none z-20"

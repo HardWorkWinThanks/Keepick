@@ -551,40 +551,62 @@ class MediaTrackManager {
     }
   }
 
-  async replaceLocalTrack(trackId: string, newTrack: MediaStreamTrack): Promise<void> {
-    const trackInfo = this.localTracks.get(trackId);
-    if (!trackInfo?.producer || !this.dispatch) {
-      throw new Error("Track or producer not found");
+async replaceLocalTrack(trackId: string, newTrack: MediaStreamTrack): Promise<void> {
+    const oldTrackInfo = this.localTracks.get(trackId);
+    if (!oldTrackInfo?.producer || !this.dispatch) {
+        throw new Error("Track or producer not found");
     }
 
     try {
-      await trackInfo.producer.replaceTrack({ track: newTrack });
-      trackInfo.track.stop();
-      trackInfo.track = newTrack;
+        await oldTrackInfo.producer.replaceTrack({ track: newTrack });
 
-      // Redux 상태 업데이트 (카메라 트랙만)
-      if (trackInfo.trackType === "camera") {
-        this.dispatch(
-          updateLocalTrack({
-            kind: trackInfo.kind,
-            updates: {
-              enabled: newTrack.enabled,
-              muted: newTrack.kind === "audio" ? newTrack.muted : undefined,
-            },
-          })
-        );
-        console.log(`🔄 Redux updated camera ${trackInfo.kind} track after replacement`);
-      } else {
-        console.log(`🚫 Skipping Redux update for ${trackInfo.trackType} track replacement`);
-      }
+        // 1. 이전 트랙과 관련된 정보 완전 삭제
+        this.localTracks.delete(trackId);
+        this.producerMap.delete(oldTrackInfo.producer.id);
+        if (oldTrackInfo.trackType === 'camera') {
+            this.dispatch(removeLocalTrack(oldTrackInfo.kind));
+        }
 
-      console.log(`🔄 Local ${trackInfo.trackType} ${trackInfo.kind} track replaced:`, trackId);
+        // 2. 새로운 정보로 새 트랙을 등록 (addLocalTrack 로직 재활용)
+        console.log(`🔄 Replacing track. New track info:`, { id: newTrack.id, kind: newTrack.kind });
+        
+        const newTrackId = `${oldTrackInfo.trackType}_${newTrack.kind}_${oldTrackInfo.peerId}_${Date.now()}`;
+
+        const newTrackInfo: TrackInfo = {
+            ...oldTrackInfo, // peerId, trackType 등 기존 정보 상속
+            trackId: newTrackId,
+            track: newTrack,
+            // producer는 동일한 것을 재사용
+        };
+        
+        // 3. 새로운 trackId로 맵과 Redux 상태 업데이트
+        this.localTracks.set(newTrackId, newTrackInfo);
+        this.producerMap.set(oldTrackInfo.producer.id, newTrackId); // producerId는 같지만 가리키는 trackId를 갱신
+
+        if (newTrackInfo.trackType === 'camera') {
+            this.dispatch(
+                setLocalTrack({
+                    kind: newTrackInfo.kind,
+                    track: {
+                        trackId: newTrackId, // 새로운 ID
+                        producerId: oldTrackInfo.producer.id,
+                        peerId: newTrackInfo.peerId,
+                        kind: newTrackInfo.kind,
+                        enabled: newTrack.enabled,
+                        muted: newTrack.kind === "audio" ? newTrack.muted : undefined,
+                    },
+                })
+            );
+            console.log(`🔄 Redux state updated with NEW trackId: ${newTrackId}`);
+        }
+
+        console.log(`✅ Local ${newTrackInfo.trackType} ${newTrackInfo.kind} track replaced successfully. Old ID: ${trackId}, New ID: ${newTrackId}`);
+
     } catch (error) {
-      console.error(`❌ Failed to replace track:`, error);
-      throw error;
+        console.error(`❌ Failed to replace track:`, error);
+        throw error;
     }
-  }
-
+}
   removeLocalTrack(trackId: string): void {
     const trackInfo = this.localTracks.get(trackId);
     if (!trackInfo || !this.dispatch) return;

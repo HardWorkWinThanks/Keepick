@@ -26,6 +26,7 @@ class MediasoupManager {
   private currentRoomId: string = "";
   private isLocalMediaStarted = false; // 로컬 미디어 시작 상태 추가
   
+  private aiSourceTrack: MediaStreamTrack | null = null; 
   // Transport 복구 관리
   private transportRecoveryInProgress = false;
   private lastTransportFailureTime = 0;
@@ -124,16 +125,15 @@ class MediasoupManager {
 
   // 로컬 미디어 시작
   /**
-   * 로컬 미디어를 시작합니다. AI 기능 활성화 여부를 선택적으로 제어할 수 있습니다.
-   * @param enableAI AI 기능 활성화 여부
-   * @param aiConfig AI 시스템 설정
+   * 로컬 미디어를 시작합니다.
+   * @param enableAI AI 기능 활성화 여부 (사용하지 않음)
+   * @param aiConfig AI 시스템 설정 (사용하지 않음)
    */
   public async startLocalMedia(enableAI: boolean = false, aiConfig?: Partial<AiSystemConfig>): Promise<void> {
     try {
-      // 이미 미디어가 시작된 경우 기존 트랙을 교체
+      // 이미 미디어가 시작된 경우 스킵
       if (this.isLocalMediaStarted) {
-        console.log("🔄 Updating existing local media with new AI settings...");
-        await this.updateLocalMediaWithAI(enableAI, aiConfig);
+        console.log("🔄 Media already started.");
         return;
       }
 
@@ -147,16 +147,17 @@ class MediasoupManager {
       const videoTrack = stream.getVideoTracks()[0];
 
       if (audioTrack) {
-        // 오디오 트랙은 AI 처리가 불필요하므로 기존 addLocalTrack 호출
         await mediaTrackManager.addLocalTrack(audioTrack, "local", "camera");
       }
 
       if (videoTrack) {
         if (enableAI && aiConfig) {
-          // 비디오 트랙은 AI 기능 활성화 여부에 따라 addLocalTrackWithAI 호출
+          // AI 기능이 활성화된 경우: AI 처리된 트랙을 상대방에게 전송
+          console.log("🤖 Adding AI-processed video track...");
           await mediaTrackManager.addLocalTrackWithAI(videoTrack, "local", "camera", undefined, aiConfig);
         } else {
-          // AI 기능이 비활성화된 경우 기존 방식 사용
+          // AI 기능이 비활성화된 경우: 원본 트랙 전송
+          console.log("📹 Adding original video track...");
           await mediaTrackManager.addLocalTrack(videoTrack, "local", "camera");
         }
       }
@@ -169,46 +170,6 @@ class MediasoupManager {
     }
   }
 
-  /**
-   * 기존 로컬 미디어의 AI 설정을 업데이트합니다.
-   * @param enableAI AI 기능 활성화 여부
-   * @param aiConfig AI 시스템 설정
-   */
-  public async updateLocalMediaWithAI(enableAI: boolean, aiConfig?: Partial<AiSystemConfig>): Promise<void> {
-    try {
-      // AI 비디오 프로세서 설정 업데이트
-      if (enableAI && aiConfig) {
-        frontendAiProcessor.updateConfig(aiConfig);
-        console.log("✅ AI configuration updated");
-      }
-
-      // 기존 비디오 트랙을 새로운 AI 설정으로 교체
-      const existingVideoTrack = mediaTrackManager.getLocalCameraTrack("video");
-      if (existingVideoTrack) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 1280, height: 720 },
-        });
-        
-        const newVideoTrack = stream.getVideoTracks()[0];
-        const existingTrackInfo = mediaTrackManager.getLocalCameraTrackInfo("video");
-        
-        if (existingTrackInfo && newVideoTrack) {
-          if (enableAI && aiConfig) {
-            // AI 기능이 활성화된 새 트랙으로 교체
-            const processedTrack = await frontendAiProcessor.processVideoTrack(newVideoTrack);
-            await mediaTrackManager.replaceLocalTrack(existingTrackInfo.trackId, processedTrack);
-          } else {
-            // AI 기능이 비활성화된 원본 트랙으로 교체
-            await mediaTrackManager.replaceLocalTrack(existingTrackInfo.trackId, newVideoTrack);
-          }
-          console.log("✅ Local video track updated with new AI settings");
-        }
-      }
-    } catch (error) {
-      console.error("❌ Failed to update local media with AI:", error);
-      throw error;
-    }
-  }
 
   /**
    * AI 설정만 업데이트합니다 (트랙 교체 없이).
@@ -218,6 +179,95 @@ class MediasoupManager {
     frontendAiProcessor.updateConfig(aiConfig);
     console.log("✅ AI configuration updated without track replacement");
   }
+
+  /**
+   * 화상회의 중 AI 토글 (실제 트랙 교체)
+   * @param enabled AI 활성화 여부
+   * @param aiConfig AI 설정
+   */
+  public async toggleAIDuringConference(enabled: boolean, aiConfig?: Partial<AiSystemConfig>): Promise<void> {
+  try {
+    console.log("🔄 Starting AI toggle during conference...", { enabled, aiConfig });
+
+    // AI 비활성화 시, 이전에 생성된 AI 소스 트랙이 남아있다면 정리합니다.
+    if (!enabled && this.aiSourceTrack) {
+      console.log(`🧹 Stopping previous AI source track: ${this.aiSourceTrack.id}`);
+      this.aiSourceTrack.stop();
+      this.aiSourceTrack = null;
+    }
+
+    const existingVideoTrack = mediaTrackManager.getLocalCameraTrack("video");
+    const existingTrackInfo = mediaTrackManager.getLocalCameraTrackInfo("video");
+
+    if (!existingVideoTrack || !existingTrackInfo) {
+      console.warn("⚠️ No existing video track found to toggle AI");
+      return;
+    }
+
+    if (enabled && aiConfig) {
+      // AI 기능 활성화
+      console.log("🤖 Enabling AI during conference...");
+      this.updateAIConfig(aiConfig);
+      
+      // 🔽 FIX: 원본 트랙을 복제하여 AI 프로세서에 전달합니다.
+      console.log(`Cloning original track ${existingVideoTrack.id} for AI processing.`);
+      this.aiSourceTrack = existingVideoTrack.clone(); 
+
+      console.log("🚀 Calling frontendAiProcessor.processVideoTrack...");
+      // 복제된 트랙을 AI 프로세서로 넘깁니다.
+      const processedTrack = await frontendAiProcessor.processVideoTrack(this.aiSourceTrack);
+      
+      console.log("🎯 AI processed track created:", {
+        trackId: processedTrack.id,
+        enabled: processedTrack.enabled,
+        readyState: processedTrack.readyState,
+      });
+
+      console.log("🔄 Calling mediaTrackManager.replaceLocalTrack...");
+      // 이 함수는 원본 트랙을 중지시키지만, AI 프로세서는 복제본을 사용하므로 이제 안전합니다.
+      await mediaTrackManager.replaceLocalTrack(existingTrackInfo.trackId, processedTrack);
+      
+      console.log("✅ AI enabled with track replacement");
+
+    } else {
+      // AI 기능 비활성화
+      console.log("📹 Disabling AI during conference...");
+       this.updateAIConfig({
+        gesture: {
+          static: { enabled: false, confidence: 0.75 },
+          dynamic: { enabled: false, confidence: 0.9 },
+        },
+        emotion: { enabled: false, confidence: 0.6 },
+        beauty: { enabled: false },
+      });
+      
+      console.log("📷 Getting new camera stream to replace AI track...");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 1280, height: 720 },
+      });
+      const newVideoTrack = stream.getVideoTracks()[0];
+
+      console.log("🔄 Replacing AI track with new original track...");
+      await mediaTrackManager.replaceLocalTrack(existingTrackInfo.trackId, newVideoTrack);
+      
+      // 🔽 FIX: AI를 비활성화할 때, 사용되던 복제 트랙을 확실히 중지시킵니다.
+      if (this.aiSourceTrack) {
+        console.log(`🧹 Stopping orphaned AI source track: ${this.aiSourceTrack.id}`);
+        this.aiSourceTrack.stop();
+        this.aiSourceTrack = null;
+      }
+      
+      console.log("✅ AI disabled with original track");
+    }
+  } catch (error) {
+    console.error("❌ Failed to toggle AI during conference:", error);
+    console.error("❌ Error details:", {
+      message: (error as Error).message,
+      stack: (error as Error).stack,
+    });
+    throw error;
+  }
+}
 
   // 소비 요청을 mediaTrackManager에 위임
   public async consumeProducer(data: {
@@ -436,6 +486,11 @@ class MediasoupManager {
    */
   public cleanup(): void {
     console.log("🧹 Cleaning up MediaSoup...");
+
+    if (this.aiSourceTrack) {
+      this.aiSourceTrack.stop();
+      this.aiSourceTrack = null;
+    }
 
     // 🆕 ScreenShareManager 정리
     screenShareManager.cleanup();

@@ -358,27 +358,19 @@ export class EmotionFaceProcessor {
     return topIdx;
   }
 
-  /**
-   * serious 표정 촉진 (app.py의 promote_serious 포팅).
-   */
-  private promoteSerious(rawFeat: number[], probs: number[], currentIdx: number): [number, number] {
+private promoteSerious(rawFeat: number[], probs: number[], currentIdx: number): [number, number] {
     const seriousProb = probs[LABELS_FACE.indexOf("serious")];
-
-    // app.py의 인덱스를 고려하여 rawFeat 참조 수정 (app.py의 extract_features12에서 반환되는 feats 배열 순서와 일치해야 합니다.)
-    // rawFeat[8] -> mouthAsym (app.py)
-    // rawFeat[3] -> browLift / faceScale (app.py)
-    // rawFeat[4] -> cheekPuff / faceScale (app.py)
-
-    const smirk = rawFeat[5] > SMIRK_T; // mouthAsym
+    // app.py의 인덱스를 고려하여 rawFeat 참조 수정
+    // app.py: raw_feat[8] -> mouthAsym, raw_feat[3] -> browLift / faceScale, raw_feat[9] -> cheekPuff / faceScale
+    const smirk = rawFeat[8] > SMIRK_T; // mouthAsym
     const frown = rawFeat[3] < FROWN_T; // browLift / faceScale
-    const puff = rawFeat[4] > PUFF_T; // cheekPuff / faceScale
+    const puff = rawFeat[9] > PUFF_T; // cheekPuff / faceScale
 
     if (seriousProb >= 0.6 || ((smirk || frown || puff) && seriousProb >= 0.45)) {
-      return [LABELS_FACE.indexOf("serious"), seriousProb];
+        return [LABELS_FACE.indexOf("serious"), seriousProb];
     }
     return [currentIdx, probs[currentIdx]];
-  }
-
+}
   /**
    * 리소스를 정리합니다.
    */

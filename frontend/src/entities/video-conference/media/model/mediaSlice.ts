@@ -54,12 +54,16 @@ const mediaSlice = createSlice({
       const { kind, track } = action.payload;
       state.local.tracks[kind] = track;
     },
+
     updateLocalTrack: (state, action: PayloadAction<{ kind: 'audio' | 'video'; updates: Partial<MediaTrackState> }>) => {
-      const { kind, updates } = action.payload;
-      if (state.local.tracks[kind]) {
-        Object.assign(state.local.tracks[kind]!, updates);
-      }
-    },
+    const { kind, updates } = action.payload;
+    const existingTrack = state.local.tracks[kind];
+    if (existingTrack) {
+        // 기존 상태와 updates 페이로드를 병합하여 새로운 객체를 할당합니다.
+        state.local.tracks[kind] = { ...existingTrack, ...updates };
+    }
+},
+
     removeLocalTrack: (state, action: PayloadAction<'audio' | 'video'>) => {
       delete state.local.tracks[action.payload];
     },

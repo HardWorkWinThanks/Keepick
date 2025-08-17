@@ -13,6 +13,7 @@ import { emotionCaptureManager } from "./emotionCaptureManager";
 import { EmotionFaceProcessor } from "./emotionFaceProcessor";
 import { BeautyFilterProcessor } from "./beautyFilterProcessor";
 import { GestureProcessor } from "./gestureProcessor";
+import * as tf from "@tensorflow/tfjs";
 
 // --- AI 모델 경로 상수 정의 ---
 // Next.js의 public 폴더는 서버 루트(/)에서 접근 가능합니다.
@@ -52,6 +53,11 @@ class FrontendAiProcessor {
   private lastFrameTime = 0;
   private frameInterval = 100;
   
+  // 백그라운드 분석용 변수들
+  private backgroundVideoElement: HTMLVideoElement | null = null;
+  private backgroundAnalysisActive = false;
+  private backgroundAnalysisLoop: number | null = null;
+  
   // AI 결과 표시 속도 제어
   private lastGestureResultTime = 0;
   private lastEmotionResultTime = 0;
@@ -59,13 +65,26 @@ class FrontendAiProcessor {
   private readonly EMOTION_RESULT_INTERVAL = 1200; // 감정 결과 간격 (ms)
 
   private activeGestureEmojis: Map<string, any> = new Map();
+
   private readonly STATIC_GESTURE_DURATION = 1500;
   private readonly DYNAMIC_GESTURE_DURATION = 500;
   private readonly ANIMATION_FADE_DURATION = 150;
 
+  private activeSourceTrack: MediaStreamTrack | null = null; // 현재 사용 중인 원본 트랙 저장
+  private activeProcessedTrack: MediaStreamTrack | null = null; // 생성된 AI 처리 트랙 저장
+
+
   public async init(dispatch: AppDispatch): Promise<void> {
     this.dispatch = dispatch;
     emotionCaptureManager.init(dispatch);
+    try {
+      await tf.setBackend('webgl'); // WebGL 백엔드 설정
+      console.log(`TensorFlow.js backend set to: ${tf.getBackend()}`);
+    } catch (error) {
+      console.warn("❌ Failed to set TensorFlow.js WebGL backend, falling back to CPU:", error);
+      // WebGL 실패 시 자동으로 CPU나 WASM으로 폴백될 수 있으나, 명시적으로 설정할 수도 있습니다.
+      // await tf.setBackend('cpu'); // 또는 'wasm'
+    }
 
     this.emotionFaceProcessor = new EmotionFaceProcessor(this.aiConfig);
     this.beautyFilterProcessor = new BeautyFilterProcessor(this.aiConfig);
@@ -122,11 +141,111 @@ class FrontendAiProcessor {
     this.onEmotionResultCallback = callback;
   }
 
+  /**
+   * 백그라운드에서 AI 분석을 시작합니다 (트랙 교체 없음)
+   * @param originalTrack 원본 비디오 트랙
+   */
+  public startBackgroundAnalysis(originalTrack: MediaStreamTrack): void {
+    if (originalTrack.kind !== "video") {
+      console.warn("Only video tracks can be analyzed.");
+      return;
+    }
+
+    console.log("🤖 Starting background AI analysis...");
+    
+    // 기존 분석이 있다면 중지
+    this.stopBackgroundAnalysis();
+
+    // 백그라운드 비디오 엘리먼트 생성
+    this.backgroundVideoElement = document.createElement("video");
+    this.backgroundVideoElement.srcObject = new MediaStream([originalTrack]);
+    this.backgroundVideoElement.autoplay = true;
+    this.backgroundVideoElement.muted = true;
+    this.backgroundVideoElement.style.display = "none"; // 화면에 표시하지 않음
+
+    this.backgroundVideoElement.onloadedmetadata = () => {
+      this.backgroundAnalysisActive = true;
+      this.runBackgroundAnalysisLoop();
+      console.log("✅ Background AI analysis started");
+      
+    };
+
+    // 비디오 재생 시작
+    this.backgroundVideoElement.play();
+  }
+
+  /**
+   * 백그라운드 AI 분석을 중지합니다
+   */
+  public stopBackgroundAnalysis(): void {
+    console.log("🛑 Stopping background AI analysis...");
+    
+    this.backgroundAnalysisActive = false;
+    
+    if (this.backgroundAnalysisLoop) {
+      cancelAnimationFrame(this.backgroundAnalysisLoop);
+      this.backgroundAnalysisLoop = null;
+    }
+
+    if (this.backgroundVideoElement) {
+      this.backgroundVideoElement.pause();
+      this.backgroundVideoElement.srcObject = null;
+      this.backgroundVideoElement = null;
+    }
+
+    console.log("✅ Background AI analysis stopped");
+  }
+
+  /**
+   * 백그라운드 분석 루프를 실행합니다
+   */
+  private runBackgroundAnalysisLoop(): void {
+    if (!this.backgroundAnalysisActive || !this.backgroundVideoElement) {
+      console.log("⚠️ Background analysis not active or video element missing");
+      return;
+    }
+
+    console.log("🔄 Starting background analysis loop...");
+
+    const processFrame = async () => {
+      if (!this.backgroundAnalysisActive || !this.backgroundVideoElement) {
+        console.log("🛑 Background analysis loop stopped");
+        return;
+      }
+
+      const now = performance.now();
+      const needsProcessing = now - this.lastFrameTime >= this.frameInterval;
+
+      if (needsProcessing && this.isInitialized) {
+        console.log("🔄 Processing frame in background...");
+        this.lastFrameTime = now;
+        try {
+          await this.runAIProcessors(this.backgroundVideoElement, now);
+        } catch (e) {
+          console.error("❌ Error in background AI processing:", e);
+        }
+      }
+
+      this.backgroundAnalysisLoop = requestAnimationFrame(processFrame);
+    };
+
+    processFrame();
+  }
+
   public async processVideoTrack(originalTrack: MediaStreamTrack): Promise<MediaStreamTrack> {
     if (originalTrack.kind !== "video") {
       console.warn("Only video tracks can be AI processed.");
       return originalTrack;
     }
+
+    this.stopProcessing();
+
+    this.activeSourceTrack = originalTrack;
+
+    console.log("🎯 Starting AI video track processing...", {
+      trackSettings: originalTrack.getSettings(),
+      isInitialized: this.isInitialized
+    });
 
     const videoElem = document.createElement("video");
     videoElem.srcObject = new MediaStream([originalTrack]);
@@ -138,8 +257,20 @@ class FrontendAiProcessor {
     outputCanvas.height = originalTrack.getSettings().height || 480;
     const ctx = outputCanvas.getContext("2d");
 
-    return new Promise<MediaStreamTrack>((resolve) => {
+    return new Promise<MediaStreamTrack>((resolve, reject) => {
+      let isResolved = false;
+      
+      // 타임아웃 설정
+      const timeout = setTimeout(() => {
+        if (!isResolved) {
+          console.error("❌ AI video track processing timeout");
+          reject(new Error("AI video track processing timeout"));
+        }
+      }, 10000); // 10초 타임아웃
+
       videoElem.onloadedmetadata = () => {
+        console.log("📹 Video metadata loaded, starting frame processing...");
+        
         const processFrame = async () => {
           if (videoElem.paused || videoElem.ended) return;
 
@@ -172,21 +303,63 @@ class FrontendAiProcessor {
           }
           requestAnimationFrame(processFrame);
         };
-        videoElem.play();
-        processFrame();
+        
+        videoElem.onplaying = () => {
+          if (!isResolved) {
+            console.log("▶️ Video started playing, returning AI-processed track");
+            const processedStream = outputCanvas.captureStream(30); // 30 FPS
+            const processedTrack = processedStream.getVideoTracks()[0];
+            
+            if (processedTrack) {
+              isResolved = true;
+              clearTimeout(timeout);
+              console.log("✅ AI-processed track ready:", {
+                trackId: processedTrack.id,
+                enabled: processedTrack.enabled,
+                readyState: processedTrack.readyState
+              });
+              this.activeProcessedTrack = processedTrack;
+              resolve(processedTrack);
+            } else {
+              console.error("❌ Failed to get processed track from canvas stream");
+              reject(new Error("Failed to get processed track from canvas stream"));
+            }
+          }
+        };
+        
+        videoElem.play().then(() => {
+          processFrame();
+        }).catch((error) => {
+          console.error("❌ Failed to start video playback:", error);
+          reject(error);
+        });
       };
 
-      const processedStream = outputCanvas.captureStream();
-      const processedTrack = processedStream.getVideoTracks()[0]; // 배열에서 첫 번째 트랙 추출
-      resolve(processedTrack); // 단일 트랙으로 resolve
+      videoElem.onerror = (error) => {
+        console.error("❌ Video element error:", error);
+        clearTimeout(timeout);
+        reject(new Error("Video element error"));
+      };
     });
   }
 
+  
+
   private async runAIProcessors(videoElement: HTMLVideoElement, timestamp: number): Promise<void> {
-    if (!this.isInitialized) return;
+    if (!this.isInitialized) {
+      console.log("⚠️ AI processors not initialized");
+      return;
+    }
+    
+    console.log("🤖 Running AI processors...", {
+      emotionEnabled: this.aiConfig.emotion.enabled,
+      gestureStaticEnabled: this.aiConfig.gesture.static.enabled,
+      gestureDynamicEnabled: this.aiConfig.gesture.dynamic.enabled
+    });
     
     // 감정 인식 처리 (속도 제어 적용)
     if (this.aiConfig.emotion.enabled && this.emotionFaceProcessor) {
+      console.log("😊 Processing emotion...");
       const faceCanvas = document.createElement("canvas");
       faceCanvas.width = videoElement.videoWidth;
       faceCanvas.height = videoElement.videoHeight;
@@ -196,10 +369,13 @@ class FrontendAiProcessor {
       const faceImageData = ctx.getImageData(0, 0, faceCanvas.width, faceCanvas.height);
       const emotionResult = await this.emotionFaceProcessor.detectEmotion(faceImageData, timestamp);
       
+      console.log("😊 Emotion result:", emotionResult);
+      
       if (emotionResult && this.onEmotionResultCallback) {
         // 감정 결과 표시 간격 제어
         const timeSinceLastEmotion = timestamp - this.lastEmotionResultTime;
         if (timeSinceLastEmotion >= this.EMOTION_RESULT_INTERVAL || emotionResult.label !== "none") {
+          console.log("😊 Calling emotion callback...");
           this.onEmotionResultCallback(emotionResult);
           this.lastEmotionResultTime = timestamp;
           // Add emotion overlay
@@ -213,7 +389,10 @@ class FrontendAiProcessor {
       (this.aiConfig.gesture.static.enabled || this.aiConfig.gesture.dynamic.enabled) &&
       this.gestureProcessor
     ) {
+      console.log("🤲 Processing gestures...");
       const gestureResult = await this.gestureProcessor.detectGestures(videoElement, timestamp);
+      
+      console.log("🤲 Gesture result:", gestureResult);
       
       if (gestureResult && this.onGestureResultCallback) {
         // 제스처 결과 표시 간격 제어 (none이 아닌 경우만 즉시 표시)
@@ -221,6 +400,7 @@ class FrontendAiProcessor {
         const hasValidGesture = gestureResult.static.label !== "none" || gestureResult.dynamic.label !== "none";
         
         if (timeSinceLastGesture >= this.GESTURE_RESULT_INTERVAL || hasValidGesture) {
+          console.log("🤲 Calling gesture callback...");
           this.onGestureResultCallback(gestureResult);
           this.lastGestureResultTime = timestamp;
           // Add gesture overlay
@@ -366,7 +546,28 @@ class FrontendAiProcessor {
     return emotionEmojis[label] || "😐";
   }
 
+    /**
+   * 현재 진행 중인 AI 처리를 중지하고 관련 트랙을 정리하는 새로운 메서드
+   */
+  public stopProcessing(): void {
+    if (this.activeSourceTrack) {
+      this.activeSourceTrack.stop();
+      this.activeSourceTrack = null;
+      console.log("🛑 Stopped previous AI source track.");
+    }
+    if (this.activeProcessedTrack) {
+      this.activeProcessedTrack.stop();
+      this.activeProcessedTrack = null;
+      console.log("🛑 Stopped previous AI processed track.");
+    }
+    this.stopBackgroundAnalysis(); // 기존 백그라운드 분석 중지 로직도 호출
+  }
+
   public cleanup(): void {
+    this.stopProcessing(); 
+    // 백그라운드 분석 중지
+    this.stopBackgroundAnalysis();
+    
     emotionCaptureManager.cleanup();
     this.dispatch = null;
     this.activeGestureEmojis.clear();

@@ -4,40 +4,46 @@ import { mediaTrackManager } from '@/shared/api/mediaTrackManager';
 import { useMemo, useState, useEffect } from 'react';
 
 // 로컬 미디어 트랙 Hook
+// 로컬 미디어 트랙 Hook (수정됨)
 export const useLocalMediaTrack = (kind: 'audio' | 'video') => {
-  const trackInfo = useAppSelector(state => state.media.local.tracks[kind]);
-  
-  const track = useMemo(() => {
-    // 🆕 카메라 전용 메서드 사용 (화면 공유와 완전 분리)
-    return trackInfo ? mediaTrackManager.getLocalCameraTrack(kind) : null;
-  }, [trackInfo?.trackId, kind]);
+  // 1. Redux에서 트랙의 메타데이터(상태)를 가져옵니다.
+  const trackState = useAppSelector(state => state.media.local.tracks[kind]);
 
-  // 디버깅을 위한 로그 제거 (필요시 활성화)
+  // 2. trackId가 변경될 때마다 mediaTrackManager에서 실제 트랙 객체를 다시 조회합니다.
+  const track = useMemo(() => {
+    if (!trackState?.trackId) return null;
+    // getLocalCameraTrack 대신 getTrackById를 사용하여 ID로 직접 조회
+    const trackInfo = mediaTrackManager.getTrackById(trackState.trackId);
+    return trackInfo?.track || null;
+  }, [trackState?.trackId]); // 의존성을 trackId로 명확하게 지정
 
   return {
-    track,
-    trackInfo,
-    enabled: trackInfo?.enabled ?? false,
-    muted: trackInfo?.muted ?? false,
-    hasTrack: !!trackInfo,
+    track, // 실제 MediaStreamTrack 객체
+    trackInfo: trackState, // Redux에 저장된 상태 정보
+    enabled: trackState?.enabled ?? false,
+    muted: trackState?.muted ?? false,
+    hasTrack: !!trackState,
   };
 };
 
-// 원격 미디어 트랙 Hook
+// 원격 미디어 트랙 Hook (수정됨)
 export const useRemoteMediaTrack = (socketId: string, kind: 'audio' | 'video') => {
-  const trackInfo = useAppSelector(state => 
+  const trackState = useAppSelector(state => 
     state.media.remotePeers[socketId]?.tracks[kind]
   );
   
   const track = useMemo(() => {
-    return trackInfo ? mediaTrackManager.getRemoteTrack(socketId, kind) : null;
-  }, [trackInfo, socketId, kind]);
+    if (!trackState?.trackId) return null;
+    // getRemoteTrack 대신 getTrackById를 사용하여 ID로 직접 조회
+    const trackInfo = mediaTrackManager.getTrackById(trackState.trackId);
+    return trackInfo?.track || null;
+  }, [trackState?.trackId]); // 의존성을 trackId로 명확하게 지정
 
   return {
     track,
-    trackInfo,
-    enabled: trackInfo?.enabled ?? false,
-    hasTrack: !!trackInfo,
+    trackInfo: trackState,
+    enabled: trackState?.enabled ?? false,
+    hasTrack: !!trackState,
   };
 };
 

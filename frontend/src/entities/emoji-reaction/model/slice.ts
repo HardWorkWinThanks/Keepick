@@ -8,6 +8,9 @@ export interface EmojiReaction {
   userName: string;
   timestamp: number; // [수정] Date 타입을 number로 변경하여 직렬화 문제를 해결
   duration?: number; // 표시 시간 (ms)
+  source?: 'ai' | 'manual'; // AI 자동 감지 또는 수동 선택
+  aiType?: 'gesture' | 'emotion'; // AI 타입 (제스처 또는 감정)
+  confidence?: number; // AI 신뢰도
 }
 
 interface EmojiReactionState {

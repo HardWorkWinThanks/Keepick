@@ -140,66 +140,56 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
 
   // AI 프리뷰 토글 함수
   const handleAiPreviewToggle = async () => {
-    if (!localStream) {
-      console.warn("로컬 스트림이 없습니다. AI 프리뷰를 토글할 수 없습니다.");
-      return;
-    }
-
     try {
       if (!aiState.isAiEnabled) {
-        // AI 기능이 현재 비활성화 상태이면 활성화
-        dispatch(setAiEnabled(true)); // Redux에 AI 상태를 활성화로 설정
+        // AI 기능 활성화
+        dispatch(setAiEnabled(true));
+        setIsAiPreviewOpen(true);
 
-        // AI 프로세서에 콜백 설정 (Lobby에서 직접 설정하지 않고,
-        // AIProcessorInitializer.tsx에서 설정된 콜백이 Redux에 저장하도록 동작한다고 가정)
-        // 여기서는 Lobby의 AI 프리뷰에 직접 연결하는 로직
-        // AIProcessorInitializer.tsx에서 콜백을 설정했다면, 이 부분은 제거될 수 있습니다.
-        // 현재는 AiTestDisplay가 Redux 상태를 구독하므로, 이곳에서 직접 콜백 설정은 불필요합니다.
-        // 하지만 만약 AI 프리뷰가 Redux와 독립적으로 동작해야 한다면 이 로직이 필요합니다.
-        // 여기서는 편의상 주석처리하고 AiTestDisplay가 aiState를 구독하는 방식으로 진행합니다.
-
-        // AI 콜백 설정 (로비용 실시간 결과 콜백)
+        // 로비용 AI 콜백 설정
         frontendAiProcessor.setGestureCallback(handleGestureResult);
         frontendAiProcessor.setEmotionCallback(handleEmotionResult);
 
-        // AI 설정 업데이트 (프리뷰 활성화 시 현재 AI 상태에 따라 AI 프로세서 설정)
-        // isAiEnabled 상태에 따라 frontendAiProcessor의 config를 업데이트
-        await frontendAiProcessor.updateConfig({
-          gesture: {
-            static: { enabled: aiState.isStaticGestureDetectionEnabled, confidence: 0.7 },
-            dynamic: { enabled: aiState.isDynamicGestureDetectionEnabled, confidence: 0.7 },
-          },
-          emotion: { enabled: aiState.isEmotionDetectionEnabled, confidence: 0.5 },
-          beauty: { enabled: aiState.isBeautyFilterEnabled },
-        });
-
-        // AI 처리된 비디오 트랙 생성 및 스트림 설정
-        const videoTrack = localStream.getVideoTracks()[0];
-        if (videoTrack) {
+        // 로컬 스트림이 있으면 AI 처리 시작
+        if (localStream?.getVideoTracks()[0]) {
+          const videoTrack = localStream.getVideoTracks()[0];
+          console.log("🤖 Starting AI processing for lobby preview...");
+          
+          // AI 처리된 스트림 생성
           const processedTrack = await frontendAiProcessor.processVideoTrack(videoTrack);
           const processedStream = new MediaStream([processedTrack]);
-          setAiProcessedStream(processedStream); // AI 처리된 스트림을 상태에 저장
-
+          setAiProcessedStream(processedStream);
+          
+          // AI 처리된 비디오 엘리먼트에 스트림 설정
           if (aiVideoRef.current) {
-            aiVideoRef.current.srcObject = processedStream; // AI 처리된 비디오를 비디오 요소에 연결
+            aiVideoRef.current.srcObject = processedStream;
           }
         }
-        setIsAiPreviewOpen(true); // AI 미리보기 UI 상태 활성화
-      } else {
-        // AI 기능이 현재 활성화 상태이면 비활성화
-        dispatch(setAiEnabled(false)); // Redux에 AI 상태를 비활성화로 설정
-        setAiProcessedStream(null); // AI 처리 스트림 제거 (비디오 렌더링 중지)
-        // AI 프로세서 클린업은 AIProcessorInitializer.tsx의 언마운트 시 처리됩니다.
-        setIsAiPreviewOpen(false); // AI 미리보기 UI 상태 비활성화
-      }
 
-      // setIsAiPreviewOpen(!isAiPreviewOpen); // AI 미리보기 UI 상태 토글 (위에서 이미 설정되므로 제거)
+        console.log("✅ AI 프리뷰 활성화");
+      } else {
+        // AI 기능 비활성화
+        dispatch(setAiEnabled(false));
+        setIsAiPreviewOpen(false);
+        
+        // AI 처리된 스트림 정리
+        if (aiProcessedStream) {
+          aiProcessedStream.getTracks().forEach(track => track.stop());
+          setAiProcessedStream(null);
+        }
+        
+        if (aiVideoRef.current) {
+          aiVideoRef.current.srcObject = null;
+        }
+
+        console.log("✅ AI 프리뷰 비활성화");
+      }
     } catch (error) {
       console.error("AI 프리뷰 토글 오류:", error);
-      setMediaError("AI 기능을 시작할 수 없습니다."); // 사용자에게 에러 메시지 표시
-      dispatch(setAiEnabled(false)); // 오류 발생 시 AI 기능 비활성화
-      setAiProcessedStream(null); // 오류 발생 시 AI 스트림 제거
-      setIsAiPreviewOpen(false); // 오류 발생 시 프리뷰 닫기
+      setMediaError("AI 기능을 시작할 수 없습니다.");
+      dispatch(setAiEnabled(false));
+      setAiProcessedStream(null);
+      setIsAiPreviewOpen(false);
     }
   };
 
@@ -301,7 +291,8 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
   // 이 useEffect는 AI 설정 토글 버튼이 아닌, 개별 AI 기능(정적/동적 제스처, 감정 감지, 뷰티 필터) 버튼 클릭 시
   // frontendAiProcessor에 변경된 설정을 즉시 적용하기 위함입니다.
   useEffect(() => {
-    if (aiState.isAiEnabled && isAiPreviewOpen && localStream?.getVideoTracks()[0]) {
+    // AI가 활성화되어 있고 로컬 스트림이 있을 때만 설정 업데이트
+    if (aiState.isAiEnabled && localStream?.getVideoTracks()[0]) {
       frontendAiProcessor
         .updateConfig({
           gesture: {
@@ -317,7 +308,6 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
     }
   }, [
     aiState.isAiEnabled,
-    isAiPreviewOpen,
     aiState.isStaticGestureDetectionEnabled,
     aiState.isDynamicGestureDetectionEnabled,
     aiState.isEmotionDetectionEnabled,
@@ -379,7 +369,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
     <div className="min-h-screen bg-[#222222] flex items-center justify-center p-4 font-body">
       <div className="w-full max-w-7xl">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-[#FE7A25] font-header mb-2">GatherRoom</h1>
+          <h1 className="text-4xl font-bold text-[#FE7A25] font-header mb-2">회의 준비</h1>
           <p className="text-[#A0A0A5]">카메라와 마이크를 확인하고 AI 기능을 테스트해보세요</p>
         </div>
 
@@ -411,7 +401,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
                   isCameraOn &&
                   hasVideoTrack &&
                   !isInitializing &&
-                  (!aiState.isAiEnabled || !isAiPreviewOpen) // AI 프리뷰가 비활성화일 때 원본 비디오 표시
+                  (!aiState.isAiEnabled || !isAiPreviewOpen || !aiProcessedStream) // AI 프리뷰가 비활성화일 때 원본 비디오 표시
                     ? "opacity-100 scale-100"
                     : "opacity-0 scale-105"
                 }`}
@@ -542,74 +532,74 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
           </div>
 
           {/* 사용자 이름 입력 및 컨트롤 한 줄 배치 */}
-          <div className="mb-6">
-            {/* 사용자 이름 입력 필드 */}
-            <div className="relative mb-4">
-              <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A0A0A5]" />
-              <input
-                type="text"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && canJoinMeeting) {
-                    handleJoinClick();
-                  }
-                }}
-                placeholder="이름을 입력하세요"
-                className="w-full bg-[#222222] text-[#FFFFFF] placeholder:text-[#636366] rounded-lg py-3 pl-10 pr-4 border border-[#424245] focus:ring-2 focus:ring-[#FE7A25] focus:border-[#FE7A25] outline-none transition-colors"
-                disabled={isInitializing}
-              />
-            </div>
+         <div className="flex items-center mb-6 space-x-6"> {/* 👈 1. 이 부분을 수정했습니다. */}
+  {/* 사용자 이름 입력 필드 */}
+  <div className="relative flex-1"> {/* 👈 2. 이 부분을 수정했습니다. */}
+    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A0A0A5]" />
+    <input
+      type="text"
+      value={userName}
+      onChange={(e) => setUserName(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && canJoinMeeting) {
+          handleJoinClick();
+        }
+      }}
+      placeholder="이름을 입력하세요"
+      className="w-full bg-[#222222] text-[#FFFFFF] placeholder:text-[#636366] rounded-lg py-3 pl-10 pr-4 border border-[#424245] focus:ring-2 focus:ring-[#FE7A25] focus:border-[#FE7A25] outline-none transition-colors"
+      disabled={isInitializing}
+    />
+  </div>
 
-            {/* 미디어 컨트롤 버튼들 */}
-            <div className="flex items-center justify-center space-x-6">
-              <div className="flex items-center space-x-2">
-                <span className="text-[#A0A0A5] text-sm">카메라</span>
-                <button
-                  onClick={handleToggleCamera}
-                  disabled={!localStream || isInitializing}
-                  className={`relative p-2.5 rounded-full transition-all duration-200 transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg ${
-                    isCameraOn && hasVideoTrack
-                      ? "bg-[#FE7A25] hover:bg-[#E06B1F]"
-                      : "bg-[#D22016] hover:bg-[#D22016]/80"
-                  }`}
-                  aria-label={isCameraOn ? "카메라 끄기" : "카메라 켜기"}
-                >
-                  {isCameraOn && hasVideoTrack ? (
-                    <VideoCameraIcon className="w-4 h-4 text-[#222222]" />
-                  ) : (
-                    <VideoCameraSlashIcon className="w-4 h-4 text-white" />
-                  )}
-                  {!hasVideoTrack && (
-                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#D22016] rounded-full border border-[#2C2C2E]"></div>
-                  )}
-                </button>
-              </div>
+  {/* 미디어 컨트롤 버튼들 */}
+  <div className="flex items-center justify-center space-x-6"> {/* 이 부분은 그대로 둡니다. */}
+    <div className="flex items-center space-x-2">
+      {/* <span className="text-[#A0A0A5] text-sm">카메라</span> */}
+      <button
+        onClick={handleToggleCamera}
+        disabled={!localStream || isInitializing}
+        className={`relative p-2.5 rounded-full transition-all duration-200 transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg ${
+          isCameraOn && hasVideoTrack
+            ? "bg-[#FE7A25] hover:bg-[#E06B1F]"
+            : "bg-[#D22016] hover:bg-[#D22016]/80"
+        }`}
+        aria-label={isCameraOn ? "카메라 끄기" : "카메라 켜기"}
+      >
+        {isCameraOn && hasVideoTrack ? (
+          <VideoCameraIcon className="w-4 h-4 text-[#222222]" />
+        ) : (
+          <VideoCameraSlashIcon className="w-4 h-4 text-white" />
+        )}
+        {!hasVideoTrack && (
+          <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#D22016] rounded-full border border-[#2C2C2E]"></div>
+        )}
+      </button>
+    </div>
 
-              <div className="flex items-center space-x-2">
-                <span className="text-[#A0A0A5] text-sm">마이크</span>
-                <button
-                  onClick={handleToggleMic}
-                  disabled={!localStream || isInitializing}
-                  className={`relative p-2.5 rounded-full transition-all duration-200 transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg ${
-                    isMicOn && hasAudioTrack
-                      ? "bg-[#FE7A25] hover:bg-[#E06B1F]"
-                      : "bg-[#D22016] hover:bg-[#D22016]/80"
-                  }`}
-                  aria-label={isMicOn ? "마이크 끄기" : "마이크 켜기"}
-                >
-                  {isMicOn && hasAudioTrack ? (
-                    <MicrophoneIcon className="w-4 h-4 text-[#222222]" />
-                  ) : (
-                    <SpeakerXMarkIcon className="w-4 h-4 text-white" />
-                  )}
-                  {!hasAudioTrack && (
-                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#D22016] rounded-full border border-[#2C2C2E]"></div>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
+    <div className="flex items-center space-x-2">
+      {/* <span className="text-[#A0A0A5] text-sm">마이크</span> */}
+      <button
+        onClick={handleToggleMic}
+        disabled={!localStream || isInitializing}
+        className={`relative p-2.5 rounded-full transition-all duration-200 transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg ${
+          isMicOn && hasAudioTrack
+            ? "bg-[#FE7A25] hover:bg-[#E06B1F]"
+            : "bg-[#D22016] hover:bg-[#D22016]/80"
+        }`}
+        aria-label={isMicOn ? "마이크 끄기" : "마이크 켜기"}
+      >
+        {isMicOn && hasAudioTrack ? (
+          <MicrophoneIcon className="w-4 h-4 text-[#222222]" />
+        ) : (
+          <SpeakerXMarkIcon className="w-4 h-4 text-white" />
+        )}
+        {!hasAudioTrack && (
+          <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#D22016] rounded-full border border-[#2C2C2E]"></div>
+        )}
+      </button>
+    </div>
+  </div>
+</div>
 
           {/* 참여 버튼 */}
           <Button
@@ -689,16 +679,11 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
                 </button>
               </div>
             </div>
-            {/* AI 세부 설정 (레이아웃 간소화) */}
-            <AnimatePresence>
-              {aiState.isAiEnabled && isAiPreviewOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="mt-3 p-3 bg-[#222222] rounded-lg"
-                >
+            {/* AI 세부 설정 (항상 표시) */}
+            <div className="mt-3 p-3 bg-[#222222] rounded-lg">
+              <div className="mb-2">
+                <span className="text-[#A0A0A5] text-xs">AI 기능 설정</span>
+              </div>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => dispatch(toggleStaticGestureDetection())}
@@ -748,9 +733,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
                       <span>뷰티 필터</span>
                     </button>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            </div>
             
             {/* AI 기능 테스트 결과 */}
             <DynamicAiTestDisplay
