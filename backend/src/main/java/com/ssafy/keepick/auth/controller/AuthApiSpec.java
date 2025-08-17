@@ -2,8 +2,9 @@ package com.ssafy.keepick.auth.controller;
 
 import com.ssafy.keepick.auth.controller.request.MobileLoginRequest;
 import com.ssafy.keepick.auth.controller.response.MobileLoginResponse;
-import com.ssafy.keepick.global.response.ApiResponse;
+import com.ssafy.keepick.auth.controller.response.TokenRefreshResponse;
 import com.ssafy.keepick.global.exception.ErrorResponse;
+import com.ssafy.keepick.global.response.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -12,13 +13,15 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * 모바일 인증 API 명세 인터페이스
+ * 인증 API 명세 인터페이스
  * Swagger 문서화를 위한 어노테이션들을 분리하여 컨트롤러를 깔끔하게 유지합니다.
  */
-@Tag(name = "모바일 인증", description = "모바일 앱을 위한 인증 관련 API")
-public interface MobileAuthApiSpec {
+@Tag(name = "인증", description = "웹/모바일 인증 관련 API")
+public interface AuthApiSpec {
 
     @Operation(
         summary = "모바일 로그인",
@@ -142,4 +145,93 @@ public interface MobileAuthApiSpec {
         )
         MobileLoginRequest request
     );
+
+    @Operation(
+        summary = "토큰 갱신",
+        description = """
+            웹/모바일 클라이언트의 refresh_token을 검증하고 새로운 액세스 토큰을 발급합니다.
+            
+            🔄 자동 클라이언트 감지:
+            1. User-Agent 헤더 확인
+            2. 쿠키 존재 여부 확인  
+            3. 모바일 앱 특화 헤더 (X-Mobile-App) 확인
+            
+            🌐 웹 클라이언트:
+            - 쿠키에 저장된 refresh_token을 사용
+            - 새로운 리프레시 토큰은 쿠키로 자동 설정
+            - 응답 본문에는 새로운 액세스 토큰만 포함
+            
+            📱 모바일 클라이언트:
+            - 요청 바디의 refreshToken 파라미터 사용
+            - 응답 본문에 새로운 액세스 토큰과 리프레시 토큰 모두 포함
+            
+            🔄 동작 흐름:
+            1. 클라이언트 타입 자동 감지
+            2. 리프레시 토큰 검증 및 회전 (새로운 리프레시 토큰 발급)
+            3. 새로운 액세스 토큰 발급
+            4. 클라이언트 타입에 따른 응답 반환
+            
+            ⚠️ 주의사항:
+            - 웹: 쿠키에 유효한 refresh_token이 있어야 합니다
+            - 모바일: 요청 바디에 refreshToken 파라미터가 있어야 합니다
+            - 리프레시 토큰이 만료되거나 재사용된 경우 갱신할 수 없습니다
+            """
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", 
+            description = "토큰 갱신 성공",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class),
+                examples = {
+                    @ExampleObject(
+                        name = "웹 클라이언트 성공 응답",
+                        value = """
+                        {
+                            "status": 200,
+                            "message": "요청이 성공적으로 처리되었습니다.",
+                            "data": {
+                                "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                            }
+                        }
+                        """
+                    ),
+                    @ExampleObject(
+                        name = "모바일 클라이언트 성공 응답",
+                        value = """
+                        {
+                            "status": 200,
+                            "message": "요청이 성공적으로 처리되었습니다.",
+                            "data": {
+                                "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                                "refreshToken": "5abcde9-b7af-123b-9425-bb01234567-example"
+                            }
+                        }
+                        """
+                    )
+                }
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "401", 
+            description = "인증 실패",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class),
+                examples = @ExampleObject(
+                    name = "토큰 없음 또는 만료",
+                    value = """
+                    {
+                        "status": 401,
+                        "message": "인증이 필요합니다.",
+                        "errorCode": "B001",
+                        "timeStamp": "2025-08-10T15:20:07.285856900"
+                    }
+                    """
+                )
+            )
+        )
+    })
+    ApiResponse<?> refreshToken(HttpServletRequest request, HttpServletResponse response);
 }

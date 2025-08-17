@@ -10,7 +10,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.ssafy.keepick.auth.application.MobileLoginService;
+import com.ssafy.keepick.auth.application.MobileAuthService;
+import com.ssafy.keepick.auth.application.AuthService;
+import com.ssafy.keepick.auth.application.dto.MobileLoginDto;
 import com.ssafy.keepick.auth.controller.request.MobileLoginRequest;
 import com.ssafy.keepick.auth.controller.response.MobileLoginResponse;
 import com.ssafy.keepick.global.response.ApiResponse;
@@ -23,26 +25,30 @@ import static org.assertj.core.api.Assertions.*;
 class MobileAuthControllerTest extends BaseTest {
 
     @Mock
-    private MobileLoginService mobileLoginService;
+    private MobileAuthService mobileAuthService;
+
+    @Mock
+    private AuthService authService;
 
     @InjectMocks
-    private MobileAuthController mobileAuthController;
+    private AuthController authController;
 
     @Test
     void login_Success() {
         // given
         MobileLoginRequest request = new MobileLoginRequest("google", "valid-token");
-        MobileLoginResponse mockResponse = MobileLoginResponse.of("jwt-token");
+        MobileLoginDto mockDto = MobileLoginDto.of("jwt-token", "refresh-token-jti");
         
-        given(mobileLoginService.login(any(MobileLoginRequest.class))).willReturn(mockResponse);
+        given(mobileAuthService.login(any(MobileLoginRequest.class))).willReturn(mockDto);
 
         // when
-        ApiResponse<MobileLoginResponse> response = mobileAuthController.login(request);
+        ApiResponse<MobileLoginResponse> response = authController.login(request);
 
         // then
         assertThat(response).isNotNull();
         assertThat(response.getData().getAccessToken()).isEqualTo("jwt-token");
-        verify(mobileLoginService).login(any(MobileLoginRequest.class));
+        assertThat(response.getData().getRefreshToken()).isEqualTo("refresh-token-jti");
+        verify(mobileAuthService).login(any(MobileLoginRequest.class));
     }
     
     @Test
@@ -50,14 +56,14 @@ class MobileAuthControllerTest extends BaseTest {
         // given
         MobileLoginRequest request = new MobileLoginRequest("facebook", "token");
         
-        given(mobileLoginService.login(any(MobileLoginRequest.class)))
+        given(mobileAuthService.login(any(MobileLoginRequest.class)))
                 .willThrow(new BaseException(ErrorCode.UNSUPPORTED_OAUTH2_PROVIDER, "지원하지 않는 OAuth2 제공자"));
 
         // when & then
-        assertThatThrownBy(() -> mobileAuthController.login(request))
+        assertThatThrownBy(() -> authController.login(request))
                 .isInstanceOf(BaseException.class);
                 
-        verify(mobileLoginService).login(any(MobileLoginRequest.class));
+        verify(mobileAuthService).login(any(MobileLoginRequest.class));
     }
     
     @Test 
@@ -65,13 +71,13 @@ class MobileAuthControllerTest extends BaseTest {
         // given
         MobileLoginRequest request = new MobileLoginRequest("google", "invalid-token");
         
-        given(mobileLoginService.login(any(MobileLoginRequest.class)))
+        given(mobileAuthService.login(any(MobileLoginRequest.class)))
                 .willThrow(new BaseException(ErrorCode.OAUTH2_AUTHENTICATION_FAILED, "OAuth2 인증 실패"));
 
         // when & then
-        assertThatThrownBy(() -> mobileAuthController.login(request))
+        assertThatThrownBy(() -> authController.login(request))
                 .isInstanceOf(BaseException.class);
                 
-        verify(mobileLoginService).login(any(MobileLoginRequest.class));
+        verify(mobileAuthService).login(any(MobileLoginRequest.class));
     }
 }
