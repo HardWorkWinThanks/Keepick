@@ -52,8 +52,8 @@ const PUFF_T = 0.015;
 const EMOTION_THRESHOLDS = {
   laugh: 0.75,
   serious: 0.65,
-  surprise: 0.80,
-  yawn: 0.85,
+  surprise: 0.70,
+  yawn: 0.70,
   none: 0.50,
 };
 
@@ -427,14 +427,20 @@ export class EmotionFaceProcessor {
   }
 
   /**
-   * gate_surprise (두 번째 확률 선택 로직 수정)
+   * gate_surprise (입이 충분히 벌어졌을 때만 surprise 허용)
    */
   private gateSurprise(rawFeat: number[], probs: number[], topIdx: number): number {
     if (topIdx !== IDX_FACE.surprise) {
       return topIdx;
     }
 
-    if (rawFeat[1] < MOUTH_H_Q25 && rawFeat[0] < EYE_OPEN_Q25 && rawFeat[3] < BROW_LIFT_Q25) {
+    // surprise는 입이 충분히 벌어져야 함 (임계값을 높여서 더 엄격하게)
+    const SURPRISE_MOUTH_THRESHOLD = 0.025; // 기존 MOUTH_H_Q25 (0.015)보다 높은 값
+    const SURPRISE_EYE_THRESHOLD = 0.018;   // 기존 EYE_OPEN_Q25 (0.012)보다 높은 값
+    
+    // 입이 충분히 벌어지지 않았거나 눈이 충분히 크게 뜨지 않았으면 surprise 거부
+    if (rawFeat[1] < SURPRISE_MOUTH_THRESHOLD || rawFeat[0] < SURPRISE_EYE_THRESHOLD) {
+      // 두 번째로 높은 확률의 감정으로 대체
       let best = -Infinity,
         bestIdx = -1;
       let second = -Infinity,
