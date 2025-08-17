@@ -73,8 +73,31 @@ public class PhotoAnalysisResultService {
             handleObjects(photo, result, photoTags);
         }
 
-        if (!photoMembers.isEmpty()) photoMemberRepository.saveAll(photoMembers);
-        if (!photoTags.isEmpty()) photoTagRepository.saveAll(photoTags);
+        if (!photoMembers.isEmpty()) {
+            // 중복 Photo 제거
+            Set<Photo> photos = photoMembers.stream()
+                    .map(PhotoMember::getPhoto)
+                    .collect(Collectors.toSet());
+
+            // Photo 단위로 기존 PhotoMember 삭제
+            photos.forEach(photoMemberRepository::deleteAllByPhoto);
+
+            // 새 데이터 저장
+            photoMemberRepository.saveAll(photoMembers);
+        }
+
+        if (!photoTags.isEmpty()) {
+            // 중복 Photo 제거
+            Set<Photo> photos = photoTags.stream()
+                    .map(PhotoTag::getPhoto)
+                    .collect(Collectors.toSet());
+
+            // Photo 단위로 기존 PhotoTag 삭제
+            photos.forEach(photoTagRepository::deleteAllByPhoto);
+
+            // 새 데이터 저장
+            photoTagRepository.saveAll(photoTags);
+        }
 
         log.info("종합 이미지 분석 내용 데이터베이스 저장 완료");
     }

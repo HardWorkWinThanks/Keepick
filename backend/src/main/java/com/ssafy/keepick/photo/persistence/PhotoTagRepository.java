@@ -1,5 +1,6 @@
 package com.ssafy.keepick.photo.persistence;
 
+import com.ssafy.keepick.photo.domain.Photo;
 import com.ssafy.keepick.photo.domain.PhotoTag;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -15,4 +16,6 @@ public interface PhotoTagRepository extends JpaRepository<PhotoTag, Long> {
             "WHERE p.deletedAt IS NULL " +
             "AND p.group.id = :groupId")
     List<String> findTagsByGroupId(Long groupId);
+
+    void deleteAllByPhoto(Photo photo);
 }

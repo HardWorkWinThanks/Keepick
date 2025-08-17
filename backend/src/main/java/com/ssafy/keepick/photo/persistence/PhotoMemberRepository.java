@@ -1,6 +1,7 @@
 package com.ssafy.keepick.photo.persistence;
 
 import com.ssafy.keepick.member.domain.Member;
+import com.ssafy.keepick.photo.domain.Photo;
 import com.ssafy.keepick.photo.domain.PhotoMember;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -34,4 +35,6 @@ public interface PhotoMemberRepository extends JpaRepository<PhotoMember, Long> 
             "    AND gm.status = GroupMemberStatus.ACCEPTED" +
             ")")
     List<Member> findMembersByGroupId(Long groupId);
+
+    void deleteAllByPhoto(Photo photo);
 }
