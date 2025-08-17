@@ -105,27 +105,34 @@ public class RefreshTokenRotatorService {
      * @throws BaseException 토큰이 유효하지 않은 경우
      */
     public RefreshCtx rotate(String rtJti) {
+        log.info("🔄 리프레시 토큰 회전 시작: jti={}", rtJti);
+        
         // 기존 토큰 정보 조회
         Map<Object, Object> tokenData = repository.getToken(rtJti);
         if (tokenData.isEmpty()) {
-            log.warn("리프레시 토큰이 존재하지 않음: jti={}", rtJti);
+            log.warn("❌ 리프레시 토큰이 존재하지 않음: jti={}", rtJti);
             throw new BaseException(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
         }
 
         String familyId = (String) tokenData.get("family_id");
         Long memberId = Long.valueOf((String) tokenData.get("member_id"));
         String username = (String) tokenData.get("username");
+        
+        log.info("📋 기존 토큰 정보 조회: memberId={}, username={}, familyId={}", memberId, username, familyId);
 
         // 패밀리 상태 확인
         String familyStatus = repository.getFamilyStatus(familyId);
         if (FAMILY_STATUS_REVOKED.equals(familyStatus) || FAMILY_STATUS_COMPROMISED.equals(familyStatus)) {
-            log.warn("폐기/침해된 패밀리의 리프레시 토큰 사용 시도: jti={}, memberId={}, familyId={}, status={}", 
+            log.warn("🚫 폐기/침해된 패밀리의 리프레시 토큰 사용 시도: jti={}, memberId={}, familyId={}, status={}", 
                     rtJti, memberId, familyId, familyStatus);
             throw new BaseException(ErrorCode.REFRESH_TOKEN_REVOKED);
         }
+        
+        log.info("✅ 패밀리 상태 확인 완료: familyId={}, status={}", familyId, familyStatus);
 
         // 새로운 JTI 생성
         String newJti = UUID.randomUUID().toString();
+        log.info("📝 새로운 JTI 생성: oldJti={}, newJti={}", rtJti, newJti);
         
         // Lua 스크립트 실행을 위한 키와 인자 준비
         String tokenKey = repository.getTokenKey(rtJti);
@@ -135,6 +142,9 @@ public class RefreshTokenRotatorService {
         long currentTimeMs = System.currentTimeMillis();
         long expSec = java.time.Instant.now().getEpochSecond() + DEFAULT_TTL.getSeconds();
         long ttlSeconds = DEFAULT_TTL.getSeconds();
+        
+        log.info("⏰ 시간 정보: currentTimeMs={}, expSec={}, ttlSeconds={}", currentTimeMs, expSec, ttlSeconds);
+        log.info("🔑 Redis 키: tokenKey={}, familyKey={}, newTokenKey={}", tokenKey, familyKey, newTokenKey);
 
         List<String> keys = List.of(tokenKey, familyKey, newTokenKey);
         List<String> args = List.of(
@@ -149,35 +159,41 @@ public class RefreshTokenRotatorService {
         );
 
         try {
+            log.info("🚀 Lua 스크립트 실행 시작");
             // Lua 스크립트 실행
             Object result = stringRedisTemplate.execute(
                     RedisScript.of(ROTATE_TOKEN_SCRIPT, List.class), // 반환을 List로 기대
                     keys,
-                    args.toArray(new String[0])                      // 전부 문자열
+                    args.toArray(String[]::new)                      // 전부 문자열
             );
+            log.info("✅ Lua 스크립트 실행 완료: result={}", result);
 
             if (result instanceof List<?> r && !r.isEmpty()) {
                 String tag = (String) r.get(0);
                 if ("err".equals(tag)) {
+                    log.warn("❌ Lua 스크립트 실행 오류: errorType={}, jti={}", r.get(1), rtJti);
                     handleRotationError((String) r.get(1), rtJti, memberId, familyId, r);
                 } else if ("ok".equals(tag)) {
                     long expSecFromRedis = Long.parseLong((String) r.get(4));
                     int ttlSec = Integer.parseInt((String) r.get(5));
-                    log.info("리프레시 토큰 회전 성공: oldJti={}, newJti={}, memberId={}, familyId={}, expSec={}, ttlSeconds={}",
+                    log.info("✅ 리프레시 토큰 회전 성공: oldJti={}, newJti={}, memberId={}, familyId={}, expSec={}, ttlSeconds={}",
                             rtJti, newJti, memberId, familyId, expSecFromRedis, ttlSec);
+                    log.info("📅 만료시간: {} ({}초)", java.time.Instant.ofEpochSecond(expSecFromRedis), expSecFromRedis);
+                    log.info("⏰ TTL: {}초 ({}일)", ttlSec, ttlSec / 86400.0);
                     return new RefreshCtx(memberId, username, familyId, rtJti, newJti, expSecFromRedis, ttlSec);
                 }
             }
 
             // 여기로 내려오면 형식 불일치
-            log.error("토큰 회전 중 예상치 못한 결과: jti={}, result={}", rtJti, result);
+            log.error("❌ 토큰 회전 중 예상치 못한 결과: jti={}, result={}", rtJti, result);
             throw new BaseException(ErrorCode.INTERNAL_SERVER_ERROR);
 
         } catch (BaseException e) {
             // BaseException은 그대로 재throw
+            log.error("❌ 토큰 회전 중 BaseException: jti={}, error={}", rtJti, e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("토큰 회전 중 오류 발생: jti={}", rtJti, e);
+            log.error("❌ 토큰 회전 중 오류 발생: jti={}", rtJti, e);
             throw new BaseException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
@@ -186,35 +202,39 @@ public class RefreshTokenRotatorService {
      * 회전 오류를 처리합니다.
      */
     private void handleRotationError(String errorType, String rtJti, Long memberId, String familyId, List<?> resultList) {
+        log.warn("🚨 토큰 회전 오류 처리 시작: errorType={}, jti={}, memberId={}, familyId={}", 
+                errorType, rtJti, memberId, familyId);
+        
         switch (errorType) {
             case "TOKEN_NOT_FOUND":
-                log.warn("리프레시 토큰이 존재하지 않음: jti={}", rtJti);
+                log.warn("❌ 리프레시 토큰이 존재하지 않음: jti={}", rtJti);
                 throw new BaseException(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
                 
             case "TOKEN_REUSED":
                 String status = resultList.size() > 2 ? (String) resultList.get(2) : "UNKNOWN";
-                log.warn("리프레시 토큰 재사용/폐기 감지: jti={}, status={}, memberId={}, familyId={}", 
+                log.warn("🚫 리프레시 토큰 재사용/폐기 감지: jti={}, status={}, memberId={}, familyId={}", 
                         rtJti, status, memberId, familyId);
                 
                 // 패밀리 상태를 REVOKED로 설정
                 if (familyId != null) {
+                    log.warn("🔒 패밀리 상태를 REVOKED로 설정: familyId={}", familyId);
                     repository.setFamilyStatus(familyId, FAMILY_STATUS_REVOKED);
                 }
                 throw new BaseException(ErrorCode.REFRESH_TOKEN_REUSED);
                 
             case "FAMILY_REVOKED":
                 String familyStatus = resultList.size() > 2 ? (String) resultList.get(2) : "UNKNOWN";
-                log.warn("폐기된 패밀리의 리프레시 토큰 사용 시도: jti={}, memberId={}, familyId={}, status={}", 
+                log.warn("🚫 폐기된 패밀리의 리프레시 토큰 사용 시도: jti={}, memberId={}, familyId={}, status={}", 
                         rtJti, memberId, familyId, familyStatus);
                 throw new BaseException(ErrorCode.REFRESH_TOKEN_REVOKED);
                 
             case "BAD_TTL":
                 String badTtl = resultList.size() > 2 ? (String) resultList.get(2) : "UNKNOWN";
-                log.error("잘못된 TTL 값: jti={}, ttl={}", rtJti, badTtl);
+                log.error("❌ 잘못된 TTL 값: jti={}, ttl={}", rtJti, badTtl);
                 throw new BaseException(ErrorCode.INTERNAL_SERVER_ERROR);
                 
             default:
-                log.error("알 수 없는 회전 오류: jti={}, errorType={}", rtJti, errorType);
+                log.error("❌ 알 수 없는 회전 오류: jti={}, errorType={}, resultList={}", rtJti, errorType, resultList);
                 throw new BaseException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }

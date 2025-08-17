@@ -92,9 +92,12 @@ public class MobileAuthService {
         
         // 5. 리프레시 토큰 발급 (새로운 패밀리 ID 생성)
         String familyId = UUID.randomUUID().toString();
+        log.info("🆔 모바일 로그인 - 새로운 패밀리 ID 생성: familyId={}", familyId);
+        
         String refreshTokenJti = refreshTokenService.issue(member.getId(), member.getEmail(), familyId);
         
-        log.info("모바일 로그인 완료: 사용자 = {} (ID: {}), 패밀리 = {}", member.getEmail(), member.getId(), familyId);
+        log.info("✅ 모바일 로그인 완료: 사용자 = {} (ID: {}), 패밀리 = {}, JTI = {}", 
+                member.getEmail(), member.getId(), familyId, refreshTokenJti);
         
         return MobileLoginDto.of(jwtToken, refreshTokenJti);
     }

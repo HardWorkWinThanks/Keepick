@@ -43,9 +43,11 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         // 리프레시 토큰 발급 (새로운 패밀리 ID 생성)
         String familyId = UUID.randomUUID().toString();
+        log.info("🆔 새로운 패밀리 ID 생성: familyId={}", familyId);
+        
         String refreshTokenJti = refreshTokenService.issue(memberId, username, familyId);
 
-        log.debug("🔄 리프레시 토큰 발급 완료: 사용자: {} | JTI: {} | 패밀리: {}",
+        log.info("✅ OAuth2 로그인 후 리프레시 토큰 발급 완료: 사용자: {} | JTI: {} | 패밀리: {}",
                 username, refreshTokenJti, familyId);
         
         // 리프레시 토큰을 HttpOnly 쿠키로 설정 (ResponseCookie 사용)
