@@ -1,6 +1,8 @@
 package com.ssafy.keepick.photo.application;
 
 import com.ssafy.keepick.group.domain.Group;
+import com.ssafy.keepick.group.domain.GroupMember;
+import com.ssafy.keepick.group.persistence.GroupMemberRepository;
 import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.photo.application.dto.*;
 import com.ssafy.keepick.photo.controller.response.GroupPhotoAllTagResponse;
@@ -45,6 +47,9 @@ class GroupPhotoServiceTest extends BaseTest {
 
     @Mock
     PhotoMemberRepository photoMemberRepository;
+
+    @Mock
+    GroupMemberRepository groupMemberRepository;
 
     Long groupId = 1L;
     Group testGroup;
@@ -154,7 +159,7 @@ class GroupPhotoServiceTest extends BaseTest {
 
         given(photoRepository.existsByGroupIdAndIdAndDeletedAtIsNull(eq(groupId), eq(photoId))).willReturn(true);
         given(photoTagRepository.findAllByPhotoId(photoId)).willReturn(List.of(tag1, tag2));
-        given(photoMemberRepository.findAllByPhotoId(photoId)).willReturn(List.of(photoMember1, photoMember2));
+        given(photoMemberRepository.findAllByPhotoId(groupId, photoId)).willReturn(List.of(photoMember1, photoMember2));
 
         // when
         PhotoTagDto groupPhotoTags = groupPhotoService.getGroupPhotoTags(groupId, photoId);
@@ -169,7 +174,9 @@ class GroupPhotoServiceTest extends BaseTest {
         // given
         Long groupId = 1L;
         List<String> mockTags = List.of("tag1", "tag2", "tag3");
+        List<Member> mockMembers = List.of(Member.builder().build(), Member.builder().build());
         when(photoTagRepository.findTagsByGroupId(groupId)).thenReturn(mockTags);
+        when(photoMemberRepository.findMembersByGroupId(groupId)).thenReturn(mockMembers);
 
         // when
         GroupPhotoTagDto dto = groupPhotoService.getGroupPhotoAllTags(groupId);
@@ -180,6 +187,7 @@ class GroupPhotoServiceTest extends BaseTest {
         assertNotNull(response);
         // DTO 검증
         assertEquals(3, dto.getTags().size());
+        assertEquals(2, dto.getMemberTags().size());
         // Response 검증
         assertEquals(dto.getTags(), response.getTags());
     }

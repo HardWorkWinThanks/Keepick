@@ -5,6 +5,7 @@ import com.ssafy.keepick.global.exception.BaseException;
 import com.ssafy.keepick.global.exception.ErrorCode;
 import com.ssafy.keepick.group.domain.Group;
 import com.ssafy.keepick.group.persistence.GroupRepository;
+import com.ssafy.keepick.member.domain.Member;
 import com.ssafy.keepick.photo.application.dto.*;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoDeleteRequest;
 import com.ssafy.keepick.photo.controller.request.GroupPhotoSearchRequest;
@@ -147,7 +148,7 @@ public class GroupPhotoService {
 
         // 사진 태그, 인식된 회원 조회
         List<PhotoTag> tags = photoTagRepository.findAllByPhotoId(photoId);
-        List<PhotoMember> members = photoMemberRepository.findAllByPhotoId(photoId);
+        List<PhotoMember> members = photoMemberRepository.findAllByPhotoId(groupId, photoId);
         return PhotoTagDto.from(tags, members);
     }
 
@@ -181,7 +182,8 @@ public class GroupPhotoService {
 
     public GroupPhotoTagDto getGroupPhotoAllTags(Long groupId) {
         List<String> tagList = photoTagRepository.findTagsByGroupId(groupId);
-        return GroupPhotoTagDto.from(tagList);
+        List<Member> memberList = photoMemberRepository.findMembersByGroupId(groupId);
+        return GroupPhotoTagDto.of(tagList, memberList);
     }
 
 }
