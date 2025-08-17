@@ -25,8 +25,8 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
   
   // 앨범 정보 상태 (실제로는 API에서 가져와야 함)
   const [albumInfo, setAlbumInfo] = useState<EditingAlbumInfo>({
-    name: "즐거운 화상통화",
-    description: "친구들과의 재미있는 시간들"
+    name: "하이라이트",
+    description: "감정별 하이라이트"
   })
   
   // 현재 대표이미지 상태
