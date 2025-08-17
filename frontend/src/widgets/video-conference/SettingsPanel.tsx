@@ -79,7 +79,7 @@ export const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
   const dispatch = useAppDispatch();
   
   const aiState = useAppSelector((state) => state.ai);
-  const { isCameraOn, isMicOn } = useAppSelector((state) => state.re_media);
+  const { isCameraOn, isMicOn } = useAppSelector((state) => state.mediaControls);
 
   // AI 전체 토글 핸들러
   const handleAiToggle = useCallback(async () => {

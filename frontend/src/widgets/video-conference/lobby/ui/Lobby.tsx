@@ -61,7 +61,7 @@ const DynamicAiTestDisplay = dynamic(
 
 export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
   const dispatch = useAppDispatch();
-  const { isCameraOn, isMicOn } = useAppSelector((state) => state.re_media);
+  const { isCameraOn, isMicOn } = useAppSelector((state) => state.mediaControls);
   const aiState = useAppSelector((state) => state.ai); // AI 상태 가져오기
   const { currentUser } = useAppSelector((state) => state.user); // 로그인된 사용자 정보 가져오기
 

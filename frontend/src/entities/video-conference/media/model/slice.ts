@@ -14,7 +14,7 @@ const initialState: MediaState = {
 };
 
 const mediaSlice = createSlice({
-  name: "media",
+  name: "mediaControls",
   initialState,
   reducers: {
     toggleCamera: (state) => {

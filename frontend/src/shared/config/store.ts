@@ -5,7 +5,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "@/features/auth/model/authSlice"; // 경로 확인 필요
 import { userReducer } from "@/entities/user"; // 경로 확인 필요
 import sessionReducer from "@/entities/video-conference/session/model/slice";
-import re_mediaReducer from "@/entities/video-conference/media/model/slice";
+import mediaControlsReducer from "@/entities/video-conference/media/model/slice";
 import mediaReducer from "@/entities/video-conference/media/model/mediaSlice"
 
 import webrtcReducer from "@/entities/video-conference/webrtc/model/slice";
@@ -26,7 +26,7 @@ export const makeStore = () => {
 
       session: sessionReducer,
       media: mediaReducer,
-      re_media: re_mediaReducer,
+      mediaControls: mediaControlsReducer,
       webrtc: webrtcReducer,
       gesture: gestureReducer,
       chat: chatReducer, // 채팅 상태 추가
