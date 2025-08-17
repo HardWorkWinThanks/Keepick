@@ -23,14 +23,14 @@ export class GestureProcessor {
   private readonly DYNAMIC_GESTURE_MODEL_PATH = "/models/dinamic-gesture/model.json"; // 실제 폴더명에 맞춰 수정
 
   // 참고 코드의 안정화 상수들 추가
-  private readonly PX_HIGH = 0.05; // 움직임 임계값
+  private readonly PX_HIGH = 0.08; // 움직임 임계값 (더 큰 움직임 요구)
   private readonly STATIC_CONF_T = 0.75; // 정적 제스처 신뢰도 임계값
   private readonly STATIC_VOTE_K = 7; // 다수결 투표 수
-  private readonly STATIC_HOLD_SEC = 0.6; // 정적 제스처 유지 시간
+  private readonly STATIC_HOLD_SEC = 1.0; // 정적 제스처 유지 시간 (1초로 증가)
   private readonly STATIC_COOLDOWN = 2.5; // 정적 제스처 쿨다운(초) - 속도 늦추기
   private readonly SEQ_LEN = 30; // 동적 제스처 시퀀스 길이
   private readonly DYN_CONF_T = 0.90; // 동적 제스처 신뢰도 임계값
-  private readonly MOVE3D_T = 0.010; // 3D 움직임 임계값
+  private readonly MOVE3D_T = 0.015; // 3D 움직임 임계값 (더 큰 움직임 요구)
   private readonly DYN_COOLDOWN = 6.0; // 동적 제스처 쿨다운(초)
 
   // 손별 상태 관리
@@ -483,15 +483,20 @@ export class GestureProcessor {
               // 시퀀스가 충분히 쌓였을 때 동적 제스처 분류
               if (handState.dynamicSequence.length === this.SEQ_LEN) {
                 const dynamicResult = await this.detectDynamicGesture(handState.dynamicSequence);
-                if (dynamicResult && dynamicResult.confidence > this.DYN_CONF_T) {
-                  // 쿨다운 체크
-                  const lastTime = handState.lastDynTime.get(dynamicResult.label) || 0;
-                  if (currentTime - lastTime >= this.DYN_COOLDOWN) {
-                    result.dynamic = {
-                      label: dynamicResult.label,
-                      confidence: dynamicResult.confidence
-                    };
-                    handState.lastDynTime.set(dynamicResult.label, currentTime);
+                if (dynamicResult) {
+                  // shot 제스처는 특별히 높은 임계값 적용
+                  const confidenceThreshold = dynamicResult.label === 'shot' ? 0.98 : this.DYN_CONF_T;
+                  
+                  if (dynamicResult.confidence > confidenceThreshold) {
+                    // 쿨다운 체크
+                    const lastTime = handState.lastDynTime.get(dynamicResult.label) || 0;
+                    if (currentTime - lastTime >= this.DYN_COOLDOWN) {
+                      result.dynamic = {
+                        label: dynamicResult.label,
+                        confidence: dynamicResult.confidence
+                      };
+                      handState.lastDynTime.set(dynamicResult.label, currentTime);
+                    }
                   }
                 }
               }

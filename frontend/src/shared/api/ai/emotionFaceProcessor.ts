@@ -434,9 +434,9 @@ export class EmotionFaceProcessor {
       return topIdx;
     }
 
-    // surprise는 입이 충분히 벌어져야 함 (임계값을 높여서 더 엄격하게)
-    const SURPRISE_MOUTH_THRESHOLD = 0.025; // 기존 MOUTH_H_Q25 (0.015)보다 높은 값
-    const SURPRISE_EYE_THRESHOLD = 0.018;   // 기존 EYE_OPEN_Q25 (0.012)보다 높은 값
+    // surprise는 입이 충분히 벌어져야 함 (임계값을 더욱 높여서 엄격하게)
+    const SURPRISE_MOUTH_THRESHOLD = 0.035; // 입을 더 크게 벌려야 함
+    const SURPRISE_EYE_THRESHOLD = 0.022;   // 눈도 더 크게 떠야 함
     
     // 입이 충분히 벌어지지 않았거나 눈이 충분히 크게 뜨지 않았으면 surprise 거부
     if (rawFeat[1] < SURPRISE_MOUTH_THRESHOLD || rawFeat[0] < SURPRISE_EYE_THRESHOLD) {

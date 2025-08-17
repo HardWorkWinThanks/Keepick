@@ -132,6 +132,7 @@ class FrontendAiProcessor {
   public async init(dispatch: AppDispatch): Promise<void> {
     this.dispatch = dispatch;
     emotionCaptureManager.init(dispatch);
+    
     try {
       await tf.setBackend('webgl');
       console.log(`TensorFlow.js backend set to: ${tf.getBackend()}`);
@@ -159,16 +160,46 @@ class FrontendAiProcessor {
         this.beautyFilterProcessor.init(FACE_MESH_WASM_PATH),
         this.gestureProcessor.init(TASKS_VISION_WASM_PATH),
       ]);
+  }
 
+      console.log("🔄 Loading gesture models...");
       console.log(`- Static gesture model: ${STATIC_GESTURE_MODEL_PATH}`);
       console.log(`- Dynamic gesture model: ${DYNAMIC_GESTURE_MODEL_PATH}`);
+  }
 
       this.isInitialized = true;
       console.log("✅ FrontendAiProcessor initialized successfully.");
+      
     } catch (error) {
       console.error("❌ FrontendAiProcessor: Failed to initialize AI models:", error);
       this.isInitialized = false;
+      });
     }
+  }
+
+  }
+
+  // 초기화 상태 업데이트 (모든 필요한 모듈이 로딩되었는지 확인)
+  private updateInitializationStatus(): void {
+    const state = this.dispatch?.getState?.();
+    const moduleStatus = state?.ai?.moduleStatus;
+    
+    // WASM은 반드시 로딩되어야 하고, 최소 하나의 AI 모듈이 로딩되어야 함
+    const wasmLoaded = moduleStatus?.wasm?.isLoaded;
+    const hasAnyModuleLoaded = 
+      moduleStatus?.gestureModels?.isLoaded || 
+      moduleStatus?.emotionModels?.isLoaded || 
+      moduleStatus?.beautyFilter?.isLoaded;
+    
+    this.isInitialized = wasmLoaded && hasAnyModuleLoaded;
+    
+    console.log("🔄 AI Initialization status updated:", {
+      isInitialized: this.isInitialized,
+      wasmLoaded,
+      gestureModelsLoaded: moduleStatus?.gestureModels?.isLoaded,
+      emotionModelsLoaded: moduleStatus?.emotionModels?.isLoaded,
+      beautyFilterLoaded: moduleStatus?.beautyFilter?.isLoaded
+    });
   }
 
   public updateConfig(config: Partial<AiSystemConfig>): Promise<void> {
@@ -494,7 +525,9 @@ class FrontendAiProcessor {
         gesture: { label: string; confidence: number } | null,
         type: 'static' | 'dynamic'
     ) => {
-        if (!gesture || gesture.label === "none" || gesture.confidence < (type === 'static' ? 0.7 : 0.8)) return;
+        // shot은 특별히 높은 임계값, 정적 제스처도 조금 높임
+        const confidenceThreshold = gesture.label === 'shot' ? 0.98 : (type === 'static' ? 0.8 : 0.85);
+        if (!gesture || gesture.label === "none" || gesture.confidence < confidenceThreshold) return;
 
         const image = this.getImageForLabel(gesture.label);
         if (!image) return; // 🚨 app.py처럼 이미지 없으면 오버레이 안 함
