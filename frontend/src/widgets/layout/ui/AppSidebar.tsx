@@ -194,19 +194,23 @@ export default function AppSidebar({
         onMouseEnter={() => setSidebarHovered(true)}
         onMouseLeave={() => setSidebarHovered(false)}
       >
-        <ScrollArea className="h-full">
-          <div className="pb-4">
+        {/* 전체 레이아웃을 flex-col로 구성 */}
+        <div className="h-full flex flex-col">
 
-            {/* 상단 구역: 그룹챗 (고정) */}
-            {showGroupChat && currentGroup && (
+          {/* 상단 구역: 그룹챗 (고정) */}
+          {showGroupChat && currentGroup && (
+            <div className="flex-shrink-0">
               <GroupChatVideoSection
                 isInCall={groupChatProps.isInCall}
                 participants={groupChatProps.participants}
               />
-            )}
-            
-            {/* 하단 구역: 동적 컨텐츠 */}
-            <div className="flex-1">
+            </div>
+          )}
+          
+          {/* 하단 구역: 동적 컨텐츠 (스크롤 가능) */}
+          <div className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full sidebar-scroll">
+              <div className="pb-4">
           {/* Group Selector - 그룹 스페이스에서는 그룹 선택 드롭다운 */}
           {shouldShowSidebar && showCreateGroupButton && (
             <div 
@@ -449,9 +453,10 @@ export default function AppSidebar({
           {/* 동적 컨텐츠 영역 - 페이지별로 다른 기능들 */}
           {dynamicContent}
           
+            </div>
+            </ScrollArea>
+          </div>
         </div>
-      </div>
-    </ScrollArea>
       </div>
 
       {/* Create Group Modal */}

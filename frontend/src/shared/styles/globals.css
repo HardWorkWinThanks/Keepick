@@ -41,6 +41,30 @@
   }
 }
 
+/* 사이드바 스크롤바 스타일 */
+.sidebar-scroll [data-radix-scroll-area-viewport] {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+}
+
+.sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 3px;
+}
+
+.sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5);
+}
+
 /* 
   3. 커스텀 폰트 정의 (@font-face)
   - 정의하신 모든 폰트를 한 곳에 모아 정리했습니다.

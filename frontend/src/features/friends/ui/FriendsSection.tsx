@@ -2,11 +2,15 @@
 
 import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/shadcn/tabs"
+import { NotificationBadge } from "@/shared/ui/composite/NotificationBadge"
 import { FriendsList } from "./FriendsList"
 import { FriendSearch } from "./FriendSearch"
 import { FriendRequests } from "./FriendRequests"
+import { useFriendRequestCount } from "../model/useFriendRequestCount"
 
 export function FriendsSection() {
+  const { receivedCount, sentCount } = useFriendRequestCount() // 친구 신청 개수 조회
+
   return (
     <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-800 h-[548px]">
       <Tabs defaultValue="friends" className="w-full h-full flex flex-col">
@@ -25,15 +29,17 @@ export function FriendsSection() {
           </TabsTrigger>
           <TabsTrigger 
             value="received" 
-            className="data-[state=active]:bg-[#FE7A25] data-[state=active]:text-white text-gray-300 font-keepick-primary"
+            className="data-[state=active]:bg-[#FE7A25] data-[state=active]:text-white text-gray-300 font-keepick-primary relative"
           >
             받은 친구 신청
+            <NotificationBadge count={receivedCount} variant="error" />
           </TabsTrigger>
           <TabsTrigger 
             value="sent" 
-            className="data-[state=active]:bg-[#FE7A25] data-[state=active]:text-white text-gray-300 font-keepick-primary"
+            className="data-[state=active]:bg-[#FE7A25] data-[state=active]:text-white text-gray-300 font-keepick-primary relative"
           >
             보낸 친구 신청
+            <NotificationBadge count={sentCount} variant="warning" />
           </TabsTrigger>
         </TabsList>
 

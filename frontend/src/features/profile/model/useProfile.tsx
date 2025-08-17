@@ -29,9 +29,11 @@ export function useProfile() {
       return result;
     },
     staleTime: 1000 * 60 * 60 * 3, // 3시간간 신선함 유지
+    gcTime: 1000 * 60 * 60 * 12, // 12시간 가비지 컬렉션 (캐시 보존)
     retry: 2,
-    // 중복 요청 방지: 이미 캐시에 데이터가 있고 신선하면 요청하지 않음
+    // 중복 요청 방지: 클라이언트에서만 실행하고 캐시 활용
     enabled: typeof window !== 'undefined', // 클라이언트에서만 실행
+    refetchOnMount: false, // 마운트 시 자동 재요청 방지 (캐시 우선 사용)
   })
   
   // 로컬 상태 (임시 입력값과 개별 로딩 상태)

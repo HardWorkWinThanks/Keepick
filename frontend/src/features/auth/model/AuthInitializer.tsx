@@ -45,7 +45,9 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
     },
     enabled: shouldFetchUser, // 토큰이 있을 때만 실행
     staleTime: 1000 * 60 * 60 * 3, // 3시간 캐시
+    gcTime: 1000 * 60 * 60 * 12, // 12시간 가비지 컬렉션 (캐시 보존)
     retry: 2,
+    refetchOnMount: false, // 마운트 시 자동 재요청 방지
   });
 
   // TanStack Query 결과 처리
@@ -77,10 +79,25 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
         return; // 서버사이드이거나 이미 초기화된 경우 건너뛰기
       }
 
-      // OAuth 콜백 처리 중인 경우 초기화 건너뛰기 (중복 방지)
-      if (sessionStorage.getItem('oauth_in_progress')) {
+      // OAuth 콜백 처리 중이거나 최근에 완료된 경우 초기화 건너뛰기 (중복 방지)
+      if (sessionStorage.getItem('oauth_in_progress') || sessionStorage.getItem('oauth_processing')) {
         console.log("💡 OAuth 콜백 처리 중, AuthInitializer 초기화 건너뛰기");
         return;
+      }
+
+      // 최근 5분 내에 OAuth가 완료된 경우 초기화 건너뛰기
+      const oauthCompleted = sessionStorage.getItem('oauth_completed');
+      if (oauthCompleted) {
+        const completedTime = parseInt(oauthCompleted);
+        const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+        if (completedTime > fiveMinutesAgo) {
+          console.log("💡 최근 OAuth 완료됨, AuthInitializer 초기화 건너뛰기");
+          setIsInitialized(true);
+          return;
+        } else {
+          // 5분 이상 지난 기록은 정리
+          sessionStorage.removeItem('oauth_completed');
+        }
       }
 
       const currentUrl = window.location.href;
