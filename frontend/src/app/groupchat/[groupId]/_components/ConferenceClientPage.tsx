@@ -124,10 +124,34 @@ export const ConferenceClientPage = ({ roomId }: ConferenceClientPageProps) => {
       chatHandler.leaveChat({ roomId });
       aiEventHandler.cleanup();
       // AI 시스템 클린업은 AIProcessorInitializer에서 담당하므로 여기서는 제거합니다.
-      // 회의 종료 시 AI 상태만 비활성화합니다.
-      dispatch(setAiEnabled(false));
+      // 로비에서 설정한 AI 상태를 유지하기 위해 setAiEnabled(false) 제거
     };
   }, [dispatch, roomId]);
+
+  // 회의 참여 후 AI가 활성화되어 있으면 자동으로 AI 처리 시작
+  useEffect(() => {
+    if (isInRoom && aiState.isAiEnabled) {
+      console.log("🤖 Conference joined with AI enabled, starting AI processing...");
+      // AI 설정 구성
+      const aiConfig = {
+        gesture: {
+          static: { enabled: aiState.isStaticGestureDetectionEnabled, confidence: 0.7 },
+          dynamic: { enabled: aiState.isDynamicGestureDetectionEnabled, confidence: 0.7 },
+        },
+        emotion: { enabled: aiState.isEmotionDetectionEnabled, confidence: 0.5 },
+        beauty: { enabled: aiState.isBeautyFilterEnabled },
+      };
+      
+      // mediasoupManager를 통해 AI 처리 활성화
+      mediasoupManager.toggleAIDuringConference(true, aiConfig)
+        .then(() => {
+          console.log("✅ AI processing started in conference");
+        })
+        .catch((error) => {
+          console.error("❌ Failed to start AI processing in conference:", error);
+        });
+    }
+  }, [isInRoom, aiState.isAiEnabled, aiState.isStaticGestureDetectionEnabled, aiState.isDynamicGestureDetectionEnabled, aiState.isEmotionDetectionEnabled, aiState.isBeautyFilterEnabled]);
 
   const handleJoin = async (userName: string) => {
     if (roomId && userName) {
