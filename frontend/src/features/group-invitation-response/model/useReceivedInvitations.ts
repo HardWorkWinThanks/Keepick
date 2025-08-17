@@ -32,9 +32,19 @@ export function useReceivedInvitations() {
   // 초대 수락
   const acceptMutation = useMutation({
     mutationFn: async ({ groupId, invitationId }: { groupId: number; invitationId: number }) => {
-      return await invitationApi.acceptGroupInvitation(groupId, invitationId)
+      console.log(`그룹 초대 수락 시도: groupId=${groupId}, invitationId=${invitationId}`)
+      
+      try {
+        const result = await invitationApi.acceptGroupInvitation(groupId, invitationId)
+        console.log('그룹 초대 수락 API 응답:', result)
+        return result
+      } catch (error) {
+        console.error('그룹 초대 수락 API 호출 실패:', error)
+        throw error
+      }
     },
-    onSuccess: (_, { groupId }) => {
+    onSuccess: (data, { groupId }) => {
+      console.log('그룹 초대 수락 성공:', data)
       showSuccessMessage('그룹에 가입되었습니다!')
       
       // 그룹 목록 갱신
@@ -42,10 +52,25 @@ export function useReceivedInvitations() {
       queryClient.invalidateQueries({ queryKey: groupQueryKeys.lists() })
       
       // 그룹 이동은 컴포넌트에서 처리하도록 데이터 반환
-      return { groupId }
+      return { groupId, invitation: data }
     },
-    onError: (error) => {
-      handleError(error, '그룹 가입에 실패했습니다.')
+    onError: (error, variables) => {
+      console.error('그룹 초대 수락 실패:', {
+        error,
+        variables,
+        errorType: typeof error,
+        errorKeys: error ? Object.keys(error) : []
+      })
+      
+      // 상세한 에러 처리
+      const appError = handleError(error, '그룹 가입에 실패했습니다.')
+      
+      // 특정 에러 코드에 따른 추가 처리
+      if (appError.code === 'MEMBER_ALREADY_EXISTS') {
+        // 이미 멤버인 경우 그룹 목록 갱신
+        queryClient.invalidateQueries({ queryKey: ['groups'] })
+        queryClient.invalidateQueries({ queryKey: groupQueryKeys.lists() })
+      }
     }
   })
 

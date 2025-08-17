@@ -36,13 +36,22 @@ export function ReceivedInvitationsSection({ className = '' }: ReceivedInvitatio
       return
     }
     
+    console.log(`초대 수락 처리 시작: groupId=${groupId}, invitationId=${invitationId}`)
+    
     try {
-      await acceptInvitation({ groupId, invitationId })
+      const result = await acceptInvitation({ groupId, invitationId })
+      console.log('초대 수락 완료:', result)
+      
       // 수락 성공 시 그룹으로 이동
       router.push(`/group/${groupId}`)
     } catch (error) {
-      // 에러는 mutation에서 처리됨
-      console.error('초대 수락 실패:', error)
+      // 에러는 mutation에서 처리되지만, 추가 로깅
+      console.error('UI 레벨에서 초대 수락 실패 감지:', {
+        error,
+        groupId,
+        invitationId,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error'
+      })
     }
   }
 

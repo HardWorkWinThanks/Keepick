@@ -59,10 +59,29 @@ export const invitationApi = {
    * @returns 업데이트된 초대 정보
    */
   async acceptGroupInvitation(groupId: number, invitationId: number): Promise<Invitation> {
-    const response = await apiClient.post<InvitationApiResponse<Invitation>>(
-      `/api/groups/${groupId}/invitations/${invitationId}`
-    )
-    return response.data.data
+    console.log(`API 호출: 그룹 초대 수락 - groupId=${groupId}, invitationId=${invitationId}`)
+    
+    try {
+      const response = await apiClient.post<InvitationApiResponse<Invitation>>(
+        `/api/groups/${groupId}/invitations/${invitationId}`
+      )
+      
+      console.log('그룹 초대 수락 API 응답:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data
+      })
+      
+      return response.data.data
+    } catch (error) {
+      console.error('그룹 초대 수락 API 에러:', {
+        error,
+        groupId,
+        invitationId,
+        url: `/api/groups/${groupId}/invitations/${invitationId}`
+      })
+      throw error
+    }
   },
 
   /**
