@@ -567,16 +567,20 @@ class FrontendAiProcessor {
   }
 
   public stopProcessing(): void {
+    // 🚨 중요: 원본 트랙(activeSourceTrack)은 중단하지 않음!
+    // 원본 트랙은 사용자의 카메라 스트림이므로 AI 처리 종료와 무관하게 유지되어야 함
     if (this.activeSourceTrack) {
-      this.activeSourceTrack.stop();
-      this.activeSourceTrack = null;
-      console.log("🛑 Stopped previous AI source track.");
+      console.log("📌 Releasing reference to source track (not stopping):", this.activeSourceTrack.id);
+      this.activeSourceTrack = null; // 참조만 해제
     }
+    
+    // AI 처리된 트랙만 중단
     if (this.activeProcessedTrack) {
       this.activeProcessedTrack.stop();
       this.activeProcessedTrack = null;
-      console.log("🛑 Stopped previous AI processed track.");
+      console.log("🛑 Stopped AI processed track.");
     }
+    
     this.stopBackgroundAnalysis();
   }
 
@@ -607,6 +611,11 @@ class FrontendAiProcessor {
     this.loadedImages.clear();
 
     console.log("FrontendAiProcessor cleaned up.");
+  }
+
+  // isInitialized 상태를 확인할 수 있는 public getter
+  public get initialized(): boolean {
+    return this.isInitialized;
   }
 }
 

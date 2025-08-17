@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { ChevronDown, ChevronUp, Users } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useRouter } from 'next/navigation'
 import { InteractiveHoverButton } from '@/shared/ui/composite/InteractiveHoverButton'
 
 // 임시 참가자 타입 (추후 실제 타입으로 교체 예정)
@@ -17,13 +18,16 @@ interface GroupChatVideoSectionProps {
   // TODO: 실제 화상회의 상태 props 추가
   isInCall?: boolean
   participants?: Participant[]
+  groupId?: string // 그룹 ID 추가
 }
 
 export function GroupChatVideoSection({ 
   isInCall = false,
-  participants = []
+  participants = [],
+  groupId
 }: GroupChatVideoSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true)
+  const router = useRouter()
   
   // 임시 데이터 (테스트용) - 추후 실제 데이터로 교체
   const mockParticipants: Participant[] = [
@@ -109,6 +113,11 @@ export function GroupChatVideoSection({
                     variant="ghost"
                     size="md"
                     className="text-sm px-6 py-2"
+                    onClick={() => {
+                      if (groupId) {
+                        router.push(`/groupchat/${groupId}`)
+                      }
+                    }}
                   >
                     그룹챗 시작
                   </InteractiveHoverButton>
