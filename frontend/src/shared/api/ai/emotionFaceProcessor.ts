@@ -104,10 +104,10 @@ export class EmotionFaceProcessor {
 
     try {
       // Dynamic import of MediaPipe Face Mesh
-      const { FaceMesh } = await import("@mediapipe/face_mesh");
+      const mediapipeFaceMesh = await import("@mediapipe/face_mesh");
 
             // 수정: 가져온 FaceMesh 클래스를 직접 사용하여 인스턴스를 생성합니다.
-      this.faceMesh = new FaceMesh({
+      this.faceMesh = new mediapipeFaceMesh.FaceMesh({
           locateFile: (file) => {
               return `${wasmPath}/${file}`;
           },
