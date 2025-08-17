@@ -71,12 +71,9 @@ export function ReceivedInvitationsSection({ className = '' }: ReceivedInvitatio
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-medium text-gray-400">받은 초대</h3>
             {invitationCount > 0 && (
-              <Badge 
-                variant="destructive" 
-                className="h-5 min-w-[20px] text-xs flex items-center justify-center bg-red-500 hover:bg-red-600"
-              >
+              <div className="w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
                 {invitationCount}
-              </Badge>
+              </div>
             )}
           </div>
           <button
@@ -145,27 +142,29 @@ export function ReceivedInvitationsSection({ className = '' }: ReceivedInvitatio
                           </div>
                           
                           {/* 액션 버튼 */}
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
+                          <div className="flex w-full">
+                            <button
                               onClick={() => handleAccept(invitation.groupId, invitation.invitationId)}
                               disabled={isAccepting || isRejecting}
-                              className="h-7 px-3 text-xs bg-green-600 hover:bg-green-700 border-green-600 text-white"
+                              className="group relative flex-1 px-3 py-2 text-white hover:text-green-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              <Check size={12} className="mr-1" />
-                              수락
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
+                              <div className="flex items-center justify-center gap-1">
+                                <Check size={12} />
+                                <span className="font-keepick-primary text-xs tracking-wide">수락</span>
+                              </div>
+                              <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-green-400 group-hover:w-full transition-all duration-300 group-disabled:w-0"></div>
+                            </button>
+                            <button
                               onClick={() => handleReject(invitation.groupId, invitation.invitationId)}
                               disabled={isAccepting || isRejecting}
-                              className="h-7 px-3 text-xs bg-red-600 hover:bg-red-700 border-red-600 text-white"
+                              className="group relative flex-1 px-3 py-2 text-white hover:text-red-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              <X size={12} className="mr-1" />
-                              거절
-                            </Button>
+                              <div className="flex items-center justify-center gap-1">
+                                <X size={12} />
+                                <span className="font-keepick-primary text-xs tracking-wide">거절</span>
+                              </div>
+                              <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-400 group-hover:w-full transition-all duration-300 group-disabled:w-0"></div>
+                            </button>
                           </div>
                         </div>
                       </div>

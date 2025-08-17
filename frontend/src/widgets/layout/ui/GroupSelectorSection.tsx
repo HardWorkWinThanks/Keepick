@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { ChevronRight, ChevronDown, ChevronUp, UserPlus, ExternalLink } from 'lucide-react'
+import { InteractiveHoverButton } from '@/shared/ui/composite/InteractiveHoverButton'
 import { useQuery } from "@tanstack/react-query"
 import { GroupManagementApi, groupQueryKeys } from "@/features/group-management"
 import { groupListSelectors, groupFormatters } from "@/entities/group"
@@ -58,7 +59,7 @@ export function GroupSelectorSection({
       {currentGroup ? (
         <div className="relative">
           {/* 그룹명 + 초대 버튼 + 드롭다운 화살표 */}
-          <div className="flex items-center gap-2 px-4 py-3 bg-gray-800 rounded-lg">
+          <div className="flex items-center gap-2 px-4 py-3 bg-[#111111] rounded-lg">
             {/* 그룹 정보 */}
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <span className="text-white text-base font-medium truncate">{currentGroup.name}</span>
@@ -71,8 +72,9 @@ export function GroupSelectorSection({
               onClick={() => onInviteGroup?.({
                 groupId: parseInt(currentGroup.id),
                 name: currentGroup.name,
-                description: currentGroup.description,
-                memberCount: 0
+                memberCount: 0,
+                invitationStatus: "ACCEPTED" as const,
+                createdAt: new Date().toISOString()
               })}
               className="w-7 h-7 border-gray-600 text-gray-300 hover:border-[#FE7A25] hover:bg-[#FE7A25]/10 hover:text-[#FE7A25] transition-all duration-300 hover:scale-105 active:scale-95"
               title="그룹원 초대"
@@ -83,7 +85,7 @@ export function GroupSelectorSection({
             {/* 드롭다운 화살표 */}
             <button
               onClick={() => setIsGroupDropdownOpen(!isGroupDropdownOpen)}
-              className="w-7 h-7 flex items-center justify-center hover:bg-gray-700 rounded transition-all duration-200 focus:outline-none focus:ring-0 border-0"
+              className="w-7 h-7 flex items-center justify-center bg-[#111111] hover:bg-gray-700 rounded transition-all duration-200 focus:outline-none focus:ring-0 border-0"
               title="다른 그룹으로 이동"
             >
               {isGroupDropdownOpen ? (
@@ -147,12 +149,16 @@ export function GroupSelectorSection({
         </div>
       ) : (
         showCreateGroupButton && (
-          <button 
-            onClick={createGroupModal.onOpen}
-            className="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-all duration-200 text-sm font-medium hover:scale-105 active:scale-95"
-          >
-            + 새 그룹 만들기
-          </button>
+          <div className="flex justify-center">
+            <InteractiveHoverButton
+              variant="ghost"
+              size="lg"
+              onClick={createGroupModal.onOpen}
+              className="text-lg px-8 py-4"
+            >
+              NEW GROUP
+            </InteractiveHoverButton>
+          </div>
         )
       )}
     </div>

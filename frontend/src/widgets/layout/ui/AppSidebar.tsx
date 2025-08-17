@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { ChevronRight, ChevronDown, ChevronUp, ChevronLeft, Settings, Check, PanelLeft, PanelRight, ExternalLink } from 'lucide-react'
+import { InteractiveHoverButton } from '@/shared/ui/composite/InteractiveHoverButton'
 import { AnimatePresence, motion } from "framer-motion"
 import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
@@ -231,12 +232,16 @@ export default function AppSidebar({
                     } ${
                       !sidebarPinned ? 'border-t border-gray-800' : ''
                     }`}>
-                      <button 
-                        onClick={createGroupModal.onOpen}
-                        className="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-all duration-200 text-sm font-medium hover:scale-105 active:scale-95"
-                      >
-                        + 새 그룹 만들기
-                      </button>
+                      <div className="flex justify-center">
+                        <InteractiveHoverButton
+                          variant="ghost"
+                          size="lg"
+                          onClick={createGroupModal.onOpen}
+                          className="text-lg px-8 py-4"
+                        >
+                          NEW GROUP
+                        </InteractiveHoverButton>
+                      </div>
                     </div>
                   )}
 

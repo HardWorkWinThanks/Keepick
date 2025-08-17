@@ -171,7 +171,7 @@ export function useGroupManagement() {
 export const useMyGroups = () => {
   return useQuery({
     queryKey: groupQueryKeys.lists(),
-    queryFn: GroupManagementApi.getMyGroups,
+    queryFn: () => GroupManagementApi.getMyGroups(),
     staleTime: 1 * 60 * 1000, // 1분으로 단축 (더 자주 업데이트)
     gcTime: 5 * 60 * 1000, // 5분 가비지 컬렉션  
     refetchOnWindowFocus: true, // 윈도우 포커스 시 자동 리패치

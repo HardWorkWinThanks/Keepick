@@ -16,7 +16,7 @@ export const TAG_DICTIONARY = {
 
   // 한국 문화유산
   'gyungbokgung': '경복궁',
-  'ddp': 'DDP',
+  'ddp': '동대문디자인플라자',
   'lottetower': '롯데타워',
   'k-gung': '창덕궁',
   'Yisunshin': '이순신',
