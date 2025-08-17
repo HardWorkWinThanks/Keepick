@@ -31,7 +31,9 @@ const FACE_MESH_WASM_PATH = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh";
 const TASKS_VISION_WASM_PATH = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
 
 // ✨ 이미지 오버레이를 위한 경로 상수 추가
-const GESTURE_IMAGE_BASE_PATH = "/images/gestures";
+const STATIC_IMAGE_BASE_PATH = "/images/gestures/static";
+const DYNAMIC_IMAGE_BASE_PATH = "/images/gestures/dynamic";
+const EMOTION_IMAGE_BASE_PATH = "/images/gestures/emotion";
 
 class FrontendAiProcessor {
   private dispatch: AppDispatch | null = null;
@@ -84,31 +86,28 @@ class FrontendAiProcessor {
     const imagePaths: { [key: string]: string } = {
       // Static gestures - app.py STATIC_IMG_MAP과 정확히 일치
       // 🚨 중요: fist와 open_palm 제거 (app.py에서 오버레이되지 않음)
-      bad: `${GESTURE_IMAGE_BASE_PATH}/bad.png`,
-      good: `${GESTURE_IMAGE_BASE_PATH}/good.png`,
-      gun: `${GESTURE_IMAGE_BASE_PATH}/gun.png`,
-      heart: `${GESTURE_IMAGE_BASE_PATH}/heart.png`,
-      ok: `${GESTURE_IMAGE_BASE_PATH}/ok.png`,
-      promise: `${GESTURE_IMAGE_BASE_PATH}/promise.png`,
-      rock: `${GESTURE_IMAGE_BASE_PATH}/rock.png`,
-      victory: `${GESTURE_IMAGE_BASE_PATH}/victory.png`,
+      bad: `${STATIC_IMAGE_BASE_PATH}/bad.png`,
+      good: `${STATIC_IMAGE_BASE_PATH}/good.png`,
+      gun: `${STATIC_IMAGE_BASE_PATH}/gun.png`,
+      heart: `${STATIC_IMAGE_BASE_PATH}/heart.png`,
+      ok: `${STATIC_IMAGE_BASE_PATH}/ok.png`,
+      promise: `${STATIC_IMAGE_BASE_PATH}/promise.png`,
+      rock: `${STATIC_IMAGE_BASE_PATH}/rock.png`,
+      victory: `${STATIC_IMAGE_BASE_PATH}/victory.png`,
       
       // Dynamic gestures - app.py DYN_LABELS와 일치
-      fire: `${GESTURE_IMAGE_BASE_PATH}/fire.png`,
-      hi: `${GESTURE_IMAGE_BASE_PATH}/hi.png`,
-      hit: `${GESTURE_IMAGE_BASE_PATH}/screen_crack.png`,
-      nono: `${GESTURE_IMAGE_BASE_PATH}/nono.png`,
-      nyan: `${GESTURE_IMAGE_BASE_PATH}/cat_paw_real.png`,
-      shot: `${GESTURE_IMAGE_BASE_PATH}/chu.png`,
+      fire: `${DYNAMIC_IMAGE_BASE_PATH}/fire.png`,
+      hi: `${DYNAMIC_IMAGE_BASE_PATH}/hi.png`,
+      hit: `${DYNAMIC_IMAGE_BASE_PATH}/hit.png`,
+      nono: `${DYNAMIC_IMAGE_BASE_PATH}/nono.png`,
+      nyan: `${DYNAMIC_IMAGE_BASE_PATH}/nyan.png`,
+      shot: `${DYNAMIC_IMAGE_BASE_PATH}/shot.png`,
       
       // Emotions
-      laugh: `${GESTURE_IMAGE_BASE_PATH}/laugh.png`,
-      serious: `${GESTURE_IMAGE_BASE_PATH}/serious.png`,
-      surprise: `${GESTURE_IMAGE_BASE_PATH}/shot.png`,
-      yawn: `${GESTURE_IMAGE_BASE_PATH}/fire.png`,
-      angry: `${GESTURE_IMAGE_BASE_PATH}/angry.png`,
-      sad: `${GESTURE_IMAGE_BASE_PATH}/bad.png`,
-      happy: `${GESTURE_IMAGE_BASE_PATH}/good.png`,
+      laugh: `${EMOTION_IMAGE_BASE_PATH}/laugh.png`,
+      serious: `${EMOTION_IMAGE_BASE_PATH}/serious.png`,
+      surprise: `${EMOTION_IMAGE_BASE_PATH}/surprise.png`,
+      yawn: `${EMOTION_IMAGE_BASE_PATH}/yawn.png`,
     };
 
     const promises = Object.entries(imagePaths).map(([key, src]) => {

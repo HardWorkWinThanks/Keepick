@@ -60,9 +60,9 @@ const EMOTION_THRESHOLDS = {
 // 연속 감지 방지를 위한 쿨다운 (초)
 const EMOTION_COOLDOWN = {
   laugh: 3.0,
-  serious: 5.0,
-  surprise: 2.0,
-  yawn: 4.0,
+  serious: 3.0,
+  surprise: 3.0,
+  yawn: 3.0,
   none: 1.0,
 };
 
