@@ -5,6 +5,7 @@ import { useAppDispatch } from "@/shared/config/hooks";
 import { setTokens, setAuthLoading } from "./authSlice";
 import { setUser, setUserLoading } from "@/entities/user";
 import { authApi } from "../api/authApi";
+import { userApi } from "@/shared/api/userApi";
 
 // OAuth2 콜백 처리를 위한 커스텀 훅
 export const useOAuthCallback = () => {
@@ -97,10 +98,10 @@ export const useOAuthCallback = () => {
     dispatch(setAuthLoading(true));
 
     try {
-      // /api/members/me 호출하여 사용자 정보 조회
-      const data = await authApi.getCurrentUser();
-      // entities/user에 사용자 정보 저장 (실제 데이터는 data.data 안에 있음)
-      dispatch(setUser(data.data));
+      // /api/members/me 호출하여 사용자 정보 조회 (공통 API 사용)
+      const userData = await userApi.getCurrentUser();
+      // entities/user에 사용자 정보 저장
+      dispatch(setUser(userData));
     } catch (error) {
       console.error("User info fetch error:", error);
       // URL 파라미터 정리 후 사용자 정보 가져오기 실패 시 메인페이지로

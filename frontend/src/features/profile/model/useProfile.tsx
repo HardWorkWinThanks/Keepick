@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useAppDispatch } from "@/shared/config/hooks"
 import { updateUser } from "@/entities/user/model/userSlice"
 import { profileApi } from "../api/profileApi"
+import { userApi, userQueryKeys } from "@/shared/api/userApi"
 import { uploadImage } from "@/features/image-upload"
 import { NaverIcon, KakaoIcon, GoogleIcon } from "@/shared/assets"
 
@@ -13,22 +14,24 @@ export function useProfile() {
   const dispatch = useAppDispatch()
   const queryClient = useQueryClient()
   
-  // 사용자 데이터 쿼리
+  // 사용자 데이터 쿼리 (공통 API 사용, 조건부 요청)
   const { 
     data: currentUser, 
     isLoading: isUserDataLoading, 
     error: userDataError,
     refetch: refetchUserData 
   } = useQuery({
-    queryKey: ['user', 'me'],
+    queryKey: userQueryKeys.current(),
     queryFn: async () => {
-      console.log('🔍 getCurrentUserInfo API 호출 시작');
-      const result = await profileApi.getCurrentUserInfo();
-      console.log('✅ getCurrentUserInfo API 응답:', result);
+      console.log('🔍 Profile 페이지: 공통 userApi.getCurrentUser 호출 시작');
+      const result = await userApi.getCurrentUser();
+      console.log('✅ Profile 페이지: 공통 userApi.getCurrentUser 응답:', result);
       return result;
     },
     staleTime: 1000 * 60 * 60 * 3, // 3시간간 신선함 유지
     retry: 2,
+    // 중복 요청 방지: 이미 캐시에 데이터가 있고 신선하면 요청하지 않음
+    enabled: typeof window !== 'undefined', // 클라이언트에서만 실행
   })
   
   // 로컬 상태 (임시 입력값과 개별 로딩 상태)
@@ -68,16 +71,43 @@ export function useProfile() {
   // 닉네임 업데이트 뮤테이션
   const updateNicknameMutation = useMutation({
     mutationFn: (nickname: string) => profileApi.updateUserInfo({ nickname }),
-    onSuccess: async () => {
-      console.log('✅ 닉네임 업데이트 완료, 잠시 후 최신 데이터 가져오기');
-      // PATCH 완료 후 잠시 대기한 다음 최신 데이터 가져오기
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['user', 'me'] })
-      }, 2000); // 2초로 늘려서 서버 DB 커밋 시간 확보
+    onMutate: async (nickname) => {
+      // 기존 데이터 백업 (롤백용)
+      const previousUser = queryClient.getQueryData(userQueryKeys.current())
+      
+      // 낙관적 업데이트: 서버 응답 전에 UI 먼저 업데이트
+      queryClient.setQueryData(userQueryKeys.current(), (old: any) => ({
+        ...old,
+        nickname
+      }))
+      
+      console.log('🚀 낙관적 업데이트: 닉네임을', nickname, '으로 즉시 변경');
+      return { previousUser }
+    },
+    onSuccess: (updatedUser, variables) => {
+      console.log('✅ 닉네임 업데이트 서버 확인 완료, 응답 검증 중:', updatedUser);
+      
+      // 응답 데이터 검증: 요청한 닉네임과 응답 닉네임이 일치하는지 확인
+      const isResponseValid = variables === updatedUser.nickname
+      
+      if (isResponseValid) {
+        console.log('✅ 응답 데이터 유효, 바로 적용');
+        queryClient.setQueryData(userQueryKeys.current(), updatedUser)
+      } else {
+        console.warn('⚠️ 응답 데이터 불일치 감지, GET 요청으로 실제 데이터 재확인');
+        console.warn('요청한 닉네임:', variables, '/ 응답 닉네임:', updatedUser.nickname);
+        // 응답이 예상과 다르면 GET 요청으로 재확인
+        queryClient.invalidateQueries({ queryKey: userQueryKeys.current() })
+      }
+      
       setNicknameCheckResult({ available: false, checked: false })
     },
-    onError: (error) => {
-      console.error("닉네임 변경 실패:", error)
+    onError: (error, variables, context) => {
+      console.error("❌ 닉네임 변경 실패, 이전 상태로 롤백:", error)
+      // 실패 시 이전 상태로 롤백
+      if (context?.previousUser) {
+        queryClient.setQueryData(userQueryKeys.current(), context.previousUser)
+      }
     }
   })
 
@@ -102,15 +132,42 @@ export function useProfile() {
       console.log(`🖼️ ${imageType} 이미지 업로드 시작:`, updateData);
       return profileApi.updateUserInfo(updateData)
     },
-    onSuccess: () => {
-      console.log('✅ 이미지 업로드 완료, 잠시 후 최신 데이터 가져오기');
-      // PATCH 완료 후 잠시 대기한 다음 최신 데이터 가져오기
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['user', 'me'] })
-      }, 2000); // 2초로 늘려서 서버 DB 커밋 시간 확보
+    onMutate: async ({ imageType, publicUrl }) => {
+      // 기존 데이터 백업 (롤백용)
+      const previousUser = queryClient.getQueryData(userQueryKeys.current())
+      
+      // 낙관적 업데이트: 서버 응답 전에 UI 먼저 업데이트
+      queryClient.setQueryData(userQueryKeys.current(), (old: any) => ({
+        ...old,
+        [imageType === "profile" ? "profileUrl" : "identificationUrl"]: publicUrl
+      }))
+      
+      console.log(`🚀 낙관적 업데이트: ${imageType} 이미지를 즉시 변경`);
+      return { previousUser }
     },
-    onError: (error) => {
-      console.error("이미지 업로드 실패:", error)
+    onSuccess: (updatedUser, variables) => {
+      console.log('✅ 이미지 업로드 서버 확인 완료, 응답 검증 중:', updatedUser);
+      
+      // 응답 데이터 검증: 요청한 이미지 URL과 응답 URL이 일치하는지 확인
+      const expectedField = variables.imageType === "profile" ? "profileUrl" : "identificationUrl"
+      const isResponseValid = variables.publicUrl === updatedUser[expectedField as keyof typeof updatedUser]
+      
+      if (isResponseValid) {
+        console.log('✅ 응답 데이터 유효, 바로 적용');
+        queryClient.setQueryData(userQueryKeys.current(), updatedUser)
+      } else {
+        console.warn('⚠️ 응답 데이터 불일치 감지, GET 요청으로 실제 데이터 재확인');
+        console.warn('요청한 URL:', variables.publicUrl, '/ 응답 URL:', updatedUser[expectedField as keyof typeof updatedUser]);
+        // 응답이 예상과 다르면 GET 요청으로 재확인
+        queryClient.invalidateQueries({ queryKey: userQueryKeys.current() })
+      }
+    },
+    onError: (error, variables, context) => {
+      console.error("❌ 이미지 업로드 실패, 이전 상태로 롤백:", error)
+      // 실패 시 이전 상태로 롤백
+      if (context?.previousUser) {
+        queryClient.setQueryData(userQueryKeys.current(), context.previousUser)
+      }
     }
   })
 

@@ -43,6 +43,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   
   const {
     allPhotos,
+    filteredPhotos,
     selectedPhotoData,
     selectedTags,
     selectedMemberNames,
@@ -104,30 +105,9 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   const similarPhotoClusters = similarQuery.clusters
   const similarPhotosLoading = similarQuery.isLoading || similarQuery.isFetchingNextPage
   const filteredPhotosLoading = filteredQuery.isLoading || filteredQuery.isFetchingNextPage
-  
-  // 뷰 모드에 따른 표시할 사진 결정 (useMemo로 메모이제이션)
-  const displayPhotos = useMemo(() => {
-    switch (viewMode) {
-      case 'blurred':
-        return blurredPhotos
-      case 'similar':
-        // 유사사진은 클러스터별로 처리하므로 빈 배열 반환
-        return []
-      default:
-        // 전체 모드에서는 서버 사이드 필터링 사용
-        if (selectedTags.length > 0) {
-          // 태그가 선택된 경우: 서버 필터링 결과 사용
-          return filteredQuery.photos
-        } else {
-          // 태그가 선택되지 않은 경우: 전체 사진 사용
-          return allQueryPhotos.length > 0 ? allQueryPhotos : allPhotos
-        }
-    }
-  }, [viewMode, blurredPhotos, selectedTags, filteredQuery.photos, allQueryPhotos, allPhotos])
 
   const smallPreviewDrag = useDragScroll()
   const expandedPreviewDrag = useDragScroll()
-  const columns = useMasonryLayout(displayPhotos, columnCount)
   
   // 사진 모달을 위한 상태 관리
   const { photo: selectedPhoto, isOpen: isPhotoModalOpen, openModal: openPhotoModal, closeModal: closePhotoModal } = usePhotoModal()
@@ -154,6 +134,39 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
   // 사진 태그 정보 캐시
   const [photoTagsCache, setPhotoTagsCache] = useState<Record<number, { tags: string[], members: string[] }>>({})
   
+  // 뷰 모드에 따른 표시할 사진 결정 (useMemo로 메모이제이션)
+  const displayPhotos = useMemo(() => {
+    switch (viewMode) {
+      case 'blurred':
+        return blurredPhotos
+      case 'similar':
+        // 유사사진은 클러스터별로 처리하므로 빈 배열 반환
+        return []
+      default:
+        // 전체 모드에서는 클라이언트 사이드 필터링 적용
+        let basePhotos = allQueryPhotos.length > 0 ? allQueryPhotos : allPhotos
+        
+        // 서버 사이드 태그 필터링이 있는 경우 우선 사용
+        if (selectedTags.length > 0 && filteredQuery.photos.length > 0) {
+          basePhotos = filteredQuery.photos
+        }
+        
+        // 사람 필터링 적용 (클라이언트 사이드)
+        if (selectedMemberNames.length > 0) {
+          basePhotos = basePhotos.filter((photo) => {
+            // photoTagsCache에서 멤버 정보 확인
+            const photoMembers = photoTagsCache[photo.id]?.members || []
+            return selectedMemberNames.some(selectedMember => photoMembers.includes(selectedMember))
+          })
+        }
+        
+        return basePhotos
+    }
+  }, [viewMode, blurredPhotos, selectedTags, selectedMemberNames, filteredQuery.photos, allQueryPhotos, allPhotos, photoTagsCache])
+  
+  // Masonry layout 계산
+  const columns = useMasonryLayout(displayPhotos, columnCount)
+  
   // 실시간 태그 목록 (API에서 수집)
   const [realTimeTags, setRealTimeTags] = useState<string[]>([])
   
@@ -175,8 +188,8 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
 
   // 현재 사진들로부터 사람 태그(memberNicknames) 계산
   const calculatedMemberNicknames = useMemo(() => {
-    const currentPhotos = selectedTags.length > 0 ? filteredQuery.photos : 
-                         (allQueryPhotos.length > 0 ? allQueryPhotos : allPhotos)
+    // 필터링되지 않은 전체 사진에서 멤버 닉네임 수집 (필터링 옵션 표시용)
+    const currentPhotos = allQueryPhotos.length > 0 ? allQueryPhotos : allPhotos
     
     // photoTagsCache에서 멤버 닉네임 수집
     const membersFromCache = [...new Set(currentPhotos.flatMap(photo => 
@@ -184,7 +197,7 @@ export default function PhotoGallery({ groupId, onBack, autoEnterAlbumMode = fal
     ))]
     
     return membersFromCache
-  }, [allQueryPhotos, allPhotos, filteredQuery.photos, selectedTags, photoTagsCache])
+  }, [allQueryPhotos, allPhotos, photoTagsCache])
   
   // 최종 표시할 태그 목록 (API 태그 우선, 없으면 계산된 태그 사용)
   const displayTags = useMemo(() => {
