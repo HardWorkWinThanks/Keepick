@@ -14,6 +14,7 @@ import { chatReducer } from "@/entities/chat/model/slice"; // 채팅 상태
 import { emojiReactionReducer } from "@/entities/emoji-reaction/model/slice"; // 이모지 반응 상태
 import { screenShareReducer } from "@/entities/screen-share/model/slice"; // 화면 공유 상태
 import aiReducer from "@/entities/video-conference/ai/model/aiSlice"; // AI 상태
+import photoSelectionReducer from "@/features/photo-gallery/model/photoSelectionSlice";
 
 // 스토어를 생성하는 makeStore 함수
 export const makeStore = () => {
@@ -22,6 +23,7 @@ export const makeStore = () => {
     reducer: {
       auth: authReducer,
       user: userReducer,
+
       session: sessionReducer,
       media: mediaReducer,
       re_media: re_mediaReducer,
@@ -31,6 +33,7 @@ export const makeStore = () => {
       emojiReaction: emojiReactionReducer, // 이모지 반응 상태 추가
       screenShare: screenShareReducer, // 화면 공유 상태 추가
       ai: aiReducer, // AI 상태 추가
+      photoSelection: photoSelectionReducer,
     },
     // 3. 두 개의 미들웨어 설정을 하나로 합칩니다.
     middleware: (getDefaultMiddleware) =>

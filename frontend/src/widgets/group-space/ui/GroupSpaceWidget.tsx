@@ -10,7 +10,7 @@ interface GroupSpaceWidgetProps {
 
 export default function GroupSpaceWidget({ group, showSidebar = false }: GroupSpaceWidgetProps) {
   return (
-    <div className="flex min-h-screen bg-[#222222]">
+    <div className="flex min-h-screen bg-[#111111]">
       {/* Main Group Space */}
       <div className={`${showSidebar ? 'flex-1' : 'w-full'}`}>
         <GroupSpaceView group={group} />

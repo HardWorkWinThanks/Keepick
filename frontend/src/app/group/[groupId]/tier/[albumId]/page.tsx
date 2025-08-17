@@ -30,5 +30,5 @@ export default function TierAlbumRoute({ params }: TierAlbumRouteProps) {
     return null // useAuthGuard가 자동으로 리다이렉트 처리
   }
 
-  return <TierAlbumPage groupId={resolvedParams.groupId} albumId={resolvedParams.albumId} />
+  return <TierAlbumPage groupId={resolvedParams.groupId} tierAlbumId={resolvedParams.albumId} />
 }

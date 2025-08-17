@@ -4,6 +4,8 @@ import { useAppDispatch, useAppSelector } from "@/shared/config/hooks";
 import { setTokens, clearAuth, setAuthLoading } from "./authSlice";
 import { setUser, clearUser, setUserLoading } from "@/entities/user";
 import { authApi } from "../api/authApi";
+import { userApi, userQueryKeys } from "@/shared/api/userApi";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -22,30 +24,53 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
   const dispatch = useAppDispatch();
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isInitialized, setIsInitialized] = useState(false); // 초기화 플래그 추가
   const [hasRedirected, setHasRedirected] = useState(false); // 리다이렉트 플래그 추가
+  const [shouldFetchUser, setShouldFetchUser] = useState(false); // 사용자 정보 조회 플래그
 
   const { isAuthenticated, isLoading: authLoading } = useAppSelector(
     (state) => state.auth
   );
   const { isLoading: userLoading } = useAppSelector((state) => state.user);
 
-  const fetchUserInfo = async () => {
-    dispatch(setUserLoading(true));
-    dispatch(setAuthLoading(true));
+  // TanStack Query를 사용한 사용자 정보 조회 (조건부)
+  const { data: userData, isLoading: isUserQueryLoading, error: userQueryError } = useQuery({
+    queryKey: userQueryKeys.current(),
+    queryFn: async () => {
+      console.log('🔍 AuthInitializer에서 공통 userApi.getCurrentUser 호출');
+      const result = await userApi.getCurrentUser();
+      console.log('✅ AuthInitializer 사용자 정보 조회 완료:', result);
+      return result;
+    },
+    enabled: shouldFetchUser, // 토큰이 있을 때만 실행
+    staleTime: 1000 * 60 * 60 * 3, // 3시간 캐시
+    gcTime: 1000 * 60 * 60 * 12, // 12시간 가비지 컬렉션 (캐시 보존)
+    retry: 2,
+    refetchOnMount: false, // 마운트 시 자동 재요청 방지
+  });
 
-    try {
-      const data = await authApi.getCurrentUser();
-      dispatch(setUser(data.data));
-    } catch (error) {
-      console.error("사용자 정보 조회 실패:", error);
-      dispatch(clearAuth());
-      dispatch(clearUser());
-    } finally {
+  // TanStack Query 결과 처리
+  useEffect(() => {
+    if (!shouldFetchUser) return;
+
+    if (isUserQueryLoading) {
+      dispatch(setUserLoading(true));
+      dispatch(setAuthLoading(true));
+    } else {
       dispatch(setUserLoading(false));
       dispatch(setAuthLoading(false));
+
+      if (userData) {
+        console.log('✅ AuthInitializer: 사용자 정보 Redux 동기화 완료');
+        dispatch(setUser(userData));
+      } else if (userQueryError) {
+        console.error("사용자 정보 조회 실패:", userQueryError);
+        dispatch(clearAuth());
+        dispatch(clearUser());
+      }
     }
-  };
+  }, [userData, isUserQueryLoading, userQueryError, shouldFetchUser, dispatch]);
 
   // 앱 시작 시 한 번만 실행되는 초기화
   useEffect(() => {
@@ -54,10 +79,25 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
         return; // 서버사이드이거나 이미 초기화된 경우 건너뛰기
       }
 
-      // OAuth 콜백 처리 중인 경우 초기화 건너뛰기 (중복 방지)
-      if (sessionStorage.getItem('oauth_in_progress')) {
+      // OAuth 콜백 처리 중이거나 최근에 완료된 경우 초기화 건너뛰기 (중복 방지)
+      if (sessionStorage.getItem('oauth_in_progress') || sessionStorage.getItem('oauth_processing')) {
         console.log("💡 OAuth 콜백 처리 중, AuthInitializer 초기화 건너뛰기");
         return;
+      }
+
+      // 최근 5분 내에 OAuth가 완료된 경우 초기화 건너뛰기
+      const oauthCompleted = sessionStorage.getItem('oauth_completed');
+      if (oauthCompleted) {
+        const completedTime = parseInt(oauthCompleted);
+        const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+        if (completedTime > fiveMinutesAgo) {
+          console.log("💡 최근 OAuth 완료됨, AuthInitializer 초기화 건너뛰기");
+          setIsInitialized(true);
+          return;
+        } else {
+          // 5분 이상 지난 기록은 정리
+          sessionStorage.removeItem('oauth_completed');
+        }
       }
 
       const currentUrl = window.location.href;
@@ -83,8 +123,8 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
           })
         );
 
-        // 백그라운드에서 사용자 정보 검증
-        await fetchUserInfo();
+        // 백그라운드에서 사용자 정보 검증 (TanStack Query 활성화)
+        setShouldFetchUser(true);
       } else {
         console.log("💡 localStorage에 토큰 없음, 비로그인 상태 유지");
       }

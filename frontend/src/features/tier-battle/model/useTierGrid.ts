@@ -11,14 +11,20 @@ import { TierData, DragOverPosition, TierConfig } from "./types";
  */
 export function useTierGrid() {
   // 전체 티어의 사진 데이터를 관리하는 상태. { "S": [photo1], "A": [photo2, photo3] } 형태.
-  const [tierPhotos, setTierPhotos] = useState<TierData>({});
+  const [tierPhotos, setTierPhotos] = useState<TierData>({
+    S: [],
+    A: [],
+    B: [],
+    C: [],
+    D: []
+  });
 
   // 사진을 드래그할 때, 마우스가 올라간 위치(티어, 인덱스)를 추적하는 상태
   const [dragOverPosition, setDragOverPosition] =
     useState<DragOverPosition | null>(null);
 
   // 현재 드래그 중인 사진의 ID를 저장하는 상태
-  const [draggingPhotoId, setDraggingPhotoId] = useState<string | null>(null);
+  const [draggingPhotoId, setDraggingPhotoId] = useState<number | null>(null);
 
   // 티어의 종류와 각 티어의 색상을 정의하는 설정 배열
   const tiers: TierConfig[] = [
@@ -36,7 +42,7 @@ export function useTierGrid() {
    * @param onReturn - 사진을 available 목록에 다시 추가하기 위해 호출할 콜백 함수
    */
   const handleReturnToAvailable = (
-    photoId: string,
+    photoId: number,
     fromTier: string,
     onReturn: (photo: Photo) => void
   ) => {

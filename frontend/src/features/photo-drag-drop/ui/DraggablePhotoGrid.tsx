@@ -14,7 +14,7 @@ export interface DraggablePhotoGridProps {
   onDragEnd?: () => void; // 드래그 종료 시 호출될 콜백 함수
   gridClassName?: string; // 그리드 컨테이너에 적용할 CSS 클래스
   photoClassName?: string; // 각 사진 이미지에 적용할 CSS 클래스
-  draggingPhotoId?: string | null; // 현재 드래그 중인 사진의 ID (투명도 처리에 사용)
+  draggingPhotoId?: number | null; // 현재 드래그 중인 사진의 ID (투명도 처리에 사용)
   sourceId?: string; // 이 그리드의 출처를 식별하는 ID (예: 'available')
 }
 
@@ -36,6 +36,9 @@ export function DraggablePhotoGrid({
     const dragData: DragPhotoData = {
       photoId: photo.id,
       source: sourceId,
+      originalUrl: photo.originalUrl, // 원본 URL 추가 (그룹 썸네일 변경용)
+      thumbnailUrl: photo.thumbnailUrl, // 썸네일 URL 추가 (썸네일용)
+      name: photo.name
     };
     e.dataTransfer.setData("text/plain", JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = "move";
@@ -48,17 +51,17 @@ export function DraggablePhotoGrid({
 
   return (
     <div className={gridClassName}>
-      {photos.map((photo) => (
+      {photos.map((photo, index) => (
         <div
-          key={photo.id}
+          key={photo.id ? `photo-${photo.id}` : `photo-${index}`}
           draggable
           onDragStart={(e) => handleDragStart(e, photo)}
           onDragEnd={handleDragEnd}
           onClick={() => onPhotoClick?.(photo)}
-          className={`cursor-grab ${draggingPhotoId === photo.id ? "opacity-40" : ""}`}>
+          className={`cursor-grab transition-opacity duration-200 ${draggingPhotoId === photo.id ? "opacity-40" : "opacity-100"}`}>
           <Image
-            src={photo.src}
-            alt={photo.name || photo.id}
+            src={photo.thumbnailUrl || '/placeholder/photo-placeholder.svg'}
+            alt={photo.name || `Photo ${photo.id}`}
             width={88}
             height={88}
             className={photoClassName}

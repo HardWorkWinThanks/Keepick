@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react";
-import { uploadImages } from "@/features/image-upload/api/imageUploadApi";
+import { uploadGalleryImages } from "../api/galleryUploadApi";
 
 interface UploadProgress {
   fileName: string;
@@ -61,8 +61,8 @@ export function usePhotoUpload() {
         try {
           updateFileProgress(fileName, { progress: 50 });
           
-          // 단일 파일을 배열로 감싸서 uploadImages 호출
-          const [result] = await uploadImages(groupId, [file]);
+          // 단일 파일을 배열로 감싸서 uploadGalleryImages 호출
+          const [result] = await uploadGalleryImages(groupId, [file]);
           
           updateFileProgress(fileName, { 
             status: 'completed', 

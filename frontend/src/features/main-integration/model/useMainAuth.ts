@@ -14,7 +14,7 @@ export const useMainAuth = () => {
     isLoggedIn: isAuthenticated,
     user: currentUser ? {
       name: currentUser.nickname || "사용자",
-      imageUrl: currentUser.profileUrl || "/basic_profile.webp",
+      imageUrl: currentUser.profileUrl || "/placeholder/basic_profile.webp",
     } : null,
   };
 };

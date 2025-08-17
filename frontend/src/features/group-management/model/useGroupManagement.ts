@@ -25,7 +25,7 @@ export function useGroupManagement() {
   const useMyGroups = () => {
     return useQuery({
       queryKey: groupQueryKeys.lists(),
-      queryFn: GroupManagementApi.getMyGroups,
+      queryFn: () => GroupManagementApi.getMyGroups(),
       staleTime: 1 * 60 * 1000, // 1분으로 단축 (더 자주 업데이트)
       gcTime: 5 * 60 * 1000, // 5분 가비지 컬렉션
       refetchOnWindowFocus: true, // 윈도우 포커스 시 자동 리패치
@@ -171,7 +171,7 @@ export function useGroupManagement() {
 export const useMyGroups = () => {
   return useQuery({
     queryKey: groupQueryKeys.lists(),
-    queryFn: GroupManagementApi.getMyGroups,
+    queryFn: () => GroupManagementApi.getMyGroups(),
     staleTime: 1 * 60 * 1000, // 1분으로 단축 (더 자주 업데이트)
     gcTime: 5 * 60 * 1000, // 5분 가비지 컬렉션  
     refetchOnWindowFocus: true, // 윈도우 포커스 시 자동 리패치
@@ -183,16 +183,22 @@ export const useGroupInfo = (groupId: number) => {
   return useQuery({
     queryKey: groupQueryKeys.detail(groupId),
     queryFn: () => GroupManagementApi.getGroupInfo(groupId),
-    staleTime: 10 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10분 캐시
+    gcTime: 30 * 60 * 1000, // 30분 가비지 컬렉션  
     enabled: !!groupId,
+    refetchOnWindowFocus: false, // 윈도우 포커스 시 자동 리패치 비활성화
+    refetchOnReconnect: true, // 네트워크 재연결 시에만 리패치
   })
 }
 
-export const useGroupMembers = (groupId: number) => {
+export const useGroupMembers = (groupId: number, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: groupQueryKeys.members(groupId),
     queryFn: () => GroupManagementApi.getGroupMembers(groupId),
-    staleTime: 5 * 60 * 1000,
-    enabled: !!groupId,
+    staleTime: 5 * 60 * 1000, // 5분 캐시
+    gcTime: 15 * 60 * 1000, // 15분 가비지 컬렉션
+    enabled: options?.enabled !== undefined ? options.enabled && !!groupId : !!groupId,
+    refetchOnWindowFocus: false, // 윈도우 포커스 시 자동 리패치 비활성화
+    refetchOnReconnect: true, // 네트워크 재연결 시에만 리패치
   })
 }

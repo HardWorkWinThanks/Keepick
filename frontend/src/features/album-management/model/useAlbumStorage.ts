@@ -26,7 +26,7 @@ export function useAlbumStorage() {
       localStorage.setItem(`album_${albumId}`, JSON.stringify(data));
       // 대표 이미지가 있으면, 별도의 키로 이미지 URL을 저장합니다.
       if (coverPhoto) {
-        localStorage.setItem(`albumCover_${albumId}`, coverPhoto.src);
+        localStorage.setItem(`albumCover_${albumId}`, coverPhoto.originalUrl);
       }
       return true;
     } catch (error) {
@@ -58,36 +58,10 @@ export function useAlbumStorage() {
   };
 
   /**
-   * 개발 및 테스트용 기본 사진 데이터 목록을 반환합니다.
-   * @returns 기본 Photo 객체 배열
-   * const getDefaultPhotos = (): Photo[] => [ 로 나중에 바꾸기.
+   * 개발 및 테스트용 기본 사진 데이터 목록을 반환합니다. (더미 데이터 제거)
+   * @returns 빈 Photo 객체 배열 - 실제 데이터는 API에서 로드
    */
-  const getDefaultPhotos = (): Photo[] => [
-    { id: "photo1", src: "/dummy/main-dummy1.jpg", name: "사진1" },
-    { id: "photo2", src: "/dummy/main-dummy2.jpg", name: "사진2" },
-    { id: "photo3", src: "/dummy/main-dummy3.jpg", name: "사진3" },
-    { id: "photo4", src: "/dummy/main-dummy4.jpg", name: "사진4" },
-    { id: "photo5", src: "/dummy/main-dummy5.jpg", name: "사진5" },
-    { id: "photo6", src: "/dummy/main-dummy6.jpg", name: "사진6" },
-    { id: "photo7", src: "/dummy/main-dummy7.jpg", name: "사진7" },
-    { id: "photo8", src: "/dummy/main-dummy8.jpg", name: "사진8" },
-    { id: "photo9", src: "/dummy/main-dummy9.jpg", name: "사진9" },
-    { id: "photo10", src: "/dummy/main-dummy10.jpg", name: "사진10" },
-    { id: "photo11", src: "/dummy/main-dummy11.jpg", name: "사진11" },
-    { id: "photo12", src: "/dummy/main-dummy12.jpg", name: "사진12" },
-    { id: "photo13", src: "/dummy/main-dummy13.jpg", name: "사진13" },
-    { id: "photo14", src: "/dummy/main-dummy14.jpg", name: "사진14" },
-    { id: "photo15", src: "/dummy/main-dummy15.jpg", name: "사진15" },
-    { id: "photo16", src: "/dummy/main-dummy16.jpg", name: "사진16" },
-    { id: "photo17", src: "/dummy/jeju-dummy1.webp", name: "제주도1" },
-    { id: "photo18", src: "/dummy/jeju-dummy2.jpg", name: "제주도2" },
-    { id: "photo19", src: "/dummy/jeju-dummy3.jpg", name: "제주도3" },
-    { id: "photo20", src: "/dummy/ssafy-dummy1.jpg", name: "싸피1" },
-    { id: "photo21", src: "/dummy/ssafy-dummy2.jpg", name: "싸피2" },
-    { id: "photo22", src: "/dummy/ssafy-dummy3.jpg", name: "싸피3" },
-    { id: "photo23", src: "/dummy/food-dummy1.jpg", name: "음식1" },
-    { id: "photo24", src: "/dummy/sea-dummy1.jpg", name: "바다1" },
-  ];
+  const getDefaultPhotos = (): Photo[] => [];
 
   // 훅이 제공하는 함수들을 객체 형태로 반환합니다.
   return {

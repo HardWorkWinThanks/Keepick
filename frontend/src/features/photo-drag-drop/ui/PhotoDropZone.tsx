@@ -15,6 +15,9 @@ export interface PhotoDropZoneProps {
   children: ReactNode; // 드롭 존 내부에 표시될 자식 요소들
   className?: string; // 컨테이너에 적용할 CSS 클래스
   dropZoneId?: string; // 드롭 존을 식별하기 위한 ID
+  draggable?: boolean; // 이 요소를 드래그 가능하게 만들지 여부
+  onDragStart?: (e: React.DragEvent) => void; // 드래그 시작 시 호출될 콜백 함수
+  onDragEnd?: (e: React.DragEvent) => void; // 드래그 종료 시 호출될 콜백 함수
 }
 
 export function PhotoDropZone({
@@ -25,6 +28,9 @@ export function PhotoDropZone({
   children,
   className = "",
   dropZoneId,
+  draggable = false,
+  onDragStart,
+  onDragEnd,
 }: PhotoDropZoneProps) {
   /**
    * 드래그 중인 요소가 영역 위에 있을 때 호출되는 핸들러입니다.
@@ -41,10 +47,29 @@ export function PhotoDropZone({
    */
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const dragData = JSON.parse(
-      e.dataTransfer.getData("text/plain")
-    ) as DragPhotoData;
-    onDrop(dragData, e);
+    
+    try {
+      const dragDataString = e.dataTransfer.getData("text/plain");
+      
+      // 비어있거나 유효하지 않은 데이터 검사
+      if (!dragDataString || dragDataString.trim() === '') {
+        console.warn('PhotoDropZone: 빈 드래그 데이터를 받았습니다');
+        return;
+      }
+      
+      const dragData = JSON.parse(dragDataString) as DragPhotoData;
+      
+      // 기본 필드 검증
+      if (!dragData.photoId) {
+        console.warn('PhotoDropZone: 유효하지 않은 드래그 데이터입니다:', dragData);
+        return;
+      }
+      
+      onDrop(dragData, e);
+    } catch (error) {
+      console.error('PhotoDropZone: 드래그 데이터 파싱 실패:', error);
+      console.error('원본 데이터:', e.dataTransfer.getData("text/plain"));
+    }
   };
 
   return (
@@ -52,6 +77,9 @@ export function PhotoDropZone({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onDragLeave={onDragLeave}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       className={`transition-all duration-300 ${className} ${
         isDragOver ? "ring-2 ring-teal-400" : ""
       }`}

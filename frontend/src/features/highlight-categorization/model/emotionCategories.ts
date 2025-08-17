@@ -8,7 +8,7 @@ export const emotionCategories: EmotionCategory[] = [
     icon: "😂",
     images: Array(5)
       .fill(null)
-      .map((_, i) => ({ id: `lol${i + 1}`, src: "/ssafy-dummy1.jpg" })),
+      .map((_, i) => ({ id: i + 1, originalUrl: "/ssafy-dummy1.jpg", thumbnailUrl: "/ssafy-dummy1.jpg" })),
   },
   {
     id: "surprised",
@@ -17,7 +17,7 @@ export const emotionCategories: EmotionCategory[] = [
     icon: "😮",
     images: Array(4)
       .fill(null)
-      .map((_, i) => ({ id: `surp${i + 1}`, src: "/ssafy-dummy1.jpg" })),
+      .map((_, i) => ({ id: i + 100, originalUrl: "/ssafy-dummy1.jpg", thumbnailUrl: "/ssafy-dummy1.jpg" })),
   },
   {
     id: "serious",
@@ -26,7 +26,7 @@ export const emotionCategories: EmotionCategory[] = [
     icon: "🤔",
     images: Array(3)
       .fill(null)
-      .map((_, i) => ({ id: `seri${i + 1}`, src: "/ssafy-dummy1.jpg" })),
+      .map((_, i) => ({ id: i + 200, originalUrl: "/ssafy-dummy1.jpg", thumbnailUrl: "/ssafy-dummy1.jpg" })),
   },
   {
     id: "screenshots",
@@ -35,6 +35,6 @@ export const emotionCategories: EmotionCategory[] = [
     icon: "📸",
     images: Array(6)
       .fill(null)
-      .map((_, i) => ({ id: `ss${i + 1}`, src: "/ssafy-dummy1.jpg" })),
+      .map((_, i) => ({ id: i + 300, originalUrl: "/ssafy-dummy1.jpg", thumbnailUrl: "/ssafy-dummy1.jpg" })),
   },
 ];

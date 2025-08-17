@@ -1,36 +1,32 @@
 import { Photo } from "@/entities/photo";
 
-// 타임라인 뷰에서 사용될 이벤트 데이터 구조
-export interface TimelineEvent {
-  id: string; // 이벤트 고유 ID
-  title: string; // 이벤트 제목 (예: "제주도 여행")
-  date: string; // 날짜
-  location?: string; // 장소 (선택사항)
-  emoji?: string; // 이벤트 대표 이모지 (선택사항)
-  description: string; // 상세 설명
-  photos: Photo[]; // 해당 이벤트에 속한 사진 목록
-  // 타임라인 앨범용 추가 필드
-  subtitle?: string; // 부제목 (영어)
-  images?: TimelineImage[]; // 레이아웃용 이미지 배열
+// 타임라인 섹션 (서버 스키마에 맞게 수정)
+export interface TimelineSection {
+  id?: number; // 클라이언트용 섹션 ID  
+  sectionId?: number; // 서버용 섹션 ID
+  name: string; // 섹션 제목 (예: "해변에서의 시간")
+  description: string; // 섹션 설명
+  startDate: string; // 시작 날짜 (YYYY-MM-DD)
+  endDate: string; // 종료 날짜 (YYYY-MM-DD)
+  photoIds?: number[]; // 해당 섹션에 속한 사진 ID 목록 (클라이언트 계산)
+  photos?: any[]; // 서버에서 받은 사진 데이터 (photoId 사용)
 }
 
-// 타임라인 이미지 - 타임라인 앨범 레이아웃용
-export interface TimelineImage {
-  src: string;
-  size: "large" | "small";
-  position: string;
-  alt?: string;
-}
-
-// 타임라인 앨범 - 여러 이벤트를 포함하는 앨범
+// 타임라인 앨범
 export interface TimelineAlbum {
-  id: number;
-  title: string;
-  description?: string;
-  coverImage: string;
-  events: TimelineEvent[];
-  createdAt: string;
-  updatedAt: string;
+  albumId: number;
+  name: string;
+  description: string;
+  thumbnailUrl: string;
+  thumbnailId?: number; // 대표이미지 사진 ID (optional)
+  originalUrl: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  photoCount: number;
+  sections: TimelineSection[];
+  unusedPhotos: Photo[]; // 앨범 생성 시 선택했지만 섹션에 사용하지 않은 사진들
+  createdAt: string; // ISO 날짜
+  updatedAt: string; // ISO 날짜
 }
 
 // 티어 배틀 진행 시, 사진을 배치하는 과정의 데이터 구조

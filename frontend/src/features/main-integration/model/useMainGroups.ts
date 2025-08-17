@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { GroupManagementApi } from "@/features/group-management";
+import { GroupManagementApi, groupQueryKeys } from "@/features/group-management";
 import { groupListSelectors } from "@/entities/group";
 import { useMainAuth } from "./useMainAuth";
 
@@ -13,10 +13,10 @@ export const useMainGroups = () => {
   const router = useRouter();
   const { isLoggedIn } = useMainAuth();
 
-  // 실제 API 데이터 사용
+  // 실제 API 데이터 사용 (통일된 쿼리 키 사용)
   const { data: allGroups = [], isLoading: isGroupsLoading } = useQuery({
-    queryKey: ['myGroups'],
-    queryFn: GroupManagementApi.getMyGroups,
+    queryKey: groupQueryKeys.lists(), // 동일한 쿼리 키로 캐시 공유
+    queryFn: () => GroupManagementApi.getMyGroups(),
     enabled: isLoggedIn, // 로그인된 상태에서만 실행
     staleTime: 5 * 60 * 1000,
   });

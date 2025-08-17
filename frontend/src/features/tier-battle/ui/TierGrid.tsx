@@ -9,9 +9,8 @@ interface TierGridProps {
   tiers: TierConfig[];
   tierPhotos: TierData;
   dragOverPosition: DragOverPosition | null;
-  draggingPhotoId: string | null;
-  onImageClick: (photo: Photo) => void;
-  onReturnToAvailable: (photoId: string, fromTier: string) => void;
+  draggingPhotoId: number | null;
+  onReturnToAvailable: (photoId: number, fromTier: string) => void;
   onDragOverTierArea: (e: React.DragEvent, tier: string) => void;
   onDropTierArea: (e: React.DragEvent, targetTier: string) => void;
   onDragOverPosition: (e: React.DragEvent, tier: string, index: number) => void;
@@ -22,6 +21,7 @@ interface TierGridProps {
   ) => void;
   onDragStart: (e: React.DragEvent, photo: Photo, source: string) => void;
   onDragEnd: () => void;
+  onImageClick: (photo: Photo) => void; // 사진 클릭 시 모달 열기
 }
 
 export function TierGrid({
@@ -29,7 +29,6 @@ export function TierGrid({
   tierPhotos,
   dragOverPosition,
   draggingPhotoId,
-  onImageClick,
   onReturnToAvailable,
   onDragOverTierArea,
   onDropTierArea,
@@ -37,11 +36,18 @@ export function TierGrid({
   onDropAtPosition,
   onDragStart,
   onDragEnd,
+  onImageClick,
 }: TierGridProps) {
   return (
-    <div className="bg-[#222222] rounded-xl shadow-lg border border-gray-700 p-4 space-y-2">
+    <div className="bg-[#222222] rounded-xl shadow-lg border border-gray-700 p-4 space-y-2 relative">
+      {/* 배경 텍스트 Keepick */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+        <span className="text-[12rem] font-keepick-heavy text-gray-800/10 select-none tracking-wider transform rotate-12">
+          Keepick
+        </span>
+      </div>
       {tiers.map(({ label, color }) => (
-        <div key={label} className="flex items-start">
+        <div key={label} className="flex items-start relative z-10">
           <div
             className="w-16 h-28 flex-shrink-0 flex items-center justify-center text-3xl font-black rounded-l-md bg-gray-800 border-r border-gray-600 relative"
           >
@@ -58,25 +64,29 @@ export function TierGrid({
           <div
             className="flex-1 p-2 flex flex-wrap gap-2 items-center border-t border-b
   border-r border-gray-600 rounded-r-md min-h-[112px] bg-[#111111]"
-            onDragOver={(e) => onDragOverTierArea(e, label)}
-            onDrop={(e) => onDropTierArea(e, label)}
+            onDragOver={(e) => {
+              e.preventDefault(); // 드롭을 가능하게 하기 위해 필수
+              onDragOverTierArea(e, label);
+            }}
+            onDrop={(e) => {
+              e.preventDefault(); // 브라우저 기본 동작 방지
+              onDropTierArea(e, label);
+            }}
           >
-            {(tierPhotos[label] || []).length === 0 && !draggingPhotoId && (
-              <div
-                className="w-full h-full flex items-center justify-center
-  text-gray-500 text-center"
-              >
-                <span className="text-sm font-keepick-primary">빈 티어</span>
-              </div>
-            )}
             {(tierPhotos[label] || []).map((photo, index) => (
               <div
                 key={photo.id}
                 className="flex items-center"
-                onDragOver={(e) => onDragOverPosition(e, label, index)}
-                onDrop={(e) =>
-                  onDropAtPosition(e, label, dragOverPosition?.index ?? index)
-                }
+                onDragOver={(e) => {
+                  e.preventDefault(); // 드롭을 가능하게 하기 위해 필수
+                  e.stopPropagation(); // 이벤트 버블링 방지
+                  onDragOverPosition(e, label, index);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault(); // 브라우저 기본 동작 방지
+                  e.stopPropagation(); // 이벤트 버블링 방지
+                  onDropAtPosition(e, label, dragOverPosition?.index ?? index);
+                }}
               >
                 {dragOverPosition?.tier === label &&
                   dragOverPosition.index === index && (
@@ -87,17 +97,21 @@ export function TierGrid({
                   draggable
                   onDragStart={(e) => onDragStart(e, photo, label)}
                   onDragEnd={onDragEnd}
-                  onClick={() => onImageClick(photo)}
                   className="relative group"
                 >
-                  <Image
-                    src={photo.src}
-                    alt={photo.name || photo.id}
-                    width={88}
-                    height={88}
-                    className="rounded-md object-cover cursor-grab w-22 h-22 shadow-md
-  hover:scale-105 transition-transform"
-                  />
+                  {/* 정사각형 컨테이너로 Next.js Image 사용 - 갤러리 선택 사진과 동일한 스타일 */}
+                  <div 
+                    className="relative w-22 h-22 overflow-hidden rounded-md shadow-md cursor-pointer"
+                    onClick={() => onImageClick(photo)}
+                  >
+                    <Image
+                      src={photo.thumbnailUrl}
+                      alt={photo.name || `Photo ${photo.id}`}
+                      fill
+                      sizes="88px"
+                      className="object-cover hover:scale-105 transition-transform"
+                    />
+                  </div>
 
                   {label === "S" && index < 3 && (
                     <div

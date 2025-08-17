@@ -12,7 +12,7 @@ interface TierBattleModalProps {
   isOpen: boolean;
   battleSequence: BattleSequence | null;
   onClose: () => void;
-  onDecision: (winnerId: string) => void;
+  onDecision: (winnerId: number) => void;
   onZoomRequest: (photo: Photo) => void;
 }
 
@@ -23,7 +23,7 @@ export default function TierBattleModal({
   onDecision,
   onZoomRequest,
 }: TierBattleModalProps) {
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<number | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -89,10 +89,11 @@ export default function TierBattleModal({
                 }`}
               >
                 <Image
-                  src={currentOpponent.src}
+                  src={currentOpponent.originalUrl}
                   alt="기존 사진"
-                  layout="fill"
-                  objectFit="cover"
+                  fill
+                  sizes="(max-width: 768px) 50vw, 400px"
+                  className="object-cover"
                 />
                 <div
                   className={`absolute inset-0 border-4 rounded-lg transition-all duration-300 ${
@@ -138,10 +139,11 @@ export default function TierBattleModal({
                 }`}
               >
                 <Image
-                  src={newPhoto.src}
+                  src={newPhoto.originalUrl}
                   alt="새로운 사진"
-                  layout="fill"
-                  objectFit="cover"
+                  fill
+                  sizes="(max-width: 768px) 50vw, 400px"
+                  className="object-cover"
                 />
                 <div
                   className={`absolute inset-0 border-4 rounded-lg transition-all duration-300 ${
