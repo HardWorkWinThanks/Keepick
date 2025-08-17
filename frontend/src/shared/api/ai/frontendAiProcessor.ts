@@ -69,7 +69,15 @@ class FrontendAiProcessor {
   private readonly EMOTION_RESULT_INTERVAL = 1500;
 
   // ✨ 오버레이 (이미지 포함)
-  private activeOverlays: Map<string, any> = new Map();
+  private activeOverlays: Map<string, {
+    image: HTMLImageElement;
+    x: number;
+    y: number;
+    timestamp: number;
+    duration: number;
+    opacity: number;
+    scale: number;
+  }> = new Map();
 
   private readonly STATIC_GESTURE_DURATION = 1500;
   private readonly DYNAMIC_GESTURE_DURATION = 1500;
@@ -174,28 +182,6 @@ class FrontendAiProcessor {
     }
   }
 
-  // 초기화 상태 업데이트 (모든 필요한 모듈이 로딩되었는지 확인)
-  private updateInitializationStatus(): void {
-    const state = this.dispatch?.getState?.();
-    const moduleStatus = state?.ai?.moduleStatus;
-    
-    // WASM은 반드시 로딩되어야 하고, 최소 하나의 AI 모듈이 로딩되어야 함
-    const wasmLoaded = moduleStatus?.wasm?.isLoaded;
-    const hasAnyModuleLoaded = 
-      moduleStatus?.gestureModels?.isLoaded || 
-      moduleStatus?.emotionModels?.isLoaded || 
-      moduleStatus?.beautyFilter?.isLoaded;
-    
-    this.isInitialized = wasmLoaded && hasAnyModuleLoaded;
-    
-    console.log("🔄 AI Initialization status updated:", {
-      isInitialized: this.isInitialized,
-      wasmLoaded,
-      gestureModelsLoaded: moduleStatus?.gestureModels?.isLoaded,
-      emotionModelsLoaded: moduleStatus?.emotionModels?.isLoaded,
-      beautyFilterLoaded: moduleStatus?.beautyFilter?.isLoaded
-    });
-  }
 
   public updateConfig(config: Partial<AiSystemConfig>): Promise<void> {
     return Promise.resolve().then(() => {
@@ -491,7 +477,15 @@ class FrontendAiProcessor {
     });
   }
 
-  private updateGestureAnimation(item: any, elapsed: number): void {
+  private updateGestureAnimation(item: {
+    image: HTMLImageElement;
+    x: number;
+    y: number;
+    timestamp: number;
+    duration: number;
+    opacity: number;
+    scale: number;
+  }, elapsed: number): void {
     const fadeInDuration = this.ANIMATION_FADE_DURATION;
     const fadeOutDuration = this.ANIMATION_FADE_DURATION;
     const totalDuration = item.duration;
@@ -521,7 +515,7 @@ class FrontendAiProcessor {
         type: 'static' | 'dynamic'
     ) => {
         // shot은 특별히 높은 임계값, 정적 제스처도 조금 높임
-        const confidenceThreshold = gesture.label === 'shot' ? 0.98 : (type === 'static' ? 0.8 : 0.85);
+        const confidenceThreshold = gesture?.label === 'shot' ? 0.98 : (type === 'static' ? 0.8 : 0.85);
         if (!gesture || gesture.label === "none" || gesture.confidence < confidenceThreshold) return;
 
         const image = this.getImageForLabel(gesture.label);
