@@ -1,7 +1,7 @@
 // src/widgets/video-conference/SettingsPanel.tsx
 "use client";
 
-import { useAppDispatch, useAppSelector } from "@/shared/hooks/redux";
+import { useAppDispatch, useAppSelector } from "@/shared/config/hooks";
 import {
   setAiEnabled,
   toggleStaticGestureDetection,
@@ -79,11 +79,7 @@ export const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
   const dispatch = useAppDispatch();
   
   const aiState = useAppSelector((state) => state.ai);
-  const mediaState = useAppSelector((state) => state.media);
-  
-  // re_media 대신 올바른 media 슬라이스에서 상태를 가져옵니다.
-  const isCameraOn = !!mediaState.local.tracks.video?.enabled;
-  const isMicOn = !!mediaState.local.tracks.audio?.enabled;
+  const { isCameraOn, isMicOn } = useAppSelector((state) => state.re_media);
 
   // AI 전체 토글 핸들러
   const handleAiToggle = useCallback(async () => {
@@ -93,10 +89,10 @@ export const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
     // 현재 Redux 상태를 기반으로 AiSystemConfig 객체를 생성
     const configForToggle: Partial<AiSystemConfig> = {
       gesture: {
-        static: { enabled: aiState.isStaticGestureDetectionEnabled, confidence: 0.75 },
-        dynamic: { enabled: aiState.isDynamicGestureDetectionEnabled, confidence: 0.9 },
+        static: { enabled: aiState.isStaticGestureDetectionEnabled, confidence: 0.7 },
+        dynamic: { enabled: aiState.isDynamicGestureDetectionEnabled, confidence: 0.7 },
       },
-      emotion: { enabled: aiState.isEmotionDetectionEnabled, confidence: 0.6 },
+      emotion: { enabled: aiState.isEmotionDetectionEnabled, confidence: 0.5 },
       beauty: { ...aiState.beautyFilterConfig, enabled: aiState.isBeautyFilterEnabled },
     };
 
@@ -110,7 +106,26 @@ export const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
   
   // 개별 기능 토글 핸들러
   const handleFeatureToggle = useCallback(async (feature: AiFeature) => {
-    // Redux 상태를 먼저 낙관적으로 업데이트
+    // 현재 상태를 기반으로 새로운 상태를 먼저 계산
+    const newStaticEnabled = feature === 'static' ? !aiState.isStaticGestureDetectionEnabled : aiState.isStaticGestureDetectionEnabled;
+    const newDynamicEnabled = feature === 'dynamic' ? !aiState.isDynamicGestureDetectionEnabled : aiState.isDynamicGestureDetectionEnabled;
+    const newEmotionEnabled = feature === 'emotion' ? !aiState.isEmotionDetectionEnabled : aiState.isEmotionDetectionEnabled;
+    const newBeautyEnabled = feature === 'beauty' ? !aiState.isBeautyFilterEnabled : aiState.isBeautyFilterEnabled;
+
+    // 새로운 설정 객체 생성
+    const newAiConfig: Partial<AiSystemConfig> = {
+      gesture: {
+        static: { enabled: newStaticEnabled, confidence: 0.7 },
+        dynamic: { enabled: newDynamicEnabled, confidence: 0.7 }
+      },
+      emotion: { enabled: newEmotionEnabled, confidence: 0.5 },
+      beauty: { 
+        ...aiState.beautyFilterConfig,
+        enabled: newBeautyEnabled,
+      }
+    };
+
+    // Redux 상태를 낙관적으로 업데이트
     switch (feature) {
       case 'static': dispatch(toggleStaticGestureDetection()); break;
       case 'dynamic': dispatch(toggleDynamicGestureDetection()); break;
@@ -120,28 +135,6 @@ export const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
 
     // AI 마스터 스위치가 켜져 있을 때만 미디어 서버와 통신
     if (aiState.isAiEnabled) {
-      // Redux 업데이트 *이후의* 상태를 기반으로 AiSystemConfig 객체를 재구성
-      const newAiConfig: Partial<AiSystemConfig> = {
-        gesture: {
-          static: { 
-            enabled: feature === 'static' ? !aiState.isStaticGestureDetectionEnabled : aiState.isStaticGestureDetectionEnabled,
-            confidence: 0.75 
-          },
-          dynamic: { 
-            enabled: feature === 'dynamic' ? !aiState.isDynamicGestureDetectionEnabled : aiState.isDynamicGestureDetectionEnabled,
-            confidence: 0.9
-          }
-        },
-        emotion: { 
-          enabled: feature === 'emotion' ? !aiState.isEmotionDetectionEnabled : aiState.isEmotionDetectionEnabled,
-          confidence: 0.6
-        },
-        beauty: { 
-          ...aiState.beautyFilterConfig,
-          enabled: feature === 'beauty' ? !aiState.isBeautyFilterEnabled : aiState.isBeautyFilterEnabled,
-        }
-      };
-      
       try {
         if (feature === 'beauty') {
           // 뷰티 필터는 픽셀을 직접 수정하므로 트랙 교체가 필요합니다.
@@ -150,8 +143,9 @@ export const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
           // 제스처/감정 인식은 설정만 업데이트하여 성능 최적화
           await mediasoupManager.updateAIConfig(newAiConfig);
         }
+        console.log(`✅ AI 기능 '${feature}' 토글 성공:`, newAiConfig);
       } catch (error) {
-        console.error(`AI 기능 '${feature}' 토글 중 오류:`, error);
+        console.error(`❌ AI 기능 '${feature}' 토글 중 오류:`, error);
         // 오류 발생 시 Redux 상태를 원래대로 복원
         switch (feature) {
           case 'static': dispatch(toggleStaticGestureDetection()); break;
@@ -160,6 +154,8 @@ export const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
           case 'beauty': dispatch(toggleBeautyFilter()); break;
         }
       }
+    } else {
+      console.log(`🔄 AI 기능 '${feature}' Redux 상태만 업데이트 (AI 비활성화 상태)`);
     }
   }, [dispatch, aiState]);
 

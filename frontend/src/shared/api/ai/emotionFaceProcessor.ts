@@ -50,10 +50,10 @@ const PUFF_T = 0.015;
 
 // 이벤트 전송 임계값 (app.py의 SHOW_THRESH 참고, 필요에 따라 조정)
 const EMOTION_THRESHOLDS = {
-  laugh: 0.75,
+  laugh: 0.6,
   serious: 0.65,
-  surprise: 0.70,
-  yawn: 0.70,
+  surprise: 0.90,
+  yawn: 0.60,
   none: 0.50,
 };
 
