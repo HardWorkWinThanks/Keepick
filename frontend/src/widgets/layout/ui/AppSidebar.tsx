@@ -207,6 +207,7 @@ export default function AppSidebar({
               <GroupChatVideoSection
                 isInCall={groupChatProps.isInCall}
                 participants={groupChatProps.participants}
+                groupId={currentGroup.id}
               />
             </div>
           )}
@@ -337,6 +338,14 @@ export default function AppSidebar({
                                 }}
                                 className="space-y-1 py-2"
                               >
+                                <button 
+                                  onClick={() => {
+                                    router.push(`/groupchat/${group.groupId}`)
+                                  }}
+                                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-blue-900/50 transition-colors text-sm text-blue-400 hover:text-blue-300"
+                                >
+                                  그룹챗 참여
+                                </button>
                                 <button 
                                   onClick={() => setInviteGroupTarget(group)}
                                   className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm text-gray-300"

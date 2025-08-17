@@ -434,7 +434,7 @@ const KeepickMainLandingComponent = forwardRef<KeepickMainLandingRef>((props, re
                   }}
                 >
                   <Image
-                    src="/images/keepick-logo.png"
+                    src="/images/keepick-logo-2.png"
                     alt="Photo Keepick Logo"
                     width={800}
                     height={600}
