@@ -28,12 +28,12 @@ export function useProfile() {
       console.log('✅ Profile 페이지: 공통 userApi.getCurrentUser 응답:', result);
       return result;
     },
-    staleTime: 1000 * 60 * 60 * 3, // 3시간간 신선함 유지
+    staleTime: 0, // 항상 최신 데이터 요청
     gcTime: 1000 * 60 * 60 * 12, // 12시간 가비지 컬렉션 (캐시 보존)
     retry: 2,
-    // 중복 요청 방지: 클라이언트에서만 실행하고 캐시 활용
+    // 프로필 페이지 방문 시 항상 최신 정보 보장
     enabled: typeof window !== 'undefined', // 클라이언트에서만 실행
-    refetchOnMount: false, // 마운트 시 자동 재요청 방지 (캐시 우선 사용)
+    refetchOnMount: true, // 페이지 방문 시 항상 최신 데이터 가져오기
   })
   
   // 로컬 상태 (임시 입력값과 개별 로딩 상태)
@@ -72,7 +72,17 @@ export function useProfile() {
 
   // 닉네임 업데이트 뮤테이션
   const updateNicknameMutation = useMutation({
-    mutationFn: (nickname: string) => profileApi.updateUserInfo({ nickname }),
+    mutationFn: (nickname: string) => {
+      // 현재 사용자 데이터를 가져와서 닉네임만 수정
+      const currentUserData = queryClient.getQueryData(userQueryKeys.current()) as any
+      const updateData = {
+        nickname,
+        profileUrl: currentUserData?.profileUrl || null,
+        identificationUrl: currentUserData?.identificationUrl || null
+      }
+      console.log('닉네임 업데이트 요청:', updateData)
+      return profileApi.updateUserInfo(updateData)
+    },
     onMutate: async (nickname) => {
       // 기존 데이터 백업 (롤백용)
       const previousUser = queryClient.getQueryData(userQueryKeys.current())
@@ -128,9 +138,13 @@ export function useProfile() {
   // 이미지 업로드 뮤테이션
   const uploadImageMutation = useMutation({
     mutationFn: async ({ imageType, publicUrl }: { imageType: "profile" | "identification", publicUrl: string }) => {
-      const updateData = imageType === "profile" 
-        ? { profileUrl: publicUrl } 
-        : { identificationUrl: publicUrl }
+      // 현재 사용자 데이터를 가져와서 해당 이미지 필드만 수정
+      const currentUserData = queryClient.getQueryData(userQueryKeys.current()) as any
+      const updateData = {
+        nickname: currentUserData?.nickname || "",
+        profileUrl: imageType === "profile" ? publicUrl : (currentUserData?.profileUrl || null),
+        identificationUrl: imageType === "identification" ? publicUrl : (currentUserData?.identificationUrl || null)
+      }
       console.log(`🖼️ ${imageType} 이미지 업로드 시작:`, updateData);
       return profileApi.updateUserInfo(updateData)
     },
@@ -155,8 +169,18 @@ export function useProfile() {
       const isResponseValid = variables.publicUrl === updatedUser[expectedField as keyof typeof updatedUser]
       
       if (isResponseValid) {
-        console.log('✅ 응답 데이터 유효, 바로 적용');
-        queryClient.setQueryData(userQueryKeys.current(), updatedUser)
+        console.log('✅ 응답 데이터 유효, 변경된 필드만 업데이트');
+        
+        // 기존 데이터를 가져와서 변경된 필드만 업데이트
+        queryClient.setQueryData(userQueryKeys.current(), (oldData: any) => {
+          if (!oldData) return updatedUser;
+          
+          // 변경된 필드만 업데이트하고 나머지는 기존 값 유지
+          return {
+            ...oldData,
+            [expectedField]: variables.publicUrl
+          }
+        })
       } else {
         console.warn('⚠️ 응답 데이터 불일치 감지, GET 요청으로 실제 데이터 재확인');
         console.warn('요청한 URL:', variables.publicUrl, '/ 응답 URL:', updatedUser[expectedField as keyof typeof updatedUser]);
@@ -173,8 +197,8 @@ export function useProfile() {
     }
   })
 
-  // 이미지 업로드 처리
-  const uploadProfileImage = async (imageType: "profile" | "identification"): Promise<void> => {
+  // 이미지 업로드 처리 (파일 선택 포함)
+  const uploadProfileImage = async (imageType: "profile" | "identification"): Promise<any> => {
     const setLoading = imageType === "profile" ? setIsProfileImageLoading : setIsIdentificationImageLoading
     
     try {
@@ -191,7 +215,7 @@ export function useProfile() {
         input.click()
       })
 
-      if (!file) return
+      if (!file) return null
 
       setLoading(true)
 
@@ -199,7 +223,33 @@ export function useProfile() {
       const { publicUrl } = await uploadImage(file)
 
       // 프로필 업데이트 (뮤테이션 사용)
-      await uploadImageMutation.mutateAsync({ imageType, publicUrl })
+      const result = await uploadImageMutation.mutateAsync({ imageType, publicUrl })
+      
+      // AI 인식 이미지의 경우 서버 응답 반환 (메시지 포함)
+      return result
+
+    } catch (error) {
+      console.error(`${imageType} 이미지 업로드 실패:`, error)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // File 객체를 받아서 업로드하는 함수 (완료 버튼용)
+  const uploadImageFile = async (file: File, imageType: "profile" | "identification"): Promise<any> => {
+    const setLoading = imageType === "profile" ? setIsProfileImageLoading : setIsIdentificationImageLoading
+    
+    try {
+      setLoading(true)
+
+      // 이미지 업로드
+      const { publicUrl } = await uploadImage(file)
+
+      // 프로필 업데이트 (뮤테이션 사용)
+      const result = await uploadImageMutation.mutateAsync({ imageType, publicUrl })
+      
+      return result
 
     } catch (error) {
       console.error(`${imageType} 이미지 업로드 실패:`, error)
@@ -249,10 +299,13 @@ export function useProfile() {
     nicknameInput,
     setNicknameInput,
     updateNickname,
+    updateNicknameMutation, // 뮤테이션 직접 노출
     uploadProfileImage,
+    uploadImageFile, // File 객체 업로드 함수 추가
     getProviderIcon,
     checkNicknameAvailability,
     nicknameCheckResult,
+    setNicknameCheckResult, // 중복 확인 상태 설정 함수 노출
     isNicknameLoading: updateNicknameMutation.isPending,
     isProfileImageLoading,
     isIdentificationImageLoading,

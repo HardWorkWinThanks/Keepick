@@ -67,7 +67,7 @@ export default function HeaderWidget({
           {/* 로고 */}
           <Link
             href="/"
-            className="font-montserrat font-bold text-2xl text-[var(--primary-color)]"
+            className="font-keepick-primary font-bold text-2xl text-[var(--primary-color)]"
           >
             Keep<span className="text-[var(--text-dark)] ml-1">ick</span>
           </Link>
