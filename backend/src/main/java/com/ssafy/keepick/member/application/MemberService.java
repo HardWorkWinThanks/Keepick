@@ -51,7 +51,7 @@ public class MemberService {
         }
         Long currentUserId = AuthenticationUtil.getCurrentUserId();
         // 트랜잭션 밖: 이미지 검증
-        if (request.getProfileUrl() != null && !request.getProfileUrl().isEmpty()) {
+        if (request.getIdentificationUrl() != null && !request.getIdentificationUrl().isEmpty()) {
             ProfileValidateRequest validateRequest = ProfileValidateRequest.of(request.getIdentificationUrl(), currentUserId.toString());
             ProfileValidateResponse response = visionAIService.postProfileValidateRequest(validateRequest);
             if (!response.isValid()) {
