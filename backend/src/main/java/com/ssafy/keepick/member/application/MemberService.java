@@ -44,6 +44,7 @@ public class MemberService {
      * @param request 수정할 정보
      * @return 수정된 사용자 정보 응답 DTO
      */
+    @Transactional
     public MemberDto updateCurrentMemberInfo(MemberUpdateRequest request) {
         if (!request.hasAnyUpdate()) {
             throw new BaseException(ErrorCode.INVALID_PARAMETER);
@@ -62,15 +63,14 @@ public class MemberService {
         return updateMemberInfoTransactional(request);
     }
 
-    @Transactional
-    protected MemberDto updateMemberInfoTransactional(MemberUpdateRequest request) {
+    public MemberDto updateMemberInfoTransactional(MemberUpdateRequest request) {
         Long currentUserId = AuthenticationUtil.getCurrentUserId();
         
         Member member = memberRepository.findById(currentUserId)
                 .orElseThrow(() -> new BaseException(ErrorCode.MEMBER_NOT_FOUND));
         
         member.updateProfile(request.getNickname(), request.getProfileUrl(), request.getIdentificationUrl());
-        
+        memberRepository.save(member);
         return MemberDto.from(member);
     }
     
