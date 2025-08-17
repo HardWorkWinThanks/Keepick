@@ -61,13 +61,13 @@ class FrontendAiProcessor {
   // AI 결과 표시 속도 제어
   private lastGestureResultTime = 0;
   private lastEmotionResultTime = 0;
-  private readonly GESTURE_RESULT_INTERVAL = 800; // 제스처 결과 간격 (ms)
-  private readonly EMOTION_RESULT_INTERVAL = 1200; // 감정 결과 간격 (ms)
+  private readonly GESTURE_RESULT_INTERVAL = 1500; // 제스처 결과 간격 (ms)
+  private readonly EMOTION_RESULT_INTERVAL = 1500; // 감정 결과 간격 (ms)
 
   private activeGestureEmojis: Map<string, any> = new Map();
 
   private readonly STATIC_GESTURE_DURATION = 1500;
-  private readonly DYNAMIC_GESTURE_DURATION = 500;
+  private readonly DYNAMIC_GESTURE_DURATION = 1500;
   private readonly ANIMATION_FADE_DURATION = 150;
 
   private activeSourceTrack: MediaStreamTrack | null = null; // 현재 사용 중인 원본 트랙 저장
@@ -470,7 +470,7 @@ class FrontendAiProcessor {
         timestamp,
         duration: this.STATIC_GESTURE_DURATION,
         opacity: 0,
-        scale: 1.5,
+        scale: 5,
         animationPhase: "fadeIn"
       });
     }
@@ -486,7 +486,7 @@ class FrontendAiProcessor {
         timestamp,
         duration: this.DYNAMIC_GESTURE_DURATION,
         opacity: 0,
-        scale: 1.8,
+        scale: 5,
         animationPhase: "fadeIn"
       });
     }
@@ -503,7 +503,7 @@ class FrontendAiProcessor {
         timestamp,
         duration: 2000, // 2 seconds for emotions
         opacity: 0,
-        scale: 1.0,
+        scale: 3,
         animationPhase: "fadeIn"
       });
     }

@@ -72,11 +72,11 @@ const GestureCard: React.FC<{
       <div className="text-center">
         <div className="text-lg mb-1">{emoji}</div>
         <div className="text-xs font-medium text-[#FFFFFF] truncate">{name}</div>
-        {result.confidence && (
+        {/* {result.confidence && (
           <div className="text-xs text-[#A0A0A5] mt-1">
             {(result.confidence * 100).toFixed(0)}%
           </div>
-        )}
+        )} */}
       </div>
     </motion.div>
   );
@@ -370,7 +370,7 @@ export const AiTestDisplay: React.FC<AiTestDisplayProps> = ({
             <SparklesIcon className="w-5 h-5 text-[#FE7A25]" />
             <span className="text-[#FE7A25] text-sm font-medium">AI 기능 테스트</span>
           </div>
-          {onLandmarkToggle && (
+          {/* {onLandmarkToggle && (
             <button
               onClick={onLandmarkToggle}
               className={`px-3 py-1 rounded text-xs transition-all ${
@@ -381,7 +381,7 @@ export const AiTestDisplay: React.FC<AiTestDisplayProps> = ({
             >
               랜드마크 {showLandmarks ? "ON" : "OFF"}
             </button>
-          )}
+          )} */}
         </div>
 
         <div className="space-y-3">
