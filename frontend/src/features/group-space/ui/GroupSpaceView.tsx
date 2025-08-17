@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { useGroupSpace } from "../model/useGroupSpace";
 import { PhotoGallery } from "@/features/photo-gallery";
 import { CreateAlbumButton, DeleteConfirmationModal } from "@/shared/ui/composite";
+import { TiltShineCard, SimpleHoverCard, HighlightGlowCard } from "@/shared/ui/effects";
 import type { Group } from "@/entities/group";
 import Image from "next/image";
 
@@ -263,35 +264,9 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                         )}
 
                         {/* 실제 앨범들 */}
-                        {visiblePhotos.map((photo, index) => (
-                          <motion.div
-                            key={photo.id}
-                            initial={{ y: 30, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            transition={{
-                              duration: 0.4,
-                              delay: index * 0.1,
-                              ease: "easeOut",
-                            }}
-                            className="group cursor-pointer w-full relative"
-                            onMouseEnter={() => {
-                              // 앨범 타입에 따라 다른 라우트로 사전 로딩
-                              if (currentAlbum.id === "timeline") {
-                                router.prefetch(
-                                  `/group/${group.groupId}/timeline/${photo.id}`
-                                );
-                              } else if (currentAlbum.id === "tier") {
-                                router.prefetch(
-                                  `/group/${group.groupId}/tier/${photo.id}`
-                                );
-                              } else if (currentAlbum.id === "highlight") {
-                                // 임시 - 하이라이트 앨범 사전 로딩
-                                router.prefetch(
-                                  `/group/${group.groupId}/highlight/${photo.id}`
-                                );
-                              }
-                            }}
-                          >
+                        {visiblePhotos.map((photo, index) => {
+                          // 앨범 카드 컨텐츠 컴포넌트
+                          const AlbumCardContent = () => (
                             <div 
                               className="relative aspect-[3/4] overflow-hidden bg-[#222222]/50 rounded-sm w-full border border-white/10"
                               onClick={() => {
@@ -359,8 +334,43 @@ export default function GroupSpaceView({ group }: GroupSpaceViewProps) {
                                 </button>
                               )}
                             </div>
-                          </motion.div>
-                        ))}
+                          );
+
+                          // 앨범 타입에 따라 다른 효과 적용
+                          return (
+                            <motion.div
+                              key={photo.id}
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.9 }}
+                              transition={{
+                                duration: 0.4,
+                                delay: index * 0.05, // 스태거 애니메이션
+                                ease: [0.32, 0.72, 0, 1],
+                              }}
+                              className="group"
+                            >
+                              {/* 앨범 타입별 차별화된 카드 효과 */}
+                              {currentAlbum.id === "timeline" && (
+                                <SimpleHoverCard>
+                                  <AlbumCardContent />
+                                </SimpleHoverCard>
+                              )}
+                              
+                              {currentAlbum.id === "tier" && (
+                                <TiltShineCard effectColor="#FE7A25" intensity={0.8}>
+                                  <AlbumCardContent />
+                                </TiltShineCard>
+                              )}
+                              
+                              {currentAlbum.id === "highlight" && (
+                                <HighlightGlowCard>
+                                  <AlbumCardContent />
+                                </HighlightGlowCard>
+                              )}
+                            </motion.div>
+                          );
+                        })}
                       </motion.div>
                     </AnimatePresence>
                   </div>
