@@ -22,6 +22,13 @@ import {
   selectThumbnailId,
   convertGalleryPhotosToEditor 
 } from "../lib/tierDataConverter"
+import { 
+  validateDragData,
+  isValidTierSource,
+  isSidebarSource,
+  createDragData,
+  logDragError
+} from "@/shared/lib/dragDataValidator"
 
 // 티어 설정
 const tiers: TierConfig[] = [
@@ -243,48 +250,205 @@ export function useTierEditor(groupId: string, tierAlbumId: string) {
     setAlbumInfo(prev => prev ? { ...prev, ...updates } : null)
   }, [])
 
-  // 사이드바로 실시간 데이터 전송 (안전한 이벤트 발송)
-  useEffect(() => {
-    if (isEditMode && availablePhotos.length >= 0) { // 빈 배열도 유효한 상태로 간주
-      // 약간의 지연을 두어 사이드바 컴포넌트가 마운트된 후 이벤트 발송
-      const timeoutId = setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('tierAvailablePhotosUpdate', { 
-          detail: availablePhotos 
-        }))
-      }, 100)
-      
-      return () => clearTimeout(timeoutId)
-    }
-  }, [availablePhotos, isEditMode])
+  // 드래그 핸들러들
+  const handleDragStart = useCallback((e: React.DragEvent, photo: Photo, source: string) => {
+    const dragDataString = createDragData(
+      photo.id,
+      source as any,
+      photo.originalUrl,
+      photo.thumbnailUrl,
+      photo.name
+    )
+    e.dataTransfer.setData('text/plain', dragDataString)
+    e.dataTransfer.effectAllowed = 'move'
+    setDraggingPhotoId(photo.id)
+  }, [])
 
-  // 편집 모드 변경 시 즉시 사이드바에 알림 (추가 안전장치)
-  useEffect(() => {
-    if (isEditMode) {
-      // 편집 모드 진입 시 사이드바가 데이터를 요청할 수 있도록 이벤트 발송
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('tierEditModeChanged', { 
-          detail: { isEditMode: true, availablePhotos } 
-        }))
-      }, 200)
-    }
-  }, [isEditMode, availablePhotos])
+  const handleDragEnd = useCallback(() => {
+    setDraggingPhotoId(null)
+    setDragOverPosition(null)
+  }, [])
 
-  // 사이드바 마운트 이벤트 처리 (사이드바가 늦게 마운트되는 경우 대응)
-  useEffect(() => {
-    const handleSidebarMounted = () => {
-      if (isEditMode && availablePhotos.length >= 0) {
-        window.dispatchEvent(new CustomEvent('tierAvailablePhotosUpdate', { 
-          detail: availablePhotos 
-        }))
+  const handleDragOverTierArea = useCallback((e: React.DragEvent, tier: string) => {
+    e.preventDefault()
+    setDragOverPosition({ tier, index: (tierPhotos[tier] || []).length })
+  }, [tierPhotos])
+
+  const handleDragOverPosition = useCallback((
+    e: React.DragEvent,
+    tier: string,
+    index: number
+  ) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const mouseX = e.clientX - rect.left
+    const isLeftHalf = mouseX < rect.width / 2
+    const targetIndex = isLeftHalf ? index : index + 1
+    setDragOverPosition({ tier, index: targetIndex })
+  }, [])
+
+  // 드롭 핸들러들 (소스별로 분리)
+  const handleSidebarToTier = useCallback((photo: Photo, targetTier: string, targetIndex?: number) => {
+    // availablePhotos에서 사진 제거
+    setAvailablePhotos(prev => prev.filter(p => p.id !== photo.id))
+    
+    // 티어에 사진 추가
+    setTierPhotos(prev => {
+      const newTierPhotos = [...prev[targetTier]]
+      const insertIndex = targetIndex ?? newTierPhotos.length
+      newTierPhotos.splice(insertIndex, 0, photo)
+      return {
+        ...prev,
+        [targetTier]: newTierPhotos
+      }
+    })
+  }, [])
+
+  const handleTierToTier = useCallback((photo: Photo, sourceTier: string, targetTier: string, targetIndex: number) => {
+    setTierPhotos(prev => {
+      const newTiers = { ...prev }
+      // 소스 티어에서 제거
+      newTiers[sourceTier] = newTiers[sourceTier].filter(p => p.id !== photo.id)
+      // 타겟 티어에 추가
+      const targetArray = [...newTiers[targetTier]]
+      targetArray.splice(targetIndex, 0, photo)
+      newTiers[targetTier] = targetArray
+      return newTiers
+    })
+  }, [])
+
+  const handleTierToSidebar = useCallback((photo: Photo, fromTier: string) => {
+    // 티어에서 사진 제거
+    setTierPhotos(prev => ({
+      ...prev,
+      [fromTier]: prev[fromTier].filter(p => p.id !== photo.id)
+    }))
+    
+    // availablePhotos에 추가 (중복 방지)
+    setAvailablePhotos(prev => {
+      if (!prev.find(p => p.id === photo.id)) {
+        return [...prev, photo]
+      }
+      return prev
+    })
+  }, [])
+
+  const handleDropAtPosition = useCallback((e: React.DragEvent, targetTier: string, targetIndex: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    // 드롭 즉시 상태 초기화
+    setDragOverPosition(null)
+    setDraggingPhotoId(null)
+
+    // 드래그 데이터 검증
+    const validation = validateDragData(e)
+    if (!validation.isValid || !validation.data) {
+      logDragError('TierEditor handleDropAtPosition', validation.error!, e.dataTransfer.getData("text/plain"))
+      return
+    }
+
+    const { photoId, source } = validation.data
+    
+    // 사진 찾기
+    const draggedPhoto = isSidebarSource(source)
+      ? availablePhotos.find(p => p.id === photoId)
+      : isValidTierSource(source)
+      ? tierPhotos[source]?.find(p => p.id === photoId)
+      : null
+
+    if (!draggedPhoto) {
+      logDragError('TierEditor handleDropAtPosition', `사진을 찾을 수 없습니다: ${photoId}`, JSON.stringify(validation.data))
+      return
+    }
+
+    // 같은 위치로의 이동 방지
+    if (isValidTierSource(source)) {
+      const sourceIndex = tierPhotos[source]?.findIndex(p => p.id === photoId) ?? -1
+      if (source === targetTier && (targetIndex === sourceIndex || targetIndex === sourceIndex + 1)) {
+        return
       }
     }
 
+    // 소스별 처리
+    if (isSidebarSource(source)) {
+      handleSidebarToTier(draggedPhoto, targetTier, targetIndex)
+    } else if (isValidTierSource(source)) {
+      handleTierToTier(draggedPhoto, source, targetTier, targetIndex)
+    }
+  }, [availablePhotos, tierPhotos, handleSidebarToTier, handleTierToTier])
+
+  const handleDropTierArea = useCallback((e: React.DragEvent, targetTier: string) => {
+    const tierLength = (tierPhotos[targetTier] || []).length
+    handleDropAtPosition(e, targetTier, tierLength)
+  }, [tierPhotos, handleDropAtPosition])
+
+  const handleSidebarDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    
+    // 드래그 데이터 검증
+    const validation = validateDragData(e)
+    if (!validation.isValid || !validation.data) {
+      logDragError('TierEditor handleSidebarDrop', validation.error!, e.dataTransfer.getData("text/plain"))
+      return
+    }
+
+    const { photoId, source } = validation.data
+    
+    // 티어에서 온 사진만 처리
+    if (isValidTierSource(source)) {
+      const photo = tierPhotos[source]?.find(p => p.id === photoId)
+      if (photo) {
+        handleTierToSidebar(photo, source)
+      }
+    }
+    
+    // 상태 초기화
+    setDragOverPosition(null)
+    setDraggingPhotoId(null)
+  }, [tierPhotos, handleTierToSidebar])
+
+  // 사이드바 통신을 위한 window 이벤트 (편집 모드일 때만)
+  useEffect(() => {
+    if (!isEditMode) return
+
+    // 사이드바로 실시간 데이터 전송
+    const updateSidebar = () => {
+      window.dispatchEvent(new CustomEvent('tierAvailablePhotosUpdate', { 
+        detail: availablePhotos 
+      }))
+    }
+
+    // 사이드바 마운트 시 데이터 전송
+    const handleSidebarMounted = () => {
+      updateSidebar()
+    }
+
+    // 사이드바에서 드롭 이벤트 처리
+    const handleSidebarDropEvent = (event: CustomEvent) => {
+      const dragData = event.detail as DragPhotoData
+      
+      if (isValidTierSource(dragData.source)) {
+        const photo = tierPhotos[dragData.source]?.find(p => p.id === dragData.photoId)
+        if (photo) {
+          handleTierToSidebar(photo, dragData.source)
+        }
+      }
+    }
+
+    // 이벤트 리스너 등록
     window.addEventListener('tierSidebarMounted', handleSidebarMounted)
+    window.addEventListener('tierSidebarDrop', handleSidebarDropEvent as EventListener)
+    
+    // 즉시 데이터 전송
+    updateSidebar()
     
     return () => {
       window.removeEventListener('tierSidebarMounted', handleSidebarMounted)
+      window.removeEventListener('tierSidebarDrop', handleSidebarDropEvent as EventListener)
     }
-  }, [isEditMode, availablePhotos])
+  }, [isEditMode, availablePhotos, tierPhotos, handleTierToSidebar])
 
   return {
     // 기본 상태
@@ -319,5 +483,18 @@ export function useTierEditor(groupId: string, tierAlbumId: string) {
     addPhotosFromGallery,
     deletePhotos,
     updateAlbumInfo,
+    
+    // 드래그&드롭 핸들러들
+    handleDragStart,
+    handleDragEnd,
+    handleDragOverTierArea,
+    handleDragOverPosition,
+    handleDropAtPosition,
+    handleDropTierArea,
+    handleSidebarDrop,
+    
+    // 개별 이동 함수들 (하위 호환성)
+    moveTierToSidebar: handleTierToSidebar,
+    moveSidebarToTier: handleSidebarToTier,
   }
 }

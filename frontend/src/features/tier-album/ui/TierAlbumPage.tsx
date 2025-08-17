@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { ArrowLeft, ChevronLeft, ChevronRight, Settings, Check, Edit } from "lucide-react"
@@ -162,6 +162,17 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
     addPhotosFromGallery,
     deletePhotos,
     updateAlbumInfo,
+    
+    // 드래그&드롭 핸들러들
+    handleDragStart,
+    handleDragEnd,
+    handleDragOverTierArea,
+    handleDragOverPosition,
+    handleDropAtPosition,
+    handleDropTierArea,
+    handleSidebarDrop,
+    moveTierToSidebar,
+    moveSidebarToTier,
   } = useTierEditor(groupId, tierAlbumId)
 
   // 뷰 모드용 훅 (기존 로직 유지)
@@ -225,13 +236,8 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
     window.history.replaceState({}, '', url.toString())
   }, [isEditMode])
   
-  // 사이드바 이벤트 처리
+  // 사이드바 이벤트 처리 (간소화 - useTierEditor에서 대부분 처리)
   useEffect(() => {
-    const handleSidebarDropEvent = (event: CustomEvent) => {
-      const dragData = event.detail
-      handleSidebarDrop(dragData)
-    }
-    
     const handlePhotosDeleteRequest = (event: CustomEvent) => {
       const photoIds = event.detail
       deletePhotos(photoIds).catch(error => {
@@ -240,11 +246,9 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
       })
     }
     
-    window.addEventListener('tierSidebarDrop', handleSidebarDropEvent as EventListener)
     window.addEventListener('tierPhotosDeleteRequest', handlePhotosDeleteRequest as EventListener)
     
     return () => {
-      window.removeEventListener('tierSidebarDrop', handleSidebarDropEvent as EventListener)
       window.removeEventListener('tierPhotosDeleteRequest', handlePhotosDeleteRequest as EventListener)
     }
   }, [deletePhotos])
@@ -254,21 +258,17 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
     updateAlbumInfo(updates)
   }
 
-  // 티어에서 사용 가능한 사진으로 되돌리는 핸들러
+  // 티어에서 사용 가능한 사진으로 되돌리는 핸들러 (useTierEditor의 moveTierToSidebar 사용)
   const handleReturnToAvailable = (
     photoId: number,
     fromTier: string,
-    onReturn: (photo: Photo) => void
+    onReturn?: (photo: Photo) => void
   ) => {
     const photo = tierPhotos[fromTier]?.find((p) => p.id === photoId)
     if (photo) {
-      // 티어에서 해당 사진 제거
-      setTierPhotos((prev) => ({
-        ...prev,
-        [fromTier]: prev[fromTier].filter((p) => p.id !== photoId),
-      }))
-      // 콜백 함수를 호출하여 사용 가능한 사진 목록에 추가
-      onReturn(photo)
+      moveTierToSidebar(photo, fromTier)
+      // 기존 콜백이 있다면 호출 (대표이미지 설정 등)
+      onReturn?.(photo)
     }
   }
 
@@ -282,11 +282,9 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
     }
     setCoverImage(photo)
     
-    // 티어에서 온 사진인 경우 해당 티어에서 제거
+    // 티어에서 온 사진인 경우 해당 티어에서 제거 (타임라인 방식)
     if (dragData.source !== "available" && dragData.source !== "cover-image") {
-      handleReturnToAvailable(dragData.photoId, dragData.source, (photo) =>
-        setAvailablePhotos((prev) => [...prev, photo])
-      )
+      handleReturnToAvailable(dragData.photoId, dragData.source)
     }
   }
 
@@ -303,160 +301,37 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
     setAvailablePhotos((prev) => [...prev, photo])
   }
 
-  // 사이드바에서 드롭될 때 처리 (티어 → 사용가능한 사진)
-  const handleSidebarDrop = (dragData: DragPhotoData) => {
-    // 드롭 완료 후 상태 초기화
-    setDragOverPosition(null)
-    setDraggingPhotoId(null)
-    
-    console.log('사이드바 드롭:', dragData)
-    
-    if (dragData.source !== "available" && dragData.source !== "cover-image") {
-      handleReturnToAvailable(dragData.photoId, dragData.source, (photo) =>
-        setAvailablePhotos((prev) => [...prev, photo])
-      )
-    } else if (dragData.source === "cover-image") {
-      handleCoverImageRemove(dragData)
-    }
-    // available 소스는 이미 사이드바에 있으므로 아무것도 하지 않음
-  }
+  // 사이드바 드롭은 useTierEditor의 handleSidebarDrop 사용
 
-  // 드래그 핸들러들 (tier-battle의 형식에 맞게 수정)
-  const handleDragStart = (
-    e: React.DragEvent,
-    photo: Photo,
-    source: string | "available"
-  ) => {
-    // DragPhotoData 형식으로 드래그 데이터 설정
-    const dragData: DragPhotoData = {
-      photoId: photo.id,
-      source: source,
-      originalUrl: photo.originalUrl,
-      thumbnailUrl: photo.thumbnailUrl,
-      name: photo.name || `사진 #${photo.id}`
-    }
-    e.dataTransfer.setData('text/plain', JSON.stringify(dragData))
-    e.dataTransfer.effectAllowed = 'move'
-    setDraggingPhotoId(photo.id)
-  }
+  // 드래그 핸들러들은 useTierEditor에서 제공
 
-  const handleDragEnd = () => {
-    // 즉시 상태 초기화
-    setDraggingPhotoId(null)
-    setDragOverPosition(null)
-    
-    // 추가 안전장치: 100ms 후 다시 한번 초기화
-    setTimeout(() => {
-      setDraggingPhotoId(null)
-      setDragOverPosition(null)
-    }, 100)
-  }
+  // 사용가능한 사진용 드래그 핸들러들도 useTierEditor에서 제공
 
-  // 통합된 드래그 핸들러 (사용가능한 사진용)
-  const handleAvailablePhotoDragStart = (_: React.DragEvent<HTMLDivElement>, photo: Photo) => {
-    setDraggingPhotoId(photo.id)
-  }
-
-  const handleAvailablePhotoDragEnd = () => {
-    // 즉시 상태 초기화
-    setDraggingPhotoId(null)
-    
-    // 추가 안전장치: 100ms 후 다시 한번 초기화
-    setTimeout(() => {
-      setDraggingPhotoId(null)
-    }, 100)
-  }
-
-  const handleDragOverTierArea = (e: React.DragEvent, tier: string) => {
-    e.preventDefault() // 드롭을 가능하게 하기 위해 필수
-    try {
-      setDragOverPosition({ tier, index: (tierPhotos[tier] || []).length })
-    } catch (error) {
-      console.error('TierAlbum handleDragOverTierArea 오류:', error)
-    }
-  }
-
-  const handleDropTierArea = (e: React.DragEvent, targetTier: string) => {
-    e.preventDefault() // 브라우저 기본 동작 방지
-    try {
-      handleDropAtPosition(e, targetTier, (tierPhotos[targetTier] || []).length)
-    } catch (error) {
-      console.error('TierAlbum handleDropTierArea 오류:', error)
-    }
-  }
-
-  const handleDragOverPosition = (
-    e: React.DragEvent,
-    tier: string,
-    index: number
-  ) => {
-    e.preventDefault() // 드롭을 가능하게 하기 위해 필수
-    e.stopPropagation() // 이벤트 버블링 방지
-    try {
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-      const mouseX = e.clientX - rect.left
-      const isLeftHalf = mouseX < rect.width / 2
-      const targetIndex = isLeftHalf ? index : index + 1
-      setDragOverPosition({ tier, index: targetIndex })
-    } catch (error) {
-      console.error('TierAlbum handleDragOverPosition 오류:', error)
-    }
-  }
-
-  const handleDropAtPosition = (
+  // 정밀 배틀 모드를 고려한 드롭 핸들러 래퍼
+  const handleDropAtPositionWithBattle = useCallback((
     e: React.DragEvent,
     targetTier: string,
     targetIndex: number
   ) => {
     e.preventDefault()
     e.stopPropagation()
-    
-    // 드롭 즉시 상태 초기화
-    setDragOverPosition(null)
-    setDraggingPhotoId(null)
 
+    // 드래그 데이터 검증을 위해 임시로 파싱
     try {
       const dragDataString = e.dataTransfer.getData("text/plain")
+      if (!dragDataString) return
       
-      // 비어있거나 유효하지 않은 데이터 검사
-      if (!dragDataString || dragDataString.trim() === '') {
-        console.warn('TierAlbum handleDropAtPosition: 빈 드래그 데이터를 받았습니다')
-        return
-      }
-      
-      const dragData: DragPhotoData = JSON.parse(dragDataString)
-      
-      // 기본 필드 검증
-      if (!dragData.photoId) {
-        console.warn('TierAlbum handleDropAtPosition: 유효하지 않은 드래그 데이터입니다:', dragData)
-        return
-      }
-      
+      const dragData = JSON.parse(dragDataString)
       const { photoId, source } = dragData
-      const draggedPhoto =
-        source === "available"
-          ? availablePhotos.find((p) => p.id === photoId)
-          : tierPhotos[source]?.find((p) => p.id === photoId)
+      
+      // 드래그된 사진 찾기
+      const draggedPhoto = source === "available"
+        ? availablePhotos.find(p => p.id === photoId)
+        : tierPhotos[source]?.find(p => p.id === photoId)
 
-      if (!draggedPhoto) {
-        console.warn('TierAlbum handleDropAtPosition: 드래그된 사진을 찾을 수 없습니다:', photoId)
-        console.warn('사용 가능한 사진들:', availablePhotos.map(p => p.id))
-        console.warn('드래그 데이터:', dragData)
-        return
-      }
+      if (!draggedPhoto) return
 
-      const sourceIndex =
-        source !== "available"
-          ? tierPhotos[source]?.findIndex((p) => p.id === photoId) ?? -1
-          : -1
-
-      if (
-        source === targetTier &&
-        (targetIndex === sourceIndex || targetIndex === sourceIndex + 1)
-      )
-        return
-
-      // 정밀 배틀 모드 체크 - 같은 티어 내 순위 변경도 포함
+      // 정밀 배틀 모드 체크
       if (precisionTierMode && tierPhotos[targetTier]?.length > 0) {
         // 같은 티어 내에서는 드래그하는 사진을 제외한 상대들만 고려
         const availableOpponents = source === targetTier 
@@ -474,34 +349,34 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
             currentOpponentIndex: 0,
             targetTier,
             targetIndex,
-            sourceType: source as "available" | string, // 타입 수정
+            sourceType: source as "available" | string,
           })
-          setShowComparisonModal(true) // 배틀 모달 열기
+          setShowComparisonModal(true)
           return
         }
       }
 
-      // 일반 드롭 처리
-      setTierPhotos((prev) => {
-        const newTiers = { ...prev }
-        if (source === "available") {
-          setAvailablePhotos((p) => p.filter((p) => p.id !== photoId))
-        } else {
-          newTiers[source] = [...(newTiers[source] || [])].filter(
-            (p) => p.id !== photoId
-          )
-        }
-        const targetArray = [...(newTiers[targetTier] || [])]
-        targetArray.splice(targetIndex, 0, draggedPhoto)
-        newTiers[targetTier] = targetArray
-        return newTiers
-      })
+      // 일반 드롭 처리 (useTierEditor 함수 사용)
+      handleDropAtPosition(e, targetTier, targetIndex)
       
     } catch (error) {
-      console.error('TierAlbum handleDropAtPosition: 드래그 데이터 파싱 실패:', error)
-      console.error('원본 데이터:', e.dataTransfer.getData("text/plain"))
+      console.error('정밀 배틀 모드 체크 실패:', error)
+      // 에러 발생 시 일반 드롭 처리로 fallback
+      handleDropAtPosition(e, targetTier, targetIndex)
     }
-  }
+  }, [
+    availablePhotos, 
+    tierPhotos, 
+    precisionTierMode, 
+    setBattleSequence, 
+    setShowComparisonModal, 
+    handleDropAtPosition
+  ])
+
+  const handleDropTierAreaWithBattle = useCallback((e: React.DragEvent, targetTier: string) => {
+    const tierLength = (tierPhotos[targetTier] || []).length
+    handleDropAtPositionWithBattle(e, targetTier, tierLength)
+  }, [tierPhotos, handleDropAtPositionWithBattle])
   
   // 갤러리에서 사진 추가 핸들러
   const handleAddPhotos = () => {
@@ -667,14 +542,12 @@ export default function TierAlbumPage({ groupId, tierAlbumId }: TierAlbumPagePro
                   dragOverPosition={dragOverPosition}
                   draggingPhotoId={draggingPhotoId}
                   onReturnToAvailable={(photoId, fromTier) =>
-                    handleReturnToAvailable(photoId, fromTier, (photo) =>
-                      setAvailablePhotos((prev) => [...prev, photo])
-                    )
+                    handleReturnToAvailable(photoId, fromTier)
                   }
                   onDragOverTierArea={handleDragOverTierArea}
-                  onDropTierArea={handleDropTierArea}
+                  onDropTierArea={handleDropTierAreaWithBattle}
                   onDragOverPosition={handleDragOverPosition}
-                  onDropAtPosition={handleDropAtPosition}
+                  onDropAtPosition={handleDropAtPositionWithBattle}
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                   onImageClick={openPhotoModal}

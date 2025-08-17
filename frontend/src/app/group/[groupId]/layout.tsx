@@ -205,7 +205,7 @@ function TierEditSidebarContent({ groupId, albumId }: { groupId: string, albumId
     // 편집 모드 변경 이벤트 리스너 (추가 안전장치)
     window.addEventListener('tierEditModeChanged', handleEditModeChanged as EventListener)
     
-    // 컴포넌트 마운트 시 메인페이지에 데이터 요청
+    // 컴포넌트 마운트 시 메인페이지에 데이터 요청 (타임라인 방식)
     window.dispatchEvent(new CustomEvent('tierSidebarMounted'))
     
     return () => {
