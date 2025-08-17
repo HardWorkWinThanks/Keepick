@@ -688,6 +688,9 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
               <div className="p-3 bg-[#222222] rounded-lg">
                 <div className="mb-2">
                   <span className="text-[#A0A0A5] text-xs">AI 기능 설정</span>
+                  <p className="text-[#636366] text-xs mt-1">
+                    인식 횟수와 실제 이모지 표시는 쿨타임이 적용되어 다를 수 있습니다
+                  </p>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
