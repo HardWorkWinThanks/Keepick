@@ -6,14 +6,13 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
-import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.ssafy.keepick.auth.application.RefreshTokenService;
 import com.ssafy.keepick.auth.application.dto.CustomOAuth2Member;
+import com.ssafy.keepick.global.security.util.JWTUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -33,7 +31,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @RequiredArgsConstructor
 public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final RefreshTokenService refreshTokenService;
+    private final JWTUtil jwtUtil;
 
     @Value("${app.redirect.defaultBase}")
     private String defaultBase;
@@ -61,28 +59,8 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         log.info("🔐 OAuth2 인증 시작 - 누가: {}(ID:{}) | 언제: {} | 어디서: {} | 무엇을: {} {} | 어떻게: {} | 왜: OAuth2 로그인 성공",
                 username, memberId, java.time.LocalDateTime.now(), clientIp, method, requestUri, userAgent);
 
-        // 리프레시 토큰 발급 (새로운 패밀리 ID 생성)
-        String familyId = UUID.randomUUID().toString();
-        log.info("🆔 새로운 패밀리 ID 생성: familyId={}", familyId);
-        
-        String refreshTokenJti = refreshTokenService.issue(memberId, username, familyId);
-        
-        log.info("✅ OAuth2 로그인 후 리프레시 토큰 발급 완료: 사용자: {} | JTI: {} | 패밀리: {}",
-                username, refreshTokenJti, familyId);
-        
-        // 리프레시 토큰을 HttpOnly 쿠키로 설정 (ResponseCookie 사용)
-        ResponseCookie refreshTokenCookie = ResponseCookie.from("refresh_token", refreshTokenJti)
-                .httpOnly(true)
-                .secure(true) // HTTPS 환경이므로 true
-                .path("/")
-                .maxAge(30 * 24 * 60 * 60) // 30일 유효
-                .sameSite("None") // Cross-origin을 위해 필요
-                .build();
-        
-        response.addHeader("Set-Cookie", refreshTokenCookie.toString());
-        
-        log.info("🍪 리프레시 토큰 쿠키 설정 완료: SameSite=None, Secure=true, TTL=30일");
-        
+        String token = jwtUtil.createToken(memberId, username);
+
         // state 파라미터에서 원본 Origin 추출 시도 (우선)
         String rawState = request.getParameter("state");
         String baseRedirect;
@@ -146,6 +124,7 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String redirectUrl = UriComponentsBuilder
                 .fromUriString(baseRedirect)
                 .path("/")
+                .queryParam("token", token)  // 쿼리스트링으로 전달
                 .build()
                 .toUriString();
 

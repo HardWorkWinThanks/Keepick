@@ -31,9 +31,8 @@ public class JWTFilter extends OncePerRequestFilter {
         if (uri.startsWith("/api/oauth2/authorization")
                 || uri.startsWith("/api/login/oauth2/code")
                 || uri.equals("/api/auth/login")
-                || uri.equals("/api/auth/token/refresh")
                 || uri.equals("/.well-known/assetlinks.json")
-                || (uri.startsWith("/api/groups/") && uri.contains("/photos/analysis/status/"))) {
+                || uri.startsWith("/api/groups/") && uri.contains("/photos/analysis/status/")) {
             filterChain.doFilter(request, response);
             return;
         }

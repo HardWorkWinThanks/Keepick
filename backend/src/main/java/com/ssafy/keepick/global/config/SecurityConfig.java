@@ -78,9 +78,8 @@ public class SecurityConfig {
                         // OAuth2 관련 경로
                         "/api/oauth2/**",
                         "/api/login/oauth2/**",
-                        // 인증 관련 경로
+                        // 모바일 인증 관련 경로
                         "/api/auth/login",
-                        "/api/auth/token/refresh",
                         // Swagger 문서 관련 경로
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
