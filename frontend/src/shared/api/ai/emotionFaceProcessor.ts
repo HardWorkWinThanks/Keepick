@@ -50,20 +50,20 @@ const PUFF_T = 0.015;
 
 // 이벤트 전송 임계값 (app.py의 SHOW_THRESH 참고, 필요에 따라 조정)
 const EMOTION_THRESHOLDS = {
-  laugh: 0.6,
-  serious: 0.65,
-  surprise: 0.95,
-  yawn: 0.60,
-  none: 0.50,
+  laugh: 0.85,   // 웃음 임계값을 0.85로 상승
+  serious: 0.85, // 진지함 임계값을 0.85로 상승
+  surprise: 0.95, // 놀람은 이미 높음
+  yawn: 0.80,    // 하품 임계값을 0.80으로 상승
+  none: 0.50,    // none은 유지
 };
 
 // 연속 감지 방지를 위한 쿨다운 (초)
 const EMOTION_COOLDOWN = {
-  laugh: 3.0,
-  serious: 3.0,
-  surprise: 3.0,
-  yawn: 3.0,
-  none: 1.0,
+  laugh: 8.0,   // 웃음 쿨다운을 8초로 증가
+  serious: 8.0, // 진지함 쿨다운을 8초로 증가
+  surprise: 8.0, // 놀람 쿨다운을 8초로 증가
+  yawn: 8.0,    // 하품 쿨다운을 8초로 증가
+  none: 1.0,    // none은 유지
 };
 
 export class EmotionFaceProcessor {

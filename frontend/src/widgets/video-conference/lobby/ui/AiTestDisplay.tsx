@@ -10,6 +10,7 @@ import {
   SparklesIcon,
   EyeIcon,
   CheckCircleIcon,
+  ClockIcon,
 } from "@heroicons/react/24/solid";
 
 import { GestureData, EmotionData, AiTestResult, GestureResult, EmotionResult } from "@/shared/types/ai.types";
@@ -18,13 +19,11 @@ import { GestureData, EmotionData, AiTestResult, GestureResult, EmotionResult } 
 const GESTURE_LABELS: { [key: string]: string } = {
   // 정적 제스처
   bad: "👎 따봉 반대",
-  fist: "✊ 주먹",
   good: "👍 따봉",
   gun: "👉 총 모양",
   heart: "🫶 손가락 하트",
   none: "없음",
   ok: "👌 OK",
-  open_palm: "✋ 손바닥",
   promise: "🤙 약속",
   rock: "🤘 락앤롤",
   victory: "✌️ 브이",
@@ -49,97 +48,188 @@ const EMOTION_LABELS: { [key: string]: string } = {
   happy: "😊 행복",
 };
 
-// 가로 카드 아이템 컴포넌트
-const GestureCard: React.FC<{
-  result: AiTestResult;
-  labelMap: { [key: string]: string };
-  isLatest?: boolean;
-}> = ({ result, labelMap, isLatest = false }) => {
-  const label = labelMap[result.label];
-  const emoji = label?.split(" ")[0] || "❓";
-  const name = label?.substring(2) || result.label;
+// 이미지 경로 매핑 (frontendAiProcessor와 동일)
+const getImagePath = (label: string): string => {
+  const basePaths = {
+    // Static gestures
+    bad: "/images/gestures/static/bad.png",
+    good: "/images/gestures/static/good.png",
+    gun: "/images/gestures/static/gun.png",
+    heart: "/images/gestures/static/heart.png",
+    ok: "/images/gestures/static/ok.png",
+    promise: "/images/gestures/static/promise.png",
+    rock: "/images/gestures/static/rock.png",
+    victory: "/images/gestures/static/victory.png",
+    // Dynamic gestures
+    fire: "/images/gestures/dynamic/fire.png",
+    hi: "/images/gestures/dynamic/hi.png",
+    hit: "/images/gestures/dynamic/hit.png",
+    nono: "/images/gestures/dynamic/nono.png",
+    nyan: "/images/gestures/dynamic/nyan.png",
+    shot: "/images/gestures/dynamic/shot.png",
+    // Emotions
+    laugh: "/images/gestures/emotion/laugh.png",
+    serious: "/images/gestures/emotion/serious.png",
+    surprise: "/images/gestures/emotion/surprise.png",
+    yawn: "/images/gestures/emotion/yawn.png",
+  };
+  return basePaths[label as keyof typeof basePaths] || "";
+};
+
+// 쿨다운 프로그레스 바 컴포넌트
+const CooldownProgressBar: React.FC<{
+  isOnCooldown: boolean;
+  progress: number; // 0-1
+  timeRemaining: number; // 초 단위
+}> = ({ isOnCooldown, progress, timeRemaining }) => {
+  if (!isOnCooldown) return null;
+
+  return (
+    <div className="flex items-center space-x-2 ml-auto">
+      <ClockIcon className="w-3 h-3 text-[#A0A0A5]" />
+      <div className="flex items-center space-x-1">
+        <div className="w-16 h-1.5 bg-[#424245] rounded-full overflow-hidden">
+          <motion.div
+            className="h-full bg-[#FE7A25] rounded-full"
+            initial={{ width: "100%" }}
+            animate={{ width: `${(1 - progress) * 100}%` }}
+            transition={{ duration: 0.05, ease: "linear" }}
+          />
+        </div>
+        <span className="text-xs text-[#A0A0A5] min-w-[20px]">
+          {Math.ceil(timeRemaining)}s
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// 그리드 형태의 제스처 카드 컴포넌트
+const GestureGridCard: React.FC<{
+  label: string;
+  name: string;
+  imagePath: string;
+  isActive: boolean;
+  lastDetectedTime?: number;
+  onCooldown: boolean;
+}> = ({ label, name, imagePath, isActive, lastDetectedTime, onCooldown }) => {
+  const [showEffect, setShowEffect] = useState(false);
+  
+  useEffect(() => {
+    if (isActive && lastDetectedTime) {
+      setShowEffect(true);
+      const timer = setTimeout(() => setShowEffect(false), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isActive, lastDetectedTime]);
 
   return (
     <motion.div
-      initial={{ scale: 0.8, opacity: 0, y: 10 }}
-      animate={{ scale: 1, opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className={`flex-shrink-0 w-20 h-16 rounded-lg p-1.5 transition-all duration-300 ${
-        isLatest 
-          ? "bg-[#FE7A25]/25 border border-[#FE7A25]/50 shadow-lg" 
-          : "bg-[#424245]/40 border border-[#424245]/20"
+      className={`relative rounded-md p-1.5 transition-all duration-300 border min-h-[60px] ${
+        onCooldown
+          ? "bg-[#636366]/20 border-[#636366]/30 opacity-50"
+          : isActive
+          ? "bg-[#FE7A25]/20 border-[#FE7A25]/50 shadow-md"
+          : "bg-[#424245]/30 border-[#424245]/40 hover:bg-[#424245]/40"
       }`}
+      animate={showEffect ? {
+        scale: [1, 1.02, 1],
+        boxShadow: [
+          "0 0 0 0 rgba(254, 122, 37, 0)",
+          "0 0 0 2px rgba(254, 122, 37, 0.3)",
+          "0 0 0 0 rgba(254, 122, 37, 0)"
+        ]
+      } : {}}
+      transition={{ duration: 0.4 }}
     >
-      <div className="text-center h-full flex flex-col justify-center">
-        <div className={`text-sm mb-0.5 ${isLatest ? "animate-pulse" : ""}`}>{emoji}</div>
-        <div className="text-xs font-medium text-[#FFFFFF] truncate leading-tight">{name}</div>
-        {result.confidence && (
-          <div className={`text-xs mt-0.5 ${isLatest ? "text-[#FE7A25]" : "text-[#A0A0A5]"}`}>
-            {(result.confidence * 100).toFixed(0)}%
+      <div className="text-center flex flex-col items-center justify-center h-full">
+        {imagePath ? (
+          <div className="flex justify-center mb-0.5">
+            <img 
+              src={imagePath} 
+              alt={name}
+              className={`w-4 h-4 object-contain transition-transform duration-300 ${
+                showEffect ? "scale-110" : ""
+              }`}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const fallback = document.createElement('div');
+                fallback.textContent = '❓';
+                fallback.className = 'text-xs';
+                target.parentNode?.appendChild(fallback);
+              }}
+            />
           </div>
+        ) : (
+          <div className="text-xs mb-0.5">❓</div>
         )}
+        <div className={`text-[10px] font-medium truncate leading-tight max-w-full ${
+          onCooldown ? "text-[#636366]" : isActive ? "text-[#FE7A25]" : "text-[#FFFFFF]"
+        }`}>
+          {name}
+        </div>
       </div>
+      
+      {/* 쿨다운 오버레이 */}
+      {onCooldown && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-md">
+          <ClockIcon className="w-2.5 h-2.5 text-[#636366]" />
+        </div>
+      )}
     </motion.div>
   );
 };
 
-// 제스처 타입별 섹션 컴포넌트
-const GestureSection: React.FC<{
+// 그리드 섹션 컴포넌트
+const GestureGridSection: React.FC<{
   title: string;
   icon: React.ReactNode;
-  results: AiTestResult[];
-  labelMap: { [key: string]: string };
   enabled: boolean;
-  gestureType: "static" | "dynamic" | "emotion";
-}> = ({ title, icon, results, labelMap, enabled, gestureType }) => {
-  // 해당 타입의 제스처만 필터링
-  const filteredResults = results.filter((r) => {
-    if (gestureType === "static") {
-      return ["bad", "fist", "good", "gun", "heart", "ok", "open_palm", "promise", "rock", "victory"].includes(r.label);
-    } else if (gestureType === "dynamic") {
-      return ["fire", "hi", "hit", "nono", "nyan", "shot"].includes(r.label);
-    } else if (gestureType === "emotion") {
-      return ["laugh", "serious", "surprise", "yawn", "angry", "sad", "happy"].includes(r.label);
-    }
-    return false;
-  }).slice(-6); // 최대 6개로 증가
-
+  gestureLabels: string[];
+  labelMap: { [key: string]: string };
+  activeGestures: { [key: string]: number }; // label -> timestamp
+  cooldownGestures: Set<string>;
+}> = ({ title, icon, enabled, gestureLabels, labelMap, activeGestures, cooldownGestures }) => {
   return (
-    <div className={`rounded-lg transition-all duration-300 ${
+    <div className={`rounded-md transition-all duration-300 ${
       enabled 
         ? "bg-[#FE7A25]/5 border border-[#FE7A25]/20" 
         : "bg-[#424245]/20 border border-[#424245]/30"
     }`}>
-      <div className="p-3 border-b border-[#424245]/30">
-        <div className="flex items-center space-x-2">
+      <div className="px-2.5 py-1.5 border-b border-[#424245]/30">
+        <div className="flex items-center space-x-1.5">
           <div className={`${enabled ? "text-[#FE7A25]" : "text-[#A0A0A5]"}`}>{icon}</div>
-          <span className={`text-sm font-medium ${enabled ? "text-[#FFFFFF]" : "text-[#A0A0A5]"}`}>
+          <span className={`text-xs font-medium ${enabled ? "text-[#FFFFFF]" : "text-[#A0A0A5]"}`}>
             {title}
           </span>
         </div>
       </div>
 
-      <div className="p-3">
+      <div className="p-2">
         {enabled ? (
-          filteredResults.length > 0 ? (
-            <div className="flex space-x-1.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[#424245]">
-              {filteredResults.reverse().map((result, index) => (
-                <GestureCard
-                  key={`${result.type}-${result.label}-${result.timestamp}-${index}`}
-                  result={result}
-                  labelMap={labelMap}
-                  isLatest={index === 0}
+          <div className="grid grid-cols-8 gap-1">
+            {gestureLabels.map((label) => {
+              const name = labelMap[label]?.substring(2) || label;
+              const imagePath = getImagePath(label);
+              const isActive = activeGestures[label] > 0;
+              const onCooldown = cooldownGestures.has(label);
+              
+              return (
+                <GestureGridCard
+                  key={label}
+                  label={label}
+                  name={name}
+                  imagePath={imagePath}
+                  isActive={isActive}
+                  lastDetectedTime={activeGestures[label]}
+                  onCooldown={onCooldown}
                 />
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center p-3 text-[#A0A0A5] text-sm">
-              <EyeIcon className="w-4 h-4 mr-2 animate-pulse" />
-              감지 대기 중...
-            </div>
-          )
+              );
+            })}
+          </div>
         ) : (
-          <div className="flex items-center justify-center p-3 text-[#636366] text-sm">
+          <div className="flex items-center justify-center p-4 text-[#636366] text-xs">
             기능이 비활성화되어 있습니다
           </div>
         )}
@@ -183,50 +273,91 @@ export const AiTestDisplay: React.FC<AiTestDisplayProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  const [filteredGestureResults, setFilteredGestureResults] = useState<AiTestResult[]>([]);
-  const [filteredEmotionResults, setFilteredEmotionResults] = useState<AiTestResult[]>([]);
-  const lastGestureTimeRef = useRef<number>(0);
-  const lastEmotionTimeRef = useRef<number>(0);
+  // 새로운 상태 관리
+  const [activeGestures, setActiveGestures] = useState<{ [key: string]: number }>({});
+  const [activeEmotions, setActiveEmotions] = useState<{ [key: string]: number }>({});
+  const [cooldownGestures, setCooldownGestures] = useState<Set<string>>(new Set());
+  const [cooldownEmotions, setCooldownEmotions] = useState<Set<string>>(new Set());
   
+  const cooldownTimers = useRef<{ [key: string]: NodeJS.Timeout }>({});
+  
+  // 제스처 리스트 정의
+  const staticGestureLabels = ["bad", "good", "gun", "heart", "ok", "promise", "rock", "victory"];
+  const dynamicGestureLabels = ["fire", "hi", "hit", "nono", "nyan", "shot"];
+  const emotionLabels = ["laugh", "serious", "surprise", "yawn"];
+  
+  // 제스처 감지 처리
   useEffect(() => {
     if (gestureResults.length === 0) return;
     const latestGesture = gestureResults[gestureResults.length - 1];
     if (latestGesture.label === "none") return;
-  
-    const now = Date.now();
-    // 동적 제스처는 더 자주 업데이트되도록 쿨다운 시간 단축
-    const isDynamic = ["fire", "hi", "hit", "nono", "nyan", "shot"].includes(latestGesture.label);
-    const cooldownTime = isDynamic ? 500 : 1000; // 동적 제스처는 0.5초, 정적 제스처는 1초
     
-    if (now - lastGestureTimeRef.current < cooldownTime) {
-      return;
+    const now = Date.now();
+    const label = latestGesture.label;
+    
+    // 제스처 활성화 및 쿨다운 시작
+    setActiveGestures(prev => ({ ...prev, [label]: now }));
+    setCooldownGestures(prev => new Set([...prev, label]));
+    
+    // 5초 후 쿨다운 해제
+    if (cooldownTimers.current[label]) {
+      clearTimeout(cooldownTimers.current[label]);
     }
-  
-    setFilteredGestureResults(prev => [...prev, latestGesture].slice(-10)); // 최대 10개로 증가
-    lastGestureTimeRef.current = now;
+    
+    cooldownTimers.current[label] = setTimeout(() => {
+      setCooldownGestures(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(label);
+        return newSet;
+      });
+      delete cooldownTimers.current[label];
+    }, 5000);
+    
+    // 1초 후 활성 상태 해제
+    setTimeout(() => {
+      setActiveGestures(prev => ({ ...prev, [label]: 0 }));
+    }, 1000);
   }, [gestureResults]);
   
+  // 감정 감지 처리
   useEffect(() => {
     if (emotionResults.length === 0) return;
     const latestEmotion = emotionResults[emotionResults.length - 1];
     if (latestEmotion.label === "none") return;
-  
+    
     const now = Date.now();
-    // 감정 인식도 더 자주 업데이트되도록 쿨다운 시간 단축
-    if (now - lastEmotionTimeRef.current < 1500) { // 1.5초로 단축
-      return;
+    const label = latestEmotion.label;
+    
+    // 감정 활성화 및 쿨다운 시작
+    setActiveEmotions(prev => ({ ...prev, [label]: now }));
+    setCooldownEmotions(prev => new Set([...prev, label]));
+    
+    // 8초 후 쿨다운 해제 (감정 인식 빈도를 크게 낮춤)
+    if (cooldownTimers.current[`emotion_${label}`]) {
+      clearTimeout(cooldownTimers.current[`emotion_${label}`]);
     }
-  
-    // 중복 감정 제거: 마지막 결과와 같은 감정이면 추가하지 않음
-    setFilteredEmotionResults(prev => {
-      const lastResult = prev[prev.length - 1];
-      if (lastResult && lastResult.label === latestEmotion.label) {
-        return prev; // 중복이면 추가하지 않음
-      }
-      return [...prev, latestEmotion].slice(-8); // 최대 8개로 증가
-    });
-    lastEmotionTimeRef.current = now;
+    
+    cooldownTimers.current[`emotion_${label}`] = setTimeout(() => {
+      setCooldownEmotions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(label);
+        return newSet;
+      });
+      delete cooldownTimers.current[`emotion_${label}`];
+    }, 8000);
+    
+    // 1초 후 활성 상태 해제
+    setTimeout(() => {
+      setActiveEmotions(prev => ({ ...prev, [label]: 0 }));
+    }, 1000);
   }, [emotionResults]);
+
+  // 컴포넌트 언마운트 시 정리
+  useEffect(() => {
+    return () => {
+      Object.values(cooldownTimers.current).forEach(clearTimeout);
+    };
+  }, []);
 
   const drawLandmarks = useCallback((
     context: CanvasRenderingContext2D,
@@ -349,9 +480,9 @@ export const AiTestDisplay: React.FC<AiTestDisplayProps> = ({
 
   if (!isAiEnabled || !isAiPreviewOpen) {
     return (
-      <div className="p-4 bg-[#222222]/50 rounded-lg text-center">
-        <SparklesIcon className="w-8 h-8 text-[#636366] mx-auto mb-2" />
-        <p className="text-[#636366] text-sm">
+      <div className="p-3 bg-[#222222]/50 rounded-lg text-center">
+        <SparklesIcon className="w-6 h-6 text-[#636366] mx-auto mb-2" />
+        <p className="text-[#636366] text-xs">
           AI 미리보기를 활성화하여
           <br />
           제스처와 감정 인식을 테스트해보세요
@@ -377,56 +508,47 @@ export const AiTestDisplay: React.FC<AiTestDisplayProps> = ({
         className="pointer-events-none"
       />
       
-      <div className="bg-[#1A1A1A] rounded-lg p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2">
-            <SparklesIcon className="w-5 h-5 text-[#FE7A25]" />
-            <span className="text-[#FE7A25] text-sm font-medium">AI 기능 테스트</span>
+      <div className="bg-[#1A1A1A] rounded-lg p-3">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center space-x-1.5">
+            <SparklesIcon className="w-4 h-4 text-[#FE7A25]" />
+            <span className="text-[#FE7A25] text-xs font-medium">AI 기능 테스트</span>
           </div>
-          {/* {onLandmarkToggle && (
-            <button
-              onClick={onLandmarkToggle}
-              className={`px-3 py-1 rounded text-xs transition-all ${
-                showLandmarks
-                  ? "bg-[#FE7A25] text-white"
-                  : "bg-[#424245] text-[#A0A0A5] hover:bg-[#525255]"
-              }`}
-            >
-              랜드마크 {showLandmarks ? "ON" : "OFF"}
-            </button>
-          )} */}
         </div>
 
-        <div className="space-y-3">
-          <GestureSection
+        <div className="space-y-2.5">
+          <GestureGridSection
             title="정적 제스처"
-            icon={<HandRaisedIcon className="w-4 h-4" />}
-            results={filteredGestureResults}
-            labelMap={GESTURE_LABELS}
+            icon={<HandRaisedIcon className="w-3.5 h-3.5" />}
             enabled={aiState.isStaticGestureDetectionEnabled}
-            gestureType="static"
-          />
-
-          <GestureSection
-            title="동적 제스처"
-            icon={<SparklesIcon className="w-4 h-4" />}
-            results={filteredGestureResults}
+            gestureLabels={staticGestureLabels}
             labelMap={GESTURE_LABELS}
-            enabled={aiState.isDynamicGestureDetectionEnabled}
-            gestureType="dynamic"
+            activeGestures={activeGestures}
+            cooldownGestures={cooldownGestures}
           />
 
-          <GestureSection
+          <GestureGridSection
+            title="동적 제스처"
+            icon={<SparklesIcon className="w-3.5 h-3.5" />}
+            enabled={aiState.isDynamicGestureDetectionEnabled}
+            gestureLabels={dynamicGestureLabels}
+            labelMap={GESTURE_LABELS}
+            activeGestures={activeGestures}
+            cooldownGestures={cooldownGestures}
+          />
+
+          <GestureGridSection
             title="감정 인식"
-            icon={<FaceSmileIcon className="w-4 h-4" />}
-            results={filteredEmotionResults}
-            labelMap={EMOTION_LABELS}
+            icon={<FaceSmileIcon className="w-3.5 h-3.5" />}
             enabled={aiState.isEmotionDetectionEnabled}
-            gestureType="emotion"
+            gestureLabels={emotionLabels}
+            labelMap={EMOTION_LABELS}
+            activeGestures={activeEmotions}
+            cooldownGestures={cooldownEmotions}
           />
         </div>
 
-        <div className="text-xs text-[#636366] text-center pt-3 mt-4 border-t border-[#424245]">
+        <div className="text-[10px] text-[#636366] text-center pt-2 mt-3 border-t border-[#424245]">
           💡 다양한 표정과 손 제스처를 시도해보세요
         </div>
       </div>
