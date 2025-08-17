@@ -26,11 +26,11 @@ export class GestureProcessor {
   private readonly PX_HIGH = 0.12; // 움직임 임계값 (더 큰 움직임 요구)
   private readonly STATIC_CONF_T = 0.75; // 정적 제스처 신뢰도 임계값
   private readonly STATIC_VOTE_K = 10; // 다수결 투표 수 (더 많은 투표 요구)
-  private readonly STATIC_HOLD_SEC = 1.5; // 정적 제스처 유지 시간 (1.5초로 증가)
+  private readonly STATIC_HOLD_SEC = 1.5; // 정적 제스처 유지 시간 (1초)
   private readonly STATIC_COOLDOWN = 2.5; // 정적 제스처 쿨다운(초) - 속도 늦추기
   private readonly SEQ_LEN = 30; // 동적 제스처 시퀀스 길이
   private readonly DYN_CONF_T = 0.92; // 동적 제스처 신뢰도 임계값 (더 높게)
-  private readonly MOVE3D_T = 0.025; // 3D 움직임 임계값 (더 큰 움직임 요구)
+  private readonly MOVE3D_T = 0.06; // 3D 움직임 임계값 (더 큰 움직임 요구)
   private readonly DYN_COOLDOWN = 8.0; // 동적 제스처 쿨다운(초) (더 길게)
 
   // 손별 상태 관리

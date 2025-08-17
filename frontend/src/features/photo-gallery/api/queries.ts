@@ -71,29 +71,16 @@ export const useSimilarPhotosFlat = (groupId: string, viewMode: string) => {
 export const useAllPhotos = (groupId: string, viewMode: string) => {
   return useInfiniteQuery({
     queryKey: ['all-photos', groupId],
-    queryFn: ({ pageParam = 20 }) => 
-      getGroupOverview(parseInt(groupId), pageParam).then(response => ({
-        list: response.allPhotos.list,
-        pageInfo: response.allPhotos.pageInfo,
-      })),
-    getNextPageParam: (lastPage) => {
-      const currentSize = lastPage.pageInfo.size
-      const hasNext = lastPage.pageInfo.hasNext
-      return hasNext ? currentSize + 20 : undefined
-    },
-    initialPageParam: 20,
+    queryFn: ({ pageParam = 0 }) => 
+      getFilteredPhotos(parseInt(groupId), {
+        page: pageParam,
+        size: 20
+      }),
+    getNextPageParam: (lastPage) => 
+      lastPage.pageInfo.hasNext ? lastPage.pageInfo.page + 1 : undefined,
+    initialPageParam: 0,
     staleTime: 5 * 60 * 1000, // 5분 캐싱
     enabled: !!groupId, // groupId가 있으면 항상 실행 (개수 정보 필요)
-    // 중복 데이터 제거를 위한 select 함수
-    select: (data) => ({
-      ...data,
-      pages: data.pages.map((page, pageIndex) => ({
-        ...page,
-        list: pageIndex === 0 
-          ? page.list // 첫 번째 페이지는 그대로
-          : page.list.slice(data.pages.slice(0, pageIndex).reduce((acc, p) => acc + p.list.length, 0)) // 이전 페이지 데이터 제외
-      }))
-    })
   })
 }
 
@@ -103,21 +90,13 @@ export const useAllPhotos = (groupId: string, viewMode: string) => {
 export const useAllPhotosFlat = (groupId: string, viewMode: string) => {
   const query = useAllPhotos(groupId, viewMode)
   
-  // 중복 제거를 위해 Map 사용
-  const photosMap = new Map()
-  query.data?.pages.forEach(page => {
-    page.list.forEach(photo => {
-      if (!photosMap.has(photo.photoId)) {
-        photosMap.set(photo.photoId, convertToGalleryPhoto(photo))
-      }
-    })
-  })
-  
-  const photos = Array.from(photosMap.values())
+  const photos = query.data?.pages.flatMap(page => 
+    page.list.map(convertToGalleryPhoto)
+  ) || []
   
   return {
     ...query,
-    photos, // 중복 제거된 갤러리 사진 배열
+    photos, // 갤러리 사진 배열
   }
 }
 
