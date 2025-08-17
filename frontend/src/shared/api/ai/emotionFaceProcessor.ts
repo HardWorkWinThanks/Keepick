@@ -479,7 +479,6 @@ export class EmotionFaceProcessor {
       this.expressionModel.dispose();
       this.expressionModel = null;
     }
-    this.faceMeshModule = null;
     this.expressionScalerMean = null;
     this.expressionScalerScale = null;
     this.lastExpressionProbs = null;
