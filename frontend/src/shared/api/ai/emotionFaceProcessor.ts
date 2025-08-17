@@ -52,7 +52,7 @@ const PUFF_T = 0.015;
 const EMOTION_THRESHOLDS = {
   laugh: 0.6,
   serious: 0.65,
-  surprise: 0.90,
+  surprise: 0.95,
   yawn: 0.60,
   none: 0.50,
 };
@@ -435,8 +435,8 @@ export class EmotionFaceProcessor {
     }
 
     // surprise는 입이 충분히 벌어져야 함 (임계값을 더욱 높여서 엄격하게)
-    const SURPRISE_MOUTH_THRESHOLD = 0.035; // 입을 더 크게 벌려야 함
-    const SURPRISE_EYE_THRESHOLD = 0.022;   // 눈도 더 크게 떠야 함
+    const SURPRISE_MOUTH_THRESHOLD = 0.045; // 입을 훨씬 더 크게 벌려야 함
+    const SURPRISE_EYE_THRESHOLD = 0.028;   // 눈도 훨씬 더 크게 떠야 함
     
     // 입이 충분히 벌어지지 않았거나 눈이 충분히 크게 뜨지 않았으면 surprise 거부
     if (rawFeat[1] < SURPRISE_MOUTH_THRESHOLD || rawFeat[0] < SURPRISE_EYE_THRESHOLD) {

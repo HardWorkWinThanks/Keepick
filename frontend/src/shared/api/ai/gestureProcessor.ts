@@ -23,15 +23,15 @@ export class GestureProcessor {
   private readonly DYNAMIC_GESTURE_MODEL_PATH = "/models/dinamic-gesture/model.json"; // 실제 폴더명에 맞춰 수정
 
   // 참고 코드의 안정화 상수들 추가
-  private readonly PX_HIGH = 0.08; // 움직임 임계값 (더 큰 움직임 요구)
+  private readonly PX_HIGH = 0.12; // 움직임 임계값 (더 큰 움직임 요구)
   private readonly STATIC_CONF_T = 0.75; // 정적 제스처 신뢰도 임계값
-  private readonly STATIC_VOTE_K = 7; // 다수결 투표 수
-  private readonly STATIC_HOLD_SEC = 1.0; // 정적 제스처 유지 시간 (1초로 증가)
+  private readonly STATIC_VOTE_K = 10; // 다수결 투표 수 (더 많은 투표 요구)
+  private readonly STATIC_HOLD_SEC = 1.5; // 정적 제스처 유지 시간 (1.5초로 증가)
   private readonly STATIC_COOLDOWN = 2.5; // 정적 제스처 쿨다운(초) - 속도 늦추기
   private readonly SEQ_LEN = 30; // 동적 제스처 시퀀스 길이
-  private readonly DYN_CONF_T = 0.90; // 동적 제스처 신뢰도 임계값
-  private readonly MOVE3D_T = 0.015; // 3D 움직임 임계값 (더 큰 움직임 요구)
-  private readonly DYN_COOLDOWN = 6.0; // 동적 제스처 쿨다운(초)
+  private readonly DYN_CONF_T = 0.92; // 동적 제스처 신뢰도 임계값 (더 높게)
+  private readonly MOVE3D_T = 0.025; // 3D 움직임 임계값 (더 큰 움직임 요구)
+  private readonly DYN_COOLDOWN = 8.0; // 동적 제스처 쿨다운(초) (더 길게)
 
   // 손별 상태 관리
   private handStates: Map<string, {
@@ -424,12 +424,15 @@ export class GestureProcessor {
               );
 
               handState.moveHist2d.push(move2d);
-              if (handState.moveHist2d.length > 5) {
+              if (handState.moveHist2d.length > 8) {
                 handState.moveHist2d.shift();
               }
 
               const avgMove2d = handState.moveHist2d.reduce((a, b) => a + b, 0) / handState.moveHist2d.length;
-              isMoving = avgMove2d > this.PX_HIGH || move3d > this.MOVE3D_T;
+              // 지속적인 움직임이 있어야 동적 제스처로 인식
+              const recentMoves = handState.moveHist2d.slice(-3); // 최근 3프레임
+              const consistentMovement = recentMoves.every(m => m > this.PX_HIGH * 0.7);
+              isMoving = (avgMove2d > this.PX_HIGH && consistentMovement) || move3d > this.MOVE3D_T;
             }
 
             // 정적 제스처 처리
