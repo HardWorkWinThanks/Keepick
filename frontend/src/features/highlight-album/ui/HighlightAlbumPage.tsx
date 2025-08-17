@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { ZoomIn, ArrowLeft, Settings, Grid3x3, LayoutList, Edit } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
 import { useHighlightAlbum } from "../model/useHighlightAlbum"
@@ -128,17 +129,48 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
 
         {/* 뷰 전환 버튼 - 4개 섹션의 교차점 */}
         <div className="absolute z-50 top-1/2 left-1/2 transform -translate-x-28 -translate-y-1/2" style={{ marginLeft: '86px' }}>
-          <button
+          <motion.button
             onClick={() => setIsGridView(!isGridView)}
-            className="bg-black/80 border border-white/20 rounded-full p-3 text-white hover:bg-black/90 transition-all duration-300 hover:scale-110 backdrop-blur-sm"
+            className="bg-black/80 border border-white/20 rounded-full p-3 text-white backdrop-blur-sm"
             title={isGridView ? "카드 스택 뷰" : "그리드 뷰"}
+            whileHover={{ 
+              scale: 1.1,
+              backgroundColor: "rgba(0,0,0,0.9)",
+              borderColor: "rgba(254, 122, 37, 0.5)"
+            }}
+            whileTap={{ scale: 0.95 }}
+            animate={{ 
+              rotate: isGridView ? 180 : 0 
+            }}
+            transition={{ 
+              duration: 0.3,
+              ease: "easeInOut"
+            }}
           >
-            {isGridView ? (
-              <LayoutList size={24} />
-            ) : (
-              <Grid3x3 size={24} />
-            )}
-          </button>
+            <AnimatePresence mode="wait">
+              {isGridView ? (
+                <motion.div
+                  key="list"
+                  initial={{ opacity: 0, rotate: -90 }}
+                  animate={{ opacity: 1, rotate: 0 }}
+                  exit={{ opacity: 0, rotate: 90 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <LayoutList size={24} />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="grid"
+                  initial={{ opacity: 0, rotate: -90 }}
+                  animate={{ opacity: 1, rotate: 0 }}
+                  exit={{ opacity: 0, rotate: 90 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Grid3x3 size={24} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.button>
         </div>
 
       {/* Four Quadrants with Clear Separation */}
@@ -168,28 +200,50 @@ export function HighlightAlbumPage({ groupId, albumId }: HighlightAlbumPageProps
               </div>
 
               {/* Card Stack / Grid Section - 뷰 모드에 따라 전환 */}
-              {isGridView ? (
-                <div className="absolute top-20 left-0 right-0 bottom-0 flex items-center justify-center">
-                  <GridView 
-                    photos={photos}
-                    emotion={emotion}
-                    emotionColor={emotionColors[emotion as keyof typeof emotionColors]}
-                    onPhotoClick={handlePhotoClick}
-                    isSelectingCoverImage={isSelectingCoverImage}
-                  />
-                </div>
-              ) : (
-                <div className="absolute top-32 left-1/2 transform -translate-x-24">
-                  <CardStack 
-                    photos={photos}
-                    emotion={emotion}
-                    emotionColor={emotionColors[emotion as keyof typeof emotionColors]}
-                    hideNavigation={isGridView}
-                    onPhotoClick={handlePhotoClick}
-                    isSelectingCoverImage={isSelectingCoverImage}
-                  />
-                </div>
-              )}
+              <AnimatePresence mode="wait">
+                {isGridView ? (
+                  <motion.div 
+                    key={`grid-${emotion}`}
+                    className="absolute top-20 left-0 right-0 bottom-0 flex items-center justify-center"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.1 }}
+                    transition={{ 
+                      duration: 0.4,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <GridView 
+                      photos={photos}
+                      emotion={emotion}
+                      emotionColor={emotionColors[emotion as keyof typeof emotionColors]}
+                      onPhotoClick={handlePhotoClick}
+                      isSelectingCoverImage={isSelectingCoverImage}
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    key={`stack-${emotion}`}
+                    className="absolute top-32 left-1/2 transform -translate-x-24"
+                    initial={{ opacity: 0, scale: 1.1 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ 
+                      duration: 0.4,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <CardStack 
+                      photos={photos}
+                      emotion={emotion}
+                      emotionColor={emotionColors[emotion as keyof typeof emotionColors]}
+                      hideNavigation={isGridView}
+                      onPhotoClick={handlePhotoClick}
+                      isSelectingCoverImage={isSelectingCoverImage}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )
         })}

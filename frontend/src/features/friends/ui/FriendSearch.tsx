@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Search, UserPlus, User, AlertCircle } from "lucide-react"
+import { getProfilePlaceholder } from "@/shared/constants/placeholders"
 import { Input } from "@/shared/ui/shadcn/input"
 import { InteractiveHoverButton } from "@/shared/ui/composite/InteractiveHoverButton"
 import { useFriends } from "../model/useFriends"
@@ -155,7 +156,7 @@ export function FriendSearch() {
               <div className="flex items-center gap-4 p-4 bg-gray-800/30 rounded-lg border border-gray-700/50">
                 {/* 프로필 이미지 */}
                 <Image
-                  src={searchResult.profileUrl || "/placeholder/basic_profile.webp"}
+                  src={getProfilePlaceholder(searchResult.profileUrl)}
                   alt={`${searchResult.nickname} 프로필`}
                   width={56}
                   height={56}

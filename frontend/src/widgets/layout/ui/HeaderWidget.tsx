@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useLogout } from "@/features/auth/model/useLogout";
+import { getProfilePlaceholder } from "@/shared/constants/placeholders";
 
 import Link from "next/link";
 import {
@@ -41,7 +42,7 @@ export default function HeaderWidget({
 
   const user = {
     name: currentUser?.nickname || "사용자", // Guest → 사용자로 변경
-    imageUrl: currentUser?.profileUrl || "/placeholder/basic_profile.webp",
+    imageUrl: getProfilePlaceholder(currentUser?.profileUrl),
   };
 
   return (
@@ -66,7 +67,7 @@ export default function HeaderWidget({
           {/* 로고 */}
           <Link
             href="/"
-            className="font-montserrat font-bold text-2xl text-[var(--primary-color)]"
+            className="font-keepick-primary font-bold text-2xl text-[var(--primary-color)]"
           >
             Keep<span className="text-[var(--text-dark)] ml-1">ick</span>
           </Link>
