@@ -23,10 +23,14 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns("/**")
                 .excludePathPatterns("/swagger-ui/**", "/v3/api-docs/**");
 
-        // 그룹 멤버 검사
+        // 그룹 멤버 검사 (그룹 초대 제외)
         registry.addInterceptor(groupMemberInterceptor)
                 .addPathPatterns("/api/groups/**")
-                .excludePathPatterns("/api/groups");
+                .excludePathPatterns(
+                        "/api/groups",
+                        "/api/groups/*/invitations/**",
+                        "/api/groups/*/invitation-link/**"
+                );
 
         // 그룹 앨범 검사 (그룹 멤버 검사 이후에 실행)
         registry.addInterceptor(groupAlbumInterceptor)

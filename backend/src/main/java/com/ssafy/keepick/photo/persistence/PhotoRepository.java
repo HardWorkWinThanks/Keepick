@@ -14,7 +14,7 @@ import java.util.List;
 @Repository
 public interface PhotoRepository extends JpaRepository<Photo,Long>, PhotoQueryFactory {
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Photo p " +
             "SET p.deletedAt = CURRENT_TIMESTAMP " +
             "WHERE p.id IN :ids")
