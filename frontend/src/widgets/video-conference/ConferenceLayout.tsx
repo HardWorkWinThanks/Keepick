@@ -5,7 +5,6 @@ import { useAppSelector } from "@/shared/hooks/redux";
 import { VideoGrid } from "./VideoGrid";
 import { BottomControls } from "./BottomControls";
 import { ChatSidebar } from "@/widgets/chat/ChatSidebar";
-import { AiResultsDisplay } from "./AiResultsDisplay";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const ConferenceLayout = () => {
@@ -24,8 +23,6 @@ export const ConferenceLayout = () => {
           {/* 비디오 그리드 영역 (남는 공간 모두 차지) */}
           <div className="flex-1 relative overflow-y-auto">
             <VideoGrid />
-            {/* AI 결과 표시 컴포넌트 */}
-            <AiResultsDisplay />
           </div>
           {/* 하단 컨트롤 (고정 높이) */}
           <BottomControls />

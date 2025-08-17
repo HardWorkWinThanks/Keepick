@@ -34,10 +34,10 @@ const IDX_FM = {
 const LABELS_FACE = ["laugh", "serious", "surprise", "yawn", "none"];
 const IDX_FACE = {
   laugh: 0,
-  serious: 1, 
+  serious: 1,
   surprise: 2,
   yawn: 3,
-  none: 4
+  none: 4,
 };
 
 // app.py의 메타데이터 임계값들 (정확히 일치)
@@ -48,22 +48,22 @@ const SMIRK_T = 0.010;
 const FROWN_T = 0.018;
 const PUFF_T = 0.015;
 
-// 🔥 새로 추가: 이벤트 전송 임계값 (app.py의 SHOW_THRESH 참고)
+// 이벤트 전송 임계값 (app.py의 SHOW_THRESH 참고, 필요에 따라 조정)
 const EMOTION_THRESHOLDS = {
-  laugh: 0.75,     // app.py: 0.90에서 낮춤 (더 민감하게)
-  serious: 0.65,   // app.py: 0.60에서 약간 상향
-  surprise: 0.80,  // app.py: 0.90에서 낮춤
-  yawn: 0.85,      // app.py: 0.90에서 낮춤 (하품 편향 방지)
-  none: 0.50       // none은 낮은 임계값
+  laugh: 0.75,
+  serious: 0.65,
+  surprise: 0.80,
+  yawn: 0.85,
+  none: 0.50,
 };
 
-// 🔥 새로 추가: 연속 감지 방지를 위한 쿨다운 (초)
+// 연속 감지 방지를 위한 쿨다운 (초)
 const EMOTION_COOLDOWN = {
   laugh: 3.0,
   serious: 5.0,
   surprise: 2.0,
   yawn: 4.0,
-  none: 1.0
+  none: 1.0,
 };
 
 export class EmotionFaceProcessor {
@@ -77,10 +77,10 @@ export class EmotionFaceProcessor {
   // MediaPipe onResults 콜백에서 결과를 Promise로 전달하기 위한 변수
   private _faceMeshResultResolver: ((value: Results) => void) | null = null;
 
-  // 🔥 새로 추가: 디버깅 및 이벤트 제어
+  // 디버깅 및 이벤트 제어
   private lastEmotionEventTime: Record<string, number> = {};
   private debugMode = false;
-  private emotionHistory: Array<{emotion: string, confidence: number, timestamp: number}> = [];
+  private emotionHistory: Array<{ emotion: string; confidence: number; timestamp: number }> = [];
 
   // 초기화 시 AI 설정 주입
   private aiConfig: AiSystemConfig;
@@ -88,7 +88,7 @@ export class EmotionFaceProcessor {
   constructor(initialConfig: AiSystemConfig) {
     this.aiConfig = initialConfig;
     // 개발 환경에서 디버그 모드 활성화
-    this.debugMode = process.env.NODE_ENV === 'development';
+    this.debugMode = typeof process !== "undefined" && process.env && process.env.NODE_ENV === "development";
   }
 
   /**
@@ -96,21 +96,27 @@ export class EmotionFaceProcessor {
    */
   public async init(modelPath: string, scalerPath: string, wasmPath: string): Promise<void> {
     // Client-side check
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       console.warn("EmotionFaceProcessor: Cannot initialize on server side");
       this.aiConfig.emotion.enabled = false;
       return;
     }
 
     try {
+      // TFJS 백엔드 고정 & 준비
+      await tf.setBackend("webgl");
+      await tf.ready();
+
       // Dynamic import of MediaPipe Face Mesh
       const mediapipeFaceMesh = await import("@mediapipe/face_mesh");
 
-            // 수정: 가져온 FaceMesh 클래스를 직접 사용하여 인스턴스를 생성합니다.
+      // FaceMesh 인스턴스
       this.faceMesh = new mediapipeFaceMesh.FaceMesh({
-          locateFile: (file) => {
-              return `${wasmPath}/${file}`;
-          },
+        locateFile: (file: string) => {
+          // 필요시 CDN으로 대체 가능:
+          // return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+          return `${wasmPath}/${file}`;
+        },
       });
 
       this.faceMesh.setOptions({
@@ -120,33 +126,46 @@ export class EmotionFaceProcessor {
         minTrackingConfidence: 0.7,
       });
 
-      this.faceMesh.onResults((results) => {
+      this.faceMesh.onResults((results: Results) => {
         if (this._faceMeshResultResolver) {
-          this._faceMeshResultResolver(results);
+          const resolve = this._faceMeshResultResolver;
           this._faceMeshResultResolver = null;
+          resolve(results);
         }
       });
       console.log("EmotionFaceProcessor: Face Mesh initialized.");
 
       // TensorFlow.js 모델 및 스케일러 로드
       this.expressionModel = await tf.loadLayersModel(modelPath);
+
       const scalerResponse = await fetch(scalerPath);
       const scalerData = await scalerResponse.json();
       this.expressionScalerMean = scalerData.mean_;
       this.expressionScalerScale = scalerData.scale_;
       console.log("EmotionFaceProcessor: Expression model and scaler loaded.");
-      
-      // 🔥 디버그: 스케일러 데이터 확인
+
+      // 강 검증: 스케일러 길이/유효성
+      if (!this.expressionScalerMean || !this.expressionScalerScale) {
+        throw new Error("Scaler (mean_/scale_) not loaded");
+      }
+      if (this.expressionScalerMean.length !== 12 || this.expressionScalerScale.length !== 12) {
+        throw new Error(
+          `Scaler length mismatch. expected 12 but got mean=${this.expressionScalerMean.length}, scale=${this.expressionScalerScale.length}`
+        );
+      }
+
+      // 디버그 로깅
       if (this.debugMode) {
-        console.log("Scaler mean length:", this.expressionScalerMean?.length);
-        console.log("Scaler scale length:", this.expressionScalerScale?.length);
-        console.log("First few mean values:", this.expressionScalerMean?.slice(0, 5));
-        console.log("First few scale values:", this.expressionScalerScale?.slice(0, 5));
+        console.log("Scaler mean length:", this.expressionScalerMean.length);
+        console.log("Scaler scale length:", this.expressionScalerScale.length);
+        console.log("First few mean values:", this.expressionScalerMean.slice(0, 5));
+        console.log("First few scale values:", this.expressionScalerScale.slice(0, 5));
       }
     } catch (error) {
       console.error("EmotionFaceProcessor: Failed to load Face Mesh or models:", error);
       this.aiConfig.emotion.enabled = false;
       this.faceMesh = null;
+      this.expressionModel = null;
     }
   }
 
@@ -157,47 +176,45 @@ export class EmotionFaceProcessor {
     this.aiConfig = {
       ...this.aiConfig,
       ...config,
-      emotion: { ...this.aiConfig.emotion, ...config.emotion },
+      emotion: { ...this.aiConfig.emotion, ...(config as any).emotion },
     };
   }
 
   /**
-   * 🔥 새로 추가: 디버그 모드 토글
+   * 디버그 모드 토글
    */
   public setDebugMode(enabled: boolean): void {
     this.debugMode = enabled;
-    console.log(`EmotionFaceProcessor debug mode: ${enabled ? 'ON' : 'OFF'}`);
+    console.log(`EmotionFaceProcessor debug mode: ${enabled ? "ON" : "OFF"}`);
   }
 
   /**
-   * 🔥 새로 추가: 감정 히스토리 조회 (디버깅용)
+   * 감정 히스토리 조회 (디버깅용)
    */
-  public getEmotionHistory(): Array<{emotion: string, confidence: number, timestamp: number}> {
-    return this.emotionHistory.slice(-50); // 최근 50개만 반환
+  public getEmotionHistory(): Array<{ emotion: string; confidence: number; timestamp: number }> {
+    const n = this.emotionHistory.length;
+    return this.emotionHistory.slice(n > 50 ? n - 50 : 0);
   }
 
   /**
    * 입력 프레임에서 얼굴 표정을 감지합니다.
    */
-  public async detectEmotion(
-    inputImageData: ImageData,
-    timestamp: number
-  ): Promise<EmotionResult | null> {
-    // Client-side check
-    if (typeof window === 'undefined') {
+  public async detectEmotion(inputImageData: ImageData, timestamp: number): Promise<EmotionResult | null> {
+    if (typeof window === "undefined") {
       return null;
     }
 
     if (
       !this.aiConfig.emotion.enabled ||
-      !this.faceMesh ||
-      !this.expressionModel ||
-      !this.expressionScalerMean ||
-      !this.expressionScalerScale
+      this.faceMesh === null ||
+      this.expressionModel === null ||
+      this.expressionScalerMean === null ||
+      this.expressionScalerScale === null
     ) {
       return null;
     }
 
+    // 오프스크린 캔버스에 프레임 올리기
     const canvas = document.createElement("canvas");
     canvas.width = inputImageData.width;
     canvas.height = inputImageData.height;
@@ -216,87 +233,77 @@ export class EmotionFaceProcessor {
     if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
       const faceLandmarks = results.multiFaceLandmarks[0];
 
-      // 🔥 디버그: 랜드마크 개수 확인
-      if (this.debugMode && Math.random() < 0.01) { // 1% 확률로 로그
-        console.log('Face landmarks count:', faceLandmarks.length);
-        console.log('Sample landmarks:', {
-          upper_eye: faceLandmarks[IDX_FM.upper_eye],
-          lower_eye: faceLandmarks[IDX_FM.lower_eye],
-          mouth_left: faceLandmarks[IDX_FM.mouth_left],
-          mouth_right: faceLandmarks[IDX_FM.mouth_right]
-        });
-      }
-
       // 특징 추출
       const extractedFeatures = this.extractFeatures12(faceLandmarks);
       if (!extractedFeatures) {
         return null;
       }
 
-      // 🔥 디버그: 특징 값 확인
-      if (this.debugMode && Math.random() < 0.02) { // 2% 확률로 로그
-        console.log('Raw features:', {
-          eyeOpen: extractedFeatures[0],
-          mouthH: extractedFeatures[1],
-          mouthW: extractedFeatures[2],
-          browLift: extractedFeatures[3]
-        });
-      }
-
       // 스케일링
       const scaledFeatures = this.scaleFeatures(extractedFeatures);
-      const inputTensor = tf.tensor2d([scaledFeatures], [1, scaledFeatures.length]);
-      const prediction = this.expressionModel.predict(inputTensor) as tf.Tensor;
-      const probs = prediction.dataSync() as Float32Array;
-      tf.dispose(inputTensor);
 
-      // 스무딩
-      const smoothedProbs = this.smoothProbs(Array.from(probs));
-      
+      // 예측 (tidy로 메모리 관리)
+      const smoothedProbs = tf.tidy(() => {
+        const inputTensor = tf.tensor2d([scaledFeatures], [1, scaledFeatures.length], "float32");
+        const out = this.expressionModel as tf.LayersModel;
+        const pred = out.predict(inputTensor) as tf.Tensor;
+        const probsArr = Array.from(pred.dataSync() as Float32Array);
+        return this.smoothProbs(probsArr);
+      });
+
       // 후처리
-      let topIdx = smoothedProbs.indexOf(Math.max(...smoothedProbs));
+      let topIdx = 0;
+      let maxP = -1;
+      for (let i = 0; i < smoothedProbs.length; i++) {
+        if (smoothedProbs[i] > maxP) {
+          maxP = smoothedProbs[i];
+          topIdx = i;
+        }
+      }
+
       topIdx = this.gateSurprise(extractedFeatures, smoothedProbs, topIdx);
-      const [finalIdx, finalConf] = this.promoteSerious(extractedFeatures, smoothedProbs, topIdx);
-      
+      const promoted = this.promoteSerious(extractedFeatures, smoothedProbs, topIdx);
+      const finalIdx = promoted[0];
+      const finalConf = promoted[1];
+
       const label = LABELS_FACE[finalIdx];
       const confidence = finalConf;
 
-      // 🔥 디버그: 확률 분포 로그 (가끔씩)
-      if (this.debugMode && Math.random() < 0.05) { // 5% 확률로 로그
+      // 가끔 확률 로그
+      if (this.debugMode && Math.random() < 0.05) {
         const top3 = smoothedProbs
-          .map((prob, idx) => ({ label: LABELS_FACE[idx], prob }))
+          .map((p, i) => ({ label: LABELS_FACE[i], prob: p }))
           .sort((a, b) => b.prob - a.prob)
           .slice(0, 3);
-        console.log('Top 3 emotions:', top3);
-        console.log('Final result:', { label, confidence: confidence.toFixed(3) });
+        console.log("Top 3 emotions:", top3);
+        console.log("Final result:", { label, confidence: confidence.toFixed(3) });
       }
 
-      // 🔥 감정 히스토리에 추가 (모든 결과 저장)
+      // 히스토리 기록
       this.emotionHistory.push({ emotion: label, confidence, timestamp });
       if (this.emotionHistory.length > 100) {
-        this.emotionHistory.shift(); // 오래된 것 제거
+        this.emotionHistory.shift();
       }
 
-      // 🔥 임계값 체크: 일정 수준 이상일 때만 이벤트 전송
-      const threshold = EMOTION_THRESHOLDS[label as keyof typeof EMOTION_THRESHOLDS] || 0.8;
-      const cooldown = EMOTION_COOLDOWN[label as keyof typeof EMOTION_COOLDOWN] || 3.0;
+      // 임계/쿨다운 체크
+      const threshold =
+        (EMOTION_THRESHOLDS as any)[label] !== undefined ? (EMOTION_THRESHOLDS as any)[label] : 0.8;
+      const cooldown =
+        (EMOTION_COOLDOWN as any)[label] !== undefined ? (EMOTION_COOLDOWN as any)[label] : 3.0;
+
       const now = Date.now() / 1000;
       const lastEventTime = this.lastEmotionEventTime[label] || 0;
 
-      // 임계값 미달이거나 쿨다운 중이면 null 반환 (이벤트 전송 안함)
-      if (confidence < threshold || (now - lastEventTime) < cooldown) {
+      if (confidence < threshold || now - lastEventTime < cooldown) {
         if (this.debugMode && confidence >= threshold) {
-          console.log(`${label} detected but in cooldown (${(now - lastEventTime).toFixed(1)}s / ${cooldown}s)`);
+          const elapsed = (now - lastEventTime).toFixed(1);
+          console.log(`${label} detected but in cooldown (${elapsed}s / ${cooldown}s)`);
         }
         return null;
       }
 
-      // 🔥 이벤트 전송 조건 만족: 쿨다운 업데이트
+      // 쿨다운 갱신 후 결과 반환
       this.lastEmotionEventTime[label] = now;
-      
-      if (this.debugMode) {
-        console.log(`🎭 EMOTION EVENT: ${label} (${(confidence * 100).toFixed(1)}%) - threshold: ${(threshold * 100).toFixed(0)}%`);
-      }
 
       return {
         type: "emotion",
@@ -306,6 +313,7 @@ export class EmotionFaceProcessor {
         timestamp: timestamp,
       };
     }
+
     return null;
   }
 
@@ -314,30 +322,25 @@ export class EmotionFaceProcessor {
    */
   private extractFeatures12(landmarks: FaceMeshLandmark[]): number[] | null {
     try {
-      // app.py처럼 3D 배열로 변환 (정규화된 좌표 사용)
-      const arr = landmarks.map(lm => [lm.x, lm.y, lm.z || 0]);
-      
-      // app.py와 동일한 거리 계산 (3D euclidean distance)
+      const arr: number[][] = landmarks.map((lm) => [lm.x, lm.y, lm.z ? lm.z : 0]);
+
       const euclideanDist = (p1: number[], p2: number[]): number => {
         const dx = p1[0] - p2[0];
-        const dy = p1[1] - p2[1]; 
+        const dy = p1[1] - p2[1];
         const dz = p1[2] - p2[2];
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
       };
 
-      // app.py와 정확히 동일한 특징 추출
       const eyeOpen = euclideanDist(arr[IDX_FM.upper_eye], arr[IDX_FM.lower_eye]);
       const mouthH = euclideanDist(arr[IDX_FM.upper_lip], arr[IDX_FM.lower_lip]);
       const mouthW = euclideanDist(arr[IDX_FM.mouth_left], arr[IDX_FM.mouth_right]);
       const browLift = euclideanDist(arr[IDX_FM.brow], arr[IDX_FM.eye_center]);
       const eyeW = euclideanDist(arr[IDX_FM.eye_left], arr[IDX_FM.eye_right]);
 
-      // 비율 계산
       const eyeRatio = eyeOpen > 0 ? eyeW / eyeOpen : 0.0;
       const mouthRatio = mouthH > 0 ? mouthW / mouthH : 0.0;
       const browMouthRatio = mouthH > 0 ? browLift / mouthH : 0.0;
 
-      // 추가 특징들
       const mouthCenterY = arr[IDX_FM.mouth_center][1];
       const leftY = arr[IDX_FM.mouth_left][1];
       const rightY = arr[IDX_FM.mouth_right][1];
@@ -349,10 +352,8 @@ export class EmotionFaceProcessor {
       const cheekPuff = noseZ - cheekAvgZ;
 
       const faceScale = euclideanDist(arr[IDX_FM.nose], arr[IDX_FM.chin]);
-      
-      // app.py와 동일한 faceScale 체크
-      if (faceScale === 0) {
-        return Array(12).fill(0);
+      if (faceScale === 0 || !isFinite(faceScale)) {
+        return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
       }
 
       const dx = arr[IDX_FM.mouth_right][0] - arr[IDX_FM.mouth_left][0];
@@ -360,24 +361,27 @@ export class EmotionFaceProcessor {
       const mouthTilt = Math.atan2(dy, dx) / (Math.PI / 2);
       const eyeMouthCoupling = (eyeOpen / faceScale) / ((mouthH / faceScale) + 1e-6);
 
-      // app.py와 정확히 동일한 순서의 12개 특징
       const feats = [
-        eyeOpen / faceScale,      // 0
-        mouthH / faceScale,       // 1
-        mouthW / faceScale,       // 2
-        browLift / faceScale,     // 3
-        eyeRatio,                 // 4
-        mouthRatio,               // 5
-        browMouthRatio,           // 6
-        mouthDroop / faceScale,   // 7
-        mouthAsym / faceScale,    // 8
-        cheekPuff / faceScale,    // 9
-        mouthTilt,                // 10
-        eyeMouthCoupling,         // 11
+        eyeOpen / faceScale, // 0
+        mouthH / faceScale, // 1
+        mouthW / faceScale, // 2
+        browLift / faceScale, // 3
+        eyeRatio, // 4
+        mouthRatio, // 5
+        browMouthRatio, // 6
+        mouthDroop / faceScale, // 7
+        mouthAsym / faceScale, // 8
+        cheekPuff / faceScale, // 9
+        mouthTilt, // 10
+        eyeMouthCoupling, // 11
       ];
 
-      // app.py의 np.nan_to_num과 동일
-      return feats.map((f) => (isNaN(f) || !isFinite(f) ? 0 : f));
+      const safe: number[] = new Array(feats.length);
+      for (let i = 0; i < feats.length; i++) {
+        const v = feats[i];
+        safe[i] = isNaN(v) || !isFinite(v) ? 0 : v;
+      }
+      return safe;
     } catch (e) {
       console.warn("Error extracting facial features:", e);
       return null;
@@ -385,87 +389,107 @@ export class EmotionFaceProcessor {
   }
 
   /**
-   * app.py와 정확히 동일한 스케일링
+   * app.py와 정확히 동일한 스케일링 + NaN 안전장치
    */
   private scaleFeatures(features: number[]): number[] {
-    if (!this.expressionScalerMean || !this.expressionScalerScale) {
+    if (this.expressionScalerMean === null || this.expressionScalerScale === null) {
       console.warn("Scaler data not loaded for scaling.");
       return features;
     }
-    
-    // app.py: (feat_raw - self.MEAN) / (self.SCALE + 1e-8)
-    return features.map(
-      (f, i) => (f - this.expressionScalerMean![i]) / (this.expressionScalerScale![i] + 1e-8)
-    );
+    const mean = this.expressionScalerMean;
+    const scale = this.expressionScalerScale;
+
+    const out = new Array(features.length);
+    for (let i = 0; i < features.length; i++) {
+      const s = scale[i] === 0 ? 1e-8 : scale[i];
+      const v = (features[i] - mean[i]) / (s + 1e-8);
+      out[i] = Number.isFinite(v) ? v : 0;
+    }
+    return out;
   }
 
   /**
-   * app.py와 정확히 동일한 스무딩
+   * app.py와 동일한 EMA 스무딩
    */
   private smoothProbs(currentProbs: number[]): number[] {
-    if (!this.lastExpressionProbs) {
-      this.lastExpressionProbs = [...currentProbs];
+    if (this.lastExpressionProbs === null) {
+      this.lastExpressionProbs = currentProbs.slice();
     } else {
-      // app.py: (1-self.PROBA_ALPHA)*self.proba_smooth + self.PROBA_ALPHA*p
-      this.lastExpressionProbs = currentProbs.map(
-        (p, i) => (1 - this.PROBA_ALPHA) * this.lastExpressionProbs![i] + this.PROBA_ALPHA * p
-      );
+      const prev = this.lastExpressionProbs;
+      const out = new Array(currentProbs.length);
+      const alpha = this.PROBA_ALPHA;
+      for (let i = 0; i < currentProbs.length; i++) {
+        out[i] = (1 - alpha) * prev[i] + alpha * currentProbs[i];
+      }
+      this.lastExpressionProbs = out;
     }
-    return [...this.lastExpressionProbs];
+    return this.lastExpressionProbs.slice();
   }
 
   /**
-   * app.py의 gate_surprise와 정확히 동일
+   * gate_surprise (두 번째 확률 선택 로직 수정)
    */
   private gateSurprise(rawFeat: number[], probs: number[], topIdx: number): number {
     if (topIdx !== IDX_FACE.surprise) {
       return topIdx;
     }
 
-    // app.py와 동일한 조건 체크
     if (rawFeat[1] < MOUTH_H_Q25 && rawFeat[0] < EYE_OPEN_Q25 && rawFeat[3] < BROW_LIFT_Q25) {
-      // app.py: return int(np.argsort(probs)[-2])  // 두 번째로 높은 확률
-      const indices = Array.from({length: probs.length}, (_, i) => i);
-      indices.sort((a, b) => probs[b] - probs[a]);
-      return indices[1]; // 두 번째로 높은 인덱스
+      let best = -Infinity,
+        bestIdx = -1;
+      let second = -Infinity,
+        secondIdx = -1;
+
+      for (let i = 0; i < probs.length; i++) {
+        const p = probs[i];
+        if (p > best) {
+          second = best;
+          secondIdx = bestIdx;
+          best = p;
+          bestIdx = i;
+        } else if (p > second) {
+          second = p;
+          secondIdx = i;
+        }
+      }
+      return secondIdx >= 0 ? secondIdx : topIdx;
     }
     return topIdx;
   }
 
   /**
-   * app.py의 promote_serious와 정확히 동일
+   * promote_serious (app.py와 동일)
    */
   private promoteSerious(rawFeat: number[], probs: number[], currentIdx: number): [number, number] {
-    const seriousP = probs[IDX_FACE.serious];
-    
-    // app.py와 동일한 특징 인덱스 및 임계값
-    const smirk = rawFeat[8] > SMIRK_T;  // mouthAsym > 0.010
-    const frown = rawFeat[3] < FROWN_T;  // browLift < 0.018
-    const puff = rawFeat[9] > PUFF_T;    // cheekPuff > 0.015
+    const seriousIdx = IDX_FACE.serious;
+    const seriousP = probs[seriousIdx];
 
-    // app.py와 동일한 로직
+    const smirk = rawFeat[8] > SMIRK_T; // mouthAsym
+    const frown = rawFeat[3] < FROWN_T; // browLift
+    const puff = rawFeat[9] > PUFF_T; // cheekPuff
+
     if (seriousP >= 0.60 || ((smirk || frown || puff) && seriousP >= 0.45)) {
-      return [IDX_FACE.serious, seriousP];
+      return [seriousIdx, seriousP];
     }
     return [currentIdx, probs[currentIdx]];
   }
 
   /**
-   * 🔥 새로 추가: 임계값 동적 조정 (필요시 사용)
+   * 임계값 동적 조정 (필요시 사용)
    */
   public updateEmotionThreshold(emotion: string, threshold: number): void {
-    if (emotion in EMOTION_THRESHOLDS) {
+    if ((EMOTION_THRESHOLDS as any)[emotion] !== undefined) {
       (EMOTION_THRESHOLDS as any)[emotion] = Math.max(0.1, Math.min(0.99, threshold));
       console.log(`Updated ${emotion} threshold to ${threshold}`);
     }
   }
 
   /**
-   * 🔥 새로 추가: 쿨다운 초기화 (테스트용)
+   * 쿨다운 초기화 (테스트용)
    */
   public resetCooldowns(): void {
     this.lastEmotionEventTime = {};
-    console.log('Emotion cooldowns reset');
+    console.log("Emotion cooldowns reset");
   }
 
   /**

@@ -61,22 +61,23 @@ const GestureCard: React.FC<{
 
   return (
     <motion.div
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      className={`flex-shrink-0 w-24 h-20 rounded-lg p-2 transition-all ${
+      initial={{ scale: 0.8, opacity: 0, y: 10 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className={`flex-shrink-0 w-20 h-16 rounded-lg p-1.5 transition-all duration-300 ${
         isLatest 
-          ? "bg-[#FE7A25]/20 border border-[#FE7A25]/40" 
-          : "bg-[#424245]/30"
+          ? "bg-[#FE7A25]/25 border border-[#FE7A25]/50 shadow-lg" 
+          : "bg-[#424245]/40 border border-[#424245]/20"
       }`}
     >
-      <div className="text-center">
-        <div className="text-lg mb-1">{emoji}</div>
-        <div className="text-xs font-medium text-[#FFFFFF] truncate">{name}</div>
-        {/* {result.confidence && (
-          <div className="text-xs text-[#A0A0A5] mt-1">
+      <div className="text-center h-full flex flex-col justify-center">
+        <div className={`text-sm mb-0.5 ${isLatest ? "animate-pulse" : ""}`}>{emoji}</div>
+        <div className="text-xs font-medium text-[#FFFFFF] truncate leading-tight">{name}</div>
+        {result.confidence && (
+          <div className={`text-xs mt-0.5 ${isLatest ? "text-[#FE7A25]" : "text-[#A0A0A5]"}`}>
             {(result.confidence * 100).toFixed(0)}%
           </div>
-        )} */}
+        )}
       </div>
     </motion.div>
   );
@@ -101,7 +102,7 @@ const GestureSection: React.FC<{
       return ["laugh", "serious", "surprise", "yawn", "angry", "sad", "happy"].includes(r.label);
     }
     return false;
-  }).slice(-5); // 최대 5개
+  }).slice(-6); // 최대 6개로 증가
 
   return (
     <div className={`rounded-lg transition-all duration-300 ${
@@ -121,7 +122,7 @@ const GestureSection: React.FC<{
       <div className="p-3">
         {enabled ? (
           filteredResults.length > 0 ? (
-            <div className="flex space-x-2 overflow-x-auto pb-2">
+            <div className="flex space-x-1.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[#424245]">
               {filteredResults.reverse().map((result, index) => (
                 <GestureCard
                   key={`${result.type}-${result.label}-${result.timestamp}-${index}`}
@@ -132,14 +133,14 @@ const GestureSection: React.FC<{
               ))}
             </div>
           ) : (
-            <div className="flex items-center justify-center p-4 text-[#A0A0A5] text-sm">
-              <EyeIcon className="w-4 h-4 mr-2" />
+            <div className="flex items-center justify-center p-3 text-[#A0A0A5] text-sm">
+              <EyeIcon className="w-4 h-4 mr-2 animate-pulse" />
               감지 대기 중...
             </div>
           )
         ) : (
-          <div className="flex items-center justify-center p-4 text-[#636366] text-sm">
-            비활성화됨
+          <div className="flex items-center justify-center p-3 text-[#636366] text-sm">
+            기능이 비활성화되어 있습니다
           </div>
         )}
       </div>
@@ -193,11 +194,15 @@ export const AiTestDisplay: React.FC<AiTestDisplayProps> = ({
     if (latestGesture.label === "none") return;
   
     const now = Date.now();
-    if (now - lastGestureTimeRef.current < 1000) { // 1초 쿨다운
+    // 동적 제스처는 더 자주 업데이트되도록 쿨다운 시간 단축
+    const isDynamic = ["fire", "hi", "hit", "nono", "nyan", "shot"].includes(latestGesture.label);
+    const cooldownTime = isDynamic ? 500 : 1000; // 동적 제스처는 0.5초, 정적 제스처는 1초
+    
+    if (now - lastGestureTimeRef.current < cooldownTime) {
       return;
     }
   
-    setFilteredGestureResults(prev => [...prev, latestGesture].slice(-5));
+    setFilteredGestureResults(prev => [...prev, latestGesture].slice(-10)); // 최대 10개로 증가
     lastGestureTimeRef.current = now;
   }, [gestureResults]);
   
@@ -207,11 +212,19 @@ export const AiTestDisplay: React.FC<AiTestDisplayProps> = ({
     if (latestEmotion.label === "none") return;
   
     const now = Date.now();
-    if (now - lastEmotionTimeRef.current < 2500) { // 2.5초 쿨다운
+    // 감정 인식도 더 자주 업데이트되도록 쿨다운 시간 단축
+    if (now - lastEmotionTimeRef.current < 1500) { // 1.5초로 단축
       return;
     }
   
-    setFilteredEmotionResults(prev => [...prev, latestEmotion].slice(-5));
+    // 중복 감정 제거: 마지막 결과와 같은 감정이면 추가하지 않음
+    setFilteredEmotionResults(prev => {
+      const lastResult = prev[prev.length - 1];
+      if (lastResult && lastResult.label === latestEmotion.label) {
+        return prev; // 중복이면 추가하지 않음
+      }
+      return [...prev, latestEmotion].slice(-8); // 최대 8개로 증가
+    });
     lastEmotionTimeRef.current = now;
   }, [emotionResults]);
 

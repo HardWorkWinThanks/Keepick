@@ -182,6 +182,11 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
           aiVideoRef.current.srcObject = null;
         }
 
+        // 원본 비디오 스트림이 화면에서 사라지는 문제 해결
+        if (videoRef.current && localStream) {
+          videoRef.current.srcObject = localStream;
+        }
+
         console.log("✅ AI 프리뷰 비활성화");
       }
     } catch (error) {
@@ -651,7 +656,7 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
           <div className="space-y-6">
             {/* AI 미리보기 토글 (맨 위로 이동) */}
             <div className="bg-[#2C2C2E] rounded-2xl p-6 shadow-2xl">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
                   <StarIcon className="w-5 h-5 text-[#FE7A25]" />
                   <span className="text-[#FFFFFF] font-medium">AI 기능 미리보기</span>
@@ -678,61 +683,62 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
                   )}
                 </button>
               </div>
-            </div>
-            {/* AI 세부 설정 (항상 표시) */}
-            <div className="mt-3 p-3 bg-[#222222] rounded-lg">
-              <div className="mb-2">
-                <span className="text-[#A0A0A5] text-xs">AI 기능 설정</span>
+              
+              {/* AI 세부 설정을 미리보기 카드 안으로 이동 */}
+              <div className="p-3 bg-[#222222] rounded-lg">
+                <div className="mb-2">
+                  <span className="text-[#A0A0A5] text-xs">AI 기능 설정</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => dispatch(toggleStaticGestureDetection())}
+                    className={`flex items-center space-x-1 p-2 rounded text-xs ${
+                      aiState.isStaticGestureDetectionEnabled
+                        ? "bg-[#FE7A25]/20 text-[#FE7A25]"
+                        : "bg-[#424245] text-[#A0A0A5]"
+                    }`}
+                  >
+                    <HandRaisedIcon className="w-3 h-3" />
+                    <span>정적 제스처</span>
+                  </button>
+
+                  <button
+                    onClick={() => dispatch(toggleDynamicGestureDetection())}
+                    className={`flex items-center space-x-1 p-2 rounded text-xs ${
+                      aiState.isDynamicGestureDetectionEnabled
+                        ? "bg-[#FE7A25]/20 text-[#FE7A25]"
+                        : "bg-[#424245] text-[#A0A0A5]"
+                    }`}
+                  >
+                    <SparklesIcon className="w-3 h-3" />
+                    <span>동적 제스처</span>
+                  </button>
+
+                  <button
+                    onClick={() => dispatch(toggleEmotionDetection())}
+                    className={`flex items-center space-x-1 p-2 rounded text-xs ${
+                      aiState.isEmotionDetectionEnabled
+                        ? "bg-[#FE7A25]/20 text-[#FE7A25]"
+                        : "bg-[#424245] text-[#A0A0A5]"
+                    }`}
+                  >
+                    <FaceSmileIcon className="w-3 h-3" />
+                    <span>감정 감지</span>
+                  </button>
+
+                  <button
+                    onClick={() => dispatch(toggleBeautyFilter())}
+                    className={`flex items-center space-x-1 p-2 rounded text-xs ${
+                      aiState.isBeautyFilterEnabled
+                        ? "bg-[#FE7A25]/20 text-[#FE7A25]"
+                        : "bg-[#424245] text-[#A0A0A5]"
+                    }`}
+                  >
+                    <SparklesIcon className="w-3 h-3" />
+                    <span>뷰티 필터</span>
+                  </button>
+                </div>
               </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => dispatch(toggleStaticGestureDetection())}
-                      className={`flex items-center space-x-1 p-2 rounded text-xs ${
-                        aiState.isStaticGestureDetectionEnabled
-                          ? "bg-[#FE7A25]/20 text-[#FE7A25]"
-                          : "bg-[#424245] text-[#A0A0A5]"
-                      }`}
-                    >
-                      <HandRaisedIcon className="w-3 h-3" />
-                      <span>정적 제스처</span>
-                    </button>
-
-                    <button
-                      onClick={() => dispatch(toggleDynamicGestureDetection())}
-                      className={`flex items-center space-x-1 p-2 rounded text-xs ${
-                        aiState.isDynamicGestureDetectionEnabled
-                          ? "bg-[#FE7A25]/20 text-[#FE7A25]"
-                          : "bg-[#424245] text-[#A0A0A5]"
-                      }`}
-                    >
-                      <SparklesIcon className="w-3 h-3" />
-                      <span>동적 제스처</span>
-                    </button>
-
-                    <button
-                      onClick={() => dispatch(toggleEmotionDetection())}
-                      className={`flex items-center space-x-1 p-2 rounded text-xs ${
-                        aiState.isEmotionDetectionEnabled
-                          ? "bg-[#FE7A25]/20 text-[#FE7A25]"
-                          : "bg-[#424245] text-[#A0A0A5]"
-                      }`}
-                    >
-                      <FaceSmileIcon className="w-3 h-3" />
-                      <span>감정 감지</span>
-                    </button>
-
-                    <button
-                      onClick={() => dispatch(toggleBeautyFilter())}
-                      className={`flex items-center space-x-1 p-2 rounded text-xs ${
-                        aiState.isBeautyFilterEnabled
-                          ? "bg-[#FE7A25]/20 text-[#FE7A25]"
-                          : "bg-[#424245] text-[#A0A0A5]"
-                      }`}
-                    >
-                      <SparklesIcon className="w-3 h-3" />
-                      <span>뷰티 필터</span>
-                    </button>
-                  </div>
             </div>
             
             {/* AI 기능 테스트 결과 */}

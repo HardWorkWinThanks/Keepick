@@ -1,6 +1,5 @@
 // src/shared/api/ai/frontendAiProcessor.ts
 
-
 import { AppDispatch } from "@/shared/config/store";
 import {
   GestureResult,
@@ -10,28 +9,22 @@ import {
   EmotionCallback,
 } from "@/shared/types/ai.types";
 
-
 import { emotionCaptureManager } from "./emotionCaptureManager";
 import { EmotionFaceProcessor } from "./emotionFaceProcessor";
 import { BeautyFilterProcessor } from "./beautyFilterProcessor";
 import { GestureProcessor } from "./gestureProcessor";
 import * as tf from "@tensorflow/tfjs";
 
-
 // --- AI 모델 경로 상수 정의 ---
-// Next.js의 public 폴더는 서버 루트(/)에서 접근 가능합니다.
 const MODELS_BASE_PATH = "/models";
-
 
 // 표정 인식 모델 경로
 const EXPRESSION_MODEL_PATH = `${MODELS_BASE_PATH}/expression/model.json`;
 const EXPRESSION_SCALER_PATH = `${MODELS_BASE_PATH}/expression/scaler_v3.json`;
 
-
-// 제스처 인식 모델 경로 (GestureProcessor 내부에서 사용될 경로)
+// 제스처 인식 모델 경로
 const STATIC_GESTURE_MODEL_PATH = `${MODELS_BASE_PATH}/static-gesture/model.json`;
-const DYNAMIC_GESTURE_MODEL_PATH = `${MODELS_BASE_PATH}/dinamic-gesture/model.json`; // 실제 폴더명에 맞춰 수정
-
+const DYNAMIC_GESTURE_MODEL_PATH = `${MODELS_BASE_PATH}/dinamic-gesture/model.json`;
 
 // MediaPipe WASM 파일 CDN 경로
 const FACE_MESH_WASM_PATH = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh";
@@ -39,7 +32,6 @@ const TASKS_VISION_WASM_PATH = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vi
 
 // ✨ 이미지 오버레이를 위한 경로 상수 추가
 const GESTURE_IMAGE_BASE_PATH = "/images/gestures";
-
 
 class FrontendAiProcessor {
   private dispatch: AppDispatch | null = null;
@@ -52,16 +44,13 @@ class FrontendAiProcessor {
     beauty: { enabled: false, gamma: 1.4, lipAlpha: 0.2, smoothAmount: 30, lipColor: [255, 0, 0] },
   };
 
-
   private emotionFaceProcessor: EmotionFaceProcessor | null = null;
   private beautyFilterProcessor: BeautyFilterProcessor | null = null;
   private gestureProcessor: GestureProcessor | null = null;
   private isInitialized = false;
 
-
   private onGestureResultCallback: GestureCallback | null = null;
   private onEmotionResultCallback: EmotionCallback | null = null;
-
 
   private lastFrameTime = 0;
   private frameInterval = 100;
@@ -74,46 +63,44 @@ class FrontendAiProcessor {
   // AI 결과 표시 속도 제어
   private lastGestureResultTime = 0;
   private lastEmotionResultTime = 0;
-  private readonly GESTURE_RESULT_INTERVAL = 1500; // 제스처 결과 간격 (ms)
-  private readonly EMOTION_RESULT_INTERVAL = 1500; // 감정 결과 간격 (ms)
+  private readonly GESTURE_RESULT_INTERVAL = 1500;
+  private readonly EMOTION_RESULT_INTERVAL = 1500;
 
-  // ✨ 변수명 변경: 이모지 -> 오버레이(이미지 포함)
+  // ✨ 오버레이 (이미지 포함)
   private activeOverlays: Map<string, any> = new Map();
-
 
   private readonly STATIC_GESTURE_DURATION = 1500;
   private readonly DYNAMIC_GESTURE_DURATION = 1500;
   private readonly ANIMATION_FADE_DURATION = 150;
 
+  private activeSourceTrack: MediaStreamTrack | null = null;
+  private activeProcessedTrack: MediaStreamTrack | null = null;
 
-  private activeSourceTrack: MediaStreamTrack | null = null; // 현재 사용 중인 원본 트랙 저장
-  private activeProcessedTrack: MediaStreamTrack | null = null; // 생성된 AI 처리 트랙 저장
-
-  // ✨ 불러온 이미지들을 저장할 Map 객체
+  // ✨ 로드된 이미지들을 저장할 Map 객체
   private loadedImages: Map<string, HTMLImageElement> = new Map();
 
-
-  // ✨ 이미지 미리 불러오기(Preloading) 헬퍼 함수
+  // ✨ 🚨 수정: app.py STATIC_IMG_MAP과 일치하도록 이미지 경로 수정
   private async preloadImages(): Promise<void> {
     const imagePaths: { [key: string]: string } = {
-      // Static gestures
+      // Static gestures - app.py STATIC_IMG_MAP과 정확히 일치
+      // 🚨 중요: fist와 open_palm 제거 (app.py에서 오버레이되지 않음)
       bad: `${GESTURE_IMAGE_BASE_PATH}/bad.png`,
-      fist: `${GESTURE_IMAGE_BASE_PATH}/fist.png`,
       good: `${GESTURE_IMAGE_BASE_PATH}/good.png`,
       gun: `${GESTURE_IMAGE_BASE_PATH}/gun.png`,
       heart: `${GESTURE_IMAGE_BASE_PATH}/heart.png`,
       ok: `${GESTURE_IMAGE_BASE_PATH}/ok.png`,
-      open_palm: `${GESTURE_IMAGE_BASE_PATH}/hi.png`,
       promise: `${GESTURE_IMAGE_BASE_PATH}/promise.png`,
       rock: `${GESTURE_IMAGE_BASE_PATH}/rock.png`,
       victory: `${GESTURE_IMAGE_BASE_PATH}/victory.png`,
-      // Dynamic gestures
+      
+      // Dynamic gestures - app.py DYN_LABELS와 일치
       fire: `${GESTURE_IMAGE_BASE_PATH}/fire.png`,
       hi: `${GESTURE_IMAGE_BASE_PATH}/hi.png`,
       hit: `${GESTURE_IMAGE_BASE_PATH}/screen_crack.png`,
       nono: `${GESTURE_IMAGE_BASE_PATH}/nono.png`,
       nyan: `${GESTURE_IMAGE_BASE_PATH}/cat_paw_real.png`,
       shot: `${GESTURE_IMAGE_BASE_PATH}/chu.png`,
+      
       // Emotions
       laugh: `${GESTURE_IMAGE_BASE_PATH}/laugh.png`,
       serious: `${GESTURE_IMAGE_BASE_PATH}/serious.png`,
@@ -123,7 +110,6 @@ class FrontendAiProcessor {
       sad: `${GESTURE_IMAGE_BASE_PATH}/bad.png`,
       happy: `${GESTURE_IMAGE_BASE_PATH}/good.png`,
     };
-
 
     const promises = Object.entries(imagePaths).map(([key, src]) => {
       return new Promise<void>((resolve) => {
@@ -140,10 +126,9 @@ class FrontendAiProcessor {
       });
     });
 
-
     await Promise.all(promises);
     console.log("✅ All overlay images preloaded.");
- }
+  }
   
   public async init(dispatch: AppDispatch): Promise<void> {
     this.dispatch = dispatch;
@@ -155,11 +140,9 @@ class FrontendAiProcessor {
       console.warn("❌ Failed to set TensorFlow.js WebGL backend, falling back to CPU:", error);
     }
 
-
     this.emotionFaceProcessor = new EmotionFaceProcessor(this.aiConfig);
     this.beautyFilterProcessor = new BeautyFilterProcessor(this.aiConfig);
     this.gestureProcessor = new GestureProcessor(this.aiConfig);
-
 
     try {
       console.log("🤖 Initializing AI modules and preloading images...");
@@ -178,10 +161,8 @@ class FrontendAiProcessor {
         this.gestureProcessor.init(TASKS_VISION_WASM_PATH),
       ]);
 
-
       console.log(`- Static gesture model: ${STATIC_GESTURE_MODEL_PATH}`);
       console.log(`- Dynamic gesture model: ${DYNAMIC_GESTURE_MODEL_PATH}`);
-
 
       this.isInitialized = true;
       console.log("✅ FrontendAiProcessor initialized successfully.");
@@ -190,7 +171,6 @@ class FrontendAiProcessor {
       this.isInitialized = false;
     }
   }
-
 
   public updateConfig(config: Partial<AiSystemConfig>): Promise<void> {
     return Promise.resolve().then(() => {
@@ -202,23 +182,19 @@ class FrontendAiProcessor {
         beauty: { ...this.aiConfig.beauty, ...config.beauty },
       };
 
-
       this.emotionFaceProcessor?.updateConfig(this.aiConfig);
       this.beautyFilterProcessor?.updateConfig(this.aiConfig);
       this.gestureProcessor?.updateConfig(this.aiConfig);
     });
   }
 
-
   public setGestureCallback(callback: GestureCallback): void {
     this.onGestureResultCallback = callback;
   }
 
-
   public setEmotionCallback(callback: EmotionCallback): void {
     this.onEmotionResultCallback = callback;
   }
-
 
   public startBackgroundAnalysis(originalTrack: MediaStreamTrack): void {
     if (originalTrack.kind !== "video") {
@@ -226,10 +202,8 @@ class FrontendAiProcessor {
       return;
     }
 
-
     console.log("🤖 Starting background AI analysis...");
     this.stopBackgroundAnalysis();
-
 
     this.backgroundVideoElement = document.createElement("video");
     this.backgroundVideoElement.srcObject = new MediaStream([originalTrack]);
@@ -237,17 +211,14 @@ class FrontendAiProcessor {
     this.backgroundVideoElement.muted = true;
     this.backgroundVideoElement.style.display = "none";
 
-
     this.backgroundVideoElement.onloadedmetadata = () => {
       this.backgroundAnalysisActive = true;
       this.runBackgroundAnalysisLoop();
       console.log("✅ Background AI analysis started");
     };
 
-
     this.backgroundVideoElement.play();
   }
-
 
   public stopBackgroundAnalysis(): void {
     console.log("🛑 Stopping background AI analysis...");
@@ -258,17 +229,14 @@ class FrontendAiProcessor {
       this.backgroundAnalysisLoop = null;
     }
 
-
     if (this.backgroundVideoElement) {
       this.backgroundVideoElement.pause();
       this.backgroundVideoElement.srcObject = null;
       this.backgroundVideoElement = null;
     }
 
-
     console.log("✅ Background AI analysis stopped");
   }
-
 
   private runBackgroundAnalysisLoop(): void {
     if (!this.backgroundAnalysisActive || !this.backgroundVideoElement) {
@@ -276,9 +244,7 @@ class FrontendAiProcessor {
       return;
     }
 
-
     console.log("🔄 Starting background analysis loop...");
-
 
     const processFrame = async () => {
       if (!this.backgroundAnalysisActive || !this.backgroundVideoElement) {
@@ -286,10 +252,8 @@ class FrontendAiProcessor {
         return;
       }
 
-
       const now = performance.now();
       const needsProcessing = now - this.lastFrameTime >= this.frameInterval;
-
 
       if (needsProcessing && this.isInitialized) {
         console.log("🔄 Processing frame in background...");
@@ -301,14 +265,11 @@ class FrontendAiProcessor {
         }
       }
 
-
       this.backgroundAnalysisLoop = requestAnimationFrame(processFrame);
     };
 
-
     processFrame();
   }
-
 
   public async processVideoTrack(originalTrack: MediaStreamTrack): Promise<MediaStreamTrack> {
     if (originalTrack.kind !== "video") {
@@ -316,28 +277,23 @@ class FrontendAiProcessor {
       return originalTrack;
     }
 
-
     this.stopProcessing();
     this.activeSourceTrack = originalTrack;
-
 
     console.log("🎯 Starting AI video track processing...", {
       trackSettings: originalTrack.getSettings(),
       isInitialized: this.isInitialized
     });
 
-
     const videoElem = document.createElement("video");
     videoElem.srcObject = new MediaStream([originalTrack]);
     videoElem.autoplay = true;
     videoElem.muted = true;
 
-
     const outputCanvas = document.createElement("canvas");
     outputCanvas.width = originalTrack.getSettings().width || 640;
     outputCanvas.height = originalTrack.getSettings().height || 480;
     const ctx = outputCanvas.getContext("2d");
-
 
     return new Promise<MediaStreamTrack>((resolve, reject) => {
       let isResolved = false;
@@ -349,17 +305,14 @@ class FrontendAiProcessor {
         }
       }, 10000);
 
-
       videoElem.onloadedmetadata = () => {
         console.log("📹 Video metadata loaded, starting frame processing...");
         
         const processFrame = async () => {
           if (videoElem.paused || videoElem.ended) return;
 
-
           const now = performance.now();
           const needsProcessing = now - this.lastFrameTime >= this.frameInterval;
-
 
           if (ctx) {
             ctx.drawImage(videoElem, 0, 0, outputCanvas.width, outputCanvas.height);
@@ -369,9 +322,8 @@ class FrontendAiProcessor {
               ctx.putImageData(filteredData, 0, 0);
             }
 
-            // ✨ 함수 이름 변경에 따라 호출 부분 수정
+            // ✨ 오버레이 렌더링
             this.renderOverlays(ctx, outputCanvas, now);
-
 
             if (
               needsProcessing &&
@@ -421,7 +373,6 @@ class FrontendAiProcessor {
         });
       };
 
-
       videoElem.onerror = (error) => {
         console.error("❌ Video element error:", error);
         clearTimeout(timeout);
@@ -429,7 +380,6 @@ class FrontendAiProcessor {
       };
     });
   }
-
 
   private async runAIProcessors(videoElement: HTMLVideoElement, timestamp: number): Promise<void> {
     if (!this.isInitialized) {
@@ -458,7 +408,6 @@ class FrontendAiProcessor {
       }
     }
 
-
     // 제스처 인식 처리
     if (
       (this.aiConfig.gesture.static.enabled || this.aiConfig.gesture.dynamic.enabled) &&
@@ -479,7 +428,7 @@ class FrontendAiProcessor {
     }
   }
 
-  // ✨ 렌더링 함수 수정: 이름 변경 및 fillText -> drawImage
+  // ✨ 렌더링 함수 수정: drawImage 사용
   private renderOverlays(
     ctx: CanvasRenderingContext2D,
     canvas: HTMLCanvasElement,
@@ -489,7 +438,7 @@ class FrontendAiProcessor {
       const elapsed = now - item.timestamp;
       const remaining = item.duration - elapsed;
       if (remaining > 0) {
-        this.updateGestureAnimation(item, elapsed); // 애니메이션 로직은 재사용
+        this.updateGestureAnimation(item, elapsed);
         
         const x = item.x * canvas.width;
         const y = item.y * canvas.height;
@@ -501,7 +450,7 @@ class FrontendAiProcessor {
         ctx.save();
         ctx.globalAlpha = item.opacity;
         
-        // ✨ fillText 대신 drawImage를 사용하여 이미지 렌더링
+        // ✨ drawImage를 사용하여 이미지 렌더링
         ctx.drawImage(
           item.image,
           x - imgWidth / 2, // 중앙 정렬
@@ -516,7 +465,6 @@ class FrontendAiProcessor {
       }
     });
   }
-
 
   private updateGestureAnimation(item: any, elapsed: number): void {
     const fadeInDuration = this.ANIMATION_FADE_DURATION;
@@ -541,7 +489,7 @@ class FrontendAiProcessor {
     }
   }
 
-  // ✨ 오버레이 추가 함수 수정: emoji -> image
+  // ✨ 🚨 수정: app.py와 동일하게 fist/open_palm 필터링
   private addGestureOverlay(gestureResult: GestureResult, timestamp: number): void {
     const processGesture = (
         gesture: { label: string; confidence: number } | null,
@@ -550,11 +498,11 @@ class FrontendAiProcessor {
         if (!gesture || gesture.label === "none" || gesture.confidence < (type === 'static' ? 0.7 : 0.8)) return;
 
         const image = this.getImageForLabel(gesture.label);
-        if (!image) return;
+        if (!image) return; // 🚨 app.py처럼 이미지 없으면 오버레이 안 함
 
         const key = `${type}_${gesture.label}_${timestamp}`;
         this.activeOverlays.set(key, {
-            image, // emoji 대신 image 저장
+            image,
             x: 0.3 + Math.random() * 0.4,
             y: 0.3 + Math.random() * 0.4,
             timestamp,
@@ -568,7 +516,6 @@ class FrontendAiProcessor {
     if (this.aiConfig.gesture.dynamic.enabled) processGesture(gestureResult.dynamic, 'dynamic');
   }
 
-  // ✨ 오버레이 추가 함수 수정: emoji -> image
   private addEmotionOverlay(emotionResult: EmotionResult, timestamp: number): void {
     if (emotionResult.label === "none" || emotionResult.confidence < 0.6) return;
 
@@ -577,7 +524,7 @@ class FrontendAiProcessor {
 
     const key = `emotion_${emotionResult.label}_${timestamp}`;
     this.activeOverlays.set(key, {
-        image, // emoji 대신 image 저장
+        image,
         x: 0.1 + Math.random() * 0.8,
         y: 0.1 + Math.random() * 0.3,
         timestamp,
@@ -587,8 +534,14 @@ class FrontendAiProcessor {
     });
   }
 
-  // ✨ emoji 대신 이미지 객체를 반환하는 헬퍼 함수
+  // ✨ 🚨 수정: app.py와 동일하게 fist/open_palm은 null 반환
   private getImageForLabel(label: string): HTMLImageElement | null {
+    // app.py의 STATIC_IMG_MAP에 없는 제스처들은 오버레이하지 않음
+    if (label === 'fist' || label === 'open_palm') {
+      console.log(`🚨 ${label} detected but no overlay image (matches app.py behavior)`);
+      return null;
+    }
+    
     return this.loadedImages.get(label) || null;
   }
 
@@ -606,7 +559,6 @@ class FrontendAiProcessor {
     this.stopBackgroundAnalysis();
   }
 
-
   public cleanup(): void {
     this.stopProcessing(); 
     this.stopBackgroundAnalysis();
@@ -614,7 +566,6 @@ class FrontendAiProcessor {
     emotionCaptureManager.cleanup();
     this.dispatch = null;
     
-    // ✨ 변경된 변수명으로 클리어
     this.activeOverlays.clear();
     
     this.onGestureResultCallback = null;
@@ -632,11 +583,10 @@ class FrontendAiProcessor {
     this.gestureProcessor?.cleanup();
     this.gestureProcessor = null;
     
-    this.loadedImages.clear(); // ✨ 추가: 로드된 이미지 정리
+    this.loadedImages.clear();
 
     console.log("FrontendAiProcessor cleaned up.");
   }
 }
-
 
 export const frontendAiProcessor = new FrontendAiProcessor();

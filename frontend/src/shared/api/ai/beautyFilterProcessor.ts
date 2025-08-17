@@ -42,10 +42,21 @@ export class BeautyFilterProcessor {
     }
 
     try {
-      // Dynamic import of MediaPipe Face Mesh
-      const mediapipeFaceMesh = await import("@mediapipe/face_mesh");
+      // Dynamic import of MediaPipe Face Mesh - 브라우저 환경에서만
+      if (typeof window === 'undefined') {
+        console.warn("BeautyFilterProcessor: Cannot initialize MediaPipe on server side");
+        this.aiConfig.beauty.enabled = false;
+        return;
+      }
 
-            // 수정: 가져온 FaceMesh 클래스를 직접 사용하여 인스턴스를 생성합니다.
+      const mediapipeFaceMesh = await import("@mediapipe/face_mesh");
+      
+      // MediaPipe 모듈이 제대로 로드되었는지 확인
+      if (!mediapipeFaceMesh || !mediapipeFaceMesh.FaceMesh) {
+        throw new Error("MediaPipe FaceMesh module not properly loaded");
+      }
+
+      // 수정: 가져온 FaceMesh 클래스를 직접 사용하여 인스턴스를 생성합니다.
       this.faceMesh = new mediapipeFaceMesh.FaceMesh({
           locateFile: (file) => {
               return `${wasmPath}/${file}`;
