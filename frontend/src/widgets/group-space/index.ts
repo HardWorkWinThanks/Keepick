@@ -1,0 +1,1 @@
+export { default as GroupSpaceWidget } from './ui/GroupSpaceWidget';

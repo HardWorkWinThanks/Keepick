@@ -1,0 +1,392 @@
+/* 1. Tailwind 초기화 (가장 위에 위치해야 합니다) */
+@import "tailwindcss";
+
+/* 
+  2. 기존 CSS 변수 시스템 (유지)
+  - 직접 만드신 모든 CSS 변수를 그대로 보존합니다.
+  - var(--primary-color) 등을 사용하는 기존 컴포넌트들이 정상적으로 동작합니다.
+*/
+:root {
+  /* 기본 라이트 모드 변수 */
+  --background: #222222; /* 다크 배경 */
+  --foreground: #ffffff;
+
+  /* 직접 추가하신 커스텀 컬러 변수들 */
+  --primary-color: #fe7a25;
+  --secondary-color: #f5e7c6;
+  --tertiary-color: #faf3e1;
+  --error-color: #d22016;
+  --surface-color: #222222;
+  --text-dark: #2c3e50;
+  --text-light: #ecf0f1;
+  --bg-light: #ffffff;
+  --bg-dark: #f0f4f8;
+  --card-bg: #f8faff;
+  --border-color: #e0e6ed;
+  --shadow-light: rgba(0, 0, 0, 0.08);
+  --shadow-medium: rgba(0, 0, 0, 0.15);
+  --shadow-card: rgba(0, 0, 0, 0.05);
+
+  /* 직접 추가하신 커스텀 폰트 변수들 */
+  --font-open-sans: "Open Sans", sans-serif;
+  --font-montserrat: "Montserrat", sans-serif;
+}
+
+/* 다크 모드 변수 재정의 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #111111;
+    --foreground: #ededed;
+    /* 필요에 따라 다른 다크모드용 변수들을 여기에 추가할 수 있습니다. */
+  }
+}
+
+/* 전역 스크롤바 스타일 - 다크 테마 */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) #111111;
+}
+
+html::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html::-webkit-scrollbar-track {
+  background: #111111;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: rgba(254, 122, 37, 0.6);
+}
+
+body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) #111111;
+}
+
+body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body::-webkit-scrollbar-track {
+  background: #111111;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+body::-webkit-scrollbar-thumb:hover {
+  background: rgba(254, 122, 37, 0.6);
+}
+
+/* 사이드바 스크롤바 스타일 - 다크 테마 */
+.sidebar-scroll [data-radix-scroll-area-viewport] {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-track {
+  background: rgba(34, 34, 34, 0.3);
+  border-radius: 3px;
+}
+
+.sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover {
+  background: rgba(254, 122, 37, 0.6);
+}
+
+/* 전체화면에서도 사이드바 커스텀 스크롤바 적용 - 다크 테마 */
+:fullscreen .sidebar-scroll [data-radix-scroll-area-viewport],
+:-webkit-full-screen .sidebar-scroll [data-radix-scroll-area-viewport],
+:-moz-full-screen .sidebar-scroll [data-radix-scroll-area-viewport],
+:fullscreen .sidebar-scroll,
+:-webkit-full-screen .sidebar-scroll,
+:-moz-full-screen .sidebar-scroll {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent !important;
+}
+
+:fullscreen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar,
+:-webkit-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar,
+:-moz-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar,
+:fullscreen .sidebar-scroll::-webkit-scrollbar,
+:-webkit-full-screen .sidebar-scroll::-webkit-scrollbar,
+:-moz-full-screen .sidebar-scroll::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+:fullscreen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-track,
+:-webkit-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-track,
+:-moz-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-track,
+:fullscreen .sidebar-scroll::-webkit-scrollbar-track,
+:-webkit-full-screen .sidebar-scroll::-webkit-scrollbar-track,
+:-moz-full-screen .sidebar-scroll::-webkit-scrollbar-track {
+  background: rgba(34, 34, 34, 0.3) !important;
+  border-radius: 3px !important;
+}
+
+:fullscreen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb,
+:-webkit-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb,
+:-moz-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb,
+:fullscreen .sidebar-scroll::-webkit-scrollbar-thumb,
+:-webkit-full-screen .sidebar-scroll::-webkit-scrollbar-thumb,
+:-moz-full-screen .sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 3px !important;
+}
+
+:fullscreen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover,
+:-webkit-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover,
+:-moz-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover,
+:fullscreen .sidebar-scroll::-webkit-scrollbar-thumb:hover,
+:-webkit-full-screen .sidebar-scroll::-webkit-scrollbar-thumb:hover,
+:-moz-full-screen .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(254, 122, 37, 0.6) !important;
+}
+
+/* 전체화면에서 Radix ScrollArea의 스크롤바 스타일 강제 적용 - 다크 테마 */
+:fullscreen [data-radix-scroll-area-scrollbar],
+:-webkit-full-screen [data-radix-scroll-area-scrollbar],
+:-moz-full-screen [data-radix-scroll-area-scrollbar] {
+  width: 6px !important;
+  background: rgba(34, 34, 34, 0.3) !important;
+}
+
+:fullscreen [data-radix-scroll-area-thumb],
+:-webkit-full-screen [data-radix-scroll-area-thumb],
+:-moz-full-screen [data-radix-scroll-area-thumb] {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 3px !important;
+}
+
+:fullscreen [data-radix-scroll-area-thumb]:hover,
+:-webkit-full-screen [data-radix-scroll-area-thumb]:hover,
+:-moz-full-screen [data-radix-scroll-area-thumb]:hover {
+  background: rgba(254, 122, 37, 0.6) !important;
+}
+
+/* 전체화면에서 모든 스크롤 영역에 커스텀 스크롤바 강제 적용 - 다크 테마 */
+:fullscreen *::-webkit-scrollbar,
+:-webkit-full-screen *::-webkit-scrollbar,
+:-moz-full-screen *::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+:fullscreen *::-webkit-scrollbar-track,
+:-webkit-full-screen *::-webkit-scrollbar-track,
+:-moz-full-screen *::-webkit-scrollbar-track {
+  background: rgba(34, 34, 34, 0.3) !important;
+  border-radius: 3px !important;
+}
+
+:fullscreen *::-webkit-scrollbar-thumb,
+:-webkit-full-screen *::-webkit-scrollbar-thumb,
+:-moz-full-screen *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 3px !important;
+}
+
+:fullscreen *::-webkit-scrollbar-thumb:hover,
+:-webkit-full-screen *::-webkit-scrollbar-thumb:hover,
+:-moz-full-screen *::-webkit-scrollbar-thumb:hover {
+  background: rgba(254, 122, 37, 0.6) !important;
+}
+
+:fullscreen *,
+:-webkit-full-screen *,
+:-moz-full-screen * {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(34, 34, 34, 0.3) !important;
+}
+
+/* 
+  3. 커스텀 폰트 정의 (@font-face)
+  - 정의하신 모든 폰트를 한 곳에 모아 정리했습니다.
+*/
+/* 어그로체 */
+@font-face {
+  font-family: "SB-Aggro";
+  src: url("/fonts/SB_Window_Font/SB_Aggro_L.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SB-Aggro";
+  src: url("/fonts/SB_Window_Font/SB_Aggro_M.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SB-Aggro";
+  src: url("/fonts/SB_Window_Font/SB_Aggro_B.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+/* LINE Seed KR */
+@font-face {
+  font-family: "Line-Seed";
+  src: url("/fonts/LINE_SEED_KR/LINESeedKR-Th.woff2") format("woff2");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Line-Seed";
+  src: url("/fonts/LINE_SEED_KR/LINESeedKR-Rg.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Line-Seed";
+  src: url("/fonts/LINE_SEED_KR/LINESeedKR-Bd.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 
+  4. 기존 커스텀 클래스 (유지)
+  - 애니메이션, 그림자 등 직접 만드신 모든 클래스를 그대로 유지합니다.
+*/
+/* Next.js 개발 도구 숨기기 */
+#__next-build-watcher,
+[data-nextjs-scroll-focus-boundary],
+.__next-dev-overlay-backdrop {
+  display: none !important;
+}
+
+/* Main Records 랜딩페이지 전용 스타일 */
+.bg-gradient-radial {
+  background: radial-gradient(var(--tw-gradient-stops));
+}
+
+.font-montserrat {
+  font-family: var(--font-montserrat), sans-serif;
+}
+
+/* 모든 애니메이션 클래스 */
+.animate-float {
+  animation: float 5s ease-in-out infinite alternate;
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-pulse-scale {
+  animation: pulseScale 2.5s infinite ease-in-out;
+}
+@keyframes pulseScale {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+.animate-fade-slide-in {
+  animation: fadeSlideIn 1.2s ease forwards 0.5s;
+  opacity: 0;
+}
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out forwards;
+}
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-modal-in {
+  animation: modal-in 0.3s ease-out forwards;
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0px);
+  }
+}
+
+/* 그룹 스페이스 전용 스타일 */
+.album-shadow {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* Keepick 전용 폰트 클래스 */
+.font-keepick-primary {
+  font-family: "Line-Seed", var(--font-montserrat), sans-serif;
+}
+
+.font-keepick-heavy {
+  font-family: "Line-Seed", var(--font-montserrat), sans-serif;
+  font-weight: 700;
+}
+
+/* 스크롤바를 숨기는 유틸리티 클래스 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Tailwind의 scrollbar-hide와 동일한 기능 */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
