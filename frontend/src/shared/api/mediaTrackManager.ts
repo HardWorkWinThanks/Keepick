@@ -44,6 +44,9 @@ class MediaTrackManager {
   private consumerMap = new Map<string, string>(); // consumerId -> trackId
   private remoteProducerMap = new Map<string, string>(); // remote producerId -> trackId
 
+  // 🆕 이벤트 기반 업데이트를 위한 콜백 시스템
+  private screenShareListeners = new Set<() => void>();
+
   // Race condition 방지를 위한 consume 큐 및 락
   private consumeQueue: Promise<string | null> = Promise.resolve(null);
   private processingProducers = new Set<string>(); // 현재 처리 중인 producer들
@@ -54,6 +57,22 @@ class MediaTrackManager {
 
   public init(dispatch: AppDispatch) {
     this.dispatch = dispatch;
+  }
+
+  // 🆕 화면공유 변화 이벤트 리스너 관리
+  public addScreenShareListener(callback: () => void): () => void {
+    this.screenShareListeners.add(callback);
+    return () => this.screenShareListeners.delete(callback);
+  }
+
+  private notifyScreenShareListeners(): void {
+    this.screenShareListeners.forEach(callback => {
+      try {
+        callback();
+      } catch (error) {
+        console.error('Screen share listener error:', error);
+      }
+    });
   }
 
   public setTransports(sendTransport: Transport, recvTransport: Transport, roomId?: string) {
@@ -373,6 +392,8 @@ class MediaTrackManager {
           trackId,
           socketId,
         });
+        // 🆕 화면공유 트랙 추가 시 리스너들에게 알림
+        this.notifyScreenShareListeners();
       }
 
       return trackId;
@@ -547,27 +568,19 @@ class MediaTrackManager {
   getAllRemoteScreenSharePeers(): { socketId: string; peerName: string }[] {
     const screenPeers = new Map<string, string>(); // socketId -> peerName
     
-    console.log(`🔍 [getAllRemoteScreenSharePeers] Checking ${this.remoteTracks.size} remote tracks`);
-    
     // 원격 트랙에서 화면 공유 트랙을 가진 피어들 찾기
-    for (const [trackId, trackInfo] of this.remoteTracks.entries()) {
-      console.log(`  - ${trackId}: peerId=${trackInfo.peerId}, trackType=${trackInfo.trackType}, kind=${trackInfo.kind}`);
-      
+    for (const trackInfo of this.remoteTracks.values()) {
       if (trackInfo.trackType === "screen") {
         // TrackInfo의 추가 정보에서 peerName 추출
         const peerName = (trackInfo as any).peerName || trackInfo.peerId;
         screenPeers.set(trackInfo.peerId, peerName);
-        console.log(`  ✅ Found screen track for ${trackInfo.peerId}`);
       }
     }
     
-    const result = Array.from(screenPeers.entries()).map(([socketId, peerName]) => ({
+    return Array.from(screenPeers.entries()).map(([socketId, peerName]) => ({
       socketId,
       peerName
     }));
-    
-    console.log(`🔍 [getAllRemoteScreenSharePeers] Found ${result.length} screen share peers:`, result);
-    return result;
   }
 
   // 🆕 트랙 타입별 안전한 제거 (카메라/화면 공유 분리)
@@ -855,6 +868,10 @@ async replaceLocalTrack(trackId: string, newTrack: MediaStreamTrack): Promise<vo
       console.log(`🔄 Redux removed camera ${trackInfo.kind} track for ${socketId}`);
     } else {
       console.log(`🚫 Skipping Redux removal for ${trackInfo.trackType} track`);
+      // 🆕 화면공유 트랙 제거 시 리스너들에게 알림
+      if (trackInfo.trackType === "screen") {
+        this.notifyScreenShareListeners();
+      }
     }
 
     console.log(`✅ Remote ${trackInfo.trackType} ${trackInfo.kind} track removed:`, trackId);
