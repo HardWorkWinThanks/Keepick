@@ -310,12 +310,6 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
         });
       }
       
-      // AI 프로세서가 활성화되어 있다면 정리
-      if (frontendAiProcessor.initialized) {
-        console.log("🧹 Lobby 언마운트 시 frontendAiProcessor 정리");
-        frontendAiProcessor.cleanup();
-      }
-      
       console.log("✅ Lobby 컴포넌트 정리 완료");
     };
   }, []); // 의존성 배열을 비워 컴포넌트 마운트 시 한 번만 실행되도록 합니다.

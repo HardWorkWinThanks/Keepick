@@ -625,6 +625,7 @@ class FrontendAiProcessor {
     // 🚨 중요: 원본 트랙(activeSourceTrack)은 중단하지 않음!
     // 원본 트랙은 사용자의 카메라 스트림이므로 AI 처리 종료와 무관하게 유지되어야 함
     if (this.activeSourceTrack) {
+      this.activeSourceTrack.stop();
       console.log("📌 Releasing reference to source track (not stopping):", this.activeSourceTrack.id);
       this.activeSourceTrack = null; // 참조만 해제
     }
@@ -668,10 +669,10 @@ class FrontendAiProcessor {
     console.log("FrontendAiProcessor cleaned up.");
   }
 
-  // isInitialized 상태를 확인할 수 있는 public getter
-  public get initialized(): boolean {
-    return this.isInitialized;
-  }
+  // // isInitialized 상태를 확인할 수 있는 public getter
+  // public get initialized(): boolean {
+  //   return this.isInitialized;
+  // }
 }
 
 export const frontendAiProcessor = new FrontendAiProcessor();
