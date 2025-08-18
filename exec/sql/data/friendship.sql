@@ -1,0 +1,10 @@
+INSERT INTO `friendship` (`created_at`,`id`,`receiver_id`,`sender_id`,`updated_at`,`status`) VALUES ('2025-08-17 07:06:24.780105',1,3,1,'2025-08-17 07:06:24.780105','ACCEPTED');
+INSERT INTO `friendship` (`created_at`,`id`,`receiver_id`,`sender_id`,`updated_at`,`status`) VALUES ('2025-08-17 07:06:24.787133',2,1,3,'2025-08-17 10:12:22.727347','ACCEPTED');
+INSERT INTO `friendship` (`created_at`,`id`,`receiver_id`,`sender_id`,`updated_at`,`status`) VALUES ('2025-08-17 10:15:57.785158',3,2,1,'2025-08-17 10:15:57.785158','ACCEPTED');
+INSERT INTO `friendship` (`created_at`,`id`,`receiver_id`,`sender_id`,`updated_at`,`status`) VALUES ('2025-08-17 10:15:57.787809',4,1,2,'2025-08-17 10:16:29.255279','ACCEPTED');
+INSERT INTO `friendship` (`created_at`,`id`,`receiver_id`,`sender_id`,`updated_at`,`status`) VALUES ('2025-08-18 00:40:06.987157',5,5,13,'2025-08-18 00:40:06.987157','ACCEPTED');
+INSERT INTO `friendship` (`created_at`,`id`,`receiver_id`,`sender_id`,`updated_at`,`status`) VALUES ('2025-08-18 00:40:06.995737',6,13,5,'2025-08-18 00:40:14.363442','ACCEPTED');
+INSERT INTO `friendship` (`created_at`,`id`,`receiver_id`,`sender_id`,`updated_at`,`status`) VALUES ('2025-08-18 00:40:12.002820',7,13,7,'2025-08-18 00:40:12.002820','ACCEPTED');
+INSERT INTO `friendship` (`created_at`,`id`,`receiver_id`,`sender_id`,`updated_at`,`status`) VALUES ('2025-08-18 00:40:12.004626',8,7,13,'2025-08-18 00:41:02.871734','ACCEPTED');
+INSERT INTO `friendship` (`created_at`,`id`,`receiver_id`,`sender_id`,`updated_at`,`status`) VALUES ('2025-08-18 00:50:32.751223',9,8,13,'2025-08-18 00:50:32.751223','ACCEPTED');
+INSERT INTO `friendship` (`created_at`,`id`,`receiver_id`,`sender_id`,`updated_at`,`status`) VALUES ('2025-08-18 00:50:32.803610',10,13,8,'2025-08-18 00:50:32.803610','ACCEPTED');
