@@ -414,7 +414,7 @@ class FrontendAiProcessor {
         if (timeSinceLastEmotion >= this.EMOTION_RESULT_INTERVAL || emotionResult.label !== "none") {
           this.onEmotionResultCallback(emotionResult);
           this.lastEmotionResultTime = timestamp;
-          this.addEmotionOverlay(emotionResult, timestamp);
+          // this.addEmotionOverlay(emotionResult, timestamp); // 감정 이미지 오버레이 비활성화
         }
       }
     }
