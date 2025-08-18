@@ -162,11 +162,6 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
       dispatch(setAiEnabled(true));
       setIsAiPreviewOpen(true);
 
-        // frontendAiProcessor가 초기화되었는지 확인
-        if (!frontendAiProcessor.initialized) {
-          console.log("🔄 frontendAiProcessor 초기화 중...");
-          await frontendAiProcessor.init(dispatch);
-        }
 
         // 로비용 AI 콜백 설정
         frontendAiProcessor.setGestureCallback(handleGestureResult);

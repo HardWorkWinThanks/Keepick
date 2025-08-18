@@ -287,9 +287,9 @@ export class GestureProcessor {
       const predictedLabel = staticGestureLabels[predictedClassIndex] || "none";
       
       // 디버깅 로그 (나중에 제거 가능)
-      if (maxProbability > 0.5) {
-        console.log(`Static gesture detected: ${predictedLabel} (${(maxProbability * 100).toFixed(1)}%)`);
-      }
+      // if (maxProbability > 0.5) {
+      //   console.log(`Static gesture detected: ${predictedLabel} (${(maxProbability * 100).toFixed(1)}%)`);
+      // }
       
       return {
         label: predictedLabel,
@@ -336,9 +336,9 @@ export class GestureProcessor {
       const predictedLabel = dynamicGestureLabels[predictedClassIndex] || "none";
       
       // 디버깅 로그 (나중에 제거 가능)
-      if (maxProbability > 0.5) {
-        console.log(`Dynamic gesture detected: ${predictedLabel} (${(maxProbability * 100).toFixed(1)}%)`);
-      }
+      // if (maxProbability > 0.5) {
+      //   console.log(`Dynamic gesture detected: ${predictedLabel} (${(maxProbability * 100).toFixed(1)}%)`);
+      // }
       
       return {
         label: predictedLabel,
@@ -499,7 +499,7 @@ export class GestureProcessor {
                         confidence: dynamicResult.confidence
                       };
                       handState.lastDynTime.set(dynamicResult.label, currentTime);
-                      console.log(`🎯 동적 제스처 인식: ${dynamicResult.label} (${(dynamicResult.confidence * 100).toFixed(1)}%)`);
+                      // console.log(`🎯 동적 제스처 인식: ${dynamicResult.label} (${(dynamicResult.confidence * 100).toFixed(1)}%)`);
                     }
                   }
                 }
@@ -525,7 +525,7 @@ export class GestureProcessor {
           }
         }
       } catch (error) {
-        console.debug("GestureProcessor: Hand detection error:", error);
+        // console.debug("GestureProcessor: Hand detection error:", error);
       }
     }
     return null;

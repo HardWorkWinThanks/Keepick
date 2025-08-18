@@ -270,14 +270,14 @@ export class EmotionFaceProcessor {
       const confidence = finalConf;
 
       // 가끔 확률 로그
-      if (this.debugMode && Math.random() < 0.05) {
-        const top3 = smoothedProbs
-          .map((p, i) => ({ label: LABELS_FACE[i], prob: p }))
-          .sort((a, b) => b.prob - a.prob)
-          .slice(0, 3);
-        console.log("Top 3 emotions:", top3);
-        console.log("Final result:", { label, confidence: confidence.toFixed(3) });
-      }
+      // if (this.debugMode && Math.random() < 0.05) {
+      //   const top3 = smoothedProbs
+      //     .map((p, i) => ({ label: LABELS_FACE[i], prob: p }))
+      //     .sort((a, b) => b.prob - a.prob)
+      //     .slice(0, 3);
+      //   console.log("Top 3 emotions:", top3);
+      //   console.log("Final result:", { label, confidence: confidence.toFixed(3) });
+      // }
 
       // 히스토리 기록
       this.emotionHistory.push({ emotion: label, confidence, timestamp });
@@ -295,10 +295,10 @@ export class EmotionFaceProcessor {
       const lastEventTime = this.lastEmotionEventTime[label] || 0;
 
       if (confidence < threshold || now - lastEventTime < cooldown) {
-        if (this.debugMode && confidence >= threshold) {
-          const elapsed = (now - lastEventTime).toFixed(1);
-          console.log(`${label} detected but in cooldown (${elapsed}s / ${cooldown}s)`);
-        }
+        // if (this.debugMode && confidence >= threshold) {
+        //   const elapsed = (now - lastEventTime).toFixed(1);
+        //   console.log(`${label} detected but in cooldown (${elapsed}s / ${cooldown}s)`);
+        // }
         return null;
       }
 
@@ -383,7 +383,7 @@ export class EmotionFaceProcessor {
       }
       return safe;
     } catch (e) {
-      console.warn("Error extracting facial features:", e);
+      // console.warn("Error extracting facial features:", e);
       return null;
     }
   }
@@ -393,7 +393,7 @@ export class EmotionFaceProcessor {
    */
   private scaleFeatures(features: number[]): number[] {
     if (this.expressionScalerMean === null || this.expressionScalerScale === null) {
-      console.warn("Scaler data not loaded for scaling.");
+      // console.warn("Scaler data not loaded for scaling.");
       return features;
     }
     const mean = this.expressionScalerMean;
