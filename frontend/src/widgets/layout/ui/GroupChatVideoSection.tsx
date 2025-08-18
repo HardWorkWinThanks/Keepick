@@ -26,7 +26,7 @@ export function GroupChatVideoSection({
   participants = [],
   groupId
 }: GroupChatVideoSectionProps) {
-  const [isExpanded, setIsExpanded] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
   const router = useRouter()
   
   // 임시 데이터 (테스트용) - 추후 실제 데이터로 교체

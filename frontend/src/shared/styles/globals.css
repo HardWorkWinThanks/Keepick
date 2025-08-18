@@ -41,10 +41,57 @@
   }
 }
 
-/* 사이드바 스크롤바 스타일 */
+/* 전역 스크롤바 스타일 - 다크 테마 */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) #111111;
+}
+
+html::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html::-webkit-scrollbar-track {
+  background: #111111;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: rgba(254, 122, 37, 0.6);
+}
+
+body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) #111111;
+}
+
+body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body::-webkit-scrollbar-track {
+  background: #111111;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+body::-webkit-scrollbar-thumb:hover {
+  background: rgba(254, 122, 37, 0.6);
+}
+
+/* 사이드바 스크롤바 스타일 - 다크 테마 */
 .sidebar-scroll [data-radix-scroll-area-viewport] {
   scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar {
@@ -52,17 +99,121 @@
 }
 
 .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(34, 34, 34, 0.3);
   border-radius: 3px;
 }
 
 .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.3);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 3px;
 }
 
 .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.5);
+  background: rgba(254, 122, 37, 0.6);
+}
+
+/* 전체화면에서도 사이드바 커스텀 스크롤바 적용 - 다크 테마 */
+:fullscreen .sidebar-scroll [data-radix-scroll-area-viewport],
+:-webkit-full-screen .sidebar-scroll [data-radix-scroll-area-viewport],
+:-moz-full-screen .sidebar-scroll [data-radix-scroll-area-viewport],
+:fullscreen .sidebar-scroll,
+:-webkit-full-screen .sidebar-scroll,
+:-moz-full-screen .sidebar-scroll {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent !important;
+}
+
+:fullscreen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar,
+:-webkit-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar,
+:-moz-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar,
+:fullscreen .sidebar-scroll::-webkit-scrollbar,
+:-webkit-full-screen .sidebar-scroll::-webkit-scrollbar,
+:-moz-full-screen .sidebar-scroll::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+:fullscreen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-track,
+:-webkit-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-track,
+:-moz-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-track,
+:fullscreen .sidebar-scroll::-webkit-scrollbar-track,
+:-webkit-full-screen .sidebar-scroll::-webkit-scrollbar-track,
+:-moz-full-screen .sidebar-scroll::-webkit-scrollbar-track {
+  background: rgba(34, 34, 34, 0.3) !important;
+  border-radius: 3px !important;
+}
+
+:fullscreen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb,
+:-webkit-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb,
+:-moz-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb,
+:fullscreen .sidebar-scroll::-webkit-scrollbar-thumb,
+:-webkit-full-screen .sidebar-scroll::-webkit-scrollbar-thumb,
+:-moz-full-screen .sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 3px !important;
+}
+
+:fullscreen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover,
+:-webkit-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover,
+:-moz-full-screen .sidebar-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover,
+:fullscreen .sidebar-scroll::-webkit-scrollbar-thumb:hover,
+:-webkit-full-screen .sidebar-scroll::-webkit-scrollbar-thumb:hover,
+:-moz-full-screen .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(254, 122, 37, 0.6) !important;
+}
+
+/* 전체화면에서 Radix ScrollArea의 스크롤바 스타일 강제 적용 - 다크 테마 */
+:fullscreen [data-radix-scroll-area-scrollbar],
+:-webkit-full-screen [data-radix-scroll-area-scrollbar],
+:-moz-full-screen [data-radix-scroll-area-scrollbar] {
+  width: 6px !important;
+  background: rgba(34, 34, 34, 0.3) !important;
+}
+
+:fullscreen [data-radix-scroll-area-thumb],
+:-webkit-full-screen [data-radix-scroll-area-thumb],
+:-moz-full-screen [data-radix-scroll-area-thumb] {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 3px !important;
+}
+
+:fullscreen [data-radix-scroll-area-thumb]:hover,
+:-webkit-full-screen [data-radix-scroll-area-thumb]:hover,
+:-moz-full-screen [data-radix-scroll-area-thumb]:hover {
+  background: rgba(254, 122, 37, 0.6) !important;
+}
+
+/* 전체화면에서 모든 스크롤 영역에 커스텀 스크롤바 강제 적용 - 다크 테마 */
+:fullscreen *::-webkit-scrollbar,
+:-webkit-full-screen *::-webkit-scrollbar,
+:-moz-full-screen *::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+:fullscreen *::-webkit-scrollbar-track,
+:-webkit-full-screen *::-webkit-scrollbar-track,
+:-moz-full-screen *::-webkit-scrollbar-track {
+  background: rgba(34, 34, 34, 0.3) !important;
+  border-radius: 3px !important;
+}
+
+:fullscreen *::-webkit-scrollbar-thumb,
+:-webkit-full-screen *::-webkit-scrollbar-thumb,
+:-moz-full-screen *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 3px !important;
+}
+
+:fullscreen *::-webkit-scrollbar-thumb:hover,
+:-webkit-full-screen *::-webkit-scrollbar-thumb:hover,
+:-moz-full-screen *::-webkit-scrollbar-thumb:hover {
+  background: rgba(254, 122, 37, 0.6) !important;
+}
+
+:fullscreen *,
+:-webkit-full-screen *,
+:-moz-full-screen * {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(34, 34, 34, 0.3) !important;
 }
 
 /* 
