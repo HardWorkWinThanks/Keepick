@@ -42,7 +42,7 @@ def api_tag_and_detect():
         sources     = data["source_images"]
         face_th     = data.get("face_distance_threshold", 0.6)
         yolo_opt    = data.get("yolo", {"conf": 0.4, "imgsz": 640})
-        blur_th     = data.get("blur_threshold", 100.0)
+        blur_th     = data.get("blur_threshold", 20.0)
         ret_b64     = data.get("return_tagged_images", False)
 
         temp_dir    = os.path.join(UPLOAD_FOLDER, "temp_face")
@@ -94,7 +94,7 @@ def api_similar_grouping():
 
         job_id   = data.get("job_id", 1)
         images   = data["images"]
-        sim_th   = data.get("similarity_threshold", 0.9)
+        sim_th   = data.get("similarity_threshold", 0.95)
         temp_dir = os.path.join(UPLOAD_FOLDER, "temp_similar")
         os.makedirs(temp_dir, exist_ok=True)
 

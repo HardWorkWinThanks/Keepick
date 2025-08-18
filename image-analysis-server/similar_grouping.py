@@ -24,7 +24,7 @@ def get_cnn_embedding(img_tensor):
     with torch.no_grad():
         return cnn_model(img_tensor.unsqueeze(0).to(device)).flatten()
 
-def group_similar_images(job_id, images, similarity_threshold=0.9, temp_dir="temp_similar"):
+def group_similar_images(job_id, images, similarity_threshold=0.95, temp_dir="temp_similar"):
     """
     유사한 이미지들을 그룹화하는 함수
     Args:

@@ -13,7 +13,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # --- 선택적 YOLO 로더 (없으면 objects=[]) ---
 _YOLO = None
-def _lazy_load_yolo(model_path="./final.pt"):
+def _lazy_load_yolo(model_path="./best.pt"):
     global _YOLO
     if _YOLO is not None:
         return _YOLO
@@ -32,13 +32,7 @@ def _run_yolo_on_bgr(img_bgr, conf=0.4, imgsz=640):
     if yolo is None:
         return []  # YOLO 미사용 시 빈 리스트
     try:
-        # 4채널 -> 3채널 변환 처리
-        if img_bgr.shape[2] == 4:
-            img_bgr = cv2.cvtColor(img_bgr, cv2.COLOR_BGRA2BGR)
-        # BGR -> RGB 변환 (YOLO가 RGB 입력 기대)
-        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-
-        res = yolo.predict(img_rgb, conf=conf, imgsz=imgsz, verbose=False)
+        res = yolo.predict(img_bgr, conf=conf, imgsz=imgsz, verbose=False)
         r0 = res[0]
         boxes = []
         names = r0.names
@@ -110,7 +104,7 @@ def tag_faces_detect_and_blur(
     distance_threshold=0.6,
     return_tagged_images=False,
     temp_dir="temp_face",
-    blur_threshold=100.0,
+    blur_threshold=20.0,
     yolo_conf=0.4,
     yolo_imgsz=640,
 ):
