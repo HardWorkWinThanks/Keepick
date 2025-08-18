@@ -43,6 +43,7 @@ export class RoomEventsHandler {
       socket.emit("joined_room", {
         rtpCapabilities: room.router.rtpCapabilities,
         peers: peersWithProducers,
+        chatSessionId: room.chatSessionId, // 채팅 세션 ID 전달
       });
 
       // 방에있는 다른 사용자에게 새로 입장한 사용자의 정보를 알림

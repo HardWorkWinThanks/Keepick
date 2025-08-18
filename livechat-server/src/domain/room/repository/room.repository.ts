@@ -4,13 +4,14 @@ import { mediasoupService } from "../../media/mediasoup.service";
 export class RoomRepository {
   private rooms: Map<string, RoomState> = new Map();
 
-  async createRoom(roomId: string): Promise<RoomState> {
+  async createRoom(roomId: string, chatSessionId: string): Promise<RoomState> {
     const router = await mediasoupService.createRouter();
     const room: RoomState = {
       id: roomId,
       router,
       peers: new Map(),
       createdAt: new Date(),
+      chatSessionId: chatSessionId, // 방 생성시 채팅 세션 ID
     };
 
     this.rooms.set(roomId, room);
