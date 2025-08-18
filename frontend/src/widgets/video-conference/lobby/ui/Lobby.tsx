@@ -146,13 +146,22 @@ export const Lobby = ({ onJoin, isLoading, error }: LobbyProps) => {
     }
   }, []);
 
-  // AI 프리뷰 토글 함수
-const handleAiPreviewToggle = async () => {
+  // AI 프리뷰 1회성 활성화 함수
+  const handleAiPreviewToggle = async () => {
     try {
-      if (!aiState.isAiEnabled) {
-        // AI 기능 활성화
-        dispatch(setAiEnabled(true));
-        setIsAiPreviewOpen(true);
+      // 이미 활성화된 경우 아무것도 하지 않음
+      if (aiState.isAiEnabled && isAiPreviewOpen) {
+        console.log("⚠️ AI 기능이 이미 활성화되어 있습니다.");
+        return;
+      }
+      
+      // AI 기능 활성화 (1회성)
+      console.log("🤖 AI 프리뷰 활성화 시작...");
+      
+      // Redux 상태 먼저 업데이트
+      dispatch(setAiEnabled(true));
+      setIsAiPreviewOpen(true);
+
 
         // 로비용 AI 콜백 설정
         frontendAiProcessor.setGestureCallback(handleGestureResult);
@@ -161,51 +170,43 @@ const handleAiPreviewToggle = async () => {
         // 로컬 스트림이 있으면 AI 처리 시작
         if (localStream?.getVideoTracks()[0]) {
           const videoTrack = localStream.getVideoTracks()[0];
-          console.log("🤖 Starting AI processing for lobby preview...");
+          console.log("🎯 AI 비디오 처리 시작...");
           
           // AI 처리된 스트림 생성
           const processedTrack = await frontendAiProcessor.processVideoTrack(videoTrack);
           const processedStream = new MediaStream([processedTrack]);
           setAiProcessedStream(processedStream);
           
-          // AI 처리된 비디오 엘리먼트에 스트림 설정
-          if (aiVideoRef.current) {
-            aiVideoRef.current.srcObject = processedStream;
-          }
+          // AI 처리된 비디오 엘리먼트에 스트림 설정 (약간의 지연 후)
+          setTimeout(() => {
+            if (aiVideoRef.current && processedStream) {
+              aiVideoRef.current.srcObject = processedStream;
+              console.log("📺 AI 비디오 스트림 설정 완료");
+            }
+          }, 100);
         }
 
-        console.log("✅ AI 프리뷰 활성화");
-      } else {
-        // AI 기능 비활성화
-        dispatch(setAiEnabled(false));
-        setIsAiPreviewOpen(false);
-        
-        // AI 처리된 스트림 정리
-        if (aiProcessedStream) {
-          aiProcessedStream.getTracks().forEach(track => track.stop());
-          setAiProcessedStream(null);
-        }
-        
-        if (aiVideoRef.current) {
-          aiVideoRef.current.srcObject = null;
-        }
-
-        // 원본 비디오 스트림이 화면에서 사라지는 문제 해결
-        if (videoRef.current && localStream) {
-          videoRef.current.srcObject = localStream;
-        }
-
-        console.log("✅ AI 프리뷰 비활성화");
-      }
+        console.log("✅ AI 프리뷰 활성화 완료");
     } catch (error) {
-      console.error("AI 프리뷰 토글 오류:", error);
-      setMediaError("AI 기능을 시작할 수 없습니다.");
+      console.error("❌ AI 프리뷰 활성화 오류:", error);
+      
+      // 에러 발생 시 상태 리셋
       dispatch(setAiEnabled(false));
-      setAiProcessedStream(null);
       setIsAiPreviewOpen(false);
+      setAiProcessedStream(null);
+      
+      // AI 리소스 정리
+      frontendAiProcessor.cleanup();
+      
+      // 에러 메시지 표시
+      setMediaError("AI 기능을 시작할 수 없습니다. 다시 시도해주세요.");
+      
+      // 3초 후 에러 메시지 자동 제거
+      setTimeout(() => {
+        setMediaError(null);
+      }, 3000);
     }
   };
-
 
   // 권한 확인 함수
   const checkPermissions = async (): Promise<MediaPermissions> => {
@@ -304,12 +305,6 @@ const handleAiPreviewToggle = async () => {
         });
       }
       
-      // // AI 프로세서가 활성화되어 있다면 정리
-      // if (frontendAiProcessor.initialized) {
-      //   console.log("🧹 Lobby 언마운트 시 frontendAiProcessor 정리");
-      //   frontendAiProcessor.cleanup();
-      // }
-      
       console.log("✅ Lobby 컴포넌트 정리 완료");
     };
   }, []); // 의존성 배열을 비워 컴포넌트 마운트 시 한 번만 실행되도록 합니다.
@@ -396,7 +391,7 @@ const handleAiPreviewToggle = async () => {
     <div className="min-h-screen bg-[#222222] flex items-center justify-center p-4 font-body">
       <div className="w-full max-w-7xl">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-[#FE7A25] font-header mb-2">그룹챗 참여</h1>
+          <h1 className="text-4xl font-bold text-[#FE7A25] font-header mb-2">그룹챗 참여하기</h1>
           <p className="text-[#A0A0A5]">카메라와 마이크를 확인하고 AI 기능을 테스트해보세요</p>
         </div>
 
@@ -685,17 +680,17 @@ const handleAiPreviewToggle = async () => {
                 </div>
                 <button
                   onClick={handleAiPreviewToggle}
-                  disabled={!hasVideoTrack || isInitializing}
+                  disabled={!hasVideoTrack || isInitializing || (aiState.isAiEnabled && isAiPreviewOpen)}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                     aiState.isAiEnabled && isAiPreviewOpen
-                      ? "bg-[#FE7A25] text-[#222222]"
-                      : "bg-[#424245] text-[#FFFFFF] hover:bg-[#4a4a4d]"
+                      ? "bg-[#424245] text-[#A0A0A5] cursor-not-allowed"
+                      : "bg-[#FE7A25] text-[#222222] hover:bg-[#E06B1F]"
                   } disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
                 >
                   {aiState.isAiEnabled && isAiPreviewOpen ? (
                     <>
-                      <EyeSlashIcon className="w-5 h-5" />
-                      <span>끄기</span>
+                      <CheckCircleIcon className="w-5 h-5" />
+                      <span>활성화됨</span>
                     </>
                   ) : (
                     <>
@@ -709,7 +704,6 @@ const handleAiPreviewToggle = async () => {
               {/* AI 세부 설정을 미리보기 카드 안으로 이동 */}
               <div className="p-3 bg-[#222222] rounded-lg">
                 <div className="mb-2">
-                  <span className="text-[#A0A0A5] text-xs">AI 기능 설정</span>
                   <p className="text-[#636366] text-xs mt-1">
                     인식 횟수와 실제 이모지 표시는 쿨타임이 적용되어 다를 수 있습니다
                   </p>

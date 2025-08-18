@@ -50,20 +50,20 @@ const PUFF_T = 0.015;
 
 // 이벤트 전송 임계값 (app.py의 SHOW_THRESH 참고, 필요에 따라 조정)
 const EMOTION_THRESHOLDS = {
-  laugh: 0.6,
-  serious: 0.65,
-  surprise: 0.95,
-  yawn: 0.60,
-  none: 0.50,
+  laugh: 0.85,   // 웃음 임계값을 0.85로 상승
+  serious: 0.85, // 진지함 임계값을 0.85로 상승
+  surprise: 0.95, // 놀람은 이미 높음
+  yawn: 0.80,    // 하품 임계값을 0.80으로 상승
+  none: 0.50,    // none은 유지
 };
 
 // 연속 감지 방지를 위한 쿨다운 (초)
 const EMOTION_COOLDOWN = {
-  laugh: 3.0,
-  serious: 3.0,
-  surprise: 3.0,
-  yawn: 3.0,
-  none: 1.0,
+  laugh: 8.0,   // 웃음 쿨다운을 8초로 증가
+  serious: 8.0, // 진지함 쿨다운을 8초로 증가
+  surprise: 8.0, // 놀람 쿨다운을 8초로 증가
+  yawn: 8.0,    // 하품 쿨다운을 8초로 증가
+  none: 1.0,    // none은 유지
 };
 
 export class EmotionFaceProcessor {
@@ -270,14 +270,14 @@ export class EmotionFaceProcessor {
       const confidence = finalConf;
 
       // 가끔 확률 로그
-      if (this.debugMode && Math.random() < 0.05) {
-        const top3 = smoothedProbs
-          .map((p, i) => ({ label: LABELS_FACE[i], prob: p }))
-          .sort((a, b) => b.prob - a.prob)
-          .slice(0, 3);
-        console.log("Top 3 emotions:", top3);
-        console.log("Final result:", { label, confidence: confidence.toFixed(3) });
-      }
+      // if (this.debugMode && Math.random() < 0.05) {
+      //   const top3 = smoothedProbs
+      //     .map((p, i) => ({ label: LABELS_FACE[i], prob: p }))
+      //     .sort((a, b) => b.prob - a.prob)
+      //     .slice(0, 3);
+      //   console.log("Top 3 emotions:", top3);
+      //   console.log("Final result:", { label, confidence: confidence.toFixed(3) });
+      // }
 
       // 히스토리 기록
       this.emotionHistory.push({ emotion: label, confidence, timestamp });
@@ -295,10 +295,10 @@ export class EmotionFaceProcessor {
       const lastEventTime = this.lastEmotionEventTime[label] || 0;
 
       if (confidence < threshold || now - lastEventTime < cooldown) {
-        if (this.debugMode && confidence >= threshold) {
-          const elapsed = (now - lastEventTime).toFixed(1);
-          console.log(`${label} detected but in cooldown (${elapsed}s / ${cooldown}s)`);
-        }
+        // if (this.debugMode && confidence >= threshold) {
+        //   const elapsed = (now - lastEventTime).toFixed(1);
+        //   console.log(`${label} detected but in cooldown (${elapsed}s / ${cooldown}s)`);
+        // }
         return null;
       }
 
@@ -383,7 +383,7 @@ export class EmotionFaceProcessor {
       }
       return safe;
     } catch (e) {
-      console.warn("Error extracting facial features:", e);
+      // console.warn("Error extracting facial features:", e);
       return null;
     }
   }
@@ -393,7 +393,7 @@ export class EmotionFaceProcessor {
    */
   private scaleFeatures(features: number[]): number[] {
     if (this.expressionScalerMean === null || this.expressionScalerScale === null) {
-      console.warn("Scaler data not loaded for scaling.");
+      // console.warn("Scaler data not loaded for scaling.");
       return features;
     }
     const mean = this.expressionScalerMean;

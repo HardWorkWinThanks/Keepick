@@ -23,15 +23,15 @@ export class GestureProcessor {
   private readonly DYNAMIC_GESTURE_MODEL_PATH = "/models/dinamic-gesture/model.json"; // 실제 폴더명에 맞춰 수정
 
   // 참고 코드의 안정화 상수들 추가
-  private readonly PX_HIGH = 0.12; // 움직임 임계값 (더 큰 움직임 요구)
+  private readonly PX_HIGH = 0.10; // 움직임 임계값 (약간만 낮춤)
   private readonly STATIC_CONF_T = 0.75; // 정적 제스처 신뢰도 임계값
   private readonly STATIC_VOTE_K = 10; // 다수결 투표 수 (더 많은 투표 요구)
-  private readonly STATIC_HOLD_SEC = 1.5; // 정적 제스처 유지 시간 (1초)
-  private readonly STATIC_COOLDOWN = 2.5; // 정적 제스처 쿨다운(초) - 속도 늦추기
-  private readonly SEQ_LEN = 30; // 동적 제스처 시퀀스 길이
-  private readonly DYN_CONF_T = 0.92; // 동적 제스처 신뢰도 임계값 (더 높게)
-  private readonly MOVE3D_T = 0.06; // 3D 움직임 임계값 (더 큰 움직임 요구)
-  private readonly DYN_COOLDOWN = 8.0; // 동적 제스처 쿨다운(초) (더 길게)
+  private readonly STATIC_HOLD_SEC = 2.0; // 정적 제스처 유지 시간 (2초)
+  private readonly STATIC_COOLDOWN = 5.0; // 정적 제스처 쿨다운(초) - 5초
+  private readonly SEQ_LEN = 30; // 동적 제스처 시퀀스 길이 (원래대로 복원)
+  private readonly DYN_CONF_T = 0.85; // 동적 제스처 신뢰도 임계값 (약간만 낮춤)
+  private readonly MOVE3D_T = 0.05; // 3D 움직임 임계값 (약간만 낮춤)
+  private readonly DYN_COOLDOWN = 5.0; // 동적 제스처 쿨다운(초) - 5초
 
   // 손별 상태 관리
   private handStates: Map<string, {
@@ -287,9 +287,9 @@ export class GestureProcessor {
       const predictedLabel = staticGestureLabels[predictedClassIndex] || "none";
       
       // 디버깅 로그 (나중에 제거 가능)
-      if (maxProbability > 0.5) {
-        console.log(`Static gesture detected: ${predictedLabel} (${(maxProbability * 100).toFixed(1)}%)`);
-      }
+      // if (maxProbability > 0.5) {
+      //   console.log(`Static gesture detected: ${predictedLabel} (${(maxProbability * 100).toFixed(1)}%)`);
+      // }
       
       return {
         label: predictedLabel,
@@ -336,9 +336,9 @@ export class GestureProcessor {
       const predictedLabel = dynamicGestureLabels[predictedClassIndex] || "none";
       
       // 디버깅 로그 (나중에 제거 가능)
-      if (maxProbability > 0.5) {
-        console.log(`Dynamic gesture detected: ${predictedLabel} (${(maxProbability * 100).toFixed(1)}%)`);
-      }
+      // if (maxProbability > 0.5) {
+      //   console.log(`Dynamic gesture detected: ${predictedLabel} (${(maxProbability * 100).toFixed(1)}%)`);
+      // }
       
       return {
         label: predictedLabel,
@@ -429,10 +429,10 @@ export class GestureProcessor {
               }
 
               const avgMove2d = handState.moveHist2d.reduce((a, b) => a + b, 0) / handState.moveHist2d.length;
-              // 지속적인 움직임이 있어야 동적 제스처로 인식
-              const recentMoves = handState.moveHist2d.slice(-3); // 최근 3프레임
-              const consistentMovement = recentMoves.every(m => m > this.PX_HIGH * 0.7);
-              isMoving = (avgMove2d > this.PX_HIGH && consistentMovement) || move3d > this.MOVE3D_T;
+              // 동적 제스처를 위한 균형잡힌 움직임 감지
+              const recentMoves = handState.moveHist2d.slice(-2); // 최근 2프레임
+              const hasMovement = recentMoves.some(m => m > this.PX_HIGH * 0.4); // 적당한 임계값
+              isMoving = (avgMove2d > this.PX_HIGH * 0.6) || move3d > this.MOVE3D_T * 0.6 || hasMovement;
             }
 
             // 정적 제스처 처리
@@ -473,8 +473,8 @@ export class GestureProcessor {
               }
             }
 
-            // 동적 제스처 처리
-            if (this.aiConfig.gesture.dynamic.enabled) {
+            // 동적 제스처 처리 - 실제 움직임이 있을 때만 인식
+            if (this.aiConfig.gesture.dynamic.enabled && isMoving) {
               // 손목 기준 상대 좌표 계산
               const relativeKeypoints = this.handKeypointsRelative(handLandmarks);
               handState.dynamicSequence.push(relativeKeypoints);
@@ -499,6 +499,7 @@ export class GestureProcessor {
                         confidence: dynamicResult.confidence
                       };
                       handState.lastDynTime.set(dynamicResult.label, currentTime);
+                      // console.log(`🎯 동적 제스처 인식: ${dynamicResult.label} (${(dynamicResult.confidence * 100).toFixed(1)}%)`);
                     }
                   }
                 }
@@ -524,7 +525,7 @@ export class GestureProcessor {
           }
         }
       } catch (error) {
-        console.debug("GestureProcessor: Hand detection error:", error);
+        // console.debug("GestureProcessor: Hand detection error:", error);
       }
     }
     return null;

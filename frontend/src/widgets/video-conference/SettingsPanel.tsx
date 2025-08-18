@@ -197,11 +197,11 @@ export const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
                 />
               </div>
               
-              <div className="mb-6 bg-[#222222]/30 rounded-lg p-4">
+              {/* <div className="mb-6 bg-[#222222]/30 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-[#A0A0A5] text-sm font-medium">AI 세부 기능</h4>
-                </div>
-                <ToggleSwitch
+                </div> */}
+                {/* <ToggleSwitch
                   label="정적 제스처"
                   description="손 모양으로 이모지 표현 (👍, 👌, ✌️ 등)"
                   isOn={aiState.isStaticGestureDetectionEnabled}
@@ -232,8 +232,8 @@ export const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
                   onToggle={() => handleFeatureToggle('beauty')}
                   disabled={!aiState.isAiEnabled}
                   icon={<SparklesIcon className="w-4 h-4" />}
-                />
-              </div>
+                /> */}
+            
 
               <div className="mb-6">
                 <h4 className="text-[#A0A0A5] text-sm font-medium mb-3 px-4">미디어 설정</h4>

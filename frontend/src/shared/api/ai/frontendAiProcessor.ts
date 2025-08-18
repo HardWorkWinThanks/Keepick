@@ -66,7 +66,7 @@ class FrontendAiProcessor {
   private lastGestureResultTime = 0;
   private lastEmotionResultTime = 0;
   private readonly GESTURE_RESULT_INTERVAL = 1500;
-  private readonly EMOTION_RESULT_INTERVAL = 1500;
+  private readonly EMOTION_RESULT_INTERVAL = 5000; // 감정 인식 간격을 5초로 증가
 
   // ✨ 오버레이 (이미지 포함)
   private activeOverlays: Map<string, {
@@ -251,15 +251,15 @@ class FrontendAiProcessor {
 
   private runBackgroundAnalysisLoop(): void {
     if (!this.backgroundAnalysisActive || !this.backgroundVideoElement) {
-      console.log("⚠️ Background analysis not active or video element missing");
+      // console.log("⚠️ Background analysis not active or video element missing");
       return;
     }
 
-    console.log("🔄 Starting background analysis loop...");
+    // console.log("🔄 Starting background analysis loop...");
 
     const processFrame = async () => {
       if (!this.backgroundAnalysisActive || !this.backgroundVideoElement) {
-        console.log("🛑 Background analysis loop stopped");
+        // console.log("🛑 Background analysis loop stopped");
         return;
       }
 
@@ -267,7 +267,7 @@ class FrontendAiProcessor {
       const needsProcessing = now - this.lastFrameTime >= this.frameInterval;
 
       if (needsProcessing && this.isInitialized) {
-        console.log("🔄 Processing frame in background...");
+        // console.log("🔄 Processing frame in background...");
         this.lastFrameTime = now;
         try {
           await this.runAIProcessors(this.backgroundVideoElement, now);
@@ -314,7 +314,7 @@ class FrontendAiProcessor {
           console.error("❌ AI video track processing timeout");
           reject(new Error("AI video track processing timeout"));
         }
-      }, 10000);
+      }, 3000);
 
       videoElem.onloadedmetadata = () => {
         console.log("📹 Video metadata loaded, starting frame processing...");
@@ -394,7 +394,7 @@ class FrontendAiProcessor {
 
   private async runAIProcessors(videoElement: HTMLVideoElement, timestamp: number): Promise<void> {
     if (!this.isInitialized) {
-      console.log("⚠️ AI processors not initialized");
+      // console.log("⚠️ AI processors not initialized");
       return;
     }
     
@@ -508,7 +508,7 @@ class FrontendAiProcessor {
     }
   }
 
-  // ✨ 🚨 수정: app.py와 동일하게 fist/open_palm 필터링
+  // ✨ 수정: 실제 손 위치를 사용한 제스처 오버레이
   private addGestureOverlay(gestureResult: GestureResult, timestamp: number): void {
     const processGesture = (
         gesture: { label: string; confidence: number } | null,
@@ -521,11 +521,46 @@ class FrontendAiProcessor {
         const image = this.getImageForLabel(gesture.label);
         if (!image) return; // 🚨 app.py처럼 이미지 없으면 오버레이 안 함
 
+        // ✨ 실제 손 위치 추출
+        let handX = 0.5; // 기본값 (중앙)
+        let handY = 0.5; // 기본값 (중앙)
+        
+        // console.log(`🖐️ [${type}] ${gesture.label} - landmarks:`, gestureResult.landmarks?.length || 0);
+        
+        if (gestureResult.landmarks && gestureResult.landmarks.length > 0) {
+          // 첫 번째 손의 손목 좌표 (랜드마크 0번)를 사용
+          // landmarks는 [hand1_landmark0, hand1_landmark1, ...] 형태
+          // 각 랜드마크는 [x, y, z] 배열
+          const wristLandmark = gestureResult.landmarks[0]; // 손목 (landmark 0)
+          // console.log(`🎯 손목 랜드마크:`, wristLandmark);
+          
+          if (wristLandmark && wristLandmark.length >= 2) {
+            handX = wristLandmark[0]; // 정규화된 x 좌표 (0-1)
+            handY = wristLandmark[1]; // 정규화된 y 좌표 (0-1)
+            
+            // console.log(`📍 원본 손 위치: (${handX.toFixed(3)}, ${handY.toFixed(3)})`);
+            
+            // 손목에서 손 위쪽으로 오버레이 위치 조정 (Y축 위로 이동)
+            handY = handY - 0.15; // 손목에서 위로 15% 올리기
+            
+            // 화면 경계 체크 및 보정 (오버레이가 화면 밖으로 나가지 않도록)
+            const margin = 0.1; // 10% 여백
+            handX = Math.max(margin, Math.min(1 - margin, handX));
+            handY = Math.max(margin, Math.min(1 - margin, handY));
+            
+            // console.log(`🎯 최종 오버레이 위치: (${handX.toFixed(3)}, ${handY.toFixed(3)})`);
+          } else {
+            // console.warn(`⚠️ 손목 랜드마크 데이터 부족:`, wristLandmark);
+          }
+        } else {
+          // console.warn(`⚠️ 랜드마크 데이터 없음, 기본값 사용: (${handX}, ${handY})`);
+        }
+
         const key = `${type}_${gesture.label}_${timestamp}`;
         this.activeOverlays.set(key, {
             image,
-            x: 0.3 + Math.random() * 0.4,
-            y: 0.3 + Math.random() * 0.4,
+            x: handX, // 실제 손 위치 사용
+            y: handY, // 실제 손 위치 사용
             timestamp,
             duration: type === 'static' ? this.STATIC_GESTURE_DURATION : this.DYNAMIC_GESTURE_DURATION,
             opacity: 0,
@@ -538,16 +573,36 @@ class FrontendAiProcessor {
   }
 
   private addEmotionOverlay(emotionResult: EmotionResult, timestamp: number): void {
-    if (emotionResult.label === "none" || emotionResult.confidence < 0.6) return;
+    if (emotionResult.label === "none" || emotionResult.confidence < 0.8) return; // 신뢰도 임계값을 0.8로 상승
 
     const image = this.getImageForLabel(emotionResult.label);
     if (!image) return;
 
+    // 얼굴 위치 기본값 (화면 중앙 상단)
+    let faceX = 0.5; // 화면 중앙
+    let faceY = 0.3; // 화면 상단 30% 지점
+    
+    // 얼굴 랜드마크가 있으면 실제 얼굴 위치 사용
+    if (emotionResult.faceLandmarks && emotionResult.faceLandmarks.length > 0) {
+      // 얼굴 랜드마크의 중심점 계산
+      const landmarks = emotionResult.faceLandmarks;
+      const avgX = landmarks.reduce((sum, lm) => sum + lm[0], 0) / landmarks.length;
+      const avgY = landmarks.reduce((sum, lm) => sum + lm[1], 0) / landmarks.length;
+      
+      faceX = avgX;
+      faceY = avgY - 0.1; // 얼굴 위쪽에 표시
+      
+      // 화면 경계 체크
+      const margin = 0.1;
+      faceX = Math.max(margin, Math.min(1 - margin, faceX));
+      faceY = Math.max(margin, Math.min(1 - margin, faceY));
+    }
+
     const key = `emotion_${emotionResult.label}_${timestamp}`;
     this.activeOverlays.set(key, {
         image,
-        x: 0.1 + Math.random() * 0.8,
-        y: 0.1 + Math.random() * 0.3,
+        x: faceX,
+        y: faceY,
         timestamp,
         duration: 2000,
         opacity: 0,
@@ -559,7 +614,7 @@ class FrontendAiProcessor {
   private getImageForLabel(label: string): HTMLImageElement | null {
     // app.py의 STATIC_IMG_MAP에 없는 제스처들은 오버레이하지 않음
     if (label === 'fist' || label === 'open_palm') {
-      console.log(`🚨 ${label} detected but no overlay image (matches app.py behavior)`);
+      // console.log(`🚨 ${label} detected but no overlay image (matches app.py behavior)`);
       return null;
     }
     
@@ -571,7 +626,7 @@ class FrontendAiProcessor {
     // 원본 트랙은 사용자의 카메라 스트림이므로 AI 처리 종료와 무관하게 유지되어야 함
     if (this.activeSourceTrack) {
       this.activeSourceTrack.stop();
-      console.log("📌 Releasing reference to source track (not stopping):", this.activeSourceTrack.id);
+      // console.log("📌 Releasing reference to source track (not stopping):", this.activeSourceTrack.id);
       this.activeSourceTrack = null; // 참조만 해제
     }
     
