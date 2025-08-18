@@ -24,6 +24,7 @@ export function useHighlightAlbum(groupId: string, albumId: string) {
         { photoId: 3, memberId: 3, chatSessionId: "session1", photoUrl: "/presentation/laugh_3.png", type: "LAUGH", takenAt: "2025-08-01" },
         { photoId: 11, memberId: 4, chatSessionId: "session1", photoUrl: "/presentation/laugh_4.jpg", type: "LAUGH", takenAt: "2025-08-01" },
         { photoId: 12, memberId: 5, chatSessionId: "session1", photoUrl: "/presentation/laugh_5.png", type: "LAUGH", takenAt: "2025-08-01" },
+        { photoId: 13, memberId: 5, chatSessionId: "session1", photoUrl: "/presentation/laugh_6.png", type: "LAUGH", takenAt: "2025-08-01" },
       ],
       "SURPRISE": [
         { photoId: 4, memberId: 1, chatSessionId: "session1", photoUrl: "/presentation/surprise_1.png", type: "SURPRISE", takenAt: "2025-08-01" },
@@ -31,6 +32,7 @@ export function useHighlightAlbum(groupId: string, albumId: string) {
         { photoId: 6, memberId: 3, chatSessionId: "session1", photoUrl: "/presentation/surprise_3.png", type: "SURPRISE", takenAt: "2025-08-01" },
         { photoId: 21, memberId: 3, chatSessionId: "session1", photoUrl: "/presentation/surprise_4.jpg", type: "SURPRISE", takenAt: "2025-08-01" },
         { photoId: 22, memberId: 3, chatSessionId: "session1", photoUrl: "/presentation/surprise_5.png", type: "SURPRISE", takenAt: "2025-08-01" },
+        { photoId: 23, memberId: 3, chatSessionId: "session1", photoUrl: "/presentation/surprise_6.png", type: "SURPRISE", takenAt: "2025-08-01" },
       ],
       "TIRED": [
         { photoId: 7, memberId: 1, chatSessionId: "session1", photoUrl: "/presentation/yawn_1.png", type: "TIRED", takenAt: "2025-08-01" },
@@ -38,6 +40,7 @@ export function useHighlightAlbum(groupId: string, albumId: string) {
         { photoId: 9, memberId: 3, chatSessionId: "session1", photoUrl: "/presentation/yawn_3.png", type: "TIRED", takenAt: "2025-08-01" },
         { photoId: 31, memberId: 3, chatSessionId: "session1", photoUrl: "/presentation/yawn_4.jpg", type: "TIRED", takenAt: "2025-08-01" },
         { photoId: 32, memberId: 3, chatSessionId: "session1", photoUrl: "/presentation/yawn_5.png", type: "TIRED", takenAt: "2025-08-01" },
+        { photoId: 33, memberId: 3, chatSessionId: "session1", photoUrl: "/presentation/yawn_6.png", type: "TIRED", takenAt: "2025-08-01" },
       ],
       "SERIOUS": [
         { photoId: 10, memberId: 1, chatSessionId: "session1", photoUrl: "/presentation/serious_1.png", type: "SERIOUS", takenAt: "2025-08-01" },
@@ -45,6 +48,7 @@ export function useHighlightAlbum(groupId: string, albumId: string) {
         { photoId: 12, memberId: 3, chatSessionId: "session1", photoUrl: "/presentation/serious_3.png", type: "SERIOUS", takenAt: "2025-08-01" },
         { photoId: 41, memberId: 3, chatSessionId: "session1", photoUrl: "/presentation/serious_4.jpg", type: "SERIOUS", takenAt: "2025-08-01" },
         { photoId: 42, memberId: 3, chatSessionId: "session1", photoUrl: "/presentation/serious_5.png", type: "SERIOUS", takenAt: "2025-08-01" },
+        { photoId: 43, memberId: 3, chatSessionId: "session1", photoUrl: "/presentation/serious_6.png", type: "SERIOUS", takenAt: "2025-08-01" },
       ],
     },
   }
