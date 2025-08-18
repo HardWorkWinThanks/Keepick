@@ -1,18 +1,29 @@
+// src/domain/media/media-events.handler.ts
+
 import { Socket } from "socket.io";
 import { RoomService } from "../room/service/room.service";
 import { RoomEventsHandler } from "../room/service/room-events.handler";
 import { logger } from "../../utils/logger";
 import { ProduceData, ConsumeData } from "../room/types/room.types";
+import {
+  ProducerAppData,
+  ConsumerAppData,
+  isScreenShareProducer,
+  getProducerAppData,
+  getConsumerAppData,
+} from "../../shared/types/media.type";
+import { ScreenShareService } from "../screenshare/services/screen-share.service";
 
 export class MediaEventsHandler {
   constructor(
     private roomService: RoomService,
-    private roomEventsHandler: RoomEventsHandler
+    private roomEventsHandler: RoomEventsHandler,
+    private screenShareService: ScreenShareService
   ) {}
 
   async handleProduce(socket: Socket, data: ProduceData) {
     try {
-      const { transportId, kind, rtpParameters, roomId } = data;
+      const { transportId, kind, rtpParameters, roomId, appData } = data;
       const room = this.roomService.getRoom(roomId);
       const peer = room?.peers.get(socket.id);
 
@@ -25,30 +36,59 @@ export class MediaEventsHandler {
         throw new Error("Transport not found");
       }
 
-      // mediasoup 워커에 producer를 생성
-      const producer = await transport.produce({ kind, rtpParameters });
+      // MediaSoup Producer에 appData 포함하여 생성
+      const producer = await transport.produce({
+        kind,
+        rtpParameters,
+        appData: appData as any,
+      });
+
       peer.producers.set(producer.id, producer);
 
+      // 🔧 헬퍼 함수로 안전하게 appData 추출
+      const producerAppData = getProducerAppData(producer);
+      const isScreenShare = producerAppData && isScreenShareProducer(producerAppData);
+
       logger.info(
-        `Producer created: ${producer.id} (${kind}) for ${socket.id}`
+        `Producer created: ${producer.id} (${kind})${isScreenShare ? " [SCREEN SHARE]" : ""} for ${
+          socket.id
+        }`,
+        {
+          producerId: producer.id,
+          kind,
+          socketId: socket.id,
+          appData: producerAppData,
+          isScreenShare,
+        }
       );
 
-      // 방에 있는 다른 모든 peer에게 새로 생성된 producer의 ID를 알림
-      socket.to(roomId).emit("new_producer", {
+      // 방에 있는 다른 모든 peer에게 새로 생성된 producer의 정보를 알림
+      const newProducerData = {
         producerId: producer.id,
         producerSocketId: socket.id,
         kind,
-      });
+        appData: producerAppData || {},
+      };
+
+      socket.to(roomId).emit("new_producer", newProducerData);
 
       // 요청을 보낸 peer에게 성공했음을 알림
-      socket.emit("producer_created", { id: producer.id });
+      socket.emit("producer_created", {
+        id: producer.id,
+        appData: producerAppData,
+      });
 
-      // 몇명에게 보냈는지 로깅을 위함
-      const otherPeers = Array.from(room.peers.keys()).filter(
-        (id) => id !== socket.id
-      );
+      const otherPeers = Array.from(room.peers.keys()).filter((id) => id !== socket.id);
+
       logger.info(
-        `Notified ${otherPeers.length} peers about new ${kind} producer from ${socket.id}`
+        `Notified ${otherPeers.length} peers about new ${kind}${
+          isScreenShare ? " screen share" : ""
+        } producer from ${socket.id}`,
+        {
+          producerId: producer.id,
+          notifiedPeerCount: otherPeers.length,
+          isScreenShare,
+        }
       );
     } catch (error) {
       logger.error("Error creating producer:", error);
@@ -60,7 +100,6 @@ export class MediaEventsHandler {
     try {
       const { transportId, producerId, rtpCapabilities, roomId } = data;
 
-      // 동일한 소비 요청이 여러번 들어오는 것을 방지
       if (!this.roomEventsHandler.addPendingConsumerRequest(socket.id, producerId)) {
         return;
       }
@@ -81,9 +120,13 @@ export class MediaEventsHandler {
 
       // Producer 찾기
       let producer;
+      let producerAppData: ProducerAppData | undefined;
+
       for (const [, otherPeer] of room.peers.entries()) {
         producer = otherPeer.producers.get(producerId);
         if (producer) {
+          // 🔧 헬퍼 함수로 안전하게 appData 추출
+          producerAppData = getProducerAppData(producer);
           break;
         }
       }
@@ -93,19 +136,39 @@ export class MediaEventsHandler {
         throw new Error(`Producer ${producerId} not found`);
       }
 
-      // consumer를 생성
-      // consumer : producer의 스트림을 가져와 클라이언트에게 전달하는 역할
+      // Consumer용 appData 생성
+      const consumerAppData: ConsumerAppData = {
+        ...producerAppData!,
+        producerId,
+        consumerId: `consumer_${socket.id}_${producerId}`,
+        consumerPeerId: socket.id,
+      };
+
+      // Consumer 생성
       const consumer = await transport.consume({
         producerId,
         rtpCapabilities,
-        paused: false, // 이거 바꿈 !!
+        paused: false,
+        appData: consumerAppData as any,
       });
 
-      // 생성된 consumer를 peer의 맵에 저장
       peer.consumers.set(consumer.id, consumer);
 
+      const isScreenShare = producerAppData && isScreenShareProducer(producerAppData);
+
       logger.info(
-        `Consumer created: ${consumer.id} (${consumer.kind}) for ${socket.id}`
+        `Consumer created: ${consumer.id} (${consumer.kind})${
+          isScreenShare ? " [SCREEN SHARE]" : ""
+        } for ${socket.id}`,
+        {
+          consumerId: consumer.id,
+          producerId,
+          kind: consumer.kind,
+          socketId: socket.id,
+          isScreenShare,
+          producerAppData,
+          consumerAppData,
+        }
       );
 
       // 요청을 보낸 peer에게 성공했음을 알림
@@ -114,6 +177,7 @@ export class MediaEventsHandler {
         producerId,
         kind: consumer.kind,
         rtpParameters: consumer.rtpParameters,
+        appData: producerAppData,
       });
 
       this.roomEventsHandler.removePendingConsumerRequest(socket.id, producerId);
@@ -124,7 +188,6 @@ export class MediaEventsHandler {
     }
   }
 
-  // 클라이언트가 미디어 스트림을 받을 준비가 되었을때 호출하여 paused 상태를 업데이트
   async handleResumeConsumer(socket: Socket, data: { consumerId: string }) {
     try {
       const { consumerId } = data;
@@ -139,15 +202,107 @@ export class MediaEventsHandler {
         throw new Error("Consumer not found");
       }
 
-      // 중지된 스트림 전송을 다시 시작
       await consumer.resume();
-      logger.info(`Consumer resumed: ${consumerId} for ${socket.id}`);
 
-      // 클라이언트에게 consumer가 재개되었음을 알림
+      // 🔧 헬퍼 함수로 안전하게 appData 추출
+      const consumerAppData = getConsumerAppData(consumer);
+      const isScreenShare = consumerAppData && isScreenShareProducer(consumerAppData);
+
+      logger.info(
+        `Consumer resumed: ${consumerId}${isScreenShare ? " [SCREEN SHARE]" : ""} for ${socket.id}`,
+        {
+          consumerId,
+          socketId: socket.id,
+          isScreenShare,
+          consumerAppData,
+        }
+      );
+
       socket.emit("consumer_resumed", { consumerId });
     } catch (error) {
       logger.error("Error resuming consumer:", error);
       socket.emit("error", { message: "Failed to resume consumer" });
+    }
+  }
+
+
+  // producer를 일시 중지하는 메서드
+  async handlePauseProducer(socket: Socket, data: { producerId: string }) {
+    const { producerId } = data;
+
+    const room = this.roomService.getRoomByPeerId(socket.id);
+    if (!room) return;
+
+    const peer = room.peers.get(socket.id);
+    if (!peer) return;
+
+    const producer = peer.producers.get(producerId);
+    if (!producer) return;
+
+    // Producer를 일시 중지
+    await producer.pause();
+    logger.info(`Producer ${producerId} paused by ${socket.id}`);
+
+    // 방에 있는 다른 모든 peer에게 producer가 일시 중지되었음을 알림
+    socket.to(room.id).emit("producer_paused", {
+      producerId,
+      socketId: socket.id,
+    });
+  }
+
+  // producer를 다시 시작하는 메서드
+  async handleResumeProducer(socket: Socket, data: { producerId: string }) {
+    const { producerId } = data;
+
+    const room = this.roomService.getRoomByPeerId(socket.id);
+    if (!room) return;
+
+    const peer = room.peers.get(socket.id);
+    if (!peer) return;
+
+    const producer = peer.producers.get(producerId);
+    if (!producer) return;
+
+    // Producer를 다시 시작
+    await producer.resume();
+    logger.info(`Producer ${producerId} resumed by ${socket.id}`);
+
+    // 방에 있는 다른 모든 peer에게 producer가 다시 시작되었음을 알림
+    socket.to(room.id).emit("producer_resumed", {
+      producerId,
+      socketId: socket.id,
+    });
+  }
+
+
+  async handleCloseProducer(socket: Socket, data: { producerId: string }) {
+    try {
+      const { producerId } = data;
+      const peer = this.roomService.getPeer(socket.id);
+      if (!peer) {
+        throw new Error("Peer not found");
+      }
+
+      const producer = peer.producers.get(producerId);
+      if (!producer) {
+        throw new Error("Producer not found");
+      }
+
+      // Producer를 닫습니다.
+      producer.close();
+
+      // Peer의 producer 목록에서 제거
+      peer.producers.delete(producerId);
+
+      // Producer가 닫혔음을 방 안의 모든 사람에게 알립니다.
+      // 클라이언트는 이 이벤트를 받아 관련 미디어 엘리먼트를 제거해야 합니다.
+      socket.to(peer.roomId).emit("producer_closed", { producerId });
+
+      logger.info(`Producer closed: ${producerId} for peer ${socket.id}`);
+      socket.emit("producer_closed_success", { producerId });
+    } catch (error) {
+      logger.error(`Error closing producer for ${socket.id}:`, error);
+      socket.emit("error", { message: "Failed to close producer" });
     }
   }
 }

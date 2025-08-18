@@ -3,6 +3,7 @@ import { RoomRepository } from "../repository/room.repository";
 import { PeerManager } from "./peer.manager";
 import { logger } from "../../../utils/logger";
 import { Socket } from "socket.io";
+import { randomUUID } from "crypto";
 
 export class RoomService {
   constructor(
@@ -16,7 +17,8 @@ export class RoomService {
       return existingRoom;
     }
 
-    const room = await this.roomRepository.createRoom(roomId);
+    const chatSessionId = randomUUID(); // 채팅 세션 ID 생성
+    const room = await this.roomRepository.createRoom(roomId, chatSessionId);
     logger.info(`Created new room: ${roomId}`);
     return room;
   }
