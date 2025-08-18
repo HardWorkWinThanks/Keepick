@@ -60,20 +60,7 @@ const nextConfig: NextConfig = {
         '@mediapipe/camera_utils': 'commonjs @mediapipe/camera_utils',
         '@mediapipe/drawing_utils': 'commonjs @mediapipe/drawing_utils'
       });
-    } else {
-      // 클라이언트 사이드에서는 FaceMesh exports-loader 설정 추가
-      config.module.rules.push({
-        test: require.resolve("@mediapipe/face_mesh/face_mesh.js"),
-        use: {
-          loader: "exports-loader",
-          options: {
-            type: "commonjs",
-            exports: "FaceMesh",
-          },
-        },
-      });
-    }
-
+    } 
     return config;
   },
 };
