@@ -30,6 +30,9 @@ class ScreenShareManager {
 
   // 중복 종료 방지를 위한 플래그
   private stoppingScreenShare = false;
+  
+  // 중복 시작 방지를 위한 플래그
+  private startingScreenShare = false;
 
   public init(dispatch: AppDispatch, device: Device) {
     this.dispatch = dispatch;
@@ -92,23 +95,34 @@ class ScreenShareManager {
       throw new Error("ScreenShareManager not initialized");
     }
 
-    // 🔒 중복 화면 공유 방지
+    // 🔒 중복 시작 방지
+    if (this.startingScreenShare) {
+      console.warn("⚠️ Screen share start already in progress, ignoring duplicate request");
+      return;
+    }
+
+    // 🔒 중복 화면 공유 방지 (정확한 peerId 관리)
     const screenSharePeerId = `${peerId}_screen`;
     const existingScreenTrack = mediaTrackManager.getLocalScreenTrack(screenSharePeerId);
     if (existingScreenTrack) {
-      console.warn("⚠️ Screen share already active, stopping previous one...");
-      await this.stopScreenShare(actualRoomId, peerId);
+      console.warn(`⚠️ Screen share already active for ${screenSharePeerId}, stopping previous one...`);
+      console.log(`🔍 Existing screen track:`, {
+        trackId: existingScreenTrack.trackId,
+        peerId: existingScreenTrack.peerId,
+        trackType: existingScreenTrack.trackType,
+        enabled: existingScreenTrack.track.enabled,
+        readyState: existingScreenTrack.track.readyState
+      });
+      // 정확한 screenPeerId로 중지 요청
+      await this.stopScreenShare(actualRoomId, screenSharePeerId);
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
-    // 기존 로컬 스트림 정리
-    if (this.localStream) {
-      console.log("🧹 Cleaning up existing local stream...");
-      this.localStream.getTracks().forEach((track) => track.stop());
-      this.localStream = null;
-    }
+    // 기존 화면 공유만 정리 (MediaTrackManager를 통해 안전하게 처리)
+    // localStream을 직접 건드리지 않고 MediaTrackManager를 통해 화면 공유 트랙만 제거
 
     try {
+      this.startingScreenShare = true; // 🔒 시작 플래그 설정
       this.dispatch(startScreenShareRequest());
       console.log(`🚀 Starting screen share for ${peerName} (${peerId})`);
 
@@ -137,18 +151,25 @@ class ScreenShareManager {
 
       // 화면 공유가 사용자에 의해 중지될 때 처리
       videoTrack.onended = () => {
-        console.log("Screen share ended by user");
-        if (!this.stoppingScreenShare) {
-          this.stopScreenShare(actualRoomId, peerId);
-        }
+        console.log("🔚 Screen share track ended by user");
+        
+        // 즉시 종료되는 것을 방지하기 위해 짧은 지연 후 확인
+        setTimeout(() => {
+          if (!this.stoppingScreenShare && videoTrack.readyState === 'ended') {
+            console.log("🛑 Confirmed track ended - initiating cleanup");
+            // 올바른 screenSharePeerId 사용
+            this.stopScreenShare(actualRoomId, screenSharePeerId);
+          } else {
+            console.log("🔄 Screen share already stopping or track recovered, ignoring ended event");
+          }
+        }, 100); // 100ms 지연
       };
 
-      // 🆕 MediaTrackManager를 통해 Producer 생성 - 화면 공유 전용 peerId 사용
-      const screenSharePeerId = `${peerId}_screen`;
+      // 🆕 MediaTrackManager를 통해 Producer 생성 - 화면 공유 전용 peerId 사용 (이미 위에서 선언됨)
       const trackId = await mediaTrackManager.addScreenShareTrack(
         videoTrack,
         screenSharePeerId,
-        peerName
+        `${peerName}_screen`
       );
 
       console.log("🖥️ Screen share track created:", {
@@ -174,15 +195,22 @@ class ScreenShareManager {
         peerId,
         streamId: stream.id,
       });
+      
+      this.startingScreenShare = false; // 🔓 성공 시 플래그 해제
     } catch (error) {
       console.error("❌ Screen share failed:", error);
+      this.startingScreenShare = false; // 🔓 실패 시 플래그 해제
+      
       this.dispatch(
         startScreenShareFailure(error instanceof Error ? error.message : "Unknown error")
       );
 
-      // 실패 시 정리
+      // 실패 시 정리 (화면 공유 트랙만 안전하게 정리)
       if (this.localStream) {
-        this.localStream.getTracks().forEach((track) => track.stop());
+        this.localStream.getTracks().forEach((track) => {
+          console.log(`🛑 Stopping failed screen track: ${track.id}`);
+          track.stop();
+        });
         this.localStream = null;
       }
       throw error;
@@ -190,6 +218,7 @@ class ScreenShareManager {
   }
 
   // 🆕 화면 공유 중지 (MediaTrackManager 활용)
+  // peerId는 원본 peerId 또는 이미 "_screen" 접미사가 붙은 screenPeerId 모두 받아서 처리
   public async stopScreenShare(roomId: string, peerId: string): Promise<void> {
     if (!this.dispatch) {
       throw new Error("ScreenShareManager not initialized");
@@ -204,10 +233,18 @@ class ScreenShareManager {
     try {
       this.stoppingScreenShare = true;
       this.dispatch(stopScreenShareRequest());
-      console.log(`🛑 Stopping screen share for ${peerId}`);
+      
+      // 🔍 peerId 정규화: "_screen" 접미사가 없으면 추가, 있으면 그대로 사용
+      const screenSharePeerId = peerId.endsWith('_screen') ? peerId : `${peerId}_screen`;
+      const originalPeerId = peerId.endsWith('_screen') ? peerId.replace('_screen', '') : peerId;
+      
+      console.log(`🛑 Stopping screen share:`, {
+        inputPeerId: peerId,
+        screenSharePeerId,
+        originalPeerId
+      });
 
       // 🆕 서버에 화면 공유 종료 알림 먼저 처리 (producer가 살아있을 때)
-      const screenSharePeerId = `${peerId}_screen`;
       const screenTrack = mediaTrackManager.getLocalScreenTrack(screenSharePeerId);
 
       if (screenTrack?.producer) {
@@ -226,18 +263,32 @@ class ScreenShareManager {
       }
 
       // 🔄 이후 로컬 정리 진행
-      console.log(`🧹 Starting local cleanup for ${peerId}`);
+      console.log(`🧹 Starting local cleanup for screen share (${screenSharePeerId})`);
+      
+      // 🔍 정리 전 상태 확인
+      console.log(`🔍 Pre-cleanup track state:`);
+      mediaTrackManager.debugPrintAllTracks();
 
       // 1. MediaTrackManager를 통해 트랙 제거
       mediaTrackManager.removeLocalTrackByType(screenSharePeerId, "screen");
+      
+      // 🔍 정리 후 상태 확인
+      console.log(`🔍 Post-cleanup track state:`);
+      mediaTrackManager.debugPrintAllTracks();
 
-      // 2. 로컬 스트림 정리
+      // 2. 화면 공유 스트림만 안전하게 정리 (카메라 트랙 완전 보호)
       if (this.localStream) {
-        this.localStream.getTracks().forEach((track) => track.stop());
+        console.log(`🧹 Safely cleaning screen share stream: ${this.localStream.id}`);
+        const tracks = this.localStream.getTracks();
+        tracks.forEach((track) => {
+          console.log(`🛑 Stopping screen share track: ${track.id} (${track.label})`);
+          track.stop();
+        });
         this.localStream = null;
+        console.log(`✅ Screen share stream cleaned up, camera tracks preserved`);
       }
 
-      console.log(`✅ Local cleanup completed for ${peerId}`);
+      console.log(`✅ Local cleanup completed for screen share (${screenSharePeerId})`);
 
       this.dispatch(stopScreenShareSuccess());
       console.log("✅ Screen share stopped successfully");
@@ -269,18 +320,11 @@ class ScreenShareManager {
         `🔍 Consuming screen share from ${producerPeerName} (${producerPeerId}), producerId: ${producerId}`
       );
 
-      // 🔒 중복 체크 (새로운 매니저 활용)
-      const validation = this.validateScreenShareDuplicates(producerId, producerPeerId);
-      if (validation.isDuplicate) {
-        console.log(`[SKIP] ${validation.reason} for screen share producer ${producerId}`);
-        this.cancelStreamCleanup(producerPeerId);
-        
-        // 기존 스트림이 유효한 경우 재사용
-        if (validation.hasValidStream) {
-          console.log(`✅ Valid stream exists, reusing for ${producerPeerId}`);
-          return;
-        }
-      }
+      // 🖥️ 화면 공유는 중복 체크 우회 - mediaTrackManager에서 이미 처리됨
+      console.log(`🖥️ Screen share consumption - duplicate check bypassed for producer ${producerId}`);
+      
+      // 기존 정리 타이머만 취소
+      this.cancelStreamCleanup(producerPeerId);
 
       // 🆕 MediaTrackManager를 통해 Consumer 생성
       const trackId = await mediaTrackManager.consumeAndAddRemoteTrack(
@@ -303,7 +347,8 @@ class ScreenShareManager {
 
       console.log("📺 Remote screen stream created:", {
         streamId: stream.id,
-        trackId: track.id,
+        mediaTrackId: trackId, // MediaTrackManager에서 생성한 trackId
+        actualTrackId: track.id, // 실제 MediaStreamTrack ID  
         trackReadyState: track.readyState,
         streamActive: stream.active,
         trackCount: stream.getTracks().length,
@@ -334,28 +379,8 @@ class ScreenShareManager {
       });
     } catch (error) {
       console.error(`❌ Screen share consumption failed: ${producerPeerId}`, error);
-      
-      // 복구 시도 (재시도 가능한 에러인 경우)
-      if (recoveryManager.shouldRetryError(error, producerId)) {
-        console.log(`🔄 Attempting screen share recovery for producer ${producerId}`);
-        userFeedbackManager.notifyRecoveryProgress(producerId, 1, 3);
-        
-        try {
-          // 상태 정리 후 재시도
-          await this.cleanupFailedScreenShare(producerPeerId);
-          await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
-          
-          // 재귀 호출로 재시도
-          await this.consumeScreenShare(roomId, producerId, producerPeerId, producerPeerName);
-          userFeedbackManager.notifyRecoverySuccess(producerId);
-          return;
-        } catch (retryError) {
-          console.error(`❌ Screen share recovery failed:`, retryError);
-          userFeedbackManager.notifyRecoveryFailed(producerId, error);
-        }
-      }
-      
-      userFeedbackManager.notifyOperationFailed(producerId, error);
+      // 간단한 정리 후 에러 전파
+      await this.cleanupFailedScreenShare(producerPeerId);
       throw error;
     }
   }
@@ -510,9 +535,13 @@ class ScreenShareManager {
     this.streamCleanupTimers.forEach((timer) => clearTimeout(timer));
     this.streamCleanupTimers.clear();
 
-    // 로컬 스트림 정리
+    // 화면 공유 스트림만 안전하게 정리 (카메라 보호)
     if (this.localStream) {
-      this.localStream.getTracks().forEach((track) => track.stop());
+      console.log(`🧹 Cleanup: stopping screen share stream ${this.localStream.id}`);
+      this.localStream.getTracks().forEach((track) => {
+        console.log(`🛑 Cleanup: stopping track ${track.id} (${track.label})`);
+        track.stop();
+      });
       this.localStream = null;
     }
 

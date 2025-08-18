@@ -244,6 +244,9 @@ export const VideoGrid = () => {
     spotlightId: spotlightVideo?.id,
     isFullscreen,
     gridLayout,
+    localScreenShare: localScreenShare.hasScreenTrack,
+    remoteScreenShares: remoteScreenShares.length,
+    hasAnyScreenShare,
   });
 
   // 전체화면 모드

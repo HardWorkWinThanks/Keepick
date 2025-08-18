@@ -53,14 +53,30 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
     const videoElement = videoRef.current;
     if (!videoElement) return;
 
+    // 🔍 트랙 타입 디버깅 로그 추가
     if (videoTrack) {
-      // 1. 기존에 srcObject가 없거나, 트랙이 다르면 새로 할당합니다.
-      if (!videoElement.srcObject || (videoElement.srcObject as MediaStream).getVideoTracks()[0] !== videoTrack) {
+      console.log(`🎥 [UserVideoCard] ${userName} - 비디오 트랙 정보:`, {
+        trackId: videoTrack.id,
+        isLocal,
+        socketId: socketId || 'N/A',
+        readyState: videoTrack.readyState,
+        enabled: videoTrack.enabled,
+        kind: videoTrack.kind,
+        label: videoTrack.label || 'No label'
+      });
+    }
+
+    if (videoTrack) {
+      // 1. 기존에 srcObject가 없거나, 트랙 ID가 다르면 새로 할당합니다.
+      const currentTrack = (videoElement.srcObject as MediaStream)?.getVideoTracks()[0];
+      const needsNewConnection = !videoElement.srcObject || !currentTrack || currentTrack.id !== videoTrack.id;
+      
+      if (needsNewConnection) {
         const newStream = new MediaStream([videoTrack]);
         videoElement.srcObject = newStream;
         videoElement.muted = true; // 로컬 비디오는 항상 음소거
         
-        console.log(`🎥 [UserVideoCard] ${userName} - 비디오 트랙을 새로 연결합니다.`);
+        console.log(`🎥 [UserVideoCard] ${userName} - 비디오 트랙을 새로 연결합니다. (${videoTrack.id}) [isLocal: ${isLocal}]`);
         
         // play()는 스트림이 설정된 후 호출되어야 합니다.
         videoElement.play().catch(error => {
@@ -68,6 +84,9 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
             console.error(`❌ [UserVideoCard] ${userName} - 자동 재생 실패:`, error);
           }
         });
+      } else {
+        // 같은 트랙이면 재연결하지 않음
+        console.log(`🎥 [UserVideoCard] ${userName} - 동일한 비디오 트랙 사용 중 (${videoTrack.id})`);
       }
     } else {
       // 2. 트랙이 없으면 srcObject를 비웁니다.
@@ -78,7 +97,7 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
     // 클린업 함수는 불필요하므로 제거해도 됩니다.
     // React가 컴포넌트 언마운트 시 video 엘리먼트를 정리합니다.
 
-  }, [videoTrack, userName]); // 의존성 배열은 그대로 유지
+  }, [videoTrack, userName, isLocal, socketId]); // 의존성 배열에 디버깅에 필요한 값들 추가
 
   // 오디오 트랙을 audio 엘리먼트에 연결 (원격 피어만)
   useEffect(() => {
@@ -88,19 +107,27 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
     if (!audio) return;
 
     if (audioTrack) {
-      // 원격 오디오 트랙을 별도 스트림으로 연결
-      const audioStream = new MediaStream([audioTrack]);
-      audio.srcObject = audioStream;
-      audio.muted = false; // 원격 오디오는 소리 출력
-      audio.autoplay = true;
+      // 기존 오디오 트랙과 ID 비교하여 같으면 재연결하지 않음
+      const currentAudioTrack = (audio.srcObject as MediaStream)?.getAudioTracks()[0];
+      const needsNewAudioConnection = !audio.srcObject || !currentAudioTrack || currentAudioTrack.id !== audioTrack.id;
       
-      console.log(`🔊 [UserVideoCard] ${userName} - 오디오 트랙 연결됨`);
-      
-      audio.play().catch(error => {
-        if (error.name !== 'AbortError') {
-          console.error(`❌ [UserVideoCard] ${userName} - 오디오 재생 실패:`, error);
-        }
-      });
+      if (needsNewAudioConnection) {
+        // 원격 오디오 트랙을 별도 스트림으로 연결
+        const audioStream = new MediaStream([audioTrack]);
+        audio.srcObject = audioStream;
+        audio.muted = false; // 원격 오디오는 소리 출력
+        audio.autoplay = true;
+        
+        console.log(`🔊 [UserVideoCard] ${userName} - 오디오 트랙 연결됨 (${audioTrack.id})`);
+        
+        audio.play().catch(error => {
+          if (error.name !== 'AbortError') {
+            console.error(`❌ [UserVideoCard] ${userName} - 오디오 재생 실패:`, error);
+          }
+        });
+      } else {
+        console.log(`🔊 [UserVideoCard] ${userName} - 동일한 오디오 트랙 사용 중 (${audioTrack.id})`);
+      }
     } else {
       audio.srcObject = null;
       console.log(`🔊 [UserVideoCard] ${userName} - 오디오 트랙 없음`);
@@ -152,7 +179,7 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
 
 
       {/* 반응 오버레이 */}
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {activeReaction && (
           <motion.div
             key="dynamic-reaction"
@@ -174,7 +201,7 @@ export const UserVideoCard = ({ socketId, userName, isLocal = false }: UserVideo
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
 
 
       {/* 사용자 정보 오버레이 */}

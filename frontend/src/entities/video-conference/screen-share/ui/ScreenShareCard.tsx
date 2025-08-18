@@ -31,6 +31,7 @@ export const ScreenShareCard = ({
   
   // 로컬/원격에 따라 적절한 트랙 선택
   const screenTrack = isLocal ? localScreenShare.track : remoteScreenShare.track;
+  const trackId = isLocal ? null : remoteScreenShare.trackId; // 내부 trackId 사용 (원격만)
   const isSharing = isLocal ? localScreenShare.isSharing : remoteScreenShare.hasScreenTrack;
   const hasScreenTrack = isLocal ? localScreenShare.hasScreenTrack : remoteScreenShare.hasScreenTrack;
   
@@ -58,7 +59,8 @@ export const ScreenShareCard = ({
       video.playsInline = true;
       
       console.log(`🖥️ [ScreenShareCard] ${userName} - 화면 공유 트랙 연결됨`, {
-        trackId: screenTrack.id,
+        internalTrackId: trackId, // MediaTrackManager 내부 ID
+        actualTrackId: screenTrack.id, // 실제 MediaStreamTrack ID
         readyState: screenTrack.readyState,
         enabled: screenTrack.enabled,
         streamId: stream.id

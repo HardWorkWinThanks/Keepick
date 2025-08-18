@@ -79,24 +79,54 @@ class MediaTrackManager {
       .substring(2, 11)}`;
 
     try {
-      // 🎯 트랙 중복 체크 - 동일한 peerId + kind + trackType 조합
-      const existingLocalTrack = this.getLocalTrack(
-        track.kind as "audio" | "video",
-        trackType,
-        peerId
-      );
+      // 🔍 trackType과 peerId 조합 검증
+      if (trackType === "camera" && peerId !== "local") {
+        console.error(`❌ Invalid peerId for camera track: ${peerId}. Camera tracks must use peerId="local"`);
+        throw new Error(`Invalid peerId "${peerId}" for camera track. Use "local" for camera tracks.`);
+      }
+      
+      if (trackType === "screen" && !peerId.includes("_screen")) {
+        console.warn(`⚠️ Screen share peerId "${peerId}" doesn't contain "_screen". This might cause issues.`);
+      }
+      
+      // 🛡️ 화면 공유 트랙 추가 시 카메라 트랙 보호
+      if (trackType === "screen") {
+        console.log(`🛡️ Adding screen share track (${peerId}) - protecting existing camera tracks`);
+        
+        // 기존 카메라 트랙들이 영향받지 않도록 확인
+        const existingCameraTracks = Array.from(this.localTracks.values())
+          .filter(t => t.trackType === "camera");
+        
+        console.log(`🔍 Current camera tracks count: ${existingCameraTracks.length}`);
+        existingCameraTracks.forEach(t => {
+          console.log(`  📹 Camera track: ${t.trackId} (${t.kind}, enabled: ${t.track.enabled}, state: ${t.track.readyState})`);
+        });
+      }
+      
+      console.log(`✅ TrackType-peerId validation passed:`, { trackType, peerId, kind: track.kind });
 
-      if (existingLocalTrack) {
-        // 기존 트랙이 있으면 해당 trackId 찾아서 반환
-        for (const [existingTrackId, trackInfo] of this.localTracks) {
-          if (trackInfo.track === existingLocalTrack) {
-            console.warn(
-              `⚠️ Local ${trackType} ${track.kind} track already exists for ${peerId}, reusing:`,
-              existingTrackId
-            );
-            return existingTrackId;
+      // 🎯 트랙 중복 체크 - 동일한 peerId + kind + trackType 조합 (화면 공유는 예외)
+      if (trackType !== "screen") {
+        const existingLocalTrack = this.getLocalTrack(
+          track.kind as "audio" | "video",
+          trackType,
+          peerId
+        );
+
+        if (existingLocalTrack) {
+          // 기존 트랙이 있으면 해당 trackId 찾아서 반환
+          for (const [existingTrackId, trackInfo] of this.localTracks) {
+            if (trackInfo.track === existingLocalTrack) {
+              console.warn(
+                `⚠️ Local ${trackType} ${track.kind} track already exists for ${peerId}, reusing:`,
+                existingTrackId
+              );
+              return existingTrackId;
+            }
           }
         }
+      } else {
+        console.log(`🖥️ Creating new screen share track for ${peerId} (no duplicate check)`);
       }
 
       // 새로운 트랙 생성 - 원본 트랙을 그대로 사용 (복제하지 않음)
@@ -143,6 +173,7 @@ class MediaTrackManager {
 
       // Redux 상태 업데이트 (카메라 트랙만, 화면 공유 트랙 제외)
       if (trackType === "camera") {
+        console.log(`🔄 Updating Redux for camera ${processedTrack.kind} track - ensuring camera state preservation`);
         this.dispatch(
           setLocalTrack({
             kind: processedTrack.kind as "audio" | "video",
@@ -156,9 +187,9 @@ class MediaTrackManager {
             },
           })
         );
-        console.log(`🔄 Redux updated for camera ${processedTrack.kind} track:`, trackId);
+        console.log(`✅ Redux updated for camera ${processedTrack.kind} track:`, trackId);
       } else {
-        console.log(`🚫 Skipping Redux update for ${trackType} track:`, trackId);
+        console.log(`🚫 Skipping Redux update for ${trackType} track (preserving camera state):`, trackId);
       }
 
       console.log(`✅ Local ${trackType} ${processedTrack.kind} track added:`, trackId);
@@ -224,7 +255,18 @@ class MediaTrackManager {
     peerId: string,
     peerName: string
   ): Promise<string> {
-    return this.addLocalTrack(track, peerId, "screen", peerName);
+    console.log(`🖥️ Creating new screen share track for ${peerId}`);
+    const trackId = await this.addLocalTrack(track, peerId, "screen", peerName);
+    
+    // 생성 후 즉시 확인
+    const verifyTrack = this.getLocalScreenTrack(peerId);
+    if (verifyTrack) {
+      console.log(`✅ Screen track verification successful for ${peerId}:`, verifyTrack.trackId);
+    } else {
+      console.error(`❌ Screen track verification failed for ${peerId} - track not found!`);
+    }
+    
+    return trackId;
   }
 
   // 원격 트랙 Consumer 생성 - consume 요청의 유일한 진입점 (Race condition 방지)
@@ -283,26 +325,8 @@ class MediaTrackManager {
       throw new Error("Transport or dispatch not initialized");
     }
 
-    // 🔒 중복 체크 (경량화된 로직)
-    const trackMaps: TrackMaps = {
-      remoteTracks: this.remoteTracks,
-      consumerMap: this.consumerMap,
-      remoteProducerMap: this.remoteProducerMap,
-      processingProducers: this.processingProducers,
-    };
-
-    const validation = duplicateValidator.validateDuplicates(
-      producerId,
-      socketId,
-      kind,
-      trackType,
-      trackMaps
-    );
-
-    if (validation.isDuplicate) {
-      console.warn(`[SKIP] ${validation.reason} for producer ${producerId}`);
-      return null;
-    }
+    // 🚫 중복 체크 완전 제거 - ID 일관성 문제 해결을 위해
+    console.log(`🔓 Duplicate check disabled for producer ${producerId} (${trackType} ${kind})`);
 
     // 🔒 처리 중 상태로 마킹
     this.processingProducers.add(producerId);
@@ -311,6 +335,7 @@ class MediaTrackManager {
     try {
       const trackId = `${trackType}_remote_${socketId}_${kind}_${Date.now()}`;
       console.log(`🔍 Creating new consumer for producer ${producerId} (${trackType} ${kind})`);
+      console.log(`🆔 Generated trackId: ${trackId}`);
 
       // Consumer 생성
       const consumerData = await this.createConsumer(producerId, rtpCapabilities);
@@ -329,6 +354,8 @@ class MediaTrackManager {
         kind,
         trackType,
       };
+
+      console.log(`🆔 TrackInfo created - trackId: ${trackId}, actualTrackId: ${consumer.track.id}`);
 
       // 원격 저장 (atomic operation)
       this.saveTrackInfo(trackInfo, producerId, consumer.id);
@@ -379,40 +406,105 @@ class MediaTrackManager {
     }
   }
 
-  // 🆕 카메라 트랙 전용 메서드들
+  // 🆕 카메라 트랙 전용 메서드들 (화면 공유와 완전 분리)
   getLocalCameraTrack(kind: "audio" | "video"): MediaStreamTrack | null {
+    console.log(`🔍 Looking for local camera ${kind} track...`);
+    
+    const allLocalTracks = Array.from(this.localTracks.values());
+    console.log(`📊 Total local tracks: ${allLocalTracks.length}`);
+    console.log(`📋 Local tracks breakdown:`, allLocalTracks.map(t => ({
+      trackId: t.trackId,
+      peerId: t.peerId,
+      trackType: t.trackType,
+      kind: t.kind,
+      enabled: t.track.enabled,
+      readyState: t.track.readyState
+    })));
+    
     for (const trackInfo of this.localTracks.values()) {
       if (
         trackInfo.peerId === "local" &&
         trackInfo.trackType === "camera" &&
         trackInfo.kind === kind
       ) {
+        console.log(`🎯 Found local camera ${kind} track: ${trackInfo.trackId}`, {
+          enabled: trackInfo.track.enabled,
+          readyState: trackInfo.track.readyState,
+          hasProducer: !!trackInfo.producer
+        });
         return trackInfo.track;
       }
     }
+    console.warn(`⚠️ No local camera ${kind} track found among ${allLocalTracks.length} tracks`);
     return null;
   }
 
   getLocalCameraTrackInfo(kind: "audio" | "video"): TrackInfo | null {
+    console.log(`🔍 Looking for local camera ${kind} track info...`);
+    
+    const allLocalTracks = Array.from(this.localTracks.values());
+    const cameraTracksOfKind = allLocalTracks.filter(t => 
+      t.peerId === "local" && t.trackType === "camera" && t.kind === kind
+    );
+    
+    console.log(`📊 Found ${cameraTracksOfKind.length} camera ${kind} tracks for "local"`, 
+      cameraTracksOfKind.map(t => ({
+        trackId: t.trackId,
+        peerId: t.peerId,
+        trackType: t.trackType,
+        enabled: t.track.enabled,
+        readyState: t.track.readyState
+      }))
+    );
+    
+    // 🔍 중복 카메라 트랙이 있으면 경고
+    if (cameraTracksOfKind.length > 1) {
+      console.warn(`⚠️ Multiple camera ${kind} tracks found! This should not happen.`);
+      // 가장 최신 트랙 반환 (trackId에 timestamp 포함)
+      return cameraTracksOfKind.sort((a, b) => 
+        b.trackId.localeCompare(a.trackId)
+      )[0];
+    }
+    
     for (const trackInfo of this.localTracks.values()) {
       if (
         trackInfo.peerId === "local" &&
         trackInfo.trackType === "camera" &&
         trackInfo.kind === kind
       ) {
+        console.log(`🎯 Found camera ${kind} trackInfo: ${trackInfo.trackId}`);
         return trackInfo;
       }
     }
+    
+    console.warn(`⚠️ No camera ${kind} trackInfo found for "local"`);
     return null;
   }
 
-  // 🆕 화면 공유 트랙 찾기
+  // 🆕 화면 공유 트랙 찾기 (카메라 트랙과 완전 분리)
   getLocalScreenTrack(peerId: string): TrackInfo | null {
+    console.log(`🔍 Looking for screen share track with peerId: ${peerId}`);
+    
+    const allLocalTracks = Array.from(this.localTracks.values());
+    const screenTracks = allLocalTracks.filter(t => t.trackType === "screen");
+    console.log(`📊 Total screen tracks: ${screenTracks.length}`, screenTracks.map(t => ({
+      trackId: t.trackId,
+      peerId: t.peerId,
+      enabled: t.track.enabled,
+      readyState: t.track.readyState
+    })));
+    
     for (const trackInfo of this.localTracks.values()) {
       if (trackInfo.peerId === peerId && trackInfo.trackType === "screen") {
+        console.log(`🖥️ Found screen share track for ${peerId}: ${trackInfo.trackId}`, {
+          enabled: trackInfo.track.enabled,
+          readyState: trackInfo.track.readyState,
+          hasProducer: !!trackInfo.producer
+        });
         return trackInfo;
       }
     }
+    console.warn(`⚠️ No screen share track found for peerId: ${peerId} among ${screenTracks.length} screen tracks`);
     return null;
   }
 
@@ -451,20 +543,83 @@ class MediaTrackManager {
     return null;
   }
 
-  // 🆕 트랙 타입별 제거
+  // 🆕 모든 원격 화면 공유 피어 정보 반환
+  getAllRemoteScreenSharePeers(): { socketId: string; peerName: string }[] {
+    const screenPeers = new Map<string, string>(); // socketId -> peerName
+    
+    console.log(`🔍 [getAllRemoteScreenSharePeers] Checking ${this.remoteTracks.size} remote tracks`);
+    
+    // 원격 트랙에서 화면 공유 트랙을 가진 피어들 찾기
+    for (const [trackId, trackInfo] of this.remoteTracks.entries()) {
+      console.log(`  - ${trackId}: peerId=${trackInfo.peerId}, trackType=${trackInfo.trackType}, kind=${trackInfo.kind}`);
+      
+      if (trackInfo.trackType === "screen") {
+        // TrackInfo의 추가 정보에서 peerName 추출
+        const peerName = (trackInfo as any).peerName || trackInfo.peerId;
+        screenPeers.set(trackInfo.peerId, peerName);
+        console.log(`  ✅ Found screen track for ${trackInfo.peerId}`);
+      }
+    }
+    
+    const result = Array.from(screenPeers.entries()).map(([socketId, peerName]) => ({
+      socketId,
+      peerName
+    }));
+    
+    console.log(`🔍 [getAllRemoteScreenSharePeers] Found ${result.length} screen share peers:`, result);
+    return result;
+  }
+
+  // 🆕 트랙 타입별 안전한 제거 (카메라/화면 공유 분리)
   removeLocalTrackByType(peerId: string, trackType: "camera" | "screen"): void {
+    // 🛡️ 화면 공유 트랙 제거 시 카메라 트랙 보호 확인
+    if (trackType === "screen") {
+      const cameraTracks = Array.from(this.localTracks.values()).filter(t => t.trackType === "camera");
+      console.log(`🛡️ Removing screen tracks for ${peerId} - protecting ${cameraTracks.length} camera tracks`);
+      cameraTracks.forEach(t => {
+        console.log(`  📹 Protected camera track: ${t.trackId} (${t.kind}, state: ${t.track.readyState})`);
+      });
+    }
+
     const tracksToRemove = Array.from(this.localTracks.values()).filter(
       (track) => track.peerId === peerId && track.trackType === trackType
     );
 
+    if (tracksToRemove.length === 0) {
+      console.warn(`⚠️ No ${trackType} tracks found for peerId: ${peerId}`);
+      return;
+    }
+
+    // 🔍 제거 전 카메라 트랙 상태 기록
+    const cameraTracksBefore = Array.from(this.localTracks.values()).filter(t => t.trackType === "camera");
+    console.log(`🔍 Camera tracks before ${trackType} removal: ${cameraTracksBefore.length}`);
+
     tracksToRemove.forEach((track) => {
-      console.log(`🗑️ Removing ${trackType} track for ${peerId}:`, track.trackId);
+      // 🛡️ 실수로 카메라 트랙을 제거하려 하는지 이중 확인
+      if (trackType === "screen" && track.trackType !== "screen") {
+        console.error(`❌ PROTECTION: Attempted to remove non-screen track as screen track:`, track.trackId);
+        return;
+      }
+
+      console.log(`🗑️ Safely removing ${trackType} track for ${peerId}:`, {
+        trackId: track.trackId,
+        trackType: track.trackType,
+        kind: track.kind,
+        enabled: track.track.enabled,
+        readyState: track.track.readyState
+      });
       this.removeLocalTrack(track.trackId);
     });
 
-    if (tracksToRemove.length === 0) {
-      console.warn(`⚠️ No ${trackType} tracks found for peerId: ${peerId}`);
+    // 🔍 제거 후 카메라 트랙 상태 확인
+    const cameraTracksAfter = Array.from(this.localTracks.values()).filter(t => t.trackType === "camera");
+    console.log(`🔍 Camera tracks after ${trackType} removal: ${cameraTracksAfter.length}`);
+    
+    if (trackType === "screen" && cameraTracksBefore.length !== cameraTracksAfter.length) {
+      console.error(`❌ CAMERA TRACK LOSS DETECTED! Before: ${cameraTracksBefore.length}, After: ${cameraTracksAfter.length}`);
     }
+
+    console.log(`✅ Removed ${tracksToRemove.length} ${trackType} track(s) for ${peerId}`);
   }
 
   removeRemoteTrackByType(socketId: string, trackType: "camera" | "screen"): void {
@@ -567,16 +722,31 @@ async replaceLocalTrack(trackId: string, newTrack: MediaStreamTrack): Promise<vo
             this.dispatch(removeLocalTrack(oldTrackInfo.kind));
         }
 
-        // 2. 새로운 정보로 새 트랙을 등록 (addLocalTrack 로직 재활용)
-        console.log(`🔄 Replacing track. New track info:`, { id: newTrack.id, kind: newTrack.kind });
+        // 2. 새로운 정보로 새 트랙을 등록 (peerId 안전성 검증 후 등록)
+        console.log(`🔄 Replacing track. Old track info:`, { 
+            oldTrackId: trackId,
+            oldPeerId: oldTrackInfo.peerId, 
+            oldTrackType: oldTrackInfo.trackType,
+            newTrackId: newTrack.id, 
+            newTrackKind: newTrack.kind 
+        });
         
-        const newTrackId = `${oldTrackInfo.trackType}_${newTrack.kind}_${oldTrackInfo.peerId}_${Date.now()}`;
+        // 🔍 peerId 안전성 검증: 카메라 트랙은 반드시 "local"이어야 함
+        let safePeerId = oldTrackInfo.peerId;
+        if (oldTrackInfo.trackType === "camera" && oldTrackInfo.peerId !== "local") {
+            console.warn(`⚠️ Camera track has wrong peerId: ${oldTrackInfo.peerId}, correcting to "local"`);
+            safePeerId = "local";
+        }
+        
+        const newTrackId = `${oldTrackInfo.trackType}_${newTrack.kind}_${safePeerId}_${Date.now()}`;
 
         const newTrackInfo: TrackInfo = {
-            ...oldTrackInfo, // peerId, trackType 등 기존 정보 상속
             trackId: newTrackId,
             track: newTrack,
-            // producer는 동일한 것을 재사용
+            producer: oldTrackInfo.producer, // producer는 동일한 것을 재사용
+            peerId: safePeerId, // 검증된 peerId 사용
+            kind: newTrack.kind as "audio" | "video",
+            trackType: oldTrackInfo.trackType, // trackType은 보존
         };
         
         // 3. 새로운 trackId로 맵과 Redux 상태 업데이트
@@ -609,13 +779,18 @@ async replaceLocalTrack(trackId: string, newTrack: MediaStreamTrack): Promise<vo
 }
   removeLocalTrack(trackId: string): void {
     const trackInfo = this.localTracks.get(trackId);
-    if (!trackInfo || !this.dispatch) return;
+    if (!trackInfo || !this.dispatch) {
+      console.warn(`⚠️ Cannot remove track ${trackId}: not found or no dispatch`);
+      return;
+    }
 
     console.log(`🗑️ Removing local track: ${trackId}`, {
       trackType: trackInfo.trackType,
       kind: trackInfo.kind,
       peerId: trackInfo.peerId,
       hasProducer: !!trackInfo.producer,
+      enabled: trackInfo.track.enabled,
+      readyState: trackInfo.track.readyState
     });
 
     // Producer 정리 및 매핑 동기화
@@ -635,13 +810,14 @@ async replaceLocalTrack(trackId: string, newTrack: MediaStreamTrack): Promise<vo
 
     // Redux 상태 업데이트 (카메라 트랙만, 화면 공유 트랙 제외)
     if (trackInfo.trackType === "camera") {
+      console.log(`🔄 Updating Redux state: removing ${trackInfo.kind} track`);
       this.dispatch(removeLocalTrack(trackInfo.kind));
-      console.log(`🔄 Redux removed camera ${trackInfo.kind} track:`, trackId);
+      console.log(`✅ Redux state updated: camera ${trackInfo.kind} track removed`);
     } else {
-      console.log(`🚫 Skipping Redux removal for ${trackInfo.trackType} track:`, trackId);
+      console.log(`🚫 Skipping Redux removal for ${trackInfo.trackType} track (non-camera):`, trackId);
     }
 
-    console.log(`✅ Local ${trackInfo.trackType} ${trackInfo.kind} track removed:`, trackId);
+    console.log(`✅ Local ${trackInfo.trackType} ${trackInfo.kind} track completely removed:`, trackId);
   }
 
   removeRemoteTrack(trackId: string, socketId: string): void {
@@ -883,6 +1059,49 @@ async replaceLocalTrack(trackId: string, newTrack: MediaStreamTrack): Promise<vo
     return this.remoteTracks;
   }
 
+  // 🆕 디버깅용: 모든 트랙 상태 출력
+  debugPrintAllTracks(): void {
+    console.log(`🔍 === MEDIA TRACK MANAGER DEBUG INFO ===`);
+    console.log(`📊 Local tracks: ${this.localTracks.size}`);
+    console.log(`📊 Remote tracks: ${this.remoteTracks.size}`);
+    
+    console.log(`\n📋 LOCAL TRACKS:`);
+    Array.from(this.localTracks.entries()).forEach(([trackId, trackInfo]) => {
+      console.log(`  ${trackId}:`, {
+        peerId: trackInfo.peerId,
+        trackType: trackInfo.trackType,
+        kind: trackInfo.kind,
+        enabled: trackInfo.track.enabled,
+        readyState: trackInfo.track.readyState,
+        hasProducer: !!trackInfo.producer,
+        producerId: trackInfo.producer?.id
+      });
+    });
+    
+    console.log(`\n📋 REMOTE TRACKS:`);
+    Array.from(this.remoteTracks.entries()).forEach(([trackId, trackInfo]) => {
+      console.log(`  ${trackId}:`, {
+        peerId: trackInfo.peerId,
+        trackType: trackInfo.trackType,
+        kind: trackInfo.kind,
+        hasConsumer: !!trackInfo.consumer,
+        consumerId: trackInfo.consumer?.id
+      });
+    });
+    
+    console.log(`\n📋 PRODUCER MAPPINGS: ${this.producerMap.size}`);
+    Array.from(this.producerMap.entries()).forEach(([producerId, trackId]) => {
+      console.log(`  ${producerId} -> ${trackId}`);
+    });
+    
+    console.log(`\n📋 CONSUMER MAPPINGS: ${this.consumerMap.size}`);
+    Array.from(this.consumerMap.entries()).forEach(([consumerId, trackId]) => {
+      console.log(`  ${consumerId} -> ${trackId}`);
+    });
+    
+    console.log(`🔍 === END DEBUG INFO ===\n`);
+  }
+
   // 전체 정리
   cleanup(): void {
     console.log("🧹 Cleaning up all tracks...");
@@ -935,6 +1154,15 @@ async replaceLocalTrack(trackId: string, newTrack: MediaStreamTrack): Promise<vo
   ): void {
     if (!this.dispatch) return;
 
+    // 🚫 화면공유 트랙은 Redux 미디어 상태에 저장하지 않음
+    // 화면공유는 별도 관리 시스템(useRemoteScreenShareTrack)으로 처리됨
+    if (trackInfo.trackType === "screen") {
+      console.log(`🚫 [MediaTrackManager] Skipping Redux update for screen track ${trackInfo.trackId} - handled separately`);
+      return;
+    }
+
+    // 카메라 트랙만 Redux에 저장하여 UserVideoCard가 사용
+    console.log(`✅ [MediaTrackManager] Updating Redux state for camera track ${trackInfo.trackId}`);
     this.dispatch(
       setRemoteTrack({
         socketId,

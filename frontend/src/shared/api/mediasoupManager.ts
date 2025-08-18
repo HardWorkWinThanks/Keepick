@@ -189,9 +189,9 @@ class MediasoupManager {
   try {
     console.log("🔄 Starting AI toggle during conference...", { enabled, aiConfig });
 
-    // AI 비활성화 시, 이전에 생성된 AI 소스 트랙이 남아있다면 정리합니다.
+    // AI 비활성화 시, AI 전용 소스 트랙만 안전하게 정리 (원본 카메라 트랙 보호)
     if (!enabled && this.aiSourceTrack) {
-      console.log(`🧹 Stopping previous AI source track: ${this.aiSourceTrack.id}`);
+      console.log(`🧹 Safely stopping AI source track: ${this.aiSourceTrack.id} (preserving camera)`);
       this.aiSourceTrack.stop();
       this.aiSourceTrack = null;
     }
@@ -209,12 +209,12 @@ class MediasoupManager {
       console.log("🤖 Enabling AI during conference...");
       this.updateAIConfig(aiConfig);
       
-      // 🔽 FIX: 원본 트랙을 복제하여 AI 프로세서에 전달합니다.
-      console.log(`Cloning original track ${existingVideoTrack.id} for AI processing.`);
+      // 🔽 원본 카메라 트랙을 복제하여 AI 처리 (원본 보호)
+      console.log(`🔄 Cloning camera track ${existingVideoTrack.id} for AI processing (preserving original)`);
       this.aiSourceTrack = existingVideoTrack.clone(); 
-
-      console.log("🚀 Calling frontendAiProcessor.processVideoTrack...");
-      // 복제된 트랙을 AI 프로세서로 넘깁니다.
+      
+      console.log("🚀 Processing cloned track with AI...");
+      // AI 처리는 복제된 트랙으로 진행 - 원본 카메라 트랙 안전
       const processedTrack = await frontendAiProcessor.processVideoTrack(this.aiSourceTrack);
       
       console.log("🎯 AI processed track created:", {
@@ -223,8 +223,9 @@ class MediasoupManager {
         readyState: processedTrack.readyState,
       });
 
-      console.log("🔄 Calling mediaTrackManager.replaceLocalTrack...");
-      // 이 함수는 원본 트랙을 중지시키지만, AI 프로세서는 복제본을 사용하므로 이제 안전합니다.
+      console.log("🔄 Replacing camera track with AI-processed track...");
+      // 기존 카메라 Producer의 트랙을 AI 처리된 트랙으로 교체
+      // 원본 트랙은 복제를 사용했으므로 안전하게 보존됨
       await mediaTrackManager.replaceLocalTrack(existingTrackInfo.trackId, processedTrack);
       
       console.log("✅ AI enabled with track replacement");
@@ -250,12 +251,16 @@ class MediasoupManager {
       console.log("🔄 Replacing AI track with new original track...");
       await mediaTrackManager.replaceLocalTrack(existingTrackInfo.trackId, newVideoTrack);
       
-      // 🔽 FIX: AI를 비활성화할 때, 사용되던 복제 트랙을 확실히 중지시킵니다.
+      // 🔽 FIX: AI를 비활성화할 때, AI 전용 복제 트랙만 중지 (원본 카메라 트랙 보호)
       if (this.aiSourceTrack) {
-        console.log(`🧹 Stopping orphaned AI source track: ${this.aiSourceTrack.id}`);
+        console.log(`🧹 Stopping AI source track: ${this.aiSourceTrack.id} (clone only)`);
+        // AI 처리용 복제 트랙만 중지 - 원본 카메라 트랙은 건드리지 않음
         this.aiSourceTrack.stop();
         this.aiSourceTrack = null;
       }
+      
+      // AI 프로세서의 처리도 중지
+      frontendAiProcessor.stopProcessing();
       
       console.log("✅ AI disabled with original track");
     }
@@ -487,7 +492,9 @@ class MediasoupManager {
   public cleanup(): void {
     console.log("🧹 Cleaning up MediaSoup...");
 
+    // AI 소스 트랙만 안전하게 정리 (원본 카메라 트랙 보호)
     if (this.aiSourceTrack) {
+      console.log(`🧹 Cleanup: Stopping AI source track: ${this.aiSourceTrack.id}`);
       this.aiSourceTrack.stop();
       this.aiSourceTrack = null;
     }

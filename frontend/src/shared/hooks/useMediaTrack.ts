@@ -4,18 +4,49 @@ import { mediaTrackManager } from '@/shared/api/mediaTrackManager';
 import { useMemo, useState, useEffect } from 'react';
 
 // 로컬 미디어 트랙 Hook
-// 로컬 미디어 트랙 Hook (수정됨)
+// 로컬 미디어 트랙 Hook (개선된 안전한 조회)
 export const useLocalMediaTrack = (kind: 'audio' | 'video') => {
   // 1. Redux에서 트랙의 메타데이터(상태)를 가져옵니다.
   const trackState = useAppSelector(state => state.media.local.tracks[kind]);
 
-  // 2. trackId가 변경될 때마다 mediaTrackManager에서 실제 트랙 객체를 다시 조회합니다.
+  // 2. 안전한 트랙 조회: trackId와 fallback 조회 모두 시도 (화면공유와 완전 분리)
   const track = useMemo(() => {
-    if (!trackState?.trackId) return null;
-    // getLocalCameraTrack 대신 getTrackById를 사용하여 ID로 직접 조회
+    console.log(`🔍 [useLocalMediaTrack] Looking for ${kind} track - Redux trackId: ${trackState?.trackId}`);
+    
+    if (!trackState?.trackId) {
+      console.log(`🔍 No trackId in Redux for ${kind}, trying direct camera track lookup`);
+      // Redux에 trackId가 없으면 직접 카메라 전용 트랙 조회
+      const cameraTrack = mediaTrackManager.getLocalCameraTrack(kind);
+      if (cameraTrack) {
+        console.log(`✅ [useLocalMediaTrack] Found ${kind} camera track via direct lookup`);
+      } else {
+        console.warn(`⚠️ [useLocalMediaTrack] No ${kind} camera track found via direct lookup`);
+      }
+      return cameraTrack;
+    }
+    
+    // trackId가 있으면 먼저 ID로 조회
     const trackInfo = mediaTrackManager.getTrackById(trackState.trackId);
-    return trackInfo?.track || null;
-  }, [trackState?.trackId]); // 의존성을 trackId로 명확하게 지정
+    if (trackInfo?.track && trackInfo.trackType === "camera") {
+      console.log(`✅ [useLocalMediaTrack] Found ${kind} camera track by ID: ${trackState.trackId}`);
+      return trackInfo.track;
+    }
+    
+    // ID로 찾지 못하거나 카메라 트랙이 아닌 경우 fallback으로 카메라 트랙 조회
+    if (trackInfo?.trackType !== "camera") {
+      console.warn(`⚠️ [useLocalMediaTrack] Track ${trackState.trackId} is not a camera track (${trackInfo?.trackType}), using camera fallback`);
+    } else {
+      console.warn(`⚠️ [useLocalMediaTrack] Track not found by ID ${trackState.trackId}, trying camera fallback for ${kind}`);
+    }
+    
+    const fallbackTrack = mediaTrackManager.getLocalCameraTrack(kind);
+    if (fallbackTrack) {
+      console.log(`🔄 [useLocalMediaTrack] Found ${kind} camera track via fallback`);
+    } else {
+      console.error(`❌ [useLocalMediaTrack] No ${kind} camera track found even via fallback!`);
+    }
+    return fallbackTrack;
+  }, [trackState?.trackId, kind]); // kind도 의존성에 추가
 
   return {
     track, // 실제 MediaStreamTrack 객체
@@ -26,7 +57,7 @@ export const useLocalMediaTrack = (kind: 'audio' | 'video') => {
   };
 };
 
-// 원격 미디어 트랙 Hook (수정됨)
+// 원격 미디어 트랙 Hook (카메라 트랙만 필터링)
 export const useRemoteMediaTrack = (socketId: string, kind: 'audio' | 'video') => {
   const trackState = useAppSelector(state => 
     state.media.remotePeers[socketId]?.tracks[kind]
@@ -34,10 +65,25 @@ export const useRemoteMediaTrack = (socketId: string, kind: 'audio' | 'video') =
   
   const track = useMemo(() => {
     if (!trackState?.trackId) return null;
-    // getRemoteTrack 대신 getTrackById를 사용하여 ID로 직접 조회
+    
+    // 🎯 카메라 트랙만 조회하여 화면공유 트랙과 완전 분리
     const trackInfo = mediaTrackManager.getTrackById(trackState.trackId);
-    return trackInfo?.track || null;
-  }, [trackState?.trackId]); // 의존성을 trackId로 명확하게 지정
+    
+    // 화면공유 트랙이면 null 반환 (UserVideoCard는 카메라 트랙만 처리)
+    if (trackInfo?.trackType === "screen") {
+      console.log(`🛡️ [useRemoteMediaTrack] Filtering out screen track ${trackState.trackId} for UserVideoCard`);
+      return null;
+    }
+    
+    // 카메라 트랙만 반환
+    if (trackInfo?.trackType === "camera") {
+      console.log(`✅ [useRemoteMediaTrack] Using camera track ${trackState.trackId} for ${socketId}`);
+      return trackInfo.track;
+    }
+    
+    console.warn(`⚠️ [useRemoteMediaTrack] Unknown track type for ${trackState.trackId}: ${trackInfo?.trackType}`);
+    return null;
+  }, [trackState?.trackId, socketId]); // socketId도 의존성에 추가
 
   return {
     track,
@@ -134,13 +180,15 @@ export const useLocalScreenShareTrack = () => {
 
 // 🆕 원격 화면 공유 Hook
 export const useRemoteScreenShareTrack = (socketId: string) => {
-  const screenTrack = useMemo(() => {
+  const screenTrackInfo = useMemo(() => {
     return socketId ? mediaTrackManager.getRemoteScreenTrack(socketId) : null;
   }, [socketId]);
   
   return {
-    track: screenTrack?.track || null,
-    hasScreenTrack: !!screenTrack,
+    track: screenTrackInfo?.track || null,
+    trackInfo: screenTrackInfo, // TrackInfo 전체 반환
+    trackId: screenTrackInfo?.trackId || null, // 내부 trackId 
+    hasScreenTrack: !!screenTrackInfo,
     socketId,
   };
 };
@@ -153,46 +201,69 @@ export const useAllScreenShareTracks = () => {
   // 강제 리렌더링을 위한 상태 (트랙 상태 변화 감지용)
   const [refreshKey, setRefreshKey] = useState(0);
   
-  // 주기적으로 트랙 상태 체크 (트랙이 끝났을 때를 감지하기 위함)
+  console.log(`🔄 [useAllScreenShareTracks] Hook executed - refreshKey: ${refreshKey}`);
+  
+  // 주기적으로 트랙 상태 체크 (새로운 화면공유 트랙 감지 및 끝난 트랙 감지)
   useEffect(() => {
     const interval = setInterval(() => {
-      let hasChanged = false;
+      // 현재 MediaTrackManager에서 실제 화면공유 트랙 수 확인
+      const currentScreenPeers = mediaTrackManager.getAllRemoteScreenSharePeers();
+      const currentCount = currentScreenPeers.length;
       
-      // 현재 활성 화면 공유 트랙들의 상태 체크
+      // 이전 refreshKey와 현재 트랙 수를 비교하여 변화 감지
+      const expectedCount = Math.floor(refreshKey / 100); // refreshKey를 100 단위로 인코딩
+      
+      if (currentCount !== expectedCount) {
+        console.log(`🔄 [useAllScreenShareTracks] Screen share count changed: ${expectedCount} -> ${currentCount}`);
+        setRefreshKey(currentCount * 100 + Date.now() % 100); // 트랙 수와 타임스탬프 조합
+      }
+      
+      // 기존 ended 트랙 체크도 유지
+      let hasEndedTrack = false;
       remotePeers.forEach(peer => {
         const screenTrack = mediaTrackManager.getRemoteScreenTrack(peer.socketId);
         if (screenTrack?.track && screenTrack.track.readyState === 'ended') {
-          hasChanged = true;
+          hasEndedTrack = true;
         }
       });
       
-      if (hasChanged) {
-        console.log('🔄 [useAllScreenShareTracks] Detected track state change, forcing refresh');
+      if (hasEndedTrack) {
+        console.log('🔄 [useAllScreenShareTracks] Detected ended track, forcing refresh');
         setRefreshKey(prev => prev + 1);
       }
-    }, 1000); // 1초마다 체크
+    }, 500); // 500ms마다 체크 (더 빠른 감지)
     
     return () => clearInterval(interval);
-  }, [remotePeers]);
+  }, [remotePeers, refreshKey]);
   
   const remoteScreenShares = useMemo(() => {
     console.log('🔄 [useAllScreenShareTracks] Recalculating remote screen shares');
     
-    const activeShares = remotePeers.map(peer => {
-      const screenTrack = mediaTrackManager.getRemoteScreenTrack(peer.socketId);
+    // 🆕 MediaTrackManager에서 직접 화면 공유 트랙을 가진 모든 피어 찾기
+    const allScreenSharePeers = mediaTrackManager.getAllRemoteScreenSharePeers();
+    console.log(`🔍 [useAllScreenShareTracks] Found ${allScreenSharePeers.length} peers with screen tracks from MediaTrackManager`);
+    
+    const activeShares = allScreenSharePeers.map(({ socketId, peerName: fallbackName }) => {
+      const screenTrack = mediaTrackManager.getRemoteScreenTrack(socketId);
       const track = screenTrack?.track;
       
-      console.log(`🔍 [useAllScreenShareTracks] Peer ${peer.socketId}:`, {
+      // Redux에서 피어 정보를 찾아 실제 peerName 사용, 없으면 fallback 사용
+      const reduxPeer = remotePeers.find(peer => peer.socketId === socketId);
+      const peerName = reduxPeer?.peerName || fallbackName || socketId;
+      
+      console.log(`🔍 [useAllScreenShareTracks] Screen peer ${socketId} (${peerName}):`, {
         hasScreenTrack: !!screenTrack,
         hasTrack: !!track,
         readyState: track?.readyState,
-        isActive: screenTrack && track && track.readyState === 'live'
+        isActive: screenTrack && track && track.readyState === 'live',
+        reduxPeerFound: !!reduxPeer
       });
       
       return {
-        socketId: peer.socketId,
-        peerName: peer.peerName,
+        socketId,
+        peerName,
         screenTrack,
+        trackId: screenTrack?.trackId || null,
       };
     }).filter(peer => {
       // 화면 공유 트랙이 있고, 트랙이 활성 상태인 경우만 포함
@@ -208,7 +279,7 @@ export const useAllScreenShareTracks = () => {
     
     console.log(`✅ [useAllScreenShareTracks] Active remote screen shares: ${activeShares.length}`);
     return activeShares;
-  }, [remotePeers, refreshKey]); // refreshKey를 dependency에 추가
+  }, [remotePeers, refreshKey]); // remotePeers를 다시 의존성에 추가 (peerName lookup용)
   
   return {
     localScreenShare,

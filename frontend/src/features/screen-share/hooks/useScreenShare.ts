@@ -44,9 +44,12 @@ export const useScreenShareControls = (roomId: string) => {
   const { userName } = useAppSelector(state => state.session);
   
   const toggleScreenShare = useCallback(async (socketId: string) => {
+    console.log(`🔄 Toggle screen share:`, { isSharing, socketId, roomId });
     if (isSharing) {
+      // 화면 공유 중지 - socketId를 그대로 전달 (stopScreenShare에서 정규화 처리)
       await screenShareManager.stopScreenShare(roomId, socketId);
     } else {
+      // 화면 공유 시작 - socketId를 그대로 전달 (startScreenShare에서 "_screen" 접미사 추가)
       await screenShareManager.startScreenShare(roomId, socketId, userName);
     }
   }, [roomId, userName, isSharing]);
