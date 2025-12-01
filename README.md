@@ -1,6 +1,7 @@
 # Keepick - AI 기반 사진 관리 및 공유 플랫폼
 
 **D207 - 팀 열심히하겠습니다. 우승하겠습니다. 감사합니다. 팀**
+<img width="1882" height="905" alt="스크린샷 2025-12-01 215520" src="https://github.com/user-attachments/assets/df73af26-63a3-4b99-bdbf-f6b4afa8f7a2" />
 
 ## 🎯 프로젝트 소개
 
