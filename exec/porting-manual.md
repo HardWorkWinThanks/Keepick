@@ -26,17 +26,17 @@ JWT_EXPIRED_MS=86400000
 
 # OAuth2 소셜 로그인 - 카카오
 KAKAO_CLIENT_ID=kakao_client_id
-KAKAO_REDIRECT_URI=https://i13d207.p.ssafy.io:8080/login/oauth2/code/kakao
+KAKAO_REDIRECT_URI=https://{domain}/login/oauth2/code/kakao
 
 # OAuth2 소셜 로그인 - 네이버
 NAVER_CLIENT_ID=naver_client_id
 NAVER_CLIENT_SECRET=naver_client_secret
-NAVER_REDIRECT_URI=https://i13d207.p.ssafy.io/login/oauth2/code/naver
+NAVER_REDIRECT_URI=https://{domain}/login/oauth2/code/naver
 
 # OAuth2 소셜 로그인 - 구글
 GOOGLE_CLIENT_ID=google_client_id
 GOOGLE_CLIENT_SECRET=google_client_secriet
-GOOGLE_REDIRECT_URI=https://i13d207.p.ssafy.io/login/oauth2/code/google
+GOOGLE_REDIRECT_URI=https://{domain}/login/oauth2/code/google
 
 # Redis 설정
 REDIS_HOST=localhost
@@ -44,9 +44,9 @@ REDIS_PORT=6379
 
 # 기타 설정
 COOKIE_MAX_AGE=86400
-FRONTEND_URL=https://i13d207.p.ssafy.io
-DEV_URL=https://i13d207.p.ssafy.io
-VISION_AI_URL=http://i13d207.p.ssafy.io:5000
+FRONTEND_URL=https://{domain}
+DEV_URL=https://{domain}
+VISION_AI_URL=http://{domain}:5000
 
 # AWS 설정
 AWS_REGION=aws_region
@@ -58,7 +58,7 @@ SQS_QUEUE_NAME=keepick-message-queue
 
 #### Next.js 환경 변수
 ```bash
-NEXT_PUBLIC_API_BASE_URL='https://i13d207.p.ssafy.io'
+NEXT_PUBLIC_API_BASE_URL='https://{domain}'
 ```
 
 ### 1-3. 배포 시 특이사항
@@ -122,7 +122,7 @@ docker run -d
 
 **소셜 로그인 (OAuth2)**
 - Google, Kakao, Naver Client ID/Secret 필요
-- Redirect URI: `https://yourdomain.com/login/oauth2/code/{provider}`
+- Redirect URI: `https://{domain}/login/oauth2/code/{provider}`
 
 ## 3. DB 덤프 파일 최신본
 
